@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Migrations\**" />
+    <Content Remove="Migrations\**" />
+    <EmbeddedResource Remove="Migrations\**" />
+    <None Remove="Migrations\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Models\Organizationusers.cs" />
+    <Compile Remove="Models\transcriberContext.cs" />
+    <Compile Remove="Models\XEmails.cs" />
+    <Compile Remove="Models\XGroupmemberships.cs" />
+    <Compile Remove="Models\XGroups.cs" />
+    <Compile Remove="Models\XNotifications.cs" />
+    <Compile Remove="Models\XOrganizationinviterequests.cs" />
+    <Compile Remove="Models\XOrganizationinvites.cs" />
+    <Compile Remove="Models\XOrganizationproductdefinitions.cs" />
+    <Compile Remove="Models\XOrganizationstores.cs" />
+    <Compile Remove="Models\XProductartifacts.cs" />
+    <Compile Remove="Models\XProductbuilds.cs" />
+    <Compile Remove="Models\XProductdefinitions.cs" />
+    <Compile Remove="Models\XProducts.cs" />
+    <Compile Remove="Models\XProducttransitions.cs" />
+    <Compile Remove="Models\XStorelanguages.cs" />
+    <Compile Remove="Models\XStores.cs" />
+    <Compile Remove="Models\XStoretypes.cs" />
+    <Compile Remove="Models\XSystemstatuses.cs" />
+    <Compile Remove="Models\XWorkflowdefinitions.cs" />
+    <Compile Remove="Models\XWorkflowglobalparameter.cs" />
+    <Compile Remove="Models\XWorkflowinbox.cs" />
+    <Compile Remove="Models\XWorkflowprocessinstance.cs" />
+    <Compile Remove="Models\XWorkflowprocessinstancepersistence.cs" />
+    <Compile Remove="Models\XWorkflowprocessinstancestatus.cs" />
+    <Compile Remove="Models\XWorkflowprocessscheme.cs" />
+    <Compile Remove="Models\XWorkflowprocesstimer.cs" />
+    <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
+    <Compile Remove="Models\XWorkflowscheme.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JsonApiDotNetCore" Version="3.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.1" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="2.1.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.1.2" /> 
+    <PackageReference Include="Amazon.Lambda.Core" Version="1.0.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.4.0" />
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="2.1.0" />
+	</ItemGroup>
+ 
+
+</Project>
