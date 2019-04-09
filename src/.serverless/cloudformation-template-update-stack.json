@@ -87,7 +87,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "sil-transcriber-lead-api",
-          "S3Key": "serverless/transcriber_api/dev/1554732328612-2019-04-08T14:05:28.612Z/bin/release/netcoreapp2.1/deploy-package.zip"
+          "S3Key": "serverless/transcriber_api/dev/1554828337756-2019-04-09T16:45:37.756Z/bin/release/netcoreapp2.1/deploy-package.zip"
         },
         "FunctionName": "transcriber_api-dev-api",
         "Handler": "TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync",
@@ -112,14 +112,14 @@
         "IamRoleLambdaExecution"
       ]
     },
-    "ApiLambdaVersiondMyo6ba9OkJsGUl3Qf0lwWhG6WJk8vyv0ZHUDAPQ": {
+    "ApiLambdaVersionHeXFvNsIAgKoOqaPh5jh5jukscav4XSnN8m71nvg4": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ApiLambdaFunction"
         },
-        "CodeSha256": "5pKwVVbAUEyFwYfydwqRMaEGjfT9a9b/k9GMfEGDeQ8="
+        "CodeSha256": "gyOIkVm7AoCDoDpDNahmjsWqXgT6u6RNoxN1z6nDsKQ="
       }
     },
     "ApiGatewayRestApi": {
@@ -191,7 +191,7 @@
         "MethodResponses": []
       }
     },
-    "ApiGatewayDeployment1554732328658": {
+    "ApiGatewayDeployment1554828337795": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -258,7 +258,7 @@
     "ApiLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ApiLambdaVersiondMyo6ba9OkJsGUl3Qf0lwWhG6WJk8vyv0ZHUDAPQ"
+        "Ref": "ApiLambdaVersionHeXFvNsIAgKoOqaPh5jh5jukscav4XSnN8m71nvg4"
       }
     },
     "ServiceEndpoint": {

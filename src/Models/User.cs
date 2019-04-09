@@ -60,7 +60,6 @@ namespace SIL.Transcriber.Models
         //[HasMany("ownedOrganizations")]
         //public virtual List<Organization> OwnedOrganizations { get; set; }
 
-        [NotMapped]
         [HasManyThrough(nameof(ProjectUsers))]
         public List<Project> Projects { get; set; }
         public virtual List<ProjectUser> ProjectUsers { get; set; }
