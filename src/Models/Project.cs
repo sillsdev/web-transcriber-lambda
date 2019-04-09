@@ -29,8 +29,27 @@ namespace SIL.Transcriber.Models
         [Attr("organization-id")]
         public int OrganizationId { get; set; }
 
+        //settings
+        [Attr("uilanguagebcp47")]
+        public string Uilanguagebcp47 { get; set; }
+
         [Attr("language")]
         public string Language { get; set; }
+
+        [Attr("language-name")]
+        public string LanguageName { get; set; }
+
+        [Attr("default-font")]
+        public string DefaultFont { get; set; }
+
+        [Attr("default-font-size")]
+        public string DefaultFontSize { get; set; }
+
+        [Attr("rtl")]
+        public bool? Rtl { get; set; } = true;
+
+        [Attr("allow-claim")]
+        public bool? AllowClaim { get; set; } = true;
 
         [Attr("is-public")]
         public bool? IsPublic { get; set; } = true;
@@ -46,9 +65,6 @@ namespace SIL.Transcriber.Models
 
         [HasMany("reviewers", Link.None)]
         public virtual List<Reviewer> Reviewers { get; set; }
-
-        [Attr("allow-downloads")]
-        public bool? AllowDownloads { get; set; } = true;
 
         [HasMany("project-integrations")]
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }

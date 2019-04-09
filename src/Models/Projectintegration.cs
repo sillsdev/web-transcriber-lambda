@@ -13,5 +13,8 @@ namespace SIL.Transcriber.Models
         public virtual Integration Integration { get; set; }
         [HasOne("project")]
         public virtual Project Project { get; set; }
+
+        [Attr("settings")]
+        public string Settings { get; set; }
     }
 }
