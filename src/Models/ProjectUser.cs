@@ -21,5 +21,12 @@ namespace SIL.Transcriber.Models
 
         [Attr("role-id")]
         public int RoleId { get; set; }
+
+        [Attr("font")]
+        public string Font { get; set; }
+
+        [Attr("font-size")]
+        public string FontSize { get; set; }
+
     }
 }

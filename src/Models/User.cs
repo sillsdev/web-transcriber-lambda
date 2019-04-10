@@ -57,6 +57,7 @@ namespace SIL.Transcriber.Models
         public string avatarurl;
         [Attr("hot-keys")]
         public string hotkeys; //json
+
         //[HasMany("ownedOrganizations")]
         //public virtual List<Organization> OwnedOrganizations { get; set; }
 

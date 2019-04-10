@@ -110,7 +110,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "sil-transcriber-lead-api",
-                "S3Key": "serverless/transcriber_api/dev/1554828337756-2019-04-09T16:45:37.756Z/bin/release/netcoreapp2.1/deploy-package.zip"
+                "S3Key": "serverless/transcriber_api/dev/1554910752706-2019-04-10T15:39:12.706Z/bin/release/netcoreapp2.1/deploy-package.zip"
               },
               "FunctionName": "transcriber_api-dev-api",
               "Handler": "TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync",
@@ -135,14 +135,14 @@
               "IamRoleLambdaExecution"
             ]
           },
-          "ApiLambdaVersionHeXFvNsIAgKoOqaPh5jh5jukscav4XSnN8m71nvg4": {
+          "ApiLambdaVersionOob1nN3gzceZXRQG0nz9t3MLQLFaKJrmqeNZ3sVKJ8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "gyOIkVm7AoCDoDpDNahmjsWqXgT6u6RNoxN1z6nDsKQ="
+              "CodeSha256": "sV2jNr2Ahs3jO97awTEHL1sSjnEwwAJky8Esa8VooTA="
             }
           },
           "ApiGatewayRestApi": {
@@ -214,7 +214,7 @@
               "MethodResponses": []
             }
           },
-          "ApiGatewayDeployment1554828337795": {
+          "ApiGatewayDeployment1554910752742": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -281,7 +281,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionHeXFvNsIAgKoOqaPh5jh5jukscav4XSnN8m71nvg4"
+              "Ref": "ApiLambdaVersionOob1nN3gzceZXRQG0nz9t3MLQLFaKJrmqeNZ3sVKJ8"
             }
           },
           "ServiceEndpoint": {
@@ -331,7 +331,7 @@
     "layers": {}
   },
   "package": {
-    "artifactDirectoryName": "serverless/transcriber_api/dev/1554828337756-2019-04-09T16:45:37.756Z",
+    "artifactDirectoryName": "serverless/transcriber_api/dev/1554910752706-2019-04-10T15:39:12.706Z",
     "artifact": "bin/release/netcoreapp2.1/deploy-package.zip"
   }
 }

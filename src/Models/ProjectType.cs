@@ -1,10 +1,9 @@
 ﻿using JsonApiDotNetCore.Models;
-using System;
 using System.Collections.Generic;
 
 namespace SIL.Transcriber.Models
 {
-    public class ProjectType : BaseModel
+    public partial class ProjectType : BaseModel
     {
         [Attr("name")]
         public string Name { get; set; }
