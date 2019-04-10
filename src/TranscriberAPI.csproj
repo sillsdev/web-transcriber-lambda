@@ -6,9 +6,13 @@
 
   <ItemGroup>
     <Compile Remove="Migrations\**" />
+    <Compile Remove="TranscriberAPITest\**" />
     <Content Remove="Migrations\**" />
+    <Content Remove="TranscriberAPITest\**" />
     <EmbeddedResource Remove="Migrations\**" />
+    <EmbeddedResource Remove="TranscriberAPITest\**" />
     <None Remove="Migrations\**" />
+    <None Remove="TranscriberAPITest\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,14 +49,16 @@
 
   <ItemGroup>
     <PackageReference Include="JsonApiDotNetCore" Version="3.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.2" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
+    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.4" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="2.1.8" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="2.1.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.1.2" /> 
-    <PackageReference Include="Amazon.Lambda.Core" Version="1.0.0" />
-    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.4.0" />
-    <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="2.1.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.1.3" /> 
+    <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0" />
+    <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.5.0" />
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="3.0.3" />
 	</ItemGroup>
  
 
