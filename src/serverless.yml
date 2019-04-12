@@ -21,7 +21,90 @@ functions:
   api:
     handler: TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync
     events:
-      - http:
-          path: /{proxy+}
-          method: ANY
+       - http:
+            path: /api/books
+            method: ANY
+            cors: true
+       - http:
+            path: /api/booktypes
+            method: ANY
+            cors: true
+       - http:
+            path: /api/integrations
+            method: ANY
+            cors: true
+       - http:
+            path: /api/organizationmemberships
+            method: ANY
+            cors: true
+       - http:
+            path: /api/organizations
+            method: ANY
+            cors: true
+       - http:
+            path: /api/projectintegrations
+            method: ANY
+            cors: true
+       - http:
+            path: /api/projects
+            method: ANY
+            request: 
+                parameters: 
+                    paths: 
+                     id: true
+            cors: true       
+       - http:
+            path: /api/projects/{id}
+            method: ANY
+            request: 
+                parameters: 
+                    paths: 
+                     id: true
+            cors: true
+       - http:
+            path: /api/projecttypes
+            method: ANY
+            cors: true
+       - http:
+            path: /api/projectusers
+            method: ANY
+            cors: true
+       - http:
+            path: /api/roles
+            method: ANY
+            cors: true
 
+       - http:
+            path: /api/sets
+            method: ANY
+            cors: true
+       - http:
+            path: /api/taskmedia
+            method: ANY
+            cors: true
+       - http:
+            path: /api/tasks
+            method: ANY
+            cors: true
+       - http:
+            path: /api/tasksets
+            method: ANY
+            cors: true
+       - http:
+            path: /api/taskstates
+            method: ANY
+            cors: true
+       - http:
+            path: /api/userroles
+            method: ANY
+            cors: true
+       - http:
+            path: /api/users
+            method: ANY
+            cors: true
+       - http:
+            path: /api/usertasks
+            method: ANY
+            cors: true
+
+      
