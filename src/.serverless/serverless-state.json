@@ -110,7 +110,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "sil-transcriber-lead-api",
-                "S3Key": "serverless/transcriber_api/dev/1554910752706-2019-04-10T15:39:12.706Z/bin/release/netcoreapp2.1/deploy-package.zip"
+                "S3Key": "serverless/transcriber_api/dev/1555085307796-2019-04-12T16:08:27.796Z/bin/release/netcoreapp2.1/deploy-package.zip"
               },
               "FunctionName": "transcriber_api-dev-api",
               "Handler": "TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync",
@@ -135,14 +135,14 @@
               "IamRoleLambdaExecution"
             ]
           },
-          "ApiLambdaVersionOob1nN3gzceZXRQG0nz9t3MLQLFaKJrmqeNZ3sVKJ8": {
+          "ApiLambdaVersionz9qeAuBc8TsOPjnXKsaEX9IvX7QeOH0t5qOeOAF5F8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "sV2jNr2Ahs3jO97awTEHL1sSjnEwwAJky8Esa8VooTA="
+              "CodeSha256": "GKk1Rts4s0dgPRchsWbGNFuKmCbkRUA0ju6vUC1iDCc="
             }
           },
           "ApiGatewayRestApi": {
@@ -166,6 +166,53 @@
                 ]
               },
               "PathPart": "{proxy+}",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodProxyVarOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true,
+                    "method.response.header.Access-Control-Allow-Credentials": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'*'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT'",
+                      "method.response.header.Access-Control-Allow-Credentials": "'false'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": "#set($origin = $input.params(\"Origin\"))\n#if($origin == \"\") #set($origin = $input.params(\"origin\")) #end\n#if($origin == \"*\") #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin) #end"
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceProxyVar"
+              },
               "RestApiId": {
                 "Ref": "ApiGatewayRestApi"
               }
@@ -214,7 +261,7 @@
               "MethodResponses": []
             }
           },
-          "ApiGatewayDeployment1554910752742": {
+          "ApiGatewayDeployment1555085307852": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -223,6 +270,7 @@
               "StageName": "dev"
             },
             "DependsOn": [
+              "ApiGatewayMethodProxyVarOptions",
               "ApiGatewayMethodProxyVarAny"
             ]
           },
@@ -281,7 +329,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionOob1nN3gzceZXRQG0nz9t3MLQLFaKJrmqeNZ3sVKJ8"
+              "Ref": "ApiLambdaVersionz9qeAuBc8TsOPjnXKsaEX9IvX7QeOH0t5qOeOAF5F8"
             }
           },
           "ServiceEndpoint": {
@@ -316,6 +364,25 @@
             "http": {
               "path": "{proxy+}",
               "method": "any",
+              "cors": {
+                "origins": [
+                  "*"
+                ],
+                "origin": "*",
+                "methods": [
+                  "OPTIONS",
+                  "ANY"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
               "integration": "AWS_PROXY"
             }
           }
@@ -331,7 +398,7 @@
     "layers": {}
   },
   "package": {
-    "artifactDirectoryName": "serverless/transcriber_api/dev/1554910752706-2019-04-10T15:39:12.706Z",
+    "artifactDirectoryName": "serverless/transcriber_api/dev/1555085307796-2019-04-12T16:08:27.796Z",
     "artifact": "bin/release/netcoreapp2.1/deploy-package.zip"
   }
 }
