@@ -67,7 +67,7 @@ namespace SIL.Transcriber
             }
             app.UseAuthentication();
 
-            app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()));
+            app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()).AllowAnyHeader());
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();
