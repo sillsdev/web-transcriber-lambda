@@ -6,7 +6,7 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Controllers
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    //[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class BooksController : BaseController<Book>
     {
         public BooksController(

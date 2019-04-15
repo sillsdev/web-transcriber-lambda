@@ -1,7 +1,9 @@
 ﻿using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Models;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
+using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -39,9 +41,5 @@ namespace SIL.Transcriber.Controllers
             //this.organizationService = organizationService;
             //this.currentUserContext = currentUserContext;
         }
-
-
     }
-
-
 }

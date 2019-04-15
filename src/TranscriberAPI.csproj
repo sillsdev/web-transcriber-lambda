@@ -61,10 +61,6 @@
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="3.0.3" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
 	</ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\JsonApiDotNetCore\JsonApiDotNetCore\src\JsonApiDotNetCore\JsonApiDotNetCore.csproj" />
-  </ItemGroup>
  
 
 </Project>
