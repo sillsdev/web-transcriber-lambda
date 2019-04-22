@@ -2,6 +2,7 @@
 using JsonApiDotNetCore.Models;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
+using SIL.Transcriber.Services;
 using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
@@ -11,10 +12,10 @@ namespace SIL.Transcriber.Controllers
         public BaseController(
             IJsonApiContext jsonApiContext,
             IResourceService<T, int> resourceService
-            //ICurrentUserContext currentUserContext,
+            //ICurrentUserContext currentUserContext
             //OrganizationService organizationService,
             //UserService userService) : base(jsonApiContext, resourceService)
-            ) : base(jsonApiContext, resourceService)
+            ) : base(jsonApiContext, resourceService)//, currentUserContext)
         {
         }
     }
@@ -29,7 +30,7 @@ namespace SIL.Transcriber.Controllers
         public BaseController(
             IJsonApiContext jsonApiContext,
             IResourceService<T, TId> resourceService
-            //ICurrentUserContext currentUserContext,
+            //ICurrentUserContext currentUserContext
             //OrganizationService organizationService,
             //UserService userService) : base(jsonApiContext, resourceService)
             ) : base(jsonApiContext, resourceService)
@@ -40,9 +41,5 @@ namespace SIL.Transcriber.Controllers
             //this.organizationService = organizationService;
             //this.currentUserContext = currentUserContext;
         }
-
-
     }
-
-
 }
