@@ -1,12 +1,12 @@
 ﻿using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class BooksController : BaseController<Book>
     {
         public BooksController(

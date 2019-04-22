@@ -1,5 +1,8 @@
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Authentication.
+    JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Controllers
