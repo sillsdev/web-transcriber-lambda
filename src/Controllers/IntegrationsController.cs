@@ -1,6 +1,8 @@
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
+
 
 namespace SIL.Transcriber.Controllers
 {
@@ -8,8 +10,11 @@ namespace SIL.Transcriber.Controllers
     {
          public IntegrationsController(
             IJsonApiContext jsonApiContext,
-                IResourceService<Integration> resourceService)
-          : base(jsonApiContext, resourceService)
+                IResourceService<Integration> resourceService,
+            ICurrentUserContext currentUserContext,
+            OrganizationService organizationService,
+            UserService userService)
+          : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
     }
 }

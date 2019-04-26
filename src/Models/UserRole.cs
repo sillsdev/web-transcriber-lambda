@@ -23,5 +23,12 @@ namespace SIL.Transcriber.Models
         [Attr("organization-id")]
         public int OrganizationId { get; set; }
 
+        [NotMapped]
+        public RoleName RoleName
+        {
+            get { return Role.RoleName; }
+        }
+
+
     }
 }
