@@ -11,7 +11,12 @@ provider:
   environment:
     ConnectionString: ${file(./serverless.env.yml):${opt:stage}.ConnectionString}
     OriginSites: "*"
-    #Database: ${file(./serverless.env.yml):${opt:stage}.Database}
+    AUTH0_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.AUTH0_DOMAIN}
+    AUTH0_AUDIENCE: ${file(./serverless.env.yml):${self:custom.myStage}.AUTH0_AUDIENCE}
+    AUTH0_TOKEN_ACCESS_CLIENT_ID: ${file(./serverless.env.yml):${self:custom.myStage}.AUTH0_TOKEN_ACCESS_CLIENT_ID}
+    AUTH0_TOKEN_ACCESS_CLIENT_SECRET: ${file(./serverless.env.yml):${self:custom.myStage}.AUTH0_TOKEN_ACCESS_CLIENT_SECRET}
+
+
 
 deploymentPrefix: AWSTranscriberAPI/
 package:
