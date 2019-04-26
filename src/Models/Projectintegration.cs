@@ -16,5 +16,6 @@ namespace SIL.Transcriber.Models
 
         [Attr("settings")]
         public string Settings { get; set; }
+
     }
 }

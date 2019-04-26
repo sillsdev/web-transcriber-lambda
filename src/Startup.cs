@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Extensions;
 using Newtonsoft.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace SIL.Transcriber
 {
@@ -38,7 +39,9 @@ namespace SIL.Transcriber
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
-            services.AddJsonApi<AppDbContext>(opt => opt.Namespace = "api");
+            services.AddApiServices();
+            services.AddAuthenticationServices(Configuration);
+            services.AddContextServices();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -53,8 +56,9 @@ namespace SIL.Transcriber
                 app.UseExceptionHandler("/Home/Error");
                 app.UseHsts();
             }
+            app.UseAuthentication();
 
-            app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()));
+            app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()).AllowAnyHeader());
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();

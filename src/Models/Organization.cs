@@ -28,13 +28,27 @@ namespace SIL.Transcriber.Models
         [HasManyThrough(nameof(OrganizationMemberships))]
         public List<User> Users { get; set; }
         public List<OrganizationMembership> OrganizationMemberships { get; set; }
-/*
- *      [NotMapped]
+
+        [HasMany("groups")]
+        public virtual List<Group> Groups { get; set; }
+
+        [HasMany("user-roles", Link.None)]
+        public virtual List<UserRole> UserRoles { get; set; }
+
+
+        /*
+        [HasMany("organization-memberships", Link.None)]
+        public virtual List<OrganizationMembership> OrganizationMemberships { get; set; }
+
+        [HasMany("groups")]
+        public virtual List<Group> Groups { get; set; }
+
+        [NotMapped]
         [HasMany("userids")]
         public IEnumerable<int> UserIds => OrganizationMemberships?.Select(om => om.UserId);
         [NotMapped]
         [HasMany("users")]
         public IEnumerable<User> Users => OrganizationMemberships?.Select(om => om.User);
-        /**/
+        */
     }
 }
