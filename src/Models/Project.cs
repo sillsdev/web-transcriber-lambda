@@ -5,7 +5,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Project : BaseModel, ITrackDate
+    public partial class Project : BaseModel, ITrackDate, IBelongsToOrganization
     {
         [Attr("name")]
         public string Name { get; set; }
@@ -28,6 +28,11 @@ namespace SIL.Transcriber.Models
         public virtual Organization Organization { get; set; }
         [Attr("organization-id")]
         public int OrganizationId { get; set; }
+
+        [HasOne("group")]
+        public virtual Group Group { get; set; }
+        [Attr("group-id")]
+        public int GroupId { get; set; }
 
         //settings
         [Attr("uilanguagebcp47")]

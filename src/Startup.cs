@@ -39,18 +39,9 @@ namespace SIL.Transcriber
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
-            services.AddJsonApi<AppDbContext>(opt => opt.Namespace = "api");
-
-            // 1. Add Authentication Services
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
-            {
-                options.Authority = "https://sil-transcriber-dev.auth0.com/";
-                options.Audience = "https://transcriber_api";
-            });
+            services.AddApiServices();
+            services.AddAuthenticationServices(Configuration);
+            services.AddContextServices();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -3,16 +3,19 @@ using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class BooksController : BaseController<Book>
     {
         public BooksController(
            IJsonApiContext jsonApiContext,
-               IResourceService<Book> resourceService)
-         : base(jsonApiContext, resourceService)
+               IResourceService<Book> resourceService,
+            ICurrentUserContext currentUserContext,
+            OrganizationService organizationService,
+            UserService userService)
+         : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
     }
 }
