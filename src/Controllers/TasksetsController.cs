@@ -1,6 +1,7 @@
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -8,8 +9,11 @@ namespace SIL.Transcriber.Controllers
     {
          public TasksetsController(
             IJsonApiContext jsonApiContext,
-                IResourceService<TaskSet> resourceService)
-          : base(jsonApiContext, resourceService)
+                IResourceService<TaskSet> resourceService,
+            ICurrentUserContext currentUserContext,
+            OrganizationService organizationService,
+            UserService userService)
+          : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
     }
 }

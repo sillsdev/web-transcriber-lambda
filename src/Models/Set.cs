@@ -9,10 +9,10 @@ namespace SIL.Transcriber.Models
         [Attr("name")]
         public string Name { get; set; }
 
-        [Attr("project-id")]
-        public int ProjectId { get; set; }
-        [HasOne("project")]
-        public virtual Project Project { get; set; }
+        [NotMapped]
+        [HasManyThrough(nameof(ProjectSets))]
+        public List<Project> Projects { get; set; }
+        public List<ProjectSet> ProjectSets { get; set; }
 
         [Attr("book-id")]
         public int? BookId { get; set; }

@@ -58,25 +58,28 @@ namespace SIL.Transcriber.Models
         [Attr("hot-keys")]
         public string hotkeys; //json
 
-        //[HasMany("ownedOrganizations")]
-        //public virtual List<Organization> OwnedOrganizations { get; set; }
+        [HasMany("ownedOrganizations")]
+        public virtual List<Organization> OwnedOrganizations { get; set; }
 
         [HasManyThrough(nameof(ProjectUsers))]
         public List<Project> Projects { get; set; }
         public virtual List<ProjectUser> ProjectUsers { get; set; }
 
+        //[NotMapped]
+        //[HasManyThrough(nameof(OrganizationMemberships))]
+        //public List<Organization> Organizations { get; set; }
+        [HasMany("organization-memberships", Link.None)]
+        public virtual List<OrganizationMembership> OrganizationMemberships { get; set; }
+
+
         [NotMapped]
-        [HasManyThrough(nameof(OrganizationMemberships))]
-        public List<Organization> Organizations { get; set; }
-        public List<OrganizationMembership> OrganizationMemberships { get; set; }
-
-
-        [HasMany("user-roles", Link.None)]
+        [HasManyThrough(nameof(UserRoles))]
+        public List<Role> Roles { get; set; }
         public virtual List<UserRole> UserRoles { get; set; }
-
 
         [NotMapped]
         public IEnumerable<int> OrganizationIds => OrganizationMemberships?.Select(o => o.OrganizationId);
+       
         /*
         public bool HasRole(RoleName role)
         {
@@ -87,7 +90,7 @@ namespace SIL.Transcriber.Models
 
             return userRole != null;
         }
-        */
+        
         public string LocaleOrDefault()
         {
             var locale = "en-US";
@@ -101,5 +104,6 @@ namespace SIL.Transcriber.Models
             }
             return locale;
         }
+        */
     }
 }
