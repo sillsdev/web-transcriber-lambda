@@ -17,18 +17,6 @@ namespace SIL.Transcriber.Models
         [HasOne("owner")]
         public virtual Organization Owner { get; set; }
         public int OwnerId { get; set; }
-
-        [NotMapped]
-        [HasManyThrough(nameof(GroupMemberships))]
-        public List<User> Users { get; set; }
-        public List<GroupMembership> GroupMemberships { get; set; }
-        /*
-         *      [NotMapped]
-                [HasMany("userids")]
-                public IEnumerable<int> UserIds => OrganizationMemberships?.Select(om => om.UserId);
-                [NotMapped]
-                [HasMany("users")]
-                public IEnumerable<User> Users => OrganizationMemberships?.Select(om => om.User);
-                /**/
+        
     }
 }

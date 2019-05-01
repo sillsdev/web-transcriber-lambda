@@ -1,16 +1,17 @@
-using JsonApiDotNetCore.Controllers;
+﻿using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
+using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Models;
-using System.Threading.Tasks;
 using SIL.Transcriber.Services;
-using JsonApiDotNetCore.Internal;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class UsersController : BaseController<User>
+    public class CurrentusersController : BaseController<User>
     {
-        public UsersController(
+        public CurrentusersController(
            IJsonApiContext jsonApiContext,
                IResourceService<User> resourceService,
             ICurrentUserContext currentUserContext,
@@ -22,15 +23,15 @@ namespace SIL.Transcriber.Controllers
         [HttpPost]
         public override async Task<IActionResult> PostAsync([FromBody] User entity)
         {
-            throw new JsonApiException(405, $"Not implemented for User resource.");
+            throw new JsonApiException(405, $"Not implemented for Current User resource.");
         }
 
-        [HttpGet("current-user")]
-        public async Task<IActionResult> GetCurrentUser()
+        [HttpGet]
+        public override async Task<IActionResult> GetAsync()
         {
             var currentUser = CurrentUser;
 
-            return await base.GetAsync(currentUser.Id);
+            return Ok(currentUser);
         }
 
     }
