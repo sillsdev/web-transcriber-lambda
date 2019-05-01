@@ -92,10 +92,6 @@ namespace SIL.Transcriber.Repositories
 
         public async Task<User> GetByAuth0Id(string auth0Id)
         {
-            if (string.IsNullOrEmpty(auth0Id))
-            {
-                return await (base.Get().FirstOrDefaultAsync());
-            }
             return await base.Get()
                        .Where(e => e.ExternalId == auth0Id)
                        .Include(user => user.OrganizationMemberships)
