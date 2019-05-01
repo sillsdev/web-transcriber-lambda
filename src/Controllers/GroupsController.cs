@@ -11,7 +11,7 @@ namespace SIL.Transcriber.Controllers
         public IOrganizationContext OrganizationContext { get; set; }
         public GroupsController(
             IJsonApiContext jsonApiContext,
-                IResourceService<Group> resourceService,
+            IResourceService<Group> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)

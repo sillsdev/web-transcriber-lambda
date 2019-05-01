@@ -33,7 +33,7 @@ namespace SIL.Transcriber.Repositories
         // this should be ok.
         public async Task<User> GetCurrentUser()
         {
-            var auth0Id = this.CurrentUserContext.Auth0Id;
+            var auth0Id = this.CurrentUserContext.Auth0Id; // RUNNING W/O AUTH! ?? "107708962143422938734";
 
             var userFromResult = this.DBContext
                 .Users.Local
@@ -52,7 +52,7 @@ namespace SIL.Transcriber.Repositories
             try {
                 //SJH WHAT TO DO HERE????
                 //await DWKitRuntime.Security.SignInAsync(currentUser?.Email, remember: false);
-            } catch (System.Exception e) {
+            } catch { //(System.Exception e) {
                 // do nothing for now, we want normal JWT sign in to work always
                 // if there is an exeption, it means the users
                 // have not yet been sync'd

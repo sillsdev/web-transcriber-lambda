@@ -3,4 +3,5 @@
 .vs/
 
 #ignore the test folder for now at least 
+test/
 test/serverless.env.yml

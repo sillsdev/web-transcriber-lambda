@@ -14,11 +14,8 @@ namespace SIL.Transcriber.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         { }
 
-        //make all query items lowercase to send to postgres...
-        protected override void OnModelCreating(ModelBuilder builder)
+        private void LowerCaseDB(ModelBuilder builder)
         {
-            base.OnModelCreating(builder);
-
             foreach (var entity in builder.Model.GetEntityTypes())
             {
                 // Replace table names
@@ -45,6 +42,69 @@ namespace SIL.Transcriber.Data
                     index.Relational().Name = index.Relational().Name.ToLower();
                 }
             }
+        }
+        private void DefineManyToMany(ModelBuilder modelBuilder)
+        {
+
+            var userEntity = modelBuilder.Entity<User>();
+            var roleEntity = modelBuilder.Entity<Role>();
+            var userRoleEntity = modelBuilder.Entity<UserRole>();
+            var orgEntity = modelBuilder.Entity<Organization>();
+            var orgMemberEntity = modelBuilder.Entity<OrganizationMembership>();
+            var projectEntity = modelBuilder.Entity<Project>();
+            var groupMemberEntity = modelBuilder.Entity<GroupMembership>();
+
+            userEntity
+                .HasMany(u => u.OrganizationMemberships)
+                .WithOne(om => om.User)
+                .HasForeignKey(om => om.UserId);
+
+            userEntity
+                .HasMany(u => u.GroupMemberships)
+                .WithOne(gm => gm.User)
+                .HasForeignKey(gm => gm.UserId);
+
+            userEntity
+                .HasMany(u => u.UserRoles)
+                .WithOne(r => r.User)
+                .HasForeignKey(r => r.UserId);
+
+            roleEntity
+                .HasMany(r => r.UserRoles)
+                .WithOne(ur => ur.Role)
+                .HasForeignKey(ur => ur.RoleId);
+
+            orgEntity
+                .HasMany(o => o.OrganizationMemberships)
+                .WithOne(om => om.Organization)
+                .HasForeignKey(om => om.OrganizationId);
+
+            orgEntity
+                .HasMany(o => o.UserRoles)
+                .WithOne(r => r.Organization)
+                .HasForeignKey(r => r.OrganizationId);
+
+            orgEntity
+                .HasMany(o => o.Groups)
+                .WithOne(g => g.Owner)
+                .HasForeignKey(g => g.OwnerId);
+
+            orgEntity
+                .Property(o => o.PublicByDefault)
+                .HasDefaultValue(true);
+
+            projectEntity
+                .Property(p => p.IsPublic)
+                .HasDefaultValue(true);
+        }
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+            builder.HasPostgresExtension("uuid-ossp");
+            //make all query items lowercase to send to postgres...
+            LowerCaseDB(builder);
+            DefineManyToMany(builder);
         }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
         private void AddTimestamps()
@@ -80,6 +140,8 @@ namespace SIL.Transcriber.Data
         public  DbSet<Integration> Integrations { get; set; }
         public  DbSet<Organization> Organizations { get; set; }
         public  DbSet<OrganizationMembership> Organizationmemberships { get; set; }
+        public  DbSet<Group> Groups { get; set; }
+        public  DbSet<GroupMembership> Groupmemberships { get; set; }
         public  DbSet<Project> Projects { get; set; }
         public  DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public  DbSet<ProjectType> Projecttypes { get; set; }
@@ -91,8 +153,9 @@ namespace SIL.Transcriber.Data
         public  DbSet<SIL.Transcriber.Models.Task> Tasks { get; set; }
         public  DbSet<TaskSet> Tasksets { get; set; }
         public  DbSet<TaskState> Taskstates { get; set; }
-        public DbSet<UserRole> Userroles { get; set; }
+        public  DbSet<UserRole> Userroles { get; set; }
         public  DbSet<User> Users { get; set; }
         public  DbSet<UserTask> Usertasks { get; set; }
+
     }
 }

@@ -36,7 +36,7 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Attribute.Equals("name", StringComparison.OrdinalIgnoreCase)) {
                 return entities.Where(u => EFUtils.Like(u.Name, filterQuery.Value));
             }
-            return entities.OptionallyFilterOnQueryParam(filterQuery,
+            return  entities.OptionallyFilterOnQueryParam(filterQuery,
                                           "organization-id",
                                           this,
                                           CurrentUserContext,
