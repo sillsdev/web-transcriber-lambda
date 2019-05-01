@@ -83,7 +83,7 @@ namespace SIL.Transcriber
 
         public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddAuthentication(options =>
+           /*( services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -92,7 +92,7 @@ namespace SIL.Transcriber
                 options.Authority = GetVarOrThrow("AUTH0_DOMAIN");
                 options.Audience = GetVarOrThrow("AUTH0_AUDIENCE");
             });
-            /*
+            */
             services.AddAuthentication()
             .AddJwtBearer(options =>
             {
@@ -101,30 +101,30 @@ namespace SIL.Transcriber
                 options.RequireHttpsMetadata = false;
                 options.SaveToken = true;
                 options.Events = new JwtBearerEvents
-                {
+                {/*
                     OnMessageReceived = context =>
                     {
                         var accessToken = context.Request.Query["access_token"];
 
                         // If the request is for our hub...
                         var path = context.HttpContext.Request.Path;
-                        if (!string.IsNullOrEmpty(accessToken) &&
-                            (path.StartsWithSegments("/hubs")))
+                        if (!string.IsNullOrEmpty(accessToken) ) && (path.StartsWithSegments("/hubs")))
                         {
                             // Read the token out of the query string
                             context.Token = accessToken;
                         }
                         return System.Threading.Tasks.Task.CompletedTask;
-                    },
+                    }, */
                     OnTokenValidated = context =>
                     {
                         // Add the access_token as a claim, as we may actually need it
                         var accessToken = context.SecurityToken as JwtSecurityToken;
                         ClaimsIdentity identity = context.Principal.Identity as ClaimsIdentity;
-                        if (!identity.HasClaim("email_verified", "true"))
-                        {
-                            context.Fail("Email address is not validated");
-                        }
+                        //SJH 05/01/2019 ours is always false?...
+                        //if (!identity.HasClaim("email_verified", "true"))
+                        //{
+                        //    context.Fail("Email address is not validated");
+                        //}
                         if (accessToken != null)
                         {
                             if (identity != null)
@@ -154,7 +154,7 @@ namespace SIL.Transcriber
                 );
             });
 
-            */
+            
             return services;
         }
 

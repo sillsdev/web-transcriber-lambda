@@ -1,18 +1,22 @@
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Services;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-
 namespace SIL.Transcriber.Controllers
 {
-    public class BooktypesController : BaseController<BookType>
+    public class GroupMembershipsController : BaseController<GroupMembership>
     {
-         public BooktypesController(
+        public IOrganizationContext OrganizationContext { get; set; }
+        public GroupMembershipsController(
             IJsonApiContext jsonApiContext,
-                IResourceService<BookType> resourceService,
+            IResourceService<GroupMembership> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
           : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
-    }
+     }
+
 }

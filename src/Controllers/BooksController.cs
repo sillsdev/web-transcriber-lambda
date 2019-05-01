@@ -11,7 +11,7 @@ namespace SIL.Transcriber.Controllers
     {
         public BooksController(
            IJsonApiContext jsonApiContext,
-               IResourceService<Book> resourceService,
+            IResourceService<Book> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
