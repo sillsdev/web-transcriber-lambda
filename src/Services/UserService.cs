@@ -51,6 +51,7 @@ namespace SIL.Transcriber.Services
         {
             
             var currentUser = await CurrentUserRepository.GetCurrentUser();
+            if (id == 0) id = currentUser.Id;
             if (currentUser.Id == id)
             {
                 return await base.GetAsync(id);

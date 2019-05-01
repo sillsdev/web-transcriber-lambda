@@ -58,29 +58,35 @@ namespace SIL.Transcriber.Models
         [Attr("hot-keys")]
         public string hotkeys; //json
 
-        [HasMany("ownedOrganizations")]
-        public virtual List<Organization> OwnedOrganizations { get; set; }
+        //[HasMany("owned-organizations")]
+        //public virtual List<Organization> OwnedOrganizations { get; set; }
 
         [HasManyThrough(nameof(ProjectUsers))]
         public List<Project> Projects { get; set; }
         public virtual List<ProjectUser> ProjectUsers { get; set; }
 
-        //[NotMapped]
         //[HasManyThrough(nameof(OrganizationMemberships))]
+        //[HasMany("Organizations")]
         //public List<Organization> Organizations { get; set; }
         [HasMany("organization-memberships", Link.None)]
         public virtual List<OrganizationMembership> OrganizationMemberships { get; set; }
 
+        [HasMany("group-memberships", Link.None)]
+        public virtual List<GroupMembership> GroupMemberships { get; set; }
+
 
         [NotMapped]
-        [HasManyThrough(nameof(UserRoles))]
-        public List<Role> Roles { get; set; }
+        //[HasManyThrough(nameof(UserRoles))]
+        //public List<Role> Roles { get; set; }
+        [HasMany("user-roles", Link.None)]
         public virtual List<UserRole> UserRoles { get; set; }
 
         [NotMapped]
         public IEnumerable<int> OrganizationIds => OrganizationMemberships?.Select(o => o.OrganizationId);
-       
-        /*
+
+        [NotMapped]
+        public IEnumerable<Organization> Organizations => OrganizationMemberships?.Select(o => o.Organization);
+
         public bool HasRole(RoleName role)
         {
             var userRole = this
@@ -90,7 +96,7 @@ namespace SIL.Transcriber.Models
 
             return userRole != null;
         }
-        
+        /*
         public string LocaleOrDefault()
         {
             var locale = "en-US";

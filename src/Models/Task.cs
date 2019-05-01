@@ -17,7 +17,7 @@ namespace SIL.Transcriber.Models
         [Attr("taskstate")]
         public string TaskState { get; set; }
         [Attr("hold")]
-        public BitArray Hold { get; set; }
+        public Boolean Hold { get; set; }
         [Attr("title")]
         public string Title { get; set; }
         [Attr("date-created")]

@@ -39,5 +39,6 @@ namespace SIL.Transcriber.Repositories
 
             return base.Filter(entities, filterQuery);
         }
+
     }
 }
