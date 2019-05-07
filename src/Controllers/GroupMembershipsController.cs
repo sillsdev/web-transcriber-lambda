@@ -6,10 +6,10 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers
 {
-    public class GroupMembershipsController : BaseController<GroupMembership>
+    public class GroupmembershipsController : BaseController<GroupMembership>
     {
         public IOrganizationContext OrganizationContext { get; set; }
-        public GroupMembershipsController(
+        public GroupmembershipsController(
             IJsonApiContext jsonApiContext,
             IResourceService<GroupMembership> resourceService,
             ICurrentUserContext currentUserContext,
