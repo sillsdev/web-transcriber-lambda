@@ -5,11 +5,11 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class TaskmediaController : BaseController<TaskMedia>
+    public class PassagesController : BaseController<Passage>
     {
-         public TaskmediaController(
+         public PassagesController(
             IJsonApiContext jsonApiContext,
-                IResourceService<TaskMedia> resourceService,
+                IResourceService<Passage> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
@@ -17,3 +17,4 @@ namespace SIL.Transcriber.Controllers
         { }
     }
 }
+

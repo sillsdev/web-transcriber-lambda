@@ -6,7 +6,7 @@ namespace SIL.Transcriber.Models
     public partial class OrganizationMembership :BaseModel
     {
         [NotMapped]
-        [Attr("email")]
+        [Attr("email")]  //user's email?
         public string Email { get; set; }
 
         [HasOne("user")]

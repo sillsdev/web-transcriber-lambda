@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{fileName}")]
         public async Task<IActionResult> GetFile([FromRoute] string fileName)
         {
-            //somehow I'll know what project this is for...perhaps just the taskid will be passed in?
+            //somehow I'll know what project this is for...perhaps just the PassageId will be passed in?
 
             S3Response response = await _service.ReadObjectDataAsync(fileName, myProject);
 
