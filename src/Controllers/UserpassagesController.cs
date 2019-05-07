@@ -5,11 +5,11 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class TaskstatesController : BaseController<TaskState>
+    public class UserpassagesController : BaseController<UserPassage>
     {
-         public TaskstatesController(
+         public UserpassagesController(
             IJsonApiContext jsonApiContext,
-                IResourceService<TaskState> resourceService,
+                IResourceService<UserPassage> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)

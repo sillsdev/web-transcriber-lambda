@@ -7,11 +7,11 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class BooksController : BaseController<Book>
+    public class PlansController : BaseController<Plan>
     {
-        public BooksController(
+        public PlansController(
            IJsonApiContext jsonApiContext,
-            IResourceService<Book> resourceService,
+            IResourceService<Plan> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)

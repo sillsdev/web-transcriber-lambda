@@ -12,32 +12,32 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class UserTaskService : EntityResourceService<UserTask>
+    public class UserPassageService : EntityResourceService<UserPassage>
     {
         public IOrganizationContext OrganizationContext { get; }
-        public IEntityRepository<UserTask> UserTaskRepository { get; }
+        public IEntityRepository<UserPassage> UserPassageRepository { get; }
         public CurrentUserRepository CurrentUserRepository { get; }
         public IJsonApiContext JsonApiContext { get; }
 
-        public UserTaskService(
+        public UserPassageService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<UserTask> userTaskRepository,
+            IEntityRepository<UserPassage> userPassageRepository,
             CurrentUserRepository currentUserRepository,
             IOrganizationContext organizationContext,
             ILoggerFactory loggerFactory) 
-            : base(jsonApiContext, userTaskRepository, loggerFactory)
+            : base(jsonApiContext, userPassageRepository, loggerFactory)
         {
             this.OrganizationContext = organizationContext;
-            this.UserTaskRepository = userTaskRepository;
+            this.UserPassageRepository = userPassageRepository;
             this.CurrentUserRepository = currentUserRepository;
             this.JsonApiContext = jsonApiContext;
         }
 
-        public override async Task<IEnumerable<UserTask>> GetAsync()
+        public override async Task<IEnumerable<UserPassage>> GetAsync()
         {
             if (this.OrganizationContext.IsOrganizationHeaderPresent) 
             {
-                return await GetScopedToOrganization<UserTask>(
+                return await GetScopedToOrganization<UserPassage>(
                     base.GetAsync,
                     this.OrganizationContext,
                     JsonApiContext);

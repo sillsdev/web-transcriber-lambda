@@ -34,7 +34,7 @@ namespace SIL.Transcriber
 
             // Add service / repository overrides
             services.AddScoped<IEntityRepository<User>, UserRepository>();
-            //services.AddScoped<IEntityRepository<UserTask>, UserTaskRepository>();
+            //services.AddScoped<IEntityRepository<UserPassage>, UserTaskRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
@@ -44,7 +44,7 @@ namespace SIL.Transcriber
 
             // services
             services.AddScoped<IResourceService<User>, UserService>();
-            services.AddScoped<IResourceService<UserTask>, UserTaskService>();
+            services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
             services.AddScoped<IResourceService<Group>, GroupService>();
             services.AddScoped<IResourceService<Project>, ProjectService>();

@@ -11,6 +11,10 @@ using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Extensions;
 using Newtonsoft.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using SIL.Transcriber.Services;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using Amazon.S3;
+using Amazon.Runtime;
 
 namespace SIL.Transcriber
 {
@@ -42,6 +46,8 @@ namespace SIL.Transcriber
             services.AddApiServices();
             services.AddAuthenticationServices(Configuration);
             services.AddContextServices();
+            services.AddSingleton<IS3Service, S3Service>();
+            services.AddAWSService<IAmazonS3>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -67,13 +73,12 @@ namespace SIL.Transcriber
 
         private string GetAllowedOrigins()
         {
-            return System.Environment.GetEnvironmentVariable("OriginSites") ?? "*";
+            return GetVarOrDefault("OriginSites","*");
         }
 
         private string GetConnectionString()
         {
-            return System.Environment.GetEnvironmentVariable("ConnectionString") ??
-                      Configuration["ConnectionString"];
+            return GetVarOrDefault("ConnectionString", Configuration["ConnectionString"]);
         }
     }
 }

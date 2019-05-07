@@ -1,15 +1,14 @@
-using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class TasksetsController : BaseController<TaskSet>
+    public class PlantypesController : BaseController<PlanType>
     {
-         public TasksetsController(
+         public PlantypesController(
             IJsonApiContext jsonApiContext,
-                IResourceService<TaskSet> resourceService,
+                IResourceService<PlanType> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)

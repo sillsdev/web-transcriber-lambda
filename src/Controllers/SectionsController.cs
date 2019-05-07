@@ -1,14 +1,15 @@
+using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class BooktypesController : BaseController<BookType>
+    public class SectionsController : BaseController<Section>
     {
-         public BooktypesController(
+         public SectionsController(
             IJsonApiContext jsonApiContext,
-                IResourceService<BookType> resourceService,
+                IResourceService<Section> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)

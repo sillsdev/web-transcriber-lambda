@@ -135,27 +135,26 @@ namespace SIL.Transcriber.Data
             return await base.SaveChangesAsync(cancellationToken);
         }
 
-        public  DbSet<Book> Books { get; set; }
-        public  DbSet<BookType> Booktypes { get; set; }
-        public  DbSet<Integration> Integrations { get; set; }
-        public  DbSet<Organization> Organizations { get; set; }
-        public  DbSet<OrganizationMembership> Organizationmemberships { get; set; }
-        public  DbSet<Group> Groups { get; set; }
-        public  DbSet<GroupMembership> Groupmemberships { get; set; }
-        public  DbSet<Project> Projects { get; set; }
-        public  DbSet<ProjectIntegration> Projectintegrations { get; set; }
+        public DbSet<ActivityState> ActivityStates { get; set; }
+        public DbSet<Group> Groups { get; set; }
+        public DbSet<GroupMembership> Groupmemberships { get; set; }
+        public DbSet<Integration> Integrations { get; set; }
+        public DbSet<Mediafiles> Mediafiles { get; set; }
+        public DbSet<Organization> Organizations { get; set; }
+        public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
+        public DbSet<Passage> Passages { get; set; }
+        public DbSet<PassageSection> PassageSections { get; set; }
+        public DbSet<Plan> Plans { get; set; }
+        public DbSet<PlanType> Plantypes { get; set; }
+        public DbSet<ProjectIntegration> Projectintegrations { get; set; }
+        public DbSet<Project> Projects { get; set; }
         public  DbSet<ProjectType> Projecttypes { get; set; }
         public  DbSet<ProjectUser> Projectusers { get; set; }
         public  DbSet<Reviewer> Reviewers { get; set; }
         public  DbSet<Role> Roles { get; set; }
-        public  DbSet<Set> Sets { get; set; }
-        public  DbSet<TaskMedia> Taskmedia { get; set; }
-        public  DbSet<SIL.Transcriber.Models.Task> Tasks { get; set; }
-        public  DbSet<TaskSet> Tasksets { get; set; }
-        public  DbSet<TaskState> Taskstates { get; set; }
-        public  DbSet<UserRole> Userroles { get; set; }
+        public  DbSet<Section> Sections { get; set; }
+        public DbSet<UserRole> Userroles { get; set; }
         public  DbSet<User> Users { get; set; }
-        public  DbSet<UserTask> Usertasks { get; set; }
 
     }
 }

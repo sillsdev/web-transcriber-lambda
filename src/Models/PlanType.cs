@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class BookType : BaseModel
+    public partial class PlanType : BaseModel
     {
         [Attr("name")]
         public string Name { get; set; }
@@ -11,8 +11,8 @@ namespace SIL.Transcriber.Models
         [Attr("description")]
         public string Description { get; set; }
 
-        [HasMany("books")]
-        public virtual List<Book> Books { get; set; }
+        [HasMany("Plans")]
+        public virtual List<Plan> Plans { get; set; }
 
     }
 }
