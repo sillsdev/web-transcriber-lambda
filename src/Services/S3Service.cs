@@ -109,7 +109,7 @@ namespace SIL.Transcriber.Services
                     PartSize = 6291456,//6M
                     CannedACL = S3CannedACL.NoACL
                 };
-                request.Metadata.Add("Book", "Genesis");
+                request.Metadata.Add("Plan", "Genesis");
 
                 await fileTransferUtility.UploadAsync(stream, USERFILES_BUCKET, "myname");
                 */

@@ -81,8 +81,8 @@ namespace SIL.Transcriber.Models
         public List<User> Users { get; set; }
         public virtual List<ProjectUser> ProjectUsers { get; set; }
 
-        [HasMany("sets")]
-        public virtual List<Set> Sets { get; set; }
+        [HasMany("plans")]
+        public virtual List<Plan> Plans { get; set; }
         //[HasManyThrough("tasks")]
         //public virtual List<Task> Tasks { get; set; }
 

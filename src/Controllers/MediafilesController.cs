@@ -5,11 +5,11 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class SetsController : BaseController<Set>
+    public class MediafilesController : BaseController<Mediafiles>
     {
-         public SetsController(
+         public MediafilesController(
             IJsonApiContext jsonApiContext,
-                IResourceService<Set> resourceService,
+                IResourceService<Mediafiles> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)

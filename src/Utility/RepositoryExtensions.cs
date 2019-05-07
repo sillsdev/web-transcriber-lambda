@@ -41,6 +41,9 @@ namespace SIL.Transcriber.Utility
            Func<IQueryable<T>, IEnumerable<int>, IQueryable<T>> getFilteredQuery)
         {
             var currentUser = userRepository.GetByAuth0Id(currentUserContext.Auth0Id).Result;
+            if (currentUser == null) 
+                    return Enumerable.Empty<T>().AsQueryable(); ;
+
             var orgIds = currentUser.OrganizationIds.OrEmpty();
 
             if (string.IsNullOrEmpty(value))

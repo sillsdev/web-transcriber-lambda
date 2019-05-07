@@ -4,26 +4,22 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public class UserTask : BaseModel, ITrackDate
+    public class UserPassage : BaseModel, ITrackDate
     {
         [HasOne("user", Link.None)]
         public virtual User User { get; set; }
 
         public int UserId { get; set; }
 
-        [HasOne("task", Link.None)]
-        public virtual Task Task { get; set; }
+        [HasOne("passage", Link.None)]
+        public virtual Passage Passage { get; set; }
         
-        public int TaskId { get; set; }
-
-        [HasOne("project", Link.None)]
-        public virtual Project Project { get; set; }
-        public int ProjectId { get; set; }
+        public int PassageId { get; set; }
 
         [Attr("activity-name")]
         public string ActivityName { get; set; }
         [Attr("state")]
-        public string TaskState { get; set; }
+        public string State { get; set; }
         [Attr("comment")]
         public string Comment { get; set; }
 

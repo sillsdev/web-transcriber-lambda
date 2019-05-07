@@ -4,12 +4,12 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class TaskMedia : BaseModel, ITrackDate
+    public partial class Mediafiles : BaseModel, ITrackDate
     {
-        [Attr("task-id")]
-        public int TaskId { get; set; }
-        [HasOne("task")]
-        public virtual Task Task { get; set; }
+        [Attr("passage-id")]
+        public int PassageId { get; set; }
+        [HasOne("passage")]
+        public virtual Passage Passage { get; set; }
 
         [Attr("version-number")]
         public int? VersionNumber { get; set; }
