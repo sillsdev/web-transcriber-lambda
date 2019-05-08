@@ -10,11 +10,10 @@ namespace SIL.Transcriber.Models
         [Attr("name")]
         public string Name { get; set; }
 
-        [HasOne("type")]
-        public ProjectType Projecttype { get; set; }
-
-        [Attr("project-type-id")]
-        public int ProjectTypeId { get; set; }
+        [HasOne("projecttype")]
+        public virtual ProjectType Projecttype { get; set; }
+        [Attr("projecttype-id")]
+        public int ProjecttypeId { get; set; }
 
         [Attr("description")]
         public string Description { get; set; }

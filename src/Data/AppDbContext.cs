@@ -154,6 +154,7 @@ namespace SIL.Transcriber.Data
         public  DbSet<Role> Roles { get; set; }
         public  DbSet<Section> Sections { get; set; }
         public DbSet<UserRole> Userroles { get; set; }
+        public DbSet<UserPassage> Userpassages { get; set; }
         public  DbSet<User> Users { get; set; }
 
     }

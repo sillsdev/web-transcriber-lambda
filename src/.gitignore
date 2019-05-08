@@ -20,6 +20,8 @@
 .env.test.local
 .env.production.local
 
+appsettings.Development.json
+
 .serverless/*
 
 npm-debug.log*
