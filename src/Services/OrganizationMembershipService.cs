@@ -87,7 +87,7 @@ namespace SIL.Transcriber.Services
 
             var role = this.RoleRepository
                 .Get()
-                .Where(r => r.RoleName == RoleName.Transcriber)
+                .Where(r => r.Rolename == RoleName.Transcriber)
                 .FirstOrDefault();
 
             if (role == null) return;

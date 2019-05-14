@@ -2,6 +2,8 @@
 
 .vs/
 
-#ignore the test folder for now at least 
-test/
+#ignore the test 
+test/TranscriberAPITest/bin
+test/TranscriberAPITest/obj
+
 test/serverless.env.yml

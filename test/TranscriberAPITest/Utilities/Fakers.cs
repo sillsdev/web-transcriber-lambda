@@ -1,0 +1,71 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Bogus;
+using SIL.Transcriber.Models;
+
+namespace TranscriberAPI.Tests.Utilities
+{
+    public class Fakers
+    {
+        public Fakers(long runNo)
+        {
+            _runNo = runNo.ToString();
+        }
+        private static string _runNo;
+        private static readonly Faker<Group> _groupFaker = new Faker<Group>()
+           .RuleFor(a => a.Name, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+           .RuleFor(a => a.OwnerId, f => 1); //org
+
+        private static readonly Faker<Integration> _integrationFaker = new Faker<Integration>()
+            .RuleFor(a => a.Name, f => "TEST" + _runNo + f.Random.AlphaNumeric(10));
+
+        private static readonly Faker<Organization> _orgFaker = new Faker<Organization>()
+            .RuleFor(a => a.Name, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+            .RuleFor(a => a.OwnerId, f => 1);
+
+        private static readonly Faker<Passage> _passageFaker = new Faker<Passage>()
+           .RuleFor(a => a.Title, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+           .RuleFor(a => a.Book, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+           .RuleFor(a => a.Reference, f => f.Random.AlphaNumeric(10))
+           .RuleFor(a => a.State, f => "Unassigned")
+           .RuleFor(a => a.Sequencenum, f => 1)
+           .RuleFor(a => a.PassageSections, f => new List<PassageSection>())
+           .RuleFor(a => a.Mediafiles, f => new List<Mediafile>())
+           .RuleFor(a => a.Sections, f => new List<Section>());
+
+        private static readonly Faker<Plan> _planFaker = new Faker<Plan>()
+            .RuleFor(a => a.Name, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+            .RuleFor(a => a.PlantypeId, f => 1)
+            .RuleFor(a => a.Sections, f => new List<Section>());
+
+        private static readonly Faker<Project> _projectFaker = new Faker<Project>()
+           .RuleFor(a => a.Name, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+           .RuleFor(a => a.ProjecttypeId, f => 1)
+           .RuleFor(a => a.OwnerId, f => 1)
+           .RuleFor(a => a.GroupId, f => 1)
+           .RuleFor(a => a.OrganizationId, f => 1)
+           .RuleFor(a => a.Plans, f => new List<Plan>());
+
+        private static readonly Faker<Section> _sectionFaker = new Faker<Section>()
+           .RuleFor(a => a.Name, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+           .RuleFor(a => a.State, f => "Unassigned")
+           .RuleFor(a => a.PlanId, f => 1)
+           .RuleFor(a => a.Passages, f => new List<Passage>())
+           .RuleFor(a => a.PassageSections, f => new List<PassageSection>())
+           .RuleFor(a => a.Sequencenum, f => 1);
+
+        private static readonly Faker<User> _userFaker = new Faker<User>()
+            .RuleFor(a => a.Name, f => "TEST" + _runNo + f.Random.AlphaNumeric(10))
+            .RuleFor(a => a.ExternalId, f => "TEST" + _runNo + "auth " + f.Random.AlphaNumeric(20));
+
+        public Group Group => _groupFaker.Generate();
+        public Integration Integration => _integrationFaker.Generate();
+        public Organization Organization => _orgFaker.Generate();
+        public Passage Passage => _passageFaker.Generate(); 
+        public Plan Plan => _planFaker.Generate();
+        public Project Project => _projectFaker.Generate();
+        public Section Section => _sectionFaker.Generate();
+        public User User => _userFaker.Generate();
+   }
+}

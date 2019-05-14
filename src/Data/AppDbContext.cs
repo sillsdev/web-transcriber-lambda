@@ -139,7 +139,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
-        public DbSet<Mediafiles> Mediafiles { get; set; }
+        public DbSet<Mediafile> Mediafiles { get; set; }
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<Passage> Passages { get; set; }

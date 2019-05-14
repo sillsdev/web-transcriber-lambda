@@ -47,6 +47,8 @@ namespace SIL.Transcriber.Forms.Projects
                        .Include(g => g.Owner).FirstOrDefaultAsync().Result;
                 ProjectOwner = UserRepository.Get()
                         .Where(u => u.Id == project.OwnerId)
+                        .Include(u => u.UserRoles)
+                            .ThenInclude(ur => ur.Role)
                         .Include(u => u.OrganizationMemberships)
                             .ThenInclude(om => om.Organization)
                         .FirstOrDefaultAsync().Result;

@@ -39,7 +39,7 @@ namespace SIL.Transcriber.Services
             var userRole = UserRolesRepository.Get()
                 .Include(ur => ur.User)
                 .Include(ur => ur.Role)
-                .Where(ur => ur.UserId == CurrentUser.Id && ur.Role.RoleName == RoleName.SuperAdmin)
+                .Where(ur => ur.UserId == CurrentUser.Id && ur.Role.Rolename == RoleName.SuperAdmin)
                 .FirstOrDefault();
             return userRole != null;
         }

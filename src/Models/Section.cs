@@ -13,10 +13,10 @@ namespace SIL.Transcriber.Models
         [Attr("state")]
         public string State { get; set; }
 
-        [Attr("Plan-id")]
+        [Attr("plan-id")]
         public int? PlanId { get; set; }
 
-        [HasOne("Plan")]
+        [HasOne("plan")]
         public virtual Plan Plan { get; set; }
 
         [NotMapped]

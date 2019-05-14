@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Mediafiles : BaseModel, ITrackDate
+    public partial class Mediafile : BaseModel, ITrackDate
     {
         [Attr("passage-id")]
         public int PassageId { get; set; }

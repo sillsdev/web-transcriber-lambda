@@ -28,7 +28,7 @@ namespace SIL.Transcriber.Models
         public DateTime? DateUpdated { get; set; }
 
        [HasMany("mediafiles")]
-       public virtual List<Mediafiles> Mediafiles { get; set; }
+       public virtual List<Mediafile> Mediafiles { get; set; }
 
         [NotMapped]
         [HasManyThrough(nameof(PassageSections))]
