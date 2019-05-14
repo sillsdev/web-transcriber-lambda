@@ -30,7 +30,7 @@ namespace TranscriberAPI.Tests.Utilities
            .RuleFor(a => a.Reference, f => f.Random.AlphaNumeric(10))
            .RuleFor(a => a.State, f => "Unassigned")
            .RuleFor(a => a.Sequencenum, f => 1)
-           .RuleFor(a => a.PassageSections, f => new List<PassageSection>())
+           .RuleFor(a => a.PassageSections, f => new List<Passagesection>())
            .RuleFor(a => a.Mediafiles, f => new List<Mediafile>())
            .RuleFor(a => a.Sections, f => new List<Section>());
 
@@ -52,7 +52,7 @@ namespace TranscriberAPI.Tests.Utilities
            .RuleFor(a => a.State, f => "Unassigned")
            .RuleFor(a => a.PlanId, f => 1)
            .RuleFor(a => a.Passages, f => new List<Passage>())
-           .RuleFor(a => a.PassageSections, f => new List<PassageSection>())
+           .RuleFor(a => a.PassageSections, f => new List<Passagesection>())
            .RuleFor(a => a.Sequencenum, f => 1);
 
         private static readonly Faker<User> _userFaker = new Faker<User>()

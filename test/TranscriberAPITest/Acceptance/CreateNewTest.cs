@@ -18,15 +18,25 @@ namespace TranscriberAPI.Tests.Acceptance
         public CreateNewTest(TestFixture<TestStartup> fixture) : base(fixture)
         {
         }
-        private async Task SaveIt(string route, IIdentifiable obj)
+        private async Task SaveIt(string routePrefix, string route, IIdentifiable obj)
         {
-            var response = await PostAsJson(route, obj);
-            Assert.True(HttpStatusCode.Created == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+            var response = await PostAsJson(routePrefix + route, obj);
+            Assert.True(HttpStatusCode.Created == response.StatusCode, $"{routePrefix + route} returned {response.StatusCode} status code");
             var newroute = response.Headers.Location.OriginalString;
             obj.StringId = newroute.Substring(newroute.LastIndexOf("/")+1);
         }
         [Fact]
-        public async Task CreateHierarchy()
+        public async Task CreateHierarchyLocal()
+        {
+            await CreateHierarchy();
+        }
+        [Fact]
+        public async Task CreateHierarchyLambdaDev()
+        {
+            await CreateHierarchy("https://9u6wlhwuha.execute-api.us-east-2.amazonaws.com/dev");
+        }
+
+        private async Task CreateHierarchy(string routePrefix = "")
         {
             var context = _fixture.GetService<AppDbContext>();
             var project = _faker.Project;
@@ -41,39 +51,60 @@ namespace TranscriberAPI.Tests.Acceptance
             passage4.Sequencenum = 3;
             section2.Sequencenum = 2;
 
-            await SaveIt($"/api/projects", project);
+            await SaveIt(routePrefix, $"/api/projects", project);
             Assert.NotEqual(0, project.Id);
 
             plan.ProjectId = project.Id;
-            await SaveIt($"/api/plans", plan);
+            await SaveIt(routePrefix, $"/api/plans", plan);
             Assert.NotEqual(0, plan.Id);
 
             section1.PlanId = plan.Id;
             section2.PlanId = plan.Id;
-            await SaveIt($"/api/sections", section1);
+            await SaveIt(routePrefix, $"/api/sections", section1);
             Assert.NotEqual(0, section1.Id);
-            await SaveIt($"/api/sections", section2);
+            await SaveIt(routePrefix, $"/api/sections", section2);
             Assert.NotEqual(0, section2.Id);
 
             var route = $"/api/passages";
             //assert
-            await SaveIt(route, passage1);
+            await SaveIt(routePrefix, route, passage1);
             Assert.NotEqual(0, passage1.Id);
-            await SaveIt(route, passage2);
+            await SaveIt(routePrefix, route, passage2);
             Assert.NotEqual(0, passage2.Id);
-            await SaveIt(route, passage3);
+            await SaveIt(routePrefix, route, passage3);
             Assert.NotEqual(0, passage3.Id);
-            await SaveIt(route, passage4);
+            await SaveIt(routePrefix, route, passage4);
             Assert.NotEqual(0, passage4.Id);
 
-            var ps = new PassageSection
+            var ps1 = new Passagesection
             {
                 PassageId = passage1.Id,
                 SectionId = section1.Id
             };
-            await SaveIt($"/api/passagesections", ps);
-            Assert.NotEqual(0, ps.Id);
-            
+            await SaveIt(routePrefix, $"/api/passagesections", ps1);
+            Assert.NotEqual(0, ps1.Id);
+            var ps2 = new Passagesection
+            {
+                PassageId = 0,
+                SectionId = 0
+            };
+            await SaveIt(routePrefix, $"/api/passagesections", ps2);
+            Assert.NotEqual(0, ps2.Id);
+            var ps3 = new Passagesection
+            {
+                PassageId = passage3.Id,
+                SectionId = section2.Id
+            };
+            await SaveIt(routePrefix, $"/api/passagesections", ps3);
+            Assert.NotEqual(0, ps3.Id);
+            var ps4 = new Passagesection
+            {
+                PassageId = passage4.Id,
+                SectionId = section2.Id
+            };
+            await SaveIt(routePrefix, $"/api/passagesections", ps4);
+            Assert.NotEqual(0, ps4.Id);
+
         }
     }
 }

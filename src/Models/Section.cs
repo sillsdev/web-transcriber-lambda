@@ -22,7 +22,7 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         [HasManyThrough(nameof(PassageSections))]
         public List<Passage> Passages { get; set; }
-        public List<PassageSection> PassageSections { get; set; }
+        public List<Passagesection> PassageSections { get; set; }
 
     }
 }

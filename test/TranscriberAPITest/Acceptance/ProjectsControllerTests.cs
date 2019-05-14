@@ -117,7 +117,7 @@ namespace TranscriberAPI.Tests
             passage.Sections.Add(section);
             section.Passages.Add(passage);
 
-            var passagesection = new PassageSection
+            var passagesection = new Passagesection
             {
                 Passage = passage,
                 Section = section
@@ -253,7 +253,7 @@ namespace TranscriberAPI.Tests
 
             //passage.Sections.Add(section);
             //section.Passages.Add(passage);
-            var passagesection = new PassageSection
+            var passagesection = new Passagesection
             {
                 Passage = passage,
                 Section = section
@@ -284,7 +284,7 @@ namespace TranscriberAPI.Tests
             var document = JsonConvert.DeserializeObject<Document>(body);
             Assert.NotNull(document.Data);
 
-            var tagResponse = _fixture.DeSerializer.Deserialize<PassageSection>(body);
+            var tagResponse = _fixture.DeSerializer.Deserialize<Passagesection>(body);
             Assert.NotNull(tagResponse);
             Assert.Equal(passage.Reference, tagResponse.Passage.Reference);
             Assert.Equal(section.Name, tagResponse.Section.Name);
