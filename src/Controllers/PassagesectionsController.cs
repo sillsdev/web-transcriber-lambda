@@ -17,20 +17,5 @@ namespace SIL.Transcriber.Controllers
           : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
 
-        [HttpPost]
-        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] PassageSection entity)
-        {
-            if (entity.Section.Id == 0)
-            {
-                //save the section
-                ;
-            }
-            if (entity.Passage.Id == 0)
-            {
-                //save the passage
-            }
-
-            return await base.PostAsync(entity);
-        }
     }
 }
