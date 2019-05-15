@@ -143,7 +143,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<Passage> Passages { get; set; }
-        public DbSet<Passagesection> PassageSections { get; set; }
+        public DbSet<Passagesection> Passagesections { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }

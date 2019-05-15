@@ -14,20 +14,13 @@ using Xunit;
 using JsonApiDotNetCore.Models;
 using TranscriberAPI.Tests.Utilities;
 
-namespace TranscriberAPI.Tests
+namespace TranscriberAPI.Tests.Acceptance
 {
     [Collection("WebHostCollection")]
-    public class UsersControllerTests
+    public class UsersControllerTests : BaseTest<TestStartup>
     {
-        private TestFixture<TestStartup> _fixture;
-        private Fakers faker;
-        private long myRunNo;
-        public UsersControllerTests(TestFixture<TestStartup> fixture)
+        public UsersControllerTests(TestFixture<TestStartup> fixture) : base(fixture)
         {
-            _fixture = fixture;
-            myRunNo = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-            faker = new Fakers(myRunNo);
-
         }
         
         [Fact]
@@ -37,14 +30,11 @@ namespace TranscriberAPI.Tests
             var route = $"/api/currentusers";
             // act
             var response = await _fixture.Client.GetAsync(route);
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+            AssertOK(response, route);
 
-            var document = JsonConvert.DeserializeObject<Document>(body);
-            Assert.NotNull(document.Data);
-            var userResponse = _fixture.DeSerializer.Deserialize<User>(body);
-            Assert.NotNull(userResponse);
-            Assert.Equal(_fixture.CurrentUser.Id, userResponse.Id);
+            User fetch = Deserialize<User>(response).Result;
+            Assert.NotNull(fetch);
+            Assert.Equal(_fixture.CurrentUser.Id, fetch.Id);
 
             //DO NOT DELETE!!
         }
@@ -55,13 +45,8 @@ namespace TranscriberAPI.Tests
             var route = $"/api/users";
             // act
             var response = await _fixture.Client.GetAsync(route);
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
-
-            var document = JsonConvert.DeserializeObject<Documents>(body);
-            Assert.NotNull(document.Data);
-
-            var responseList = _fixture.DeSerializer.DeserializeList<User>(body);
+            AssertOK(response, route);
+            ICollection<User> responseList = DeserializeList<User>(response).Result;
             Assert.NotNull(responseList);
             var oResponse = responseList.FirstOrDefault(a => a.Id == _fixture.CurrentUser.Id);
             Assert.NotNull(oResponse);
@@ -76,12 +61,9 @@ namespace TranscriberAPI.Tests
             var route = $"/api/users/{_fixture.CurrentUser.Id}";
             // act
             var response = await _fixture.Client.GetAsync(route);
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+            AssertOK(response, route);
 
-            var document = JsonConvert.DeserializeObject<Document>(body);
-            Assert.NotNull(document.Data);
-            var userResponse = _fixture.DeSerializer.Deserialize<User>(body);
+            User userResponse = Deserialize<User>(response).Result;
             Assert.NotNull(userResponse);
             Assert.Equal(_fixture.CurrentUser.Id, userResponse.Id);
 
@@ -92,12 +74,12 @@ namespace TranscriberAPI.Tests
         {
             // arrange
             var context = _fixture.GetService<AppDbContext>();
-            var user = faker.User;
+            var user = _faker.User;
             var myOrgMem = _fixture.CurrentUser.OrganizationMemberships.First<OrganizationMembership>();
             var orgmem = new OrganizationMembership
             {
                 User = user,
-                Organization = myOrgMem.Organization
+                OrganizationId = myOrgMem.OrganizationId
             };
             context.Organizationmemberships.Add(orgmem);
             await context.SaveChangesAsync();
@@ -105,15 +87,10 @@ namespace TranscriberAPI.Tests
             var route = $"/api/users/{user.Id}";
             // act
             var response = await _fixture.Client.GetAsync(route);
-
             // assert
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+            AssertOK(response, route);
 
-            var document = JsonConvert.DeserializeObject<Document>(body);
-            Assert.NotNull(document.Data);
-
-            var userResponse = _fixture.DeSerializer.Deserialize<User>(body);
+            User userResponse = Deserialize<User>(response).Result;
             Assert.NotNull(userResponse);
             Assert.Equal(user.Id, userResponse.Id);
             Assert.Equal(user.Name, userResponse.Name);
@@ -129,17 +106,15 @@ namespace TranscriberAPI.Tests
         {
             // arrange
             var context = _fixture.GetService<AppDbContext>();
-            var user = faker.User;
+            var user = _faker.User;
             context.Users.Add(user);
             await context.SaveChangesAsync();
 
             var route = $"/api/users/{user.Id}";
             // act
             var response = await _fixture.Client.GetAsync(route);
-
             // assert
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.NotFound == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+            Assert.True(HttpStatusCode.NotFound == response.StatusCode, $"{route} returned {response.StatusCode}");
 
             if (_fixture.DeleteTestData)
             {
@@ -152,8 +127,8 @@ namespace TranscriberAPI.Tests
         {
             // arrange
             var context = _fixture.GetService<AppDbContext>();
-            var user = faker.User;
-            var org = faker.Organization;
+            var user = _faker.User;
+            var org = _faker.Organization;
             var orgmem = new OrganizationMembership
             {
                 User = user,
@@ -167,13 +142,9 @@ namespace TranscriberAPI.Tests
             var response = await _fixture.Client.GetAsync(route);
 
             // assert
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+            AssertOK(response, route);
 
-            var document = JsonConvert.DeserializeObject<Documents>(body);
-            Assert.NotNull(document.Data);
-
-            var responseList = _fixture.DeSerializer.DeserializeList<OrganizationMembership>(body);
+            ICollection<OrganizationMembership> responseList = DeserializeList<OrganizationMembership>(response).Result;
             Assert.NotNull(responseList);
             var oResponse = responseList.FirstOrDefault(a => a.Id == orgmem.Id);
             Assert.NotNull(oResponse);
@@ -194,12 +165,13 @@ namespace TranscriberAPI.Tests
         {
             // arrange
             var context = _fixture.GetService<AppDbContext>();
-            var user = faker.User;
-            var project = faker.Project;
+            var user = _faker.User;
+            var project = _faker.Project;
             var projuser = new ProjectUser
             {
                 User = user,
-                Project = project
+                Project = project,
+                RoleId = 2
             };
             context.Projectusers.Add(projuser);
             await context.SaveChangesAsync();
@@ -209,13 +181,10 @@ namespace TranscriberAPI.Tests
             var response = await _fixture.Client.GetAsync(route);
 
             // assert
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+            AssertOK(response, route);
 
-            var document = JsonConvert.DeserializeObject<Documents>(body);
-            Assert.NotNull(document.Data);
+            ICollection<Project> responseList = DeserializeList<Project>(response).Result;
 
-            var responseList = _fixture.DeSerializer.DeserializeList<Project>(body);
             Assert.NotNull(responseList);
             var oResponse = responseList.FirstOrDefault(a => a.Id == project.Id);
             Assert.NotNull(oResponse);
@@ -230,19 +199,27 @@ namespace TranscriberAPI.Tests
                 await _fixture.Client.DeleteAsync(route);
             }
         }
+        /* No organizations link YET
         [Fact]
         public async Task Can_Fetch_Many_To_Many_Through_Id2()
         {
             // arrange
             var context = _fixture.GetService<AppDbContext>();
-            var user = faker.User;
-            var org = faker.Organization;
+            var user = _faker.User;
+            var org = _faker.Organization;
+            var myOrgMem = _fixture.CurrentUser.OrganizationMemberships.First<OrganizationMembership>();
+
             var orgmem = new OrganizationMembership
             {
                 User = user,
                 Organization = org
             };
             context.Organizationmemberships.Add(orgmem);
+            context.Organizationmemberships.Add(new OrganizationMembership
+            {
+                User = user,
+                OrganizationId = myOrgMem.OrganizationId
+            });
             await context.SaveChangesAsync();
 
             var route = $"/api/Users/{user.Id}/organizations";
@@ -250,13 +227,10 @@ namespace TranscriberAPI.Tests
             var response = await _fixture.Client.GetAsync(route);
 
             // assert
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+            AssertOK(response, route);
 
-            var document = JsonConvert.DeserializeObject<Documents>(body);
-            Assert.NotNull(document.Data);
+            ICollection<Organization> responseList = DeserializeList<Organization>(response).Result;
 
-            var responseList = _fixture.DeSerializer.DeserializeList<Organization>(body);
             Assert.NotNull(responseList);
             var oResponse = responseList.FirstOrDefault(a => a.Id == org.Id);
             Assert.NotNull(oResponse);
@@ -271,5 +245,6 @@ namespace TranscriberAPI.Tests
                 await _fixture.Client.DeleteAsync(route);
             }
         }
-}
+        */
+    }
 }

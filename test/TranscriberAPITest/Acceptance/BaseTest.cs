@@ -24,17 +24,21 @@ namespace TranscriberAPI.Tests.Acceptance
         protected AppDbContext _context;
         protected IJsonApiContext _jsonApiContext;
         protected Fakers _faker;
-        protected long _myRunNo;
+        protected string _myRunNo;
 
         public BaseTest(TestFixture<TStartup> fixture)
         {
             _fixture = fixture;
             _context = fixture.GetService<AppDbContext>();
             _jsonApiContext = fixture.GetService<IJsonApiContext>();
-            _myRunNo = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+            _myRunNo = DateTime.Now.TimeOfDay.ToString().Replace(":", "");
             _faker = new Fakers(_myRunNo);
         }
-        #region HTTP Request Helpers
+        public void AssertOK(HttpResponseMessage response, string route)
+        { 
+            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+        }
+       #region HTTP Request Helpers
 
         public async Task<HttpResponseMessage> Get(string url, string organizationId = "", bool addOrgHeader = false, bool allOrgs = false)
         {
@@ -67,6 +71,7 @@ namespace TranscriberAPI.Tests.Acceptance
             var request = new HttpRequestMessage(httpMethod, url);
             return await MakeRequest(request, "", false);
         }
+
         public async Task<HttpResponseMessage> PostAsJson(string url, object content, string organizationId = "", bool addOrgHeader = false, bool allOrgs = false)
         {
             var httpMethod = new HttpMethod("POST");

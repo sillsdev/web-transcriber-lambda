@@ -24,7 +24,7 @@ namespace TranscriberAPI.Tests.Acceptance
         {
         }
         [Fact]
-        public async Task CreateOne()
+        public async Task CreateOneTheComplicatedWay()
         {
             var context = _fixture.GetService<AppDbContext>();
             var section = _faker.Section;
@@ -65,7 +65,7 @@ namespace TranscriberAPI.Tests.Acceptance
             Assert.Equal(passage.Book, newpassage.Book);
         }
         [Fact]
-        public async Task CreateOne2()
+        public async Task CreateOneWithJson()
         {
             var context = _fixture.GetService<AppDbContext>();
             var section = _faker.Section;

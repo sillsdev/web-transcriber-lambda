@@ -15,6 +15,8 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using System.Text;
+using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Services;
 
 namespace TranscriberAPI.Tests
 {
@@ -31,19 +33,22 @@ namespace TranscriberAPI.Tests
             _server = new TestServer(builder);
             _services = _server.Host.Services;
             Client = _server.CreateClient();
+            WebClient = new HttpClient();
             //this doesn't get changes made since process started
             //var token = Environment.GetEnvironmentVariable("BEARER_TOKEN");
             var token = Registry.GetValue(@"HKEY_CURRENT_USER\Environment", "BEARER_TOKEN", "DefaultSomething").ToString();
             Client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token); 
+            WebClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
             Context = GetService<IDbContextResolver>().GetContext() as AppDbContext;
             DeSerializer = GetService<IJsonApiDeSerializer>();
             Serializer = GetService<IJsonApiSerializer>();
             JsonApiContext = GetService<IJsonApiContext>();
             DeleteTestData = GetVarOrDefault("DeleteTestData", "true").Equals("true");
-            CurrentUser = getCurrentUser();
+            CurrentUser = getCurrentUser(); 
         }
 
         public HttpClient Client { get; set; }
+        public HttpClient WebClient { get; set; }
         public AppDbContext Context { get; private set; }
         public IJsonApiDeSerializer DeSerializer { get; private set; }
         public IJsonApiSerializer Serializer { get; private set; }
@@ -61,7 +66,7 @@ namespace TranscriberAPI.Tests
         }
         private async Task<User> CurrentUserAsync()
         {
-            var route = $"/api/currentusers";
+            var route = $"/api/currentusers?include=organization-memberships,group-memberships";
             var response = await Client.GetAsync(route);
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
@@ -108,6 +113,7 @@ namespace TranscriberAPI.Tests
                 if (disposing)
                 {
                     Client.Dispose();
+                    WebClient.Dispose();
                     _server.Dispose();
                 }
 

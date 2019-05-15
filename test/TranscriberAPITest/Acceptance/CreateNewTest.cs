@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Xunit;
 using JsonApiDotNetCore.Models;
 using TranscriberAPI.Tests.Utilities;
+using System.Net.Http;
 
 namespace TranscriberAPI.Tests.Acceptance
 {
@@ -18,12 +19,12 @@ namespace TranscriberAPI.Tests.Acceptance
         public CreateNewTest(TestFixture<TestStartup> fixture) : base(fixture)
         {
         }
-        private async Task SaveIt(string routePrefix, string route, IIdentifiable obj)
+        protected async Task SaveIt(string routePrefix, string route, IIdentifiable obj)
         {
             var response = await PostAsJson(routePrefix + route, obj);
             Assert.True(HttpStatusCode.Created == response.StatusCode, $"{routePrefix + route} returned {response.StatusCode} status code");
             var newroute = response.Headers.Location.OriginalString;
-            obj.StringId = newroute.Substring(newroute.LastIndexOf("/")+1);
+            obj.StringId = newroute.Substring(newroute.LastIndexOf("/") + 1);
         }
         [Fact]
         public async Task CreateHierarchyLocal()
@@ -33,7 +34,17 @@ namespace TranscriberAPI.Tests.Acceptance
         [Fact]
         public async Task CreateHierarchyLambdaDev()
         {
-            await CreateHierarchy("https://9u6wlhwuha.execute-api.us-east-2.amazonaws.com/dev");
+            HttpClient testclient = _fixture.Client;
+            _fixture.Client = _fixture.WebClient;
+            try
+            {
+                await CreateHierarchy("https://9u6wlhwuha.execute-api.us-east-2.amazonaws.com/dev");
+            }
+            finally 
+            {
+
+                _fixture.Client = testclient;
+            }
         }
 
         private async Task CreateHierarchy(string routePrefix = "")
@@ -85,8 +96,8 @@ namespace TranscriberAPI.Tests.Acceptance
             Assert.NotEqual(0, ps1.Id);
             var ps2 = new Passagesection
             {
-                PassageId = 0,
-                SectionId = 0
+                PassageId = passage2.Id,
+                SectionId = section1.Id
             };
             await SaveIt(routePrefix, $"/api/passagesections", ps2);
             Assert.NotEqual(0, ps2.Id);
@@ -104,6 +115,11 @@ namespace TranscriberAPI.Tests.Acceptance
             };
             await SaveIt(routePrefix, $"/api/passagesections", ps4);
             Assert.NotEqual(0, ps4.Id);
+            if (_fixture.DeleteTestData)
+            {
+                route = routePrefix + $"/api/projects/{project.Id}";
+                await _fixture.Client.DeleteAsync(route);
+            }
 
         }
     }
