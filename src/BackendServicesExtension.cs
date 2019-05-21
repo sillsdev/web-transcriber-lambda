@@ -51,6 +51,8 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
+            services.AddScoped<IResourceService<Mediafile>, MediafileService>();
+            services.AddScoped<IS3Service, S3Service>();
 
             //services.AddScoped<IQueryParser, OrbitJSQueryParser>();
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Amazon.S3.Transfer;
@@ -14,11 +15,11 @@ namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class S3BucketController : ControllerBase
+    public class S3FileController : ControllerBase
     {
         private const string myProject = "Project0";
         private readonly IS3Service _service;
-        public S3BucketController(IS3Service service)
+        public S3FileController(IS3Service service)
         {
             _service = service;
         }
@@ -33,8 +34,14 @@ namespace SIL.Transcriber.Controllers
         [HttpGet]
         public async Task<IActionResult> ListFiles()
         {
-            S3Response response = await _service.ListObjectsAsync(myProject);
-            return Ok(response);
+            S3Response s3response = await _service.ListObjectsAsync(myProject);
+
+            if (s3response.Status == HttpStatusCode.OK)
+            {
+                return Ok(s3response.Message);
+            }
+
+            return Ok(s3response);
         }
 
         [HttpGet("{fileName}")]

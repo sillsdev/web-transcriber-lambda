@@ -1,15 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using JsonApiDotNetCore.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace SIL.Transcriber.Models
 {
     public partial class Mediafile : BaseModel, ITrackDate
     {
         [Attr("passage-id")]
-        public int PassageId { get; set; }
+        public int? PassageId { get; set; }
         [HasOne("passage")]
         public virtual Passage Passage { get; set; }
+
+        [Attr("plan-id")]
+        public int PlanId { get; set; }
+        [HasOne("plan")]
+        public virtual Plan Plan { get; set; }
+
 
         [Attr("version-number")]
         public int? VersionNumber { get; set; }
@@ -29,6 +37,9 @@ namespace SIL.Transcriber.Models
         public string TextQuality { get; set; }
         [Attr("transcription")]
         public string Transcription { get; set; }
+
+        [Attr("s3file")]
+        public string S3file { get; set; }
 
         [Attr("date-created")]
         public DateTime? DateCreated { get; set; }

@@ -85,6 +85,5 @@ namespace SIL.Transcriber.Models
         //[HasManyThrough("tasks")]
         //public virtual List<Task> Tasks { get; set; }
 
-
     }
 }

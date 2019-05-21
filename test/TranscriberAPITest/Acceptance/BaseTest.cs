@@ -15,6 +15,9 @@ using JsonApiDotNetCore.Models;
 using TranscriberAPI.Tests.Utilities;
 using JsonApiDotNetCore.Services;
 using System.Text;
+using System.IO;
+using RestSharp;
+using Microsoft.Win32;
 
 namespace TranscriberAPI.Tests.Acceptance
 {
@@ -70,6 +73,23 @@ namespace TranscriberAPI.Tests.Acceptance
             var httpMethod = new HttpMethod("DELETE");
             var request = new HttpRequestMessage(httpMethod, url);
             return await MakeRequest(request, "", false);
+        }
+
+        public async Task<HttpResponseMessage> PostFormFile(string url, string filePath, object entity)
+        {
+       
+            HttpContent stringContent = new StringContent(JsonConvert.SerializeObject(entity), Encoding.UTF8, "application/json");
+            var stream = new FileStream(filePath, FileMode.Open);
+            HttpContent fileStreamContent = new StreamContent(stream);
+            var formData = new MultipartFormDataContent
+            {
+                {stringContent, "jsonString" },
+                {fileStreamContent, "file", filePath }
+            };
+            
+            // add files to upload (works with compatible verbs)
+            var response = await _fixture.Client.PostAsync(url, formData);
+            return response;
         }
 
         public async Task<HttpResponseMessage> PostAsJson(string url, object content, string organizationId = "", bool addOrgHeader = false, bool allOrgs = false)

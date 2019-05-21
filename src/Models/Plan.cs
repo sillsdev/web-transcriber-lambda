@@ -21,5 +21,9 @@ namespace SIL.Transcriber.Models
         public int PlantypeId { get; set; }
         [HasMany("sections")]
         public virtual List<Section> Sections { get; set; }
+
+        [HasMany("mediafiles")]
+        public virtual List<Mediafile> Mediafiles { get; set; }
+
     }
 }

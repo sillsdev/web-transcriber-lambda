@@ -34,6 +34,14 @@ namespace TranscriberAPI.Tests.Utilities
            .RuleFor(a => a.Mediafiles, f => new List<Mediafile>())
            .RuleFor(a => a.Sections, f => new List<Section>());
 
+        private static readonly Faker<Mediafile> _mediaFaker = new Faker<Mediafile>()
+            .RuleFor(a => a.PlanId, f => 1)
+            .RuleFor(a => a.VersionNumber, f => 1)
+            .RuleFor(a => a.Duration, f => f.Random.Int(0,500))
+            .RuleFor(a => a.Transcription, f => f.Random.AlphaNumeric(10))
+           .RuleFor(a => a.AudioUrl, f => "MediaTest" + _runNo)
+           ;
+
         private static readonly Faker<Plan> _planFaker = new Faker<Plan>()
             .RuleFor(a => a.Name, f => "PlanTest" + _runNo + f.Random.AlphaNumeric(10))
             .RuleFor(a => a.PlantypeId, f => 1)
@@ -67,5 +75,6 @@ namespace TranscriberAPI.Tests.Utilities
         public Project Project => _projectFaker.Generate();
         public Section Section => _sectionFaker.Generate();
         public User User => _userFaker.Generate();
-   }
+        public Mediafile Mediafile => _mediaFaker.Generate();
+    }
 }
