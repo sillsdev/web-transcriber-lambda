@@ -7,6 +7,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.IO;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
@@ -25,10 +26,26 @@ namespace SIL.Transcriber.Controllers
         {
             _service = (MediafileService)resourceService;
         }
+
         [HttpGet("{id}/file")]
-        public async Task<Stream> GetFile([FromRoute] int id)
+        public async Task<IActionResult> GetFile([FromRoute] int id)
         {
-            return await _service.GetFile(id);
+            var response = await _service.GetFile(id);
+
+            if (response.Status == HttpStatusCode.OK)
+            {
+                Response.Headers.Add("Content-Disposition", new ContentDisposition
+                {
+                    FileName = response.Message,
+                    Inline = true // false = prompt the user for downloading; true = browser to try to show the file inline
+                }.ToString());
+
+                return File(response.FileStream, response.ContentType);
+            }
+            else
+            {
+                return NotFound();
+            }
         }
         [HttpPost("file")]
         public async Task<IActionResult> PostAsync([FromForm] string jsonString,

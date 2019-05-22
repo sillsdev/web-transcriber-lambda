@@ -34,27 +34,29 @@ namespace SIL.Transcriber.Services
         {
 
             S3Response response = await _S3service.UploadFileAsync(FileToUpload, PlanName(entity.PlanId));
-            entity.S3file = response.Message;
+            entity.AudioUrl = response.Message;
+            entity.Filesize = FileToUpload.Length;
+            entity.ContentType = FileToUpload.ContentType;
             entity = await base.CreateAsync(entity);
             return entity;
         }
 
-        public async Task<Stream> GetFile(int id)
+        public async Task<S3Response> GetFile(int id)
         {
             Mediafile mf = await base.GetAsync(id);
-            if (mf.S3file.Length == 0 || !(await _S3service.FileExistsAsync(mf.S3file)))
+            if (mf.AudioUrl.Length == 0 || !(await _S3service.FileExistsAsync(mf.AudioUrl, PlanName(mf.PlanId))))
                 return null;
 
-            S3Response response = await _S3service.ReadObjectDataAsync(mf.S3file, PlanName(mf.PlanId));
+            S3Response response = await _S3service.ReadObjectDataAsync(mf.AudioUrl, PlanName(mf.PlanId));
 
-            return response.FileStream;
+            return response;
         }
 
         public override async Task<bool> DeleteAsync(int id)
         {
             Mediafile mf = await base.GetAsync(id);
             
-            S3Response response = await _S3service.RemoveFile(mf.S3file, PlanName(mf.PlanId));
+            S3Response response = await _S3service.RemoveFile(mf.AudioUrl, PlanName(mf.PlanId));
             return await base.DeleteAsync(id);
         }        
     }

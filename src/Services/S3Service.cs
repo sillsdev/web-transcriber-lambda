@@ -42,7 +42,9 @@ namespace SIL.Transcriber.Services
         }
         public async Task<bool> FileExistsAsync(string fileName, string folder = "")
         {
-            ListObjectsResponse response = await _client.ListObjectsAsync(USERFILES_BUCKET, ProperFolder(folder)+ fileName);
+            fileName = ProperFolder(folder) + fileName;
+            ListObjectsResponse response = await _client.ListObjectsAsync(USERFILES_BUCKET, fileName);
+            //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
             if (response.HttpStatusCode == HttpStatusCode.OK)
             {
                 for (int o = 0; o < response.S3Objects.Count; o++)
@@ -110,10 +112,11 @@ namespace SIL.Transcriber.Services
                         CannedACL = S3CannedACL.NoACL
                     };
                     request.Metadata.Add("OriginalFileName", file.FileName);
+                    /*
                     request.Metadata.Add("Book", "Genesis");
                     request.Metadata.Add("Reference", "1:1-5");
                     request.Metadata.Add("Plan", "Creation");
-
+                    */
                     response = await _client.PutObjectAsync(request);
                 };
 

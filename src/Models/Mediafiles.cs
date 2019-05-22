@@ -38,8 +38,10 @@ namespace SIL.Transcriber.Models
         [Attr("transcription")]
         public string Transcription { get; set; }
 
-        [Attr("s3file")]
-        public string S3file { get; set; }
+        [Attr("original-file")]
+        public string OriginalFile { get; set; }
+        [Attr("filesize")]
+        public long Filesize { get; set; }
 
         [Attr("date-created")]
         public DateTime? DateCreated { get; set; }

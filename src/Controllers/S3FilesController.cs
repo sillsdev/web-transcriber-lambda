@@ -15,11 +15,10 @@ namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class S3FileController : ControllerBase
+    public class S3FilesController : ControllerBase
     {
-        private const string myProject = "Project0";
         private readonly IS3Service _service;
-        public S3FileController(IS3Service service)
+        public S3FilesController(IS3Service service)
         {
             _service = service;
         }
@@ -34,7 +33,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet]
         public async Task<IActionResult> ListFiles()
         {
-            S3Response s3response = await _service.ListObjectsAsync(myProject);
+            S3Response s3response = await _service.ListObjectsAsync();
 
             if (s3response.Status == HttpStatusCode.OK)
             {
@@ -44,32 +43,47 @@ namespace SIL.Transcriber.Controllers
             return Ok(s3response);
         }
 
+        private async Task<IActionResult> GetS3File(string folder, string fileName)
+        {
+            S3Response response = await _service.ReadObjectDataAsync(fileName, folder);
+
+            if (response.Status == HttpStatusCode.OK)
+            {
+                Response.Headers.Add("Content-Disposition", new ContentDisposition
+                {
+                    FileName = fileName,
+                    Inline = true // false = prompt the user for downloading; true = browser to try to show the file inline
+                }.ToString());
+
+                return File(response.FileStream, response.ContentType);
+            }
+            else
+            {
+                return NotFound();
+            }
+        }
         [HttpGet("{fileName}")]
         public async Task<IActionResult> GetFile([FromRoute] string fileName)
         {
-            //somehow I'll know what project this is for...perhaps just the PassageId will be passed in?
+            return await GetS3File("", fileName);
+        }
+        [HttpGet("{folder}/{fileName}")]
+        public async Task<IActionResult> GetFile([FromRoute] string folder, [FromRoute] string fileName)
+        {
+            return await GetS3File(folder, fileName);
 
-            S3Response response = await _service.ReadObjectDataAsync(fileName, myProject);
-
-            Response.Headers.Add("Content-Disposition", new ContentDisposition
-            {
-                FileName = fileName,
-                Inline = true // false = prompt the user for downloading; true = browser to try to show the file inline
-            }.ToString());
-
-            return File(response.FileStream, response.ContentType); 
         }
         [HttpPost]
         public async Task<IActionResult> AddFile()
         {
             IFormFile file = this.Request.Form.Files[0];
-            S3Response response = await _service.UploadFileAsync(file, myProject);
+            S3Response response = await _service.UploadFileAsync(file);
             return Ok(response);
         }
         [HttpDelete("{fileName}")]
         public async Task<IActionResult> RemoveFile([FromRoute] string fileName)
         {
-            S3Response response = await _service.RemoveFile(fileName, myProject);
+            S3Response response = await _service.RemoveFile(fileName);
             return Ok(response);
         }
 

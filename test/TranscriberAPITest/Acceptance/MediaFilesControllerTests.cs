@@ -33,38 +33,7 @@ namespace TranscriberAPI.Tests.Acceptance
             var media = _faker.Mediafile;
             var route = $"/api/mediafiles";
             var response = await PostAsJson(route, media);
-            Assert.True(HttpStatusCode.NoContent == response.StatusCode, $"{route} returned {response.StatusCode} status code");
-        }
-
-        public IFormFile AsMockIFormFile(FileInfo physicalFile)
-        {
-            var fileMock = new Mock<IFormFile>();
-            var ms = new MemoryStream();
-            var writer = new StreamWriter(ms);
-            writer.Write(physicalFile.OpenRead());
-            writer.Flush();
-            ms.Position = 0;
-            var fileName = physicalFile.Name;
-            //Setup mock file using info from physical file
-            fileMock.Setup(_ => _.FileName).Returns(fileName);
-            fileMock.Setup(_ => _.Length).Returns(ms.Length);
-            fileMock.Setup(m => m.OpenReadStream()).Returns(ms);
-            fileMock.Setup(m => m.ContentDisposition).Returns(string.Format("inline; filename={0}", fileName));
-            //...setup other members (code removed for brevity)
-
-
-            return fileMock.Object;
-        }
-        [Fact]
-        public async Task RegularPostFails()
-        {
-            var media = _faker.Mediafile;
-            media.PassageId = 1;
-
-            var route = $"/api/mediafiles";
-            var response = await PostAsJson(route, media);
             Assert.True(HttpStatusCode.NotImplemented == response.StatusCode, $"{route} returned {response.StatusCode} status code");
-
         }
 
         [Fact]
@@ -108,15 +77,10 @@ namespace TranscriberAPI.Tests.Acceptance
                 Assert.Equal(media.Transcription, tagResponse.Transcription);
 
         }
-        [Fact]
-        public async Task CreateOneWithoutPassage()
+        private async Task<Mediafile> GetNewMedia(Mediafile media, string filename)
         {
-            var context = _fixture.GetService<AppDbContext>();
-            var media = _faker.Mediafile;
-            media.PassageId = null;  //not 0!
-
             var route = $"/api/mediafiles/file";
-            var response = await PostFormFile(route, "mpthreetest.mp3", media);
+            var response = await PostFormFile(route, filename, media);
 
             Assert.True(HttpStatusCode.Created == response.StatusCode, $"{route} returned {response.StatusCode} status code");
             route = response.Headers.Location.OriginalString;
@@ -130,11 +94,58 @@ namespace TranscriberAPI.Tests.Acceptance
             var document = JsonConvert.DeserializeObject<Document>(body);
             Assert.NotNull(document.Data);
 
-            var tagResponse = _fixture.DeSerializer.Deserialize<Mediafile>(body);
+            return _fixture.DeSerializer.Deserialize<Mediafile>(body);
+        }
+        [Fact]
+        public async Task CreateOneWithoutPassage()
+        {
+            var media = _faker.Mediafile;
+            media.PassageId = null;  //not 0!
+
+            var tagResponse = await GetNewMedia(media, "mpthreetest.mp3");
             Assert.NotNull(tagResponse);
             Assert.Equal(media.Transcription, tagResponse.Transcription);
 
         }
+        [Fact]
+        public async Task CanGetAudioFile()
+        {
+            var media = _faker.Mediafile;
+            media.PassageId = 1;
+            //save it
+            media = await GetNewMedia(media, "mpthreetest.mp3");
 
+            var route = $"/api/mediafiles/" + media.Id.ToString() + "/file";
+
+            var response = await _fixture.Client.GetAsync(route);
+            //assert
+            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+            Assert.Equal(media.Filesize, response.Content.Headers.ContentLength);
+            var fileStream = new FileStream("myfile.mp3", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+            await response.Content.CopyToAsync(fileStream);
+            fileStream.Close();
+
+        }
+        [Fact]
+        public async Task CanDelete()
+        {
+            var media = _faker.Mediafile;
+            //save it
+            media = await GetNewMedia(media, "mpthreetest.mp3");
+
+            //verify file exists on s3
+            var route = $"/api/s3files/Plan" + media.PlanId.ToString() + "/" + media.AudioUrl;
+            var response = await _fixture.Client.GetAsync(route);
+            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+
+            route = $"/api/mediafiles/" + media.Id.ToString();
+            response = await _fixture.Client.DeleteAsync(route);
+            //assert
+            Assert.True(HttpStatusCode.NoContent == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+            //assert audiofile has been deleted
+            route = $"/api/s3files/Plan" + media.PlanId.ToString() + "/" + media.AudioUrl;
+            response = await _fixture.Client.GetAsync(route);
+            Assert.True(HttpStatusCode.NotFound == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+        }
     }
 }
