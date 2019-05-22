@@ -28,12 +28,12 @@ namespace SIL.Transcriber.Models
         public DateTime? DateUpdated { get; set; }
 
        [HasMany("mediafiles")]
-       public virtual List<Mediafiles> Mediafiles { get; set; }
+       public virtual List<Mediafile> Mediafiles { get; set; }
 
         [NotMapped]
         [HasManyThrough(nameof(PassageSections))]
         public List<Section> Sections { get; set; }
-        public List<PassageSection> PassageSections { get; set; }
+        public List<Passagesection> PassageSections { get; set; }
 
     }
 }

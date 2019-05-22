@@ -139,11 +139,11 @@ namespace SIL.Transcriber.Data
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
-        public DbSet<Mediafiles> Mediafiles { get; set; }
+        public DbSet<Mediafile> Mediafiles { get; set; }
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<Passage> Passages { get; set; }
-        public DbSet<PassageSection> PassageSections { get; set; }
+        public DbSet<Passagesection> Passagesections { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
@@ -154,6 +154,7 @@ namespace SIL.Transcriber.Data
         public  DbSet<Role> Roles { get; set; }
         public  DbSet<Section> Sections { get; set; }
         public DbSet<UserRole> Userroles { get; set; }
+        public DbSet<UserPassage> Userpassages { get; set; }
         public  DbSet<User> Users { get; set; }
 
     }

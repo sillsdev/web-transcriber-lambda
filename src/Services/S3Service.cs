@@ -40,6 +40,27 @@ namespace SIL.Transcriber.Services
                 ContentType = contentType,
             };
         }
+        public async Task<bool> FileExistsAsync(string fileName, string folder = "")
+        {
+            fileName = ProperFolder(folder) + fileName;
+            ListObjectsResponse response = await _client.ListObjectsAsync(USERFILES_BUCKET, fileName);
+            //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
+            if (response.HttpStatusCode == HttpStatusCode.OK)
+            {
+                for (int o = 0; o < response.S3Objects.Count; o++)
+                {
+                    if (response.S3Objects[o].Key == fileName)
+                        return true;
+                }
+            }
+            else
+            {
+                //TODO don't eat the error?
+                return false;
+            }
+            return false;
+        }
+
         public async Task<S3Response> CreateBucketAsync(string bucketName)
         {
             try
@@ -75,7 +96,7 @@ namespace SIL.Transcriber.Services
                 byte[] fileBytes = new Byte[file.Length];
                 file.OpenReadStream().Read(fileBytes, 0, Int32.Parse(file.Length.ToString()));
 
-                // create unique file name for prevent the mess
+                // create unique file name 
                 var fileName = Guid.NewGuid() + file.FileName;
 
                 PutObjectResponse response = null;
@@ -91,10 +112,11 @@ namespace SIL.Transcriber.Services
                         CannedACL = S3CannedACL.NoACL
                     };
                     request.Metadata.Add("OriginalFileName", file.FileName);
+                    /*
                     request.Metadata.Add("Book", "Genesis");
                     request.Metadata.Add("Reference", "1:1-5");
                     request.Metadata.Add("Plan", "Creation");
-
+                    */
                     response = await _client.PutObjectAsync(request);
                 };
 
@@ -161,15 +183,19 @@ namespace SIL.Transcriber.Services
             try
             {
                 // List the objects in this bucket.
+                string list = "";
                 ListObjectsResponse response = await _client.ListObjectsAsync(USERFILES_BUCKET, ProperFolder(folder));
-                string list = "[";
-                for (int o = 0; o < response.S3Objects.Count; o++)
+                if (response.HttpStatusCode == HttpStatusCode.OK)
                 {
-                    list += string.Format("{{\"Key\":\"{0}\",\"Size\":\"{1}\",\"LastModified\":\"{2}\"}},", 
-                        response.S3Objects[o].Key, response.S3Objects[o].Size, response.S3Objects[o].LastModified);
+                    list = "[";
+                    for (int o = 0; o < response.S3Objects.Count; o++)
+                    {
+                        list += string.Format("{{\"Key\":\"{0}\",\"Size\":\"{1}\",\"LastModified\":\"{2}\"}},",
+                            response.S3Objects[o].Key, response.S3Objects[o].Size, response.S3Objects[o].LastModified);
+                    }
+                    list += "]";
                 }
-                list += "]";
-                return S3Response(list, HttpStatusCode.OK);
+                return S3Response(list, response.HttpStatusCode, null,"application/json");
             }
             catch (AmazonS3Exception e)
             {

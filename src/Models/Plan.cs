@@ -9,17 +9,21 @@ namespace SIL.Transcriber.Models
 
         [Attr("name")]
         public string Name { get; set; }
+
         [HasOne("project")]
         public Project Project { get; set; }
         [Attr("project-id")]
         public int ProjectId { get; set; }
 
-        [HasOne("type")]
+        [HasOne("plantype")]
         public PlanType Plantype { get; set; }
-        [Attr("plan-type-id")]
-        public int PlanTypeId { get; set; }
-
+        [Attr("plantype-id")]
+        public int PlantypeId { get; set; }
         [HasMany("sections")]
         public virtual List<Section> Sections { get; set; }
+
+        [HasMany("mediafiles")]
+        public virtual List<Mediafile> Mediafiles { get; set; }
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using JsonApiDotNetCore.Models;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
@@ -15,6 +16,7 @@ namespace SIL.Transcriber.Models
         public virtual Project Project { get; set; }
 
         [Attr("settings")]
+        [Column(TypeName = "jsonb")]
         public string Settings { get; set; }
 
     }

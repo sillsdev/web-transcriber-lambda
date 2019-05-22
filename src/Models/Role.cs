@@ -5,14 +5,14 @@ namespace SIL.Transcriber.Models
 {
     public partial class Role : BaseModel
     {
-        public RoleName RoleName { get; set; }
+        public RoleName Rolename { get; set; }
 
         [Attr("role-name")]
         public string RoleNameString
         {
             get
             {
-                return RoleName.ToString();
+                return Rolename.ToString();
             }
         }
 

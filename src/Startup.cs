@@ -32,7 +32,7 @@ namespace SIL.Transcriber
         private bool IsDevelopment => Environment.IsDevelopment() || Environment.IsEnvironment("Testing");
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public virtual void ConfigureServices(IServiceCollection services)
         {
             services.Configure<CookiePolicyOptions>(options =>
             {
@@ -41,7 +41,7 @@ namespace SIL.Transcriber
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
             services.AddCors();
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1).AddJsonOptions(x => x.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
             services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
             services.AddApiServices();
             services.AddAuthenticationServices(Configuration);
