@@ -30,9 +30,10 @@ namespace SIL.Transcriber.Models
        [HasMany("mediafiles")]
        public virtual List<Mediafile> Mediafiles { get; set; }
 
-        [NotMapped]
-        [HasManyThrough(nameof(PassageSections))]
-        public List<Section> Sections { get; set; }
+ //     [NotMapped]
+ //     [HasManyThrough(nameof(PassageSections))]
+ //     public List<Section> Sections { get; set; }
+        [HasMany("passagesections")]
         public List<Passagesection> PassageSections { get; set; }
 
     }

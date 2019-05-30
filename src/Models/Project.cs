@@ -10,6 +10,9 @@ namespace SIL.Transcriber.Models
         [Attr("name")]
         public string Name { get; set; }
 
+        [NotMapped]
+        public string Slug { get => "Org" + Id.ToString(); }
+
         [HasOne("projecttype")]
         public virtual ProjectType Projecttype { get; set; }
         [Attr("projecttype-id")]

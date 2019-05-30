@@ -36,8 +36,7 @@ namespace SIL.Transcriber.Utility
                 {
                     orgIdToFilterBy = organizationContext.OrganizationId.ToString();
                 }
-                
-                query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("organization-header", orgIdToFilterBy, "="));
+                query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("organization-header", orgIdToFilterBy, "eq"));
 
                 return await baseQuery();
             }

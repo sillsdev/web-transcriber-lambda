@@ -53,6 +53,18 @@ namespace SIL.Transcriber.Data
             var orgMemberEntity = modelBuilder.Entity<OrganizationMembership>();
             var projectEntity = modelBuilder.Entity<Project>();
             var groupMemberEntity = modelBuilder.Entity<GroupMembership>();
+            var passageEntity = modelBuilder.Entity<Passage>();
+            var sectionEntity = modelBuilder.Entity<Section>();
+
+            passageEntity
+                .HasMany(p => p.PassageSections)
+                .WithOne(ps => ps.Passage)
+                .HasForeignKey(ps => ps.PassageId);
+
+            sectionEntity
+                .HasMany(s => s.PassageSections)
+                .WithOne(ps => ps.Section)
+                .HasForeignKey(ps => ps.SectionId);
 
             userEntity
                 .HasMany(u => u.OrganizationMemberships)

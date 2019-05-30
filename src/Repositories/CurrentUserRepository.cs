@@ -11,22 +11,25 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class CurrentUserRepository : DefaultEntityRepository<User> 
+    public class CurrentUserRepository : DefaultEntityRepository<User>
     {
         // NOTE: this repository MUST not rely on any other repositories or services
         public CurrentUserRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             IDbContextResolver contextResolver,
+            IEntityRepository<UserRole> userRolesRepository,
             ICurrentUserContext currentUserContext
-        ) : base(loggerFactory, jsonApiContext, contextResolver)
+       ) : base(loggerFactory, jsonApiContext, contextResolver)
         {
             this.DBContext = (AppDbContext)contextResolver.GetContext();
             this.CurrentUserContext = currentUserContext;
+            UserRolesRepository = userRolesRepository;
         }
 
-        public AppDbContext DBContext { get; }
-        public ICurrentUserContext CurrentUserContext { get; }
+        private AppDbContext DBContext { get; }
+        private ICurrentUserContext CurrentUserContext { get; }
+        private IEntityRepository<UserRole> UserRolesRepository { get; }
 
         // memoize once per local thread,
         // since the current user can't change in a single request
@@ -46,19 +49,20 @@ namespace SIL.Transcriber.Repositories
             var currentUser = await base.Get()
                 .Where(user => user.ExternalId.Equals(auth0Id))
                 .Include(user => user.OrganizationMemberships)
-                .Include(user => user.UserRoles)
+                .Include(user => user.GroupMemberships)
+               .Include(user => user.UserRoles)
+                    .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync();
 
-            try {
-                //SJH WHAT TO DO HERE????
-                //await DWKitRuntime.Security.SignInAsync(currentUser?.Email, remember: false);
-            } catch { //(System.Exception e) {
-                // do nothing for now, we want normal JWT sign in to work always
-                // if there is an exeption, it means the users
-                // have not yet been sync'd
-            }
-            
             return currentUser;
+        }
+        public bool IsSuperAdmin(User currentuser)
+        {
+            return currentuser.HasRole(RoleName.SuperAdmin);
+        }
+        public bool IsOrgAdmin(User currentuser, int orgId)
+        {
+            return currentuser.HasRole(RoleName.OrganizationAdmin, orgId);
         }
     }
 }

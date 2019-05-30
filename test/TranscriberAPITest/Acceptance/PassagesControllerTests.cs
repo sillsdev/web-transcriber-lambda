@@ -23,6 +23,7 @@ namespace TranscriberAPI.Tests.Acceptance
         public PassagesControllerTests(TestFixture<TestStartup> fixture) :base(fixture)
         {
         }
+
         [Fact]
         public async Task CreateOneTheComplicatedWay()
         {

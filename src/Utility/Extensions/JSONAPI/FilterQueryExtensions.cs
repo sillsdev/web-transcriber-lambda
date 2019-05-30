@@ -21,5 +21,9 @@ namespace SIL.Transcriber.Utility.Extensions.JSONAPI
 
           return attribute.Equals(param, StringComparison.OrdinalIgnoreCase);
         }
+        public static bool HasSpecificOrg(this FilterQuery filterQuery)
+        {
+            return int.TryParse(filterQuery.Value, out int specifiedOrgId);
+        }
     }
 }

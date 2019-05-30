@@ -1,5 +1,7 @@
+using System.Threading.Tasks;
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
@@ -15,6 +17,7 @@ namespace SIL.Transcriber.Controllers
             UserService userService)
           : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
+
     }
 }
 

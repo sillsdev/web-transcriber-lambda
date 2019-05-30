@@ -31,15 +31,30 @@ namespace SIL.Transcriber.Repositories
         {
         }
 
+        private IQueryable<Project> UsersProjects(IQueryable<Project> entities)
+        {
+            var orgIds = CurrentUser.OrganizationIds.OrEmpty();
+            if (!CurrentUser.HasRole(RoleName.SuperAdmin))
+            {
+                //if I'm an admin in the org, give me all projects in all groups in that org
+                //otherwise give me just the projects in the groups I'm a member of
+                var orgadmins = orgIds.Where(o => currentUserRepository.IsOrgAdmin(CurrentUser, o));
+
+                entities = entities
+                       .Where(p => orgadmins.Contains(p.OrganizationId) || CurrentUser.GroupIds.Contains(p.GroupId));
+
+            }
+            return entities;
+        }
         public override IQueryable<Project> Filter(IQueryable<Project> entities, FilterQuery filterQuery)
-        {            
+        {
+            //Get already gives us just these entities = UsersProjects(entities);
             if (filterQuery.Has(ORGANIZATION_HEADER)) 
             {
                 var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-
                 return entities.FilterByOrganization(filterQuery, allowedOrganizationIds: orgIds);
             }
-
+ 
             var value = filterQuery.Value;
             var op = filterQuery.Operation.ToEnum<FilterOperations>(defaultValue: FilterOperations.eq);
 
@@ -67,7 +82,6 @@ namespace SIL.Transcriber.Repositories
                         || EFUtils.Like(p.Owner.Name, value)
                     ));
             }
-
             
             return base.Filter(entities, filterQuery);
         }
@@ -76,15 +90,20 @@ namespace SIL.Transcriber.Repositories
         {
             return base.Sort(entities, sortQueries);
         }
-
+        public Project GetInternal(int id)
+        {
+            return base.Get().SingleOrDefault(p => p.Id == id);
+        }
+        public IQueryable<Project> GetInternal()
+        {
+            return base.Get();
+        }
         // This is the set of all projects that a user has access to.
         // If a project would ever need to be accessed outside of this set of projects,
         // this method should not be used.
         public override IQueryable<Project> Get() 
         {
-            var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-
-            return base.Get().Where(p => p.IsPublic == true || orgIds.Contains(p.OrganizationId));
+           return UsersProjects(base.Get());
         }
     }
 }

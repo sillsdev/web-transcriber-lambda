@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
@@ -9,6 +10,9 @@ namespace SIL.Transcriber.Models
 
         [Attr("name")]
         public string Name { get; set; }
+
+        [NotMapped]
+        public string Slug { get => "Plan" + Id.ToString(); }
 
         [HasOne("project")]
         public Project Project { get; set; }

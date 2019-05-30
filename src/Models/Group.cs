@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Group : BaseModel
+    public partial class Group : BaseModel, IBelongsToOrganization
     {
         [Attr("name")]
         public string Name { get; set; }
@@ -18,5 +18,23 @@ namespace SIL.Transcriber.Models
         public virtual Organization Owner { get; set; }
         public int OwnerId { get; set; }
         
+        [HasMany("projects")]
+        public virtual List<Project> Projects { get; set; }
+
+        [HasMany("group-memberships", Link.None)]
+        public virtual List<GroupMembership> GroupMemberships { get; set; }
+
+        [NotMapped]
+        public int OrganizationId { get => OwnerId; set { } }
+        
+        [NotMapped]
+        public Organization Organization { get => Owner; set { } }
+
+        [NotMapped]
+        public IEnumerable<int> UserIds => GroupMemberships?.Select(g => g.UserId);
+
+        [NotMapped]
+        public IEnumerable<User> Users => GroupMemberships?.Select(g => g.User);
+
     }
 }

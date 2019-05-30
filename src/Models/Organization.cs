@@ -8,6 +8,9 @@ namespace SIL.Transcriber.Models
 {
     public partial class Organization : BaseModel
     {
+        [NotMapped]
+        public string Slug { get => "Org" + Id.ToString(); }
+
         [Attr("name")]
         public string Name { get; set; }
 
@@ -39,9 +42,6 @@ namespace SIL.Transcriber.Models
         /*
         [HasMany("organization-memberships", Link.None)]
         public virtual List<OrganizationMembership> OrganizationMemberships { get; set; }
-
-        [HasMany("groups")]
-        public virtual List<Group> Groups { get; set; }
 
         [NotMapped]
         [HasMany("userids")]

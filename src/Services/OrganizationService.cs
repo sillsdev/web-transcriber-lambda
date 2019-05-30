@@ -34,19 +34,11 @@ namespace SIL.Transcriber.Services
             CurrentUser = currentUserRepository.GetCurrentUser().Result;
             UserRolesRepository = userRolesRepository;
         }
-        protected bool IsCurrentUserSuperAdmin()
-        {
-            var userRole = UserRolesRepository.Get()
-                .Include(ur => ur.User)
-                .Include(ur => ur.Role)
-                .Where(ur => ur.UserId == CurrentUser.Id && ur.Role.Rolename == RoleName.SuperAdmin)
-                .FirstOrDefault();
-            return userRole != null;
-        }
+
         public override async Task<IEnumerable<Organization>> GetAsync()
         {
             //scope to user, unless user is super admin
-            var isScopeToUser = !IsCurrentUserSuperAdmin();
+            var isScopeToUser = !CurrentUser.HasRole(RoleName.SuperAdmin);
             IEnumerable<Organization> entities = await base.GetAsync();
             if (isScopeToUser)
             {

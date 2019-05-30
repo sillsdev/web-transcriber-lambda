@@ -87,6 +87,15 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         public IEnumerable<Organization> Organizations => OrganizationMemberships?.Select(o => o.Organization);
 
+        [NotMapped]
+        public IEnumerable<int> GroupIds => GroupMemberships?.Select(g => g.GroupId);
+
+        [NotMapped]
+        public IEnumerable<Group> Groups => GroupMemberships?.Select(g => g.Group);
+
+        //[NotMapped]
+        //public IEnumerable<Group> ProjectIds => GroupMemberships?.Select(g => g.Group);
+
         public bool HasRole(RoleName role)
         {
             var userRole = this
@@ -94,6 +103,14 @@ namespace SIL.Transcriber.Models
                 .Where(r => r.RoleName == role)
                 .FirstOrDefault();
 
+            return userRole != null;
+        }
+        public bool HasRole(RoleName role, int OrgId)
+        {
+            var userRole = this
+                .UserRoles
+                .Where(r => r.OrganizationId == OrgId && r.RoleName == role)
+                .FirstOrDefault();
             return userRole != null;
         }
         /*
