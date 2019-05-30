@@ -59,6 +59,10 @@ namespace SIL.Transcriber.Repositories
             }
             return base.Filter(entities, filterQuery);
         }
+        public IQueryable<Mediafile> GetInternal()
+        {
+            return base.Get();
+        }
         public Mediafile GetInternal(int id)
         {
             return base.Get().SingleOrDefault(p => p.Id == id);

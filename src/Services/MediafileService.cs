@@ -56,8 +56,16 @@ namespace SIL.Transcriber.Services
         public  async Task<Mediafile> CreateAsync(Mediafile entity, IFormFile FileToUpload)
         {
 
-            //var plan = await PlanRepository.GetAndIncludeAsync(entity.PlanId, "project");  //can add .organization
-            var plan = PlanRepository.GetWithProject(entity.PlanId);  
+            var plan = PlanRepository.GetWithProject(entity.PlanId);
+            var mfs = MediafileRepository.GetInternal().Where(mf => mf.OriginalFile == FileToUpload.FileName);
+            if (mfs.Count() == 0)
+                entity.VersionNumber = 1;
+            else
+            {
+                var last = mfs.Where(mf => mf.Id == mfs.Max(m => m.Id)).First();
+                entity.VersionNumber = last.VersionNumber + 1;
+                entity.PassageId = last.PassageId;
+            }
 
             S3Response response = await _S3service.UploadFileAsync(FileToUpload, DirectoryName(plan));
             entity.AudioUrl = response.Message;

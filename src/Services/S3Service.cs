@@ -97,7 +97,7 @@ namespace SIL.Transcriber.Services
                 file.OpenReadStream().Read(fileBytes, 0, Int32.Parse(file.Length.ToString()));
 
                 // create unique file name 
-                var fileName = file.FileName + Guid.NewGuid();
+                var fileName = Guid.NewGuid() + "_" + file.FileName;
 
                 PutObjectResponse response = null;
                 using (var stream = new MemoryStream(fileBytes))
