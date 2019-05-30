@@ -12,5 +12,15 @@ namespace SIL.Transcriber.Models
         [HasOne("group")]
         public virtual Group Group { get; set; }
         public int GroupId { get; set; }
+
+        [HasOne("role", Link.None)]
+        public virtual Role Role { get; set; }
+        public int RoleId { get; set; }
+
+        [Attr("font")]
+        public string Font { get; set; }
+
+        [Attr("font-size")]
+        public string FontSize { get; set; }
     }
 }

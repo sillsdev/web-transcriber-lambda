@@ -16,7 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\ProjectusersController.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
+    <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\transcriberContext.cs" />
     <Compile Remove="Models\XEmails.cs" />
     <Compile Remove="Models\XGroupmemberships.cs" />

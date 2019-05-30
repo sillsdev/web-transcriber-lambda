@@ -75,13 +75,8 @@ namespace SIL.Transcriber.Models
 
         [HasMany("project-integrations")]
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
-        //[HasManyThrough("project-integrations")]
+        //[HasManyThrough(nameof(ProjectIntegrations))]
         //public virtual List<Integration> Integrations { get; set; }
-
-        [NotMapped]
-        [HasManyThrough(nameof(ProjectUsers))]
-        public List<User> Users { get; set; }
-        public virtual List<ProjectUser> ProjectUsers { get; set; }
 
         [HasMany("plans")]
         public virtual List<Plan> Plans { get; set; }

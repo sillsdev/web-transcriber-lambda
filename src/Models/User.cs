@@ -61,11 +61,7 @@ namespace SIL.Transcriber.Models
         //[HasMany("owned-organizations")]
         //public virtual List<Organization> OwnedOrganizations { get; set; }
 
-        [HasManyThrough(nameof(ProjectUsers))]
-        public List<Project> Projects { get; set; }
-        public virtual List<ProjectUser> ProjectUsers { get; set; }
-
-        //[HasManyThrough(nameof(OrganizationMemberships))]
+        //[HasManyThrough(nameof(OrganizationMemberships))]   these cause issues...don't use 
         //[HasMany("Organizations")]
         //public List<Organization> Organizations { get; set; }
         [HasMany("organization-memberships", Link.None)]
