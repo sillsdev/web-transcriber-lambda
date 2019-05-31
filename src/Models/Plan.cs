@@ -11,8 +11,8 @@ namespace SIL.Transcriber.Models
         [Attr("name")]
         public string Name { get; set; }
 
-        [NotMapped]
-        public string Slug { get => "Plan" + Id.ToString(); }
+        [Attr("slug")]
+        public string Slug { get; set; }
 
         [HasOne("project")]
         public Project Project { get; set; }

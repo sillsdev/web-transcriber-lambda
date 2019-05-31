@@ -18,8 +18,7 @@ namespace SIL.Transcriber.Models
 
         [Attr("activity-name")]
         public string ActivityName { get; set; }
-        [Attr("state")]
-        public string State { get; set; }
+
         [Attr("comment")]
         public string Comment { get; set; }
 

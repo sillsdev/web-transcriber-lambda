@@ -8,11 +8,11 @@ namespace SIL.Transcriber.Models
 {
     public partial class Organization : BaseModel
     {
-        [NotMapped]
-        public string Slug { get => "Org" + Id.ToString(); }
-
         [Attr("name")]
         public string Name { get; set; }
+
+        [Attr("slug")]
+        public string Slug { get; set; }
 
         [Attr("website-url")]
         public string WebsiteUrl { get; set; }
