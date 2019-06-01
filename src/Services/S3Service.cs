@@ -89,6 +89,53 @@ namespace SIL.Transcriber.Services
             }
 
         }
+
+        private string SignedUrl(string key, HttpVerb action, string mimetype = "audio/mpeg")
+        {
+            var s3Client = new AmazonS3Client();
+
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = USERFILES_BUCKET,
+                Key = key,
+                Verb = action,
+                Expires = DateTime.Now.AddMinutes(25),
+               // ContentType = mimetype
+            };
+            return s3Client.GetPreSignedURL(request);
+        }
+        public S3Response GetSignedUrl(string fileName, string folder = "")
+        {
+            try
+            {
+                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET), HttpStatusCode.OK);
+
+            }
+            catch (AmazonS3Exception e)
+            {
+                return S3Response(e.Message, e.StatusCode);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
+        public S3Response PutSignedUrl(string fileName, string folder = "")
+        {
+            try
+            {
+                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT), HttpStatusCode.OK);
+            }
+            catch (AmazonS3Exception e)
+            {
+                return S3Response(e.Message, e.StatusCode);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
+
         public async Task<S3Response> UploadFileAsync(IFormFile file, string folder = "")
         {
             try

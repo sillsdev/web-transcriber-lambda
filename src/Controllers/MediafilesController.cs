@@ -26,9 +26,21 @@ namespace SIL.Transcriber.Controllers
         {
             _service = (MediafileService)resourceService;
         }
+        //POST will return your new mediafile with a PUT signed url in Audiourl.
+        //POST/file expects mediafile and file to be in MultiPartForm. It will upload the file and return new mediafile with nothing in audiourl.
+        //GET/{id} will return mediafile record without refreshing Audiourl.
+        //GET/{id}/file will return the file directly
+        //GET/{id}/fileurl will return mediafile with new GET signed url in Audiourl.
 
+        [HttpGet("{id}/fileurl")]
+        public IActionResult GetFile([FromRoute] int id)
+        {
+            var response = _service.GetFileSignedUrl(id);
+            return Ok(response);
+        }
+        
         [HttpGet("{id}/file")]
-        public async Task<IActionResult> GetFile([FromRoute] int id)
+        public async Task<IActionResult> GetFileDirect([FromRoute] int id)
         {
             var response = await _service.GetFile(id);
 
@@ -47,19 +59,15 @@ namespace SIL.Transcriber.Controllers
                 return NotFound();
             }
         }
+       
         [HttpPost("file")]
         public async Task<IActionResult> PostAsync([FromForm] string jsonString,
                                                     [FromForm] IFormFile file)
         {
             Mediafile entity = JsonConvert.DeserializeObject<Mediafile>(jsonString);
-            entity = await _service.CreateAsync(entity, file);
+            entity = await _service.CreateAsyncWithFile(entity, file);
             return Created("/api/mediafiles/" + entity.Id.ToString(), entity);
         }
         
-        [HttpPost]
-        public override async Task<IActionResult> PostAsync([FromBody] Mediafile entity)
-        {
-            throw new JsonApiException((int)HttpStatusCode.NotImplemented, $"Use route /mediafiles/file to Post.  Post must include Form Data: jsonString with entity information, and file with a media file.");
-        }
     }
 }

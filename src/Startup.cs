@@ -9,12 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Extensions;
-using Newtonsoft.Json.Serialization;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using SIL.Transcriber.Services;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using Amazon.S3;
-using Amazon.Runtime;
+
 
 namespace SIL.Transcriber
 {

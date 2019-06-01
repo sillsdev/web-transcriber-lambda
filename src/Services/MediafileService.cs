@@ -1,6 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using Amazon.S3;
+using Amazon.S3.Model;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Http;
@@ -20,10 +25,6 @@ namespace SIL.Transcriber.Services
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
 
-        private string DirectoryName(Plan plan)
-        {
-            return plan.Project.Organization.Slug + "/" + plan.Slug;
-        }
         public MediafileService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Mediafile> basemediafileRepository,
@@ -38,6 +39,7 @@ namespace SIL.Transcriber.Services
             PlanRepository = planRepository;
             MediafileRepository = (MediafileRepository)basemediafileRepository;
         }
+
         public override async Task<IEnumerable<Mediafile>> GetAsync()
         {
             return await GetScopedToOrganization<Mediafile>(
@@ -52,12 +54,22 @@ namespace SIL.Transcriber.Services
 
             return files.SingleOrDefault(g => g.Id == id);
         }
-
-        public  async Task<Mediafile> CreateAsync(Mediafile entity, IFormFile FileToUpload)
+        private string DirectoryName(Plan plan)
         {
+            return plan.Project.Organization.Slug + "/" + plan.Slug;
+        }
 
+        private string DirectoryName(Mediafile entity)
+        {
             var plan = PlanRepository.GetWithProject(entity.PlanId);
-            var mfs = MediafileRepository.GetInternal().Where(mf => mf.OriginalFile == FileToUpload.FileName);
+            return DirectoryName(plan);
+        }
+
+        //set the version number
+        private void InitNewMediafile(Mediafile entity)
+        {
+            entity.S3File = Guid.NewGuid() + "_" + entity.OriginalFile;
+            var mfs = MediafileRepository.GetInternal().Where(mf => mf.OriginalFile == entity.OriginalFile);
             if (mfs.Count() == 0)
                 entity.VersionNumber = 1;
             else
@@ -66,14 +78,32 @@ namespace SIL.Transcriber.Services
                 entity.VersionNumber = last.VersionNumber + 1;
                 entity.PassageId = last.PassageId;
             }
-
-            S3Response response = await _S3service.UploadFileAsync(FileToUpload, DirectoryName(plan));
+        }
+        public override async Task<Mediafile> CreateAsync(Mediafile entity)
+        {
+            InitNewMediafile(entity); //set the version number
+            var response = _S3service.PutSignedUrl(entity.S3File, DirectoryName(entity));
             entity.AudioUrl = response.Message;
+            return await base.CreateAsync(entity);
+        }
+        public  async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
+        {
+           InitNewMediafile(entity);
+
+            S3Response response = await _S3service.UploadFileAsync(FileToUpload, DirectoryName(entity));
+            entity.S3File = response.Message;
             entity.Filesize = FileToUpload.Length/1024;
             entity.OriginalFile = FileToUpload.FileName;
             entity.ContentType = FileToUpload.ContentType;
             entity = await base.CreateAsync(entity);
             return entity;
+        }
+
+        public Mediafile GetFileSignedUrl(int id)
+        {
+            Mediafile mf = MediafileRepository.GetInternal(id);
+            mf.AudioUrl = _S3service.GetSignedUrl(mf.S3File, DirectoryName(mf)).Message;
+            return mf;
         }
 
         public async Task<S3Response> GetFile(int id)
