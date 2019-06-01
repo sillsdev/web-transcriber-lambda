@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class ActivityState : BaseModel
+    public partial class Activitystate : BaseModel
     {
         [Attr("state")]
         public string State { get; set; }

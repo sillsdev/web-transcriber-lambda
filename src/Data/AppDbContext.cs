@@ -147,7 +147,7 @@ namespace SIL.Transcriber.Data
             return await base.SaveChangesAsync(cancellationToken);
         }
 
-        public DbSet<ActivityState> ActivityStates { get; set; }
+        public DbSet<Activitystate> Activitystates { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
