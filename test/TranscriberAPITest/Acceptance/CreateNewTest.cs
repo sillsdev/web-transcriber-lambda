@@ -151,28 +151,28 @@ namespace TranscriberAPI.Tests.Acceptance
             await SaveIt(routePrefix, route, passage4);
             Assert.NotEqual(0, passage4.Id);
 
-            var ps1 = new Passagesection
+            var ps1 = new PassageSection
             {
                 PassageId = passage1.Id,
                 SectionId = section1.Id
             };
             await SaveIt(routePrefix, $"/api/passagesections", ps1);
             Assert.NotEqual(0, ps1.Id);
-            var ps2 = new Passagesection
+            var ps2 = new PassageSection
             {
                 PassageId = passage2.Id,
                 SectionId = section1.Id
             };
             await SaveIt(routePrefix, $"/api/passagesections", ps2);
             Assert.NotEqual(0, ps2.Id);
-            var ps3 = new Passagesection
+            var ps3 = new PassageSection
             {
                 PassageId = passage3.Id,
                 SectionId = section2.Id
             };
             await SaveIt(routePrefix, $"/api/passagesections", ps3);
             Assert.NotEqual(0, ps3.Id);
-            var ps4 = new Passagesection
+            var ps4 = new PassageSection
             {
                 PassageId = passage4.Id,
                 SectionId = section2.Id

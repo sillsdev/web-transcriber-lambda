@@ -4,11 +4,12 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public class UserPassage : BaseModel, IArchive
+    public class UserPassage : BaseModel
     {
         [HasOne("user", Link.None)]
         public virtual User User { get; set; }
 
+        [Attr("user-id")]
         public int UserId { get; set; }
 
         [HasOne("passage", Link.None)]
@@ -22,6 +23,9 @@ namespace SIL.Transcriber.Models
         [Attr("comment")]
         public string Comment { get; set; }
 
-        public bool Archived { get; set; }
+        [Attr("role-id")]
+        public int  RoleId { get; set; }
+        [HasOne("role", Link.None)]
+        public virtual Role Role { get; set; }
     }
 }

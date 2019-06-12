@@ -12,7 +12,7 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class UserPassageService : BaseArchiveService<UserPassage>
+    public class UserPassageService : BaseService<UserPassage>
     {
         public IOrganizationContext OrganizationContext { get; }
         public IEntityRepository<UserPassage> UserPassageRepository { get; }

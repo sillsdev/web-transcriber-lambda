@@ -6,11 +6,11 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class PassagesectionsController : BaseController<Passagesection>
+    public class PassagesectionsController : BaseController<PassageSection>
     {
          public PassagesectionsController(
             IJsonApiContext jsonApiContext,
-                IResourceService<Passagesection> resourceService,
+                IResourceService<PassageSection> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
