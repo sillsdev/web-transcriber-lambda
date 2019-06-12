@@ -13,14 +13,12 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class GroupService : EntityResourceService<Group>
+    public class GroupService : BaseArchiveService<Group>
     {
         public IOrganizationContext OrganizationContext { get; private set; }
-        public IJsonApiContext JsonApiContext { get; }
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
         public IEntityRepository<UserRole> UserRolesRepository { get; }
-        public GroupRepository GroupRepository { get; }
 
         public GroupService(
             IJsonApiContext jsonApiContext,
@@ -29,14 +27,12 @@ namespace SIL.Transcriber.Services
             UserRepository userRepository,
             IEntityRepository<Group> groupRepository,
             IEntityRepository<UserRole> userRolesRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, groupRepository, loggerFactory)
+            ILoggerFactory loggerFactory) : base(jsonApiContext, groupRepository,  loggerFactory)
         {
             OrganizationContext = organizationContext;
-            JsonApiContext = jsonApiContext;
             CurrentUserContext = currentUserContext;
             UserRepository = userRepository;
             UserRolesRepository = userRolesRepository;
-            GroupRepository = (GroupRepository)groupRepository;
         }
 
 
@@ -54,7 +50,7 @@ namespace SIL.Transcriber.Services
         public override async Task<Group> UpdateAsync(int id, Group resource)
         {
             var updateForm = new UpdateForm(UserRepository,
-                                             GroupRepository,
+                                             (GroupRepository)MyRepository,
                                              OrganizationContext,
                                              UserRolesRepository,
                                              CurrentUserContext);

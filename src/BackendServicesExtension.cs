@@ -47,17 +47,19 @@ namespace SIL.Transcriber
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
 
             // services
-            services.AddScoped<IResourceService<User>, UserService>();
-            services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
-            services.AddScoped<IResourceService<Organization>, OrganizationService>();
-            services.AddScoped<IResourceService<Group>, GroupService>();
-            services.AddScoped<IResourceService<Project>, ProjectService>();
-            services.AddScoped<IResourceService<Plan>, PlanService>();
-            services.AddScoped<IResourceService<Section>, SectionService>();
-            services.AddScoped<IResourceService<Passage>, PassageService>();
-            services.AddScoped<IResourceService<Mediafile>, MediafileService>();
+            services.AddScoped<IResourceService<Activitystate>, ActivitystateService>();
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
+            services.AddScoped<IResourceService<Group>, GroupService>();
+            services.AddScoped<IResourceService<Integration>, IntegrationService>();
+            services.AddScoped<IResourceService<Mediafile>, MediafileService>();
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
+            services.AddScoped<IResourceService<Organization>, OrganizationService>();
+            services.AddScoped<IResourceService<Passage>, PassageService>();
+            services.AddScoped<IResourceService<Plan>, PlanService>();
+            services.AddScoped<IResourceService<Project>, ProjectService>();
+            services.AddScoped<IResourceService<Section>, SectionService>();
+            services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
+            services.AddScoped<IResourceService<User>, UserService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
 
@@ -74,14 +76,20 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<CurrentUserRepository>();
 
-            services.AddScoped<UserService>();
-            services.AddScoped<OrganizationService>();
+            services.AddScoped<ActivitystateService>();
+            services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
-            services.AddScoped<ProjectService>();
-            services.AddScoped<PlanService>();
-            services.AddScoped<SectionService>();
-            services.AddScoped<PassageService>();
+            services.AddScoped<IntegrationService>();
             services.AddScoped<MediafileService>();
+            services.AddScoped<OrganizationMembershipService>();
+            services.AddScoped<OrganizationService>();
+            services.AddScoped<PassageService>();
+            services.AddScoped<PlanService>();
+            services.AddScoped<ProjectService>();
+            services.AddScoped<SectionService>();
+            services.AddScoped<UserPassageService>();
+            services.AddScoped<UserService>();
+
             services.AddScoped<Auth0ManagementApiTokenService>();
             //services.AddScoped<SendNotificationService>();
             //services.AddScoped<SendEmailService>();

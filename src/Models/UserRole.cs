@@ -26,7 +26,7 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         public RoleName RoleName
         {
-            get { return Role.Rolename; }
+            get { return Role == null ? RoleName.Transcriber : Role.Rolename; }
         }
 
 

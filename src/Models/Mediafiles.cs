@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Mediafile : BaseModel, ITrackDate
+    public partial class Mediafile : BaseModel, IArchive
     {
         [Attr("passage-id")]
         public int? PassageId { get; set; }
@@ -44,11 +44,7 @@ namespace SIL.Transcriber.Models
         [Attr("filesize")]
         public long Filesize { get; set; }
 
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
+        public bool Archived { get; set; }
 
     }
 }

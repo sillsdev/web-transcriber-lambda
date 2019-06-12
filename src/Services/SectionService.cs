@@ -9,10 +9,9 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionService : EntityResourceService<Section>
+    public class SectionService : BaseArchiveService<Section>
     {
         public IOrganizationContext OrganizationContext { get; private set; }
-        public IJsonApiContext JsonApiContext { get; }
 
         public SectionService(
             IJsonApiContext jsonApiContext,
@@ -21,7 +20,6 @@ namespace SIL.Transcriber.Services
             ILoggerFactory loggerFactory) : base(jsonApiContext, sectionRepository, loggerFactory)
         {
             OrganizationContext = organizationContext;
-            JsonApiContext = jsonApiContext;
         }
         public override async Task<IEnumerable<Section>> GetAsync()
         {

@@ -5,7 +5,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Plan : BaseModel
+    public partial class Plan : BaseModel, IArchive
     {
 
         [Attr("name")]
@@ -28,6 +28,7 @@ namespace SIL.Transcriber.Models
 
         [HasMany("mediafiles")]
         public virtual List<Mediafile> Mediafiles { get; set; }
+        public bool Archived { get; set; }
 
     }
 }

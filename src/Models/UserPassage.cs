@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public class UserPassage : BaseModel, ITrackDate
+    public class UserPassage : BaseModel, IArchive
     {
         [HasOne("user", Link.None)]
         public virtual User User { get; set; }
@@ -22,10 +22,6 @@ namespace SIL.Transcriber.Models
         [Attr("comment")]
         public string Comment { get; set; }
 
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
+        public bool Archived { get; set; }
     }
 }

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Organization : BaseModel
+    public partial class Organization : BaseModel, IArchive
     {
         [Attr("name")]
         public string Name { get; set; }
@@ -50,5 +50,6 @@ namespace SIL.Transcriber.Models
         [HasMany("users")]
         public IEnumerable<User> Users => OrganizationMemberships?.Select(om => om.User);
         */
+        public bool Archived { get; set; }
     }
 }

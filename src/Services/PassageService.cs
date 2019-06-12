@@ -5,23 +5,22 @@ using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class PassageService : EntityResourceService<Passage>
+    public class PassageService : BaseArchiveService<Passage>
     {
         public IOrganizationContext OrganizationContext { get; private set; }
-        public IJsonApiContext JsonApiContext { get; }
 
         public PassageService(
             IJsonApiContext jsonApiContext,
             IOrganizationContext organizationContext,
             IEntityRepository<Passage> PassageRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, PassageRepository, loggerFactory)
+           ILoggerFactory loggerFactory) : base(jsonApiContext, PassageRepository, loggerFactory)
         {
             OrganizationContext = organizationContext;
-            JsonApiContext = jsonApiContext;
         }
         public override async Task<IEnumerable<Passage>> GetAsync()
         {

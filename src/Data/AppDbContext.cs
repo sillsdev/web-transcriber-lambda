@@ -2,6 +2,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 using System;
 using System.Linq;
 using System.Threading;
@@ -11,8 +12,11 @@ namespace SIL.Transcriber.Data
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-        { }
+        protected ICurrentUserContext CurrentUserContext;
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext) : base(options)
+        {
+            CurrentUserContext = currentUserContext;
+        }
 
         private void LowerCaseDB(ModelBuilder builder)
         {
@@ -118,6 +122,12 @@ namespace SIL.Transcriber.Data
             LowerCaseDB(builder);
             DefineManyToMany(builder);
         }
+        private int CurrentUserId()
+        { 
+             var auth0Id = this.CurrentUserContext.Auth0Id; 
+             var userFromResult = Users.Local.FirstOrDefault(u => u.ExternalId.Equals(auth0Id));
+             return userFromResult.Id;
+        }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
         private void AddTimestamps()
         {
@@ -134,6 +144,11 @@ namespace SIL.Transcriber.Data
                     trackDate.DateUpdated = now;
                 }
             }
+            entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            foreach (var entry in entries)
+            {
+                entry.CurrentValues["LastModifiedBy"] = CurrentUserId();
+             }
         }
         public override int SaveChanges()
         {

@@ -69,7 +69,7 @@ namespace SIL.Transcriber.Services
         private void InitNewMediafile(Mediafile entity)
         {
             entity.S3File = Guid.NewGuid() + "_" + entity.OriginalFile;
-            var mfs = MediafileRepository.GetInternal().Where(mf => mf.OriginalFile == entity.OriginalFile);
+            var mfs = MediafileRepository.GetInternal().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId);
             if (mfs.Count() == 0)
                 entity.VersionNumber = 1;
             else

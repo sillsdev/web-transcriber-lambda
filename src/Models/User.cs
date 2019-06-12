@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace SIL.Transcriber.Models
 {
-    public class User : BaseModel, ITrackDate
+    public class User : BaseModel, IArchive
     {
         // Full Name of User
         // Comes from Auth0 (trusting that they handle correct order)
@@ -38,11 +38,6 @@ namespace SIL.Transcriber.Models
         [Attr("auth0Id")]
         public string ExternalId { get; set; }
 
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
         [Attr("identity-token")]
         public string identitytoken;
         [Attr("uilanguagebcp47")]
@@ -124,5 +119,6 @@ namespace SIL.Transcriber.Models
             return locale;
         }
         */
+        public bool Archived { get; set; }
     }
 }

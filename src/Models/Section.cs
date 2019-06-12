@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public class Section : BaseModel
+    public class Section : BaseModel, IArchive
     {
         [Attr("sequencenum")]
         public int Sequencenum { get; set; }
@@ -26,6 +26,7 @@ namespace SIL.Transcriber.Models
 
         [HasMany("passagesections")]
         public List<Passagesection> PassageSections { get; set; }
+        public bool Archived { get; set; }
 
     }
 }

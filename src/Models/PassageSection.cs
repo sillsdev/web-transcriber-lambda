@@ -3,7 +3,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Passagesection : BaseModel
+    public partial class Passagesection : BaseModel, IArchive
     {
         [Attr("passage-id")]
         public int PassageId { get; set; }
@@ -15,5 +15,7 @@ namespace SIL.Transcriber.Models
 
         [HasOne("section")]
         public virtual Section Section { get; set; }
+
+        public bool Archived { get; set; }
     }
 }

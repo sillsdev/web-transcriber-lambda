@@ -47,6 +47,9 @@
     <Compile Remove="Models\XWorkflowprocesstimer.cs" />
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
+    <Compile Remove="Services\PlantypeService.cs" />
+    <Compile Remove="Services\ProjecttypeService.cs" />
+    <Compile Remove="Services\RoleService.cs" />
   </ItemGroup>
 
   <ItemGroup>

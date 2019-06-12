@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Integration : BaseModel
+    public partial class Integration : BaseModel, IArchive
     {
         [Attr("name")]
         public string Name { get; set; }
@@ -15,5 +15,6 @@ namespace SIL.Transcriber.Models
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
 
         //public ICollection<ProjectIntegration> Projectintegrations { get; set; }
+        public bool Archived { get; set; }
     }
 }

@@ -5,7 +5,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Project : BaseModel, ITrackDate, IBelongsToOrganization
+    public partial class Project : BaseModel, IArchive, IBelongsToOrganization
     {
         [Attr("name")]
         public string Name { get; set; }
@@ -61,12 +61,6 @@ namespace SIL.Transcriber.Models
         [Attr("is-public")]
         public bool? IsPublic { get; set; } = true;
 
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
-
         [Attr("date-archived")]
         public DateTime? DateArchived { get; set; }
 
@@ -82,6 +76,7 @@ namespace SIL.Transcriber.Models
         public virtual List<Plan> Plans { get; set; }
         //[HasManyThrough("tasks")]
         //public virtual List<Task> Tasks { get; set; }
+        public bool Archived { get; set; }
 
     }
 }
