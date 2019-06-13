@@ -1,6 +1,12 @@
 # web-transcriber-lambda
-REST API for transcriber - hosted in AWS lambda function
+REST API for transcriber - hosted in AWS lambda function  
 
+DEV:  https://9u6wlhwuha.execute-api.us-east-2.amazonaws.com/dev/api  
+  ./build.ps1 in src dir  
+  
+QA:  https://ukepgrpe6l.execute-api.us-east-2.amazonaws.com/qa/api  
+  ./buildqa.ps1 in src dir  
+  
 ActivityStates  
 CurrentUsers - Get Only, returns logged in user  
 GroupMemberships  
