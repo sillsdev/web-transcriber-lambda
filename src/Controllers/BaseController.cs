@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Models;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using System.Data.Common;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -46,6 +48,21 @@ namespace SIL.Transcriber.Controllers
         }
         private static string CURRENT_USER_KEY = "CurrentUser";
 
+        /*  Nice try...but the errors don't come back to here...have to interrupt the jsonapi error handling
+        public override async Task<IActionResult> PostAsync([FromBody] T entity)
+        {
+            try
+            {
+                return await base.PostAsync(entity);
+
+            }
+            catch (DbException ex)
+            {
+
+                return BadRequest(ex);
+            }
+        }
+        */
         public User CurrentUser
         {
             get

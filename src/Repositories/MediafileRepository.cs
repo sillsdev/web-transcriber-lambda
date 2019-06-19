@@ -4,6 +4,7 @@ using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
@@ -17,6 +18,7 @@ namespace SIL.Transcriber.Repositories
 
         private ProjectRepository ProjectRepository;
         private PlanRepository PlanRepository;
+        private AppDbContext AppDbContext;
 
         public MediafileRepository(
             ILoggerFactory loggerFactory,
@@ -28,6 +30,7 @@ namespace SIL.Transcriber.Repositories
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             ProjectRepository = projectRepository;
+            AppDbContext = contextResolver.GetContext() as AppDbContext;
             PlanRepository = planRepository;
         }
 
@@ -61,11 +64,11 @@ namespace SIL.Transcriber.Repositories
         }
         public IQueryable<Mediafile> GetInternal()
         {
-            return base.Get();
+            return AppDbContext.Mediafiles;
         }
         public Mediafile GetInternal(int id)
         {
-            return base.Get().SingleOrDefault(p => p.Id == id);
+            return GetInternal().SingleOrDefault(p => p.Id == id);
         }
 
         // This is the set of all Mediafiles that a user has access to.

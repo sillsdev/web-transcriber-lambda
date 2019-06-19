@@ -66,7 +66,7 @@ namespace SIL.Transcriber
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();
-            app.UseJsonApi();
+            app.UseJsonApi(true);
         }
 
         private string GetAllowedOrigins()

@@ -14,18 +14,17 @@ namespace SIL.Transcriber.Models
 
         [HasOne("passage", Link.None)]
         public virtual Passage Passage { get; set; }
-        
+
+        [Attr("passage-id")]
         public int PassageId { get; set; }
 
-        [Attr("activity-name")]
-        public string ActivityName { get; set; }
-
-        [Attr("comment")]
-        public string Comment { get; set; }
 
         [Attr("role-id")]
         public int  RoleId { get; set; }
         [HasOne("role", Link.None)]
         public virtual Role Role { get; set; }
+
+        [Attr("comment")]
+        public string Comment { get; set; }
     }
 }

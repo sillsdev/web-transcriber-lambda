@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
@@ -6,6 +7,7 @@ using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
@@ -46,7 +48,9 @@ namespace SIL.Transcriber.Repositories
         public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, IQueryable<Section> sections = null)
         {
             if (sections == null)
+            {
                 sections = SectionRepository.GetWithPassageSections();
+            }
 
             IEnumerable<int> passageIds = sections.SelectMany(s => s.PassageSections.Select(ps => ps.PassageId));
 
@@ -72,7 +76,7 @@ namespace SIL.Transcriber.Repositories
         // This is the set of all Passages that a user has access to.
         public override IQueryable<Passage> Get()
         {
-           return UsersPassages(base.Get());
+           return  UsersPassages(base.Get());
         }
     }
 }

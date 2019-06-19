@@ -184,28 +184,28 @@ namespace TranscriberAPI.Tests.Acceptance
             {
                 UserId = user.Id,
                 PassageId = passage1.Id,
-                ActivityName = "TestActivityState"
+                RoleId = 3
             };
             await SaveIt(routePrefix, $"/api/userpassages", up1);
             var up2 = new UserPassage()
             {
                 UserId = user.Id,
                 PassageId = passage2.Id,
-                ActivityName ="TestActivityState"
+                RoleId = 3
             };
             await SaveIt(routePrefix, $"/api/userpassages", up2);
             var up3 = new UserPassage()
             {
                 UserId = user.Id,
                 PassageId = passage3.Id,
-                ActivityName = "Ready for Transcription"
+                RoleId = 3
             };
             await SaveIt(routePrefix, $"/api/userpassages", up3);
             var up4 = new UserPassage()
             {
                 UserId = user.Id,
                 PassageId = passage4.Id,
-                ActivityName = "Ready for Transcription"
+                RoleId = 3
             };
             await SaveIt(routePrefix, $"/api/userpassages", up4);
             media.PassageId = passage1.Id;

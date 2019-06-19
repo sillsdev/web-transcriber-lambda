@@ -57,14 +57,19 @@ namespace SIL.Transcriber.Repositories
             statusUpdateService.DidUpdate(retval);
             return retval;
         }
-
+        */
         public override async Task<TEntity> CreateAsync(TEntity entity)
         {
-            var retval = await base.CreateAsync(entity);
-            statusUpdateService.DidInsert(retval);
-            return retval;
+            try
+            {
+                return  await base.CreateAsync(entity);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw ex;  //does this go back to my controller?  Nope...eaten by JsonApiExceptionFilter.  TODO: Figure out a way to capture it and return a 400 instead
+            }
         }
-
+      /*
         public override async Task<bool> DeleteAsync(TId id)
         {
             var entity = await GetAsync(id);

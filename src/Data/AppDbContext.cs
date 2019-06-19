@@ -170,18 +170,18 @@ namespace SIL.Transcriber.Data
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<Passage> Passages { get; set; }
-        public DbSet<PassageSection> PassageSections { get; set; }
+        public DbSet<PassageSection> Passagesections { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public DbSet<Project> Projects { get; set; }
-        public  DbSet<ProjectType> Projecttypes { get; set; }
-        public  DbSet<Reviewer> Reviewers { get; set; }
-        public  DbSet<Role> Roles { get; set; }
-        public  DbSet<Section> Sections { get; set; }
+        public DbSet<ProjectType> Projecttypes { get; set; }
+        public DbSet<Reviewer> Reviewers { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<Section> Sections { get; set; }
         public DbSet<UserRole> Userroles { get; set; }
         public DbSet<UserPassage> Userpassages { get; set; }
-        public  DbSet<User> Users { get; set; }
+        public DbSet<User> Users { get; set; }
 
     }
 }

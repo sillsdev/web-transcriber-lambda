@@ -38,7 +38,8 @@ namespace SIL.Transcriber.Repositories
         //get my sections in these projects
         public IQueryable<Section> UsersSections(IQueryable<Section> entities, IQueryable<Project> projects)
         {
-            var plans = PlanRepository.UsersPlans(PlanRepository.Get(), projects);
+            //var plans = PlanRepository.UsersPlans(PlanRepository.Get(), projects);
+            var plans = PlanRepository.UsersPlans(AppDbContext.Plans, projects);
             return UsersSections(entities, plans);
 
         }
@@ -46,7 +47,9 @@ namespace SIL.Transcriber.Repositories
         {
             //this gets just the plans I have access to
             if (plans == null)
+            {
                 plans = PlanRepository.Get();
+            }
 
             IEnumerable<int> planIds = plans.Select(p => p.Id);
 
@@ -60,7 +63,10 @@ namespace SIL.Transcriber.Repositories
             //you'd think this would work...but you'd be wrong;
             //return Include(Get(), "passagesections");
             //no error...but no passagesections either  return Get().Include(s => s.PassageSections);
-            return UsersSections(Include(base.Get(), "passagesections"));
+            System.Diagnostics.Debug.WriteLine("Getting sections with ps" + DateTime.Now.ToLongTimeString() );
+            var sections =  UsersSections(Include(base.Get(), "passage-sections" ));
+            System.Diagnostics.Debug.WriteLine("done Getting sections with ps" + DateTime.Now.ToLongTimeString());
+            return sections;
         }
 
         // This is the set of all Sections that a user has access to.
@@ -91,7 +97,7 @@ namespace SIL.Transcriber.Repositories
             if (role == null)
                 throw new Exception("Invalid Role Requested" + Rolename);
 
-            var passagesections = AppDbContext.PassageSections.Where(ps => ps.SectionId == Id).Include(ps => ps.Passage);
+            var passagesections = AppDbContext.Passagesections.Where(ps => ps.SectionId == Id).Include(ps => ps.Passage);
             UserPassage up;
             IEnumerable<Passage> passages = passagesections.Select(p => p.Passage);
             foreach (var ps in passagesections)
@@ -121,7 +127,7 @@ namespace SIL.Transcriber.Repositories
             if (role == null)
                 throw new Exception("Invalid Role Requested" + Rolename);
 
-            var passagesections = AppDbContext.PassageSections.Where(ps => ps.SectionId == Id).Include(ps => ps.Passage);
+            var passagesections = AppDbContext.Passagesections.Where(ps => ps.SectionId == Id).Include(ps => ps.Passage);
             IEnumerable<Passage> passages = passagesections.Select(p => p.Passage);
             foreach (var ps in passagesections)
             {
@@ -136,7 +142,7 @@ namespace SIL.Transcriber.Repositories
                 throw new Exception("Invalid Section");
 
             var assignments = new List<Assignment>();
-            PassageSection first = AppDbContext.PassageSections.Where(ps => ps.SectionId == id).FirstOrDefault();
+            PassageSection first = AppDbContext.Passagesections.Where(ps => ps.SectionId == id).FirstOrDefault();
             if (first == null)
                 return assignments;
 
