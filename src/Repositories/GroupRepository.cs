@@ -44,6 +44,10 @@ namespace SIL.Transcriber.Repositories
 
                 return entities = entities.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
             }
+            if (filterQuery.Has(ALLOWED_CURRENTUSER))
+            {
+                return UsersGroups(entities);
+            }
             return base.Filter(entities, filterQuery);
             /* deprecated....
              return entities.OptionallyFilterOnQueryParam(filterQuery,
@@ -56,13 +60,7 @@ namespace SIL.Transcriber.Repositories
                                                        GetWithOrganizationContext); 
                                                        */
         }
-        // This is the set of all groups that a user has access to.
-        // If a group would ever need to be accessed outside of this set of group,
-        // this method should not be used.
-        public override IQueryable<Group> Get()
-        {
-            return UsersGroups(base.Get());
-        }
+
     }
     /* So far, transcriber doesn't have a use case for this...
     private IQueryable<Group> GetWithOwnerId(IQueryable<Group> query,

@@ -24,10 +24,14 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<IEnumerable<Plan>> GetAsync()
         {
-            return await GetScopedToOrganization<Plan>(
+            return await GetScopedToCurrentUser(
+                base.GetAsync,
+                JsonApiContext);
+/*            return await GetScopedToOrganization<Plan>(
                 base.GetAsync,
                 OrganizationContext,
                 JsonApiContext);
+                */
 
         }
 

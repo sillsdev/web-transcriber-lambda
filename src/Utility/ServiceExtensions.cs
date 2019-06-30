@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Utility
@@ -13,9 +15,7 @@ namespace SIL.Transcriber.Utility
         public static async Task<IEnumerable<T>> GetScopedToOrganization<T>(
             Func<Task<IEnumerable<T>>> baseQuery,
             IOrganizationContext organizationContext,
-            IJsonApiContext jsonApiContext
-
-        )
+            IJsonApiContext jsonApiContext)
         {
             if (organizationContext.SpecifiedOrganizationDoesNotExist)
             {
@@ -41,6 +41,22 @@ namespace SIL.Transcriber.Utility
                 return await baseQuery();
             }
 
+        }
+
+        public static async Task<IEnumerable<T>> GetScopedToCurrentUser<T>(
+                              Func<Task<IEnumerable<T>>> baseQuery,
+                              IJsonApiContext jsonApiContext)
+        {
+                var query = jsonApiContext.QuerySet;
+
+                if (query == null)
+                {
+                    query = new QuerySet();
+                    jsonApiContext.QuerySet = query;
+                }
+                query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("currentuser", "currentuser", "eq"));
+
+                return await baseQuery();
         }
     }
 }

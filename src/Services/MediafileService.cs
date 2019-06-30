@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -17,11 +18,10 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class MediafileService : EntityResourceService<Mediafile>
+    public class MediafileService : BaseArchiveService<Mediafile>
     {
         private IS3Service _S3service { get; }
         private IOrganizationContext OrganizationContext { get; set; }
-        private IJsonApiContext JsonApiContext { get; }
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
 
@@ -35,17 +35,19 @@ namespace SIL.Transcriber.Services
         {
             _S3service = service;
             OrganizationContext = organizationContext;
-            JsonApiContext = jsonApiContext;
             PlanRepository = planRepository;
-            MediafileRepository = (MediafileRepository)basemediafileRepository;
+            MediafileRepository = (MediafileRepository)MyRepository; //from base
         }
 
         public override async Task<IEnumerable<Mediafile>> GetAsync()
         {
-            return await GetScopedToOrganization<Mediafile>(
+            return await GetScopedToCurrentUser(
+             base.GetAsync,
+             JsonApiContext);
+/*            return await GetScopedToOrganization<Mediafile>(
                 base.GetAsync,
                 OrganizationContext,
-                JsonApiContext);
+                JsonApiContext); */
 
         }
         public override async Task<Mediafile> GetAsync(int id)
@@ -69,7 +71,7 @@ namespace SIL.Transcriber.Services
         private void InitNewMediafile(Mediafile entity)
         {
             entity.S3File = Guid.NewGuid() + "_" + entity.OriginalFile;
-            var mfs = MediafileRepository.GetInternal().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId);
+            var mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
             if (mfs.Count() == 0)
                 entity.VersionNumber = 1;
             else
@@ -101,30 +103,33 @@ namespace SIL.Transcriber.Services
 
         public Mediafile GetFileSignedUrl(int id)
         {
-            Mediafile mf = MediafileRepository.GetInternal(id);
+            Mediafile mf = MediafileRepository.Get(id);
             mf.AudioUrl = _S3service.GetSignedUrl(mf.S3File, DirectoryName(mf)).Message;
             return mf;
         }
 
         public async Task<S3Response> GetFile(int id)
         {
-            Mediafile mf = MediafileRepository.GetInternal(id);
+            Mediafile mf = MediafileRepository.Get(id);
             var plan = PlanRepository.GetWithProject(mf.PlanId);
-            if (mf.AudioUrl.Length == 0 || !(await _S3service.FileExistsAsync(mf.AudioUrl, DirectoryName(plan))))
+            if (mf.S3File.Length == 0 || !(await _S3service.FileExistsAsync(mf.S3File, DirectoryName(plan))))
                 return null;
 
-            S3Response response = await _S3service.ReadObjectDataAsync(mf.AudioUrl, DirectoryName(plan));
+            S3Response response = await _S3service.ReadObjectDataAsync(mf.S3File, DirectoryName(plan));
 
             return response;
         }
 
         public override async Task<bool> DeleteAsync(int id)
         {
-            Mediafile mf = MediafileRepository.GetInternal(id);
+            Mediafile mf = MediafileRepository.Get(id);
             var plan = PlanRepository.GetWithProject(mf.PlanId);
 
-            S3Response response = await _S3service.RemoveFile(mf.AudioUrl, DirectoryName(plan));
-            return await base.DeleteAsync(id);
+            S3Response response = await _S3service.RemoveFile(mf.S3File, DirectoryName(plan));
+            if (response.Status == HttpStatusCode.OK || response.Status == HttpStatusCode.NoContent)
+                return await base.DeleteAsync(id);
+            else
+                throw new Exception(response.Message);
         }        
     }
 }

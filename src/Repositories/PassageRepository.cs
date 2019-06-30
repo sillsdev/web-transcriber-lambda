@@ -34,14 +34,11 @@ namespace SIL.Transcriber.Repositories
             ProjectRepository = projectRepository;
             SectionRepository = sectionRepository;
         }
-
-        //get my passages in these projects
+       
         public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, IQueryable<Project> projects)
         {
-            //var sections = entities.SelectMany(p => p.PassageSections.Select(ps => ps.Section));
+            var sections = SectionRepository.UsersSections(dbContext.Sections, projects);
 
-            //this gets just the sections I have access to in these projects
-            var sections = SectionRepository.UsersSections(SectionRepository.GetWithPassageSections(), projects);
             return UsersPassages(entities, sections);
         }
 
@@ -49,34 +46,30 @@ namespace SIL.Transcriber.Repositories
         {
             if (sections == null)
             {
-                sections = SectionRepository.GetWithPassageSections();
+                // sections = SectionRepository.GetWithPassageSections();
+                //this is faster...
+                sections = SectionRepository.UsersSections(dbContext.Sections);
             }
-
-            IEnumerable<int> passageIds = sections.SelectMany(s => s.PassageSections.Select(ps => ps.PassageId));
+            var passagesections = dbContext.Passagesections.Join(sections, ps => ps.SectionId, s => s.Id, (ps, s) => ps);
 
             //cast this to an ienumerable because to avoid error:A second operation started on this context before a previous operation completed. Any instance members are not guaranteed to be thread safe.
-            entities = ((IEnumerable<Passage>)entities).Where(p => passageIds.Contains(p.Id)).AsQueryable();
-            return entities;
+            return entities.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p);
         }
+
 
         public override IQueryable<Passage> Filter(IQueryable<Passage> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-                    return UsersPassages(entities, projects);
-                }
-                return entities;
+                var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                return UsersPassages(entities, projects);
             }
-            return base.Filter(entities, filterQuery);
+            if (filterQuery.Has(ALLOWED_CURRENTUSER))
+            {
+                return UsersPassages(entities);
+            }
+            return base.Filter(entities, filterQuery); 
         }
- 
-        // This is the set of all Passages that a user has access to.
-        public override IQueryable<Passage> Get()
-        {
-           return  UsersPassages(base.Get());
-        }
+        
     }
 }

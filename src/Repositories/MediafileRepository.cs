@@ -38,43 +38,33 @@ namespace SIL.Transcriber.Repositories
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Project> projects)
         {
             //this gets just the passages I have access to in these projects
-            var plans = PlanRepository.UsersPlans(entities.Select(mf => mf.Plan), projects);
+            var plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
             return UsersMediafiles(entities, plans);
         }
 
         private IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Plan> plans = null)
         {
             if (plans == null)
-                plans = PlanRepository.Get();
+                plans = PlanRepository.UsersPlans(dbContext.Plans);
 
-            return entities.Where(m => plans.Contains(m.Plan));
+            return entities.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
         }
         public override IQueryable<Mediafile> Filter(IQueryable<Mediafile> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-					return UsersMediafiles(entities, projects);
-                }
-                return entities;
+                var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+				return UsersMediafiles(entities, projects);
+            }
+            if (filterQuery.Has(ALLOWED_CURRENTUSER))
+            {
+                return UsersMediafiles(entities);
             }
             return base.Filter(entities, filterQuery);
         }
-        public IQueryable<Mediafile> GetInternal()
+        public Mediafile Get(int id)
         {
-            return AppDbContext.Mediafiles;
-        }
-        public Mediafile GetInternal(int id)
-        {
-            return GetInternal().SingleOrDefault(p => p.Id == id);
-        }
-
-        // This is the set of all Mediafiles that a user has access to.
-        public override IQueryable<Mediafile> Get()
-        {
-            return UsersMediafiles(base.Get());
+            return Get().SingleOrDefault(p => p.Id == id);
         }
     }
 }

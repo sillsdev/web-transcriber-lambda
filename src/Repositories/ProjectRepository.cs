@@ -35,7 +35,7 @@ namespace SIL.Transcriber.Repositories
             AppDbContext = contextResolver.GetContext() as AppDbContext;
         }
 
-        private IQueryable<Project> UsersProjects(IQueryable<Project> entities)
+        public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {
             var orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasRole(RoleName.SuperAdmin))
@@ -55,10 +55,9 @@ namespace SIL.Transcriber.Repositories
             //Get already gives us just these entities = UsersProjects(entities);
             if (filterQuery.Has(ORGANIZATION_HEADER)) 
             {
-                var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                return entities.FilterByOrganization(filterQuery, allowedOrganizationIds: orgIds);
+                return entities.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
             }
- 
+
             var value = filterQuery.Value;
             var op = filterQuery.Operation.ToEnum<FilterOperations>(defaultValue: FilterOperations.eq);
 
@@ -86,7 +85,10 @@ namespace SIL.Transcriber.Repositories
                         || EFUtils.Like(p.Owner.Name, value)
                     ));
             }
-            
+            if (filterQuery.Has(ALLOWED_CURRENTUSER))
+            {
+                return UsersProjects(entities);
+            }
             return base.Filter(entities, filterQuery);
         }
 
@@ -94,21 +96,6 @@ namespace SIL.Transcriber.Repositories
         {
             return base.Sort(entities, sortQueries);
         }
-        public Project GetInternal(int id)
-        {
-            return GetInternal().SingleOrDefault(p => p.Id == id);
-        }
-        public IQueryable<Project> GetInternal()
-        {
-            return AppDbContext.Projects;
 
-        }
-        // This is the set of all projects that a user has access to.
-        // If a project would ever need to be accessed outside of this set of projects,
-        // this method should not be used.
-        public override IQueryable<Project> Get() 
-        {
-           return UsersProjects(base.Get());
-        }
     }
 }

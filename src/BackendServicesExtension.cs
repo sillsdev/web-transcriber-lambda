@@ -26,7 +26,7 @@ namespace SIL.Transcriber
             services.AddJsonApi<AppDbContext>(options => {
                 options.Namespace = "api";
                 options.IncludeTotalRecordCount = false;
-                
+                options.DefaultPageSize = 0;
                 //options.EnableOperations = true;
             });
 
@@ -38,7 +38,7 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
             services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
-            services.AddScoped<IEntityRepository<SectionPassage>, SectionRepository>();
+            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
             services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
@@ -57,7 +57,7 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Passage>, PassageService>();
             services.AddScoped<IResourceService<Plan>, PlanService>();
             services.AddScoped<IResourceService<Project>, ProjectService>();
-            services.AddScoped<IResourceService<SectionPassage>, SectionService>();
+            services.AddScoped<IResourceService<Section>, SectionService>();
             services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
             services.AddScoped<IResourceService<User>, UserService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
