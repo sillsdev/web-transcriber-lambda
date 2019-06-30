@@ -35,7 +35,7 @@ namespace SIL.Transcriber.Repositories
         public IQueryable<Plan> UsersPlans(IQueryable<Plan> entities, IQueryable<Project> projects = null)
         {
             if (projects == null)
-                projects = ProjectRepository.Get();
+                projects = ProjectRepository.UsersProjects(dbContext.Projects);
 
             return entities.Where(p => projects.Contains(p.Project));
 
@@ -44,22 +44,15 @@ namespace SIL.Transcriber.Repositories
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-                    return UsersPlans(entities, projects);
-                }
-                return entities;
+                 var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                 return UsersPlans(entities, projects);
+            }
+            if (filterQuery.Has(ALLOWED_CURRENTUSER))
+            {
+                return UsersPlans(entities);
             }
             return base.Filter(entities, filterQuery);
-        }        // This is the set of all plans that a user has access to.
-
-        // This is the set of all plans that a user has access to.
-        public override IQueryable<Plan> Get()
-        {
-            return UsersPlans(base.Get());
-        }
-        
+        }       
         public Plan GetWithProject(int id)
         {
             return base.Get().Where(p => p.Id == id).Include(p => p.Project).ThenInclude(pr => pr.Organization).FirstOrDefault();

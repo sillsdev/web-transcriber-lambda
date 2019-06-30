@@ -26,7 +26,7 @@ namespace SIL.Transcriber
             services.AddJsonApi<AppDbContext>(options => {
                 options.Namespace = "api";
                 options.IncludeTotalRecordCount = false;
-                
+                options.DefaultPageSize = 0;
                 //options.EnableOperations = true;
             });
 

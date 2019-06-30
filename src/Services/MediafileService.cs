@@ -41,10 +41,13 @@ namespace SIL.Transcriber.Services
 
         public override async Task<IEnumerable<Mediafile>> GetAsync()
         {
-            return await GetScopedToOrganization<Mediafile>(
+            return await GetScopedToCurrentUser(
+             base.GetAsync,
+             JsonApiContext);
+/*            return await GetScopedToOrganization<Mediafile>(
                 base.GetAsync,
                 OrganizationContext,
-                JsonApiContext);
+                JsonApiContext); */
 
         }
         public override async Task<Mediafile> GetAsync(int id)
@@ -68,7 +71,7 @@ namespace SIL.Transcriber.Services
         private void InitNewMediafile(Mediafile entity)
         {
             entity.S3File = Guid.NewGuid() + "_" + entity.OriginalFile;
-            var mfs = MediafileRepository.GetInternal().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
+            var mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
             if (mfs.Count() == 0)
                 entity.VersionNumber = 1;
             else
@@ -100,14 +103,14 @@ namespace SIL.Transcriber.Services
 
         public Mediafile GetFileSignedUrl(int id)
         {
-            Mediafile mf = MediafileRepository.GetInternal(id);
+            Mediafile mf = MediafileRepository.Get(id);
             mf.AudioUrl = _S3service.GetSignedUrl(mf.S3File, DirectoryName(mf)).Message;
             return mf;
         }
 
         public async Task<S3Response> GetFile(int id)
         {
-            Mediafile mf = MediafileRepository.GetInternal(id);
+            Mediafile mf = MediafileRepository.Get(id);
             var plan = PlanRepository.GetWithProject(mf.PlanId);
             if (mf.S3File.Length == 0 || !(await _S3service.FileExistsAsync(mf.S3File, DirectoryName(plan))))
                 return null;
@@ -119,7 +122,7 @@ namespace SIL.Transcriber.Services
 
         public override async Task<bool> DeleteAsync(int id)
         {
-            Mediafile mf = MediafileRepository.GetInternal(id);
+            Mediafile mf = MediafileRepository.Get(id);
             var plan = PlanRepository.GetWithProject(mf.PlanId);
 
             S3Response response = await _S3service.RemoveFile(mf.S3File, DirectoryName(plan));
