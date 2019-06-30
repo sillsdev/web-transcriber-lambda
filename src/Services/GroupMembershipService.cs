@@ -10,7 +10,7 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class GroupMembershipService : EntityResourceService<GroupMembership>
+    public class GroupMembershipService : BaseService<GroupMembership>
     {
         public GroupMembershipService(
             IJsonApiContext jsonApiContext,

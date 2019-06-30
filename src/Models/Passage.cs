@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public class Passage : BaseModel, ITrackDate
+    public class Passage : BaseModel, IArchive
     {
         [Attr("sequencenum")]
         public int Sequencenum { get; set; }
@@ -22,18 +22,18 @@ namespace SIL.Transcriber.Models
         public Boolean Hold { get; set; }
         [Attr("title")]
         public string Title { get; set; }
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
 
        [HasMany("mediafiles")]
        public virtual List<Mediafile> Mediafiles { get; set; }
 
-        [NotMapped]
-        [HasManyThrough(nameof(PassageSections))]
-        public List<Section> Sections { get; set; }
-        public List<Passagesection> PassageSections { get; set; }
+ //     [NotMapped]
+ //     [HasManyThrough(nameof(PassageSections))]
+ //     public List<Section> Sections { get; set; }
+        [HasMany("passage-sections")]
+        public List<PassageSection> PassageSections { get; set; }
+        [HasMany("user-passages")]
+        public List<UserPassage> UserPassages { get; set; }
+        public bool Archived { get; set; }
 
     }
 }

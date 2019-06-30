@@ -10,6 +10,7 @@ namespace SIL.Transcriber.Utility
 {
     public static class RepositoryExtensions
     {
+        //FilterByOrganization can only be used by tables with organizationid
         [Obsolete("OptionallyFilterOnQueryParam is deprecated, please use FilterByOrganization instead.")]
         public static IQueryable<T> OptionallyFilterOnQueryParam<T>(
             this IQueryable<T> query,
@@ -33,6 +34,7 @@ namespace SIL.Transcriber.Utility
             }
             return exitFilter(query, filterQuery);
         }
+
         public static IQueryable<T> GetWithFilter<T>(IQueryable<T> query,
            string value,
            UserRepository userRepository,

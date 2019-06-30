@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Plan : BaseModel
+    public partial class Plan : BaseModel, IArchive
     {
 
         [Attr("name")]
         public string Name { get; set; }
+
+        [Attr("slug")]
+        public string Slug { get; set; }
 
         [HasOne("project")]
         public Project Project { get; set; }
@@ -24,6 +28,7 @@ namespace SIL.Transcriber.Models
 
         [HasMany("mediafiles")]
         public virtual List<Mediafile> Mediafiles { get; set; }
+        public bool Archived { get; set; }
 
     }
 }

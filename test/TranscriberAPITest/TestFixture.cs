@@ -75,10 +75,12 @@ namespace TranscriberAPI.Tests
             }
             throw new Exception("Unable to get Current User " + response.StatusCode);
         }
+        /*
         public void ReloadDbContext()
         {
             Context = new AppDbContext(GetService<DbContextOptions<AppDbContext>>());
         }
+        */
         public async Task<(HttpResponseMessage response, T data)> PostAsync<T>(string route, object data)
         {
             return await SendAsync<T>("POST", route, data);

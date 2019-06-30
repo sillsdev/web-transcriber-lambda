@@ -15,13 +15,16 @@ using static SIL.Transcriber.Utility.RepositoryExtensions;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.Extensions.StringExtensions;
 using SIL.Transcriber.Utility;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
     public class ProjectRepository : BaseRepository<Project>
     {
 
-    public ProjectRepository(
+        private AppDbContext AppDbContext;
+
+        public ProjectRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
@@ -29,15 +32,30 @@ namespace SIL.Transcriber.Repositories
             IDbContextResolver contextResolver
         ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
+            AppDbContext = contextResolver.GetContext() as AppDbContext;
         }
 
+        public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
+        {
+            var orgIds = CurrentUser.OrganizationIds.OrEmpty();
+            if (!CurrentUser.HasRole(RoleName.SuperAdmin))
+            {
+                //if I'm an admin in the org, give me all projects in all groups in that org
+                //otherwise give me just the projects in the groups I'm a member of
+                var orgadmins = orgIds.Where(o => currentUserRepository.IsOrgAdmin(CurrentUser, o));
+
+                entities = entities
+                       .Where(p => orgadmins.Contains(p.OrganizationId) || CurrentUser.GroupIds.Contains(p.GroupId));
+
+            }
+            return entities;
+        }
         public override IQueryable<Project> Filter(IQueryable<Project> entities, FilterQuery filterQuery)
-        {            
+        {
+            //Get already gives us just these entities = UsersProjects(entities);
             if (filterQuery.Has(ORGANIZATION_HEADER)) 
             {
-                var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-
-                return entities.FilterByOrganization(filterQuery, allowedOrganizationIds: orgIds);
+                return entities.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
             }
 
             var value = filterQuery.Value;
@@ -67,8 +85,10 @@ namespace SIL.Transcriber.Repositories
                         || EFUtils.Like(p.Owner.Name, value)
                     ));
             }
-
-            
+            if (filterQuery.Has(ALLOWED_CURRENTUSER))
+            {
+                return UsersProjects(entities);
+            }
             return base.Filter(entities, filterQuery);
         }
 
@@ -77,14 +97,5 @@ namespace SIL.Transcriber.Repositories
             return base.Sort(entities, sortQueries);
         }
 
-        // This is the set of all projects that a user has access to.
-        // If a project would ever need to be accessed outside of this set of projects,
-        // this method should not be used.
-        public override IQueryable<Project> Get() 
-        {
-            var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-
-            return base.Get().Where(p => p.IsPublic == true || orgIds.Contains(p.OrganizationId));
-        }
     }
 }

@@ -16,8 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\ProjectusersController.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
+    <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\transcriberContext.cs" />
+    <Compile Remove="Models\VwUserallowedgroups.cs" />
+    <Compile Remove="Models\VwUserallowedpassages.cs" />
     <Compile Remove="Models\XEmails.cs" />
     <Compile Remove="Models\XGroupmemberships.cs" />
     <Compile Remove="Models\XGroups.cs" />
@@ -45,6 +49,9 @@
     <Compile Remove="Models\XWorkflowprocesstimer.cs" />
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
+    <Compile Remove="Services\PlantypeService.cs" />
+    <Compile Remove="Services\ProjecttypeService.cs" />
+    <Compile Remove="Services\RoleService.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -66,6 +73,10 @@
     <PackageReference Include="Serilog.AspNetCore" Version="2.1.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
 	</ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\JsonApiDotNetCore\src\JsonApiDotNetCore\JsonApiDotNetCore.csproj" />
+  </ItemGroup>
  
 
 </Project>

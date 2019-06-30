@@ -2,6 +2,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 using System;
 using System.Linq;
 using System.Threading;
@@ -11,8 +12,11 @@ namespace SIL.Transcriber.Data
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-        { }
+        protected ICurrentUserContext CurrentUserContext;
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext) : base(options)
+        {
+            CurrentUserContext = currentUserContext;
+        }
 
         private void LowerCaseDB(ModelBuilder builder)
         {
@@ -53,6 +57,18 @@ namespace SIL.Transcriber.Data
             var orgMemberEntity = modelBuilder.Entity<OrganizationMembership>();
             var projectEntity = modelBuilder.Entity<Project>();
             var groupMemberEntity = modelBuilder.Entity<GroupMembership>();
+            var passageEntity = modelBuilder.Entity<Passage>();
+            var sectionEntity = modelBuilder.Entity<Section>();
+
+            passageEntity
+                .HasMany(p => p.PassageSections)
+                .WithOne(ps => ps.Passage)
+                .HasForeignKey(ps => ps.PassageId);
+
+            sectionEntity
+                .HasMany(s => s.PassageSections)
+                .WithOne(ps => ps.Section)
+                .HasForeignKey(ps => ps.SectionId);
 
             userEntity
                 .HasMany(u => u.OrganizationMemberships)
@@ -106,6 +122,12 @@ namespace SIL.Transcriber.Data
             LowerCaseDB(builder);
             DefineManyToMany(builder);
         }
+        private int CurrentUserId()
+        { 
+             var auth0Id = this.CurrentUserContext.Auth0Id; 
+             var userFromResult = Users.Local.FirstOrDefault(u => u.ExternalId.Equals(auth0Id));
+             return userFromResult.Id;
+        }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
         private void AddTimestamps()
         {
@@ -122,6 +144,11 @@ namespace SIL.Transcriber.Data
                     trackDate.DateUpdated = now;
                 }
             }
+            entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            foreach (var entry in entries)
+            {
+                entry.CurrentValues["LastModifiedBy"] = CurrentUserId();
+             }
         }
         public override int SaveChanges()
         {
@@ -135,7 +162,7 @@ namespace SIL.Transcriber.Data
             return await base.SaveChangesAsync(cancellationToken);
         }
 
-        public DbSet<ActivityState> ActivityStates { get; set; }
+        public DbSet<Activitystate> Activitystates { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
@@ -143,19 +170,18 @@ namespace SIL.Transcriber.Data
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<Passage> Passages { get; set; }
-        public DbSet<Passagesection> Passagesections { get; set; }
+        public DbSet<PassageSection> Passagesections { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public DbSet<Project> Projects { get; set; }
-        public  DbSet<ProjectType> Projecttypes { get; set; }
-        public  DbSet<ProjectUser> Projectusers { get; set; }
-        public  DbSet<Reviewer> Reviewers { get; set; }
-        public  DbSet<Role> Roles { get; set; }
-        public  DbSet<Section> Sections { get; set; }
+        public DbSet<ProjectType> Projecttypes { get; set; }
+        public DbSet<Reviewer> Reviewers { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<Section> Sections { get; set; }
         public DbSet<UserRole> Userroles { get; set; }
         public DbSet<UserPassage> Userpassages { get; set; }
-        public  DbSet<User> Users { get; set; }
+        public DbSet<User> Users { get; set; }
 
     }
 }

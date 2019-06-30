@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
@@ -13,15 +12,12 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class ProjectService : EntityResourceService<Project>
+    public class ProjectService : BaseArchiveService<Project>
     {
         public IOrganizationContext OrganizationContext { get; private set; }
-        public IJsonApiContext JsonApiContext { get; }
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
         public GroupRepository GroupRepository { get; }
-        public ProjectRepository ProjectRepository { get; }
-        public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<Organization> OrganizationRepository { get; set; }
         public IEntityRepository<UserRole> UserRolesRepository { get; }
 
@@ -31,33 +27,28 @@ namespace SIL.Transcriber.Services
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             IEntityRepository<Project> projectRepository,
-            CurrentUserRepository currentUserRepository,
             GroupRepository groupRepository,
             IEntityRepository<Organization> organizationRepository,
             IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, projectRepository, loggerFactory)
         {
             OrganizationContext = organizationContext;
-            JsonApiContext = jsonApiContext;
             CurrentUserContext = currentUserContext;
             UserRepository = userRepository;
             GroupRepository = groupRepository;
             OrganizationRepository = organizationRepository;
             UserRolesRepository = userRolesRepository;
-            ProjectRepository = (ProjectRepository)projectRepository;
-            CurrentUserRepository = currentUserRepository;
         }
         public override async Task<IEnumerable<Project>> GetAsync()
         {
-            if (OrganizationContext.IsOrganizationHeaderPresent) 
-            {
-                return await GetScopedToOrganization<Project>(
+            return await GetScopedToCurrentUser(
+              base.GetAsync,
+              JsonApiContext);
+/*            return await GetScopedToOrganization<Project>(
                     base.GetAsync,
                     OrganizationContext,
                     JsonApiContext);
-            }
-
-            return await base.GetAsync();
+*/
         }
 
         public override async Task<Project> GetAsync(int id)
@@ -76,7 +67,7 @@ namespace SIL.Transcriber.Services
                                            OrganizationRepository,
                                            UserRolesRepository,
                                            OrganizationContext,
-                                           ProjectRepository);
+                                           (ProjectRepository)MyRepository);
             if (!updateForm.IsValid(id, resource))
             {
                 throw new JsonApiException(updateForm.Errors);

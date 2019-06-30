@@ -5,10 +5,13 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class Project : BaseModel, ITrackDate, IBelongsToOrganization
+    public partial class Project : BaseModel, IArchive, IBelongsToOrganization
     {
         [Attr("name")]
         public string Name { get; set; }
+
+        [Attr("slug")]
+        public string Slug { get; set; }
 
         [HasOne("projecttype")]
         public virtual ProjectType Projecttype { get; set; }
@@ -58,12 +61,6 @@ namespace SIL.Transcriber.Models
         [Attr("is-public")]
         public bool? IsPublic { get; set; } = true;
 
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
-
         [Attr("date-archived")]
         public DateTime? DateArchived { get; set; }
 
@@ -72,18 +69,14 @@ namespace SIL.Transcriber.Models
 
         [HasMany("project-integrations")]
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
-        //[HasManyThrough("project-integrations")]
+        //[HasManyThrough(nameof(ProjectIntegrations))]
         //public virtual List<Integration> Integrations { get; set; }
-
-        [NotMapped]
-        [HasManyThrough(nameof(ProjectUsers))]
-        public List<User> Users { get; set; }
-        public virtual List<ProjectUser> ProjectUsers { get; set; }
 
         [HasMany("plans")]
         public virtual List<Plan> Plans { get; set; }
         //[HasManyThrough("tasks")]
         //public virtual List<Task> Tasks { get; set; }
+        public bool Archived { get; set; }
 
     }
 }

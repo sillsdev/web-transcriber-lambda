@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace SIL.Transcriber.Models
 {
-    public class User : BaseModel, ITrackDate
+    public class User : BaseModel, IArchive
     {
         // Full Name of User
         // Comes from Auth0 (trusting that they handle correct order)
@@ -38,11 +38,6 @@ namespace SIL.Transcriber.Models
         [Attr("auth0Id")]
         public string ExternalId { get; set; }
 
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
         [Attr("identity-token")]
         public string identitytoken;
         [Attr("uilanguagebcp47")]
@@ -61,11 +56,7 @@ namespace SIL.Transcriber.Models
         //[HasMany("owned-organizations")]
         //public virtual List<Organization> OwnedOrganizations { get; set; }
 
-        [HasManyThrough(nameof(ProjectUsers))]
-        public List<Project> Projects { get; set; }
-        public virtual List<ProjectUser> ProjectUsers { get; set; }
-
-        //[HasManyThrough(nameof(OrganizationMemberships))]
+        //[HasManyThrough(nameof(OrganizationMemberships))]   these cause issues...don't use 
         //[HasMany("Organizations")]
         //public List<Organization> Organizations { get; set; }
         [HasMany("organization-memberships", Link.None)]
@@ -87,6 +78,15 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         public IEnumerable<Organization> Organizations => OrganizationMemberships?.Select(o => o.Organization);
 
+        [NotMapped]
+        public IEnumerable<int> GroupIds => GroupMemberships?.Select(g => g.GroupId);
+
+        [NotMapped]
+        public IEnumerable<Group> Groups => GroupMemberships?.Select(g => g.Group);
+
+        //[NotMapped]
+        //public IEnumerable<Group> ProjectIds => GroupMemberships?.Select(g => g.Group);
+
         public bool HasRole(RoleName role)
         {
             var userRole = this
@@ -94,6 +94,14 @@ namespace SIL.Transcriber.Models
                 .Where(r => r.RoleName == role)
                 .FirstOrDefault();
 
+            return userRole != null;
+        }
+        public bool HasRole(RoleName role, int OrgId)
+        {
+            var userRole = this
+                .UserRoles
+                .Where(r => r.OrganizationId == OrgId && r.RoleName == role)
+                .FirstOrDefault();
             return userRole != null;
         }
         /*
@@ -111,5 +119,6 @@ namespace SIL.Transcriber.Models
             return locale;
         }
         */
+        public bool Archived { get; set; }
     }
 }

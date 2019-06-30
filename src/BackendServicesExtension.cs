@@ -26,7 +26,7 @@ namespace SIL.Transcriber
             services.AddJsonApi<AppDbContext>(options => {
                 options.Namespace = "api";
                 options.IncludeTotalRecordCount = false;
-                
+                options.DefaultPageSize = 0;
                 //options.EnableOperations = true;
             });
 
@@ -37,21 +37,30 @@ namespace SIL.Transcriber
             //services.AddScoped<IEntityRepository<UserPassage>, UserTaskRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
+            services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
+            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
+            services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
+            services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             //services.AddScoped<IEntityRepository<OrganizationInviteRequest>, OrganizationInviteRequestRepository>();
             //services.AddScoped<IEntityRepository<Notification>, NotificationRepository>();
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
 
             // services
-            services.AddScoped<IResourceService<User>, UserService>();
-            services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
-            services.AddScoped<IResourceService<Organization>, OrganizationService>();
-            services.AddScoped<IResourceService<Group>, GroupService>();
-            services.AddScoped<IResourceService<Project>, ProjectService>();
+            services.AddScoped<IResourceService<Activitystate>, ActivitystateService>();
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
-            services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
-            //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
+            services.AddScoped<IResourceService<Group>, GroupService>();
+            services.AddScoped<IResourceService<Integration>, IntegrationService>();
             services.AddScoped<IResourceService<Mediafile>, MediafileService>();
+            services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
+            services.AddScoped<IResourceService<Organization>, OrganizationService>();
+            services.AddScoped<IResourceService<Passage>, PassageService>();
+            services.AddScoped<IResourceService<Plan>, PlanService>();
+            services.AddScoped<IResourceService<Project>, ProjectService>();
+            services.AddScoped<IResourceService<Section>, SectionService>();
+            services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
+            services.AddScoped<IResourceService<User>, UserService>();
+            //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
 
             //services.AddScoped<IQueryParser, OrbitJSQueryParser>();
@@ -60,12 +69,27 @@ namespace SIL.Transcriber
             services.AddScoped<UserRepository>();
             services.AddScoped<GroupRepository>();
             services.AddScoped<ProjectRepository>();
+            services.AddScoped<PlanRepository>();
+            services.AddScoped<SectionRepository>();
+            services.AddScoped<PassageRepository>();
+            services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<CurrentUserRepository>();
 
-            services.AddScoped<UserService>();
-            services.AddScoped<OrganizationService>();
+            services.AddScoped<ActivitystateService>();
+            services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
+            services.AddScoped<IntegrationService>();
+            services.AddScoped<MediafileService>();
+            services.AddScoped<OrganizationMembershipService>();
+            services.AddScoped<OrganizationService>();
+            services.AddScoped<PassageService>();
+            services.AddScoped<PlanService>();
+            services.AddScoped<ProjectService>();
+            services.AddScoped<SectionService>();
+            services.AddScoped<UserPassageService>();
+            services.AddScoped<UserService>();
+
             services.AddScoped<Auth0ManagementApiTokenService>();
             //services.AddScoped<SendNotificationService>();
             //services.AddScoped<SendEmailService>();

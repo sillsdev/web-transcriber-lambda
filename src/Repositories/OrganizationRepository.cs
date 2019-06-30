@@ -7,6 +7,8 @@ using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.IEnumerableExtensions;
 using static SIL.Transcriber.Utility.RepositoryExtensions;
 
@@ -22,23 +24,29 @@ namespace SIL.Transcriber.Repositories
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
         }
+        public IQueryable<Organization> UsersOrganizations(IQueryable<Organization> entities)
+        {
+            return entities.Join(dbContext.Organizationmemberships.Where(om=>om.UserId == CurrentUser.Id), o => o.Id, om => om.OrganizationId, (o, om) => o);
+        }
+        #region Overrides
         public override IQueryable<Organization> Filter(IQueryable<Organization> entities, FilterQuery filterQuery)
         {
-            var attribute = filterQuery.Attribute;
-            var value = filterQuery.Value;
-            var isScopeToUser = attribute.Equals("scope-to-current-user", StringComparison.OrdinalIgnoreCase);
-
-            if (isScopeToUser) {
-                var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-
-                var scopedToUser = entities.Where(organization => orgIds.Contains(organization.Id));
-
-                // return base.Filter(scopedToUser, filterQuery);
-                return scopedToUser;
+            if (filterQuery.Has(ORGANIZATION_HEADER))
+            {
+                if (filterQuery.HasSpecificOrg())
+                {
+                    int specifiedOrgId;
+                    var hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
+                    return UsersOrganizations(entities).Where(om => om.Id == specifiedOrgId) ;
+                }
+                return UsersOrganizations(entities);
             }
-
+            if (filterQuery.Has(ALLOWED_CURRENTUSER))
+            {
+                return UsersOrganizations(entities);
+            }
             return base.Filter(entities, filterQuery);
         }
-
+        #endregion
     }
 }

@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public class Section : BaseModel
+    public class Section : BaseModel, IArchive
     {
         [Attr("sequencenum")]
         public int Sequencenum { get; set; }
@@ -14,15 +14,19 @@ namespace SIL.Transcriber.Models
         public string State { get; set; }
 
         [Attr("plan-id")]
-        public int? PlanId { get; set; }
+        public int PlanId { get; set; }
 
         [HasOne("plan")]
         public virtual Plan Plan { get; set; }
 
-        [NotMapped]
-        [HasManyThrough(nameof(PassageSections))]
-        public List<Passage> Passages { get; set; }
-        public List<Passagesection> PassageSections { get; set; }
+        //causes errors when organization specified
+//        [NotMapped]
+//        [HasManyThrough(nameof(PassageSections))]
+//        public List<Passage> Passages { get; set; }
+
+        [HasMany("passage-sections")]
+        public List<PassageSection> PassageSections { get; set; }
+        public bool Archived { get; set; }
 
     }
 }

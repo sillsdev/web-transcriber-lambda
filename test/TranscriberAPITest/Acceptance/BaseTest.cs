@@ -77,10 +77,12 @@ namespace TranscriberAPI.Tests.Acceptance
 
         public async Task<HttpResponseMessage> PostFormFile(string url, string filePath, object entity)
         {
-       
-            HttpContent stringContent = new StringContent(JsonConvert.SerializeObject(entity), Encoding.UTF8, "application/json");
+
+            var json = JsonConvert.SerializeObject(entity);
+            HttpContent stringContent = new StringContent(json, Encoding.UTF8);
             var stream = new FileStream(filePath, FileMode.Open);
             HttpContent fileStreamContent = new StreamContent(stream);
+            fileStreamContent.Headers.Add("Content-Type", "audio/mpeg");
             var formData = new MultipartFormDataContent
             {
                 {stringContent, "jsonString" },

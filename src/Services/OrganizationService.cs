@@ -12,12 +12,11 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
-    public class OrganizationService : EntityResourceService<Organization>
+    public class OrganizationService : BaseArchiveService<Organization>
     {
-        public IEntityRepository<Organization> OrganizationRepository { get; }
         public IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; }
-        public CurrentUserRepository currentUserRepository { get; }
         public IEntityRepository<UserRole> UserRolesRepository { get; }
+        public CurrentUserRepository CurrentUserRepository { get; }
         public User CurrentUser { get; }
 
         public OrganizationService(
@@ -28,25 +27,16 @@ namespace SIL.Transcriber.Services
             IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
         {
-            this.OrganizationRepository = organizationRepository;
-            this.OrganizationMembershipRepository = organizationMembershipRepository;
-            this.currentUserRepository = currentUserRepository;
-            CurrentUser = currentUserRepository.GetCurrentUser().Result;
+            OrganizationMembershipRepository = organizationMembershipRepository;
             UserRolesRepository = userRolesRepository;
+            CurrentUserRepository = currentUserRepository;
+            CurrentUser = currentUserRepository.GetCurrentUser().Result;
         }
-        protected bool IsCurrentUserSuperAdmin()
-        {
-            var userRole = UserRolesRepository.Get()
-                .Include(ur => ur.User)
-                .Include(ur => ur.Role)
-                .Where(ur => ur.UserId == CurrentUser.Id && ur.Role.Rolename == RoleName.SuperAdmin)
-                .FirstOrDefault();
-            return userRole != null;
-        }
+
         public override async Task<IEnumerable<Organization>> GetAsync()
         {
             //scope to user, unless user is super admin
-            var isScopeToUser = !IsCurrentUserSuperAdmin();
+            var isScopeToUser = !CurrentUser.HasRole(RoleName.SuperAdmin);
             IEnumerable<Organization> entities = await base.GetAsync();
             if (isScopeToUser)
             {
@@ -79,9 +69,9 @@ namespace SIL.Transcriber.Services
 
         public async Task<Organization> FindByIdOrDefaultAsync(int id)
         {
-            return await OrganizationRepository.Get()
-                                               .Where(e => e.Id == id)
-                                               .FirstOrDefaultAsync();
+            return await MyRepository.Get()
+                                        .Where(e => e.Id == id)
+                                        .FirstOrDefaultAsync();
         }
     }
 }

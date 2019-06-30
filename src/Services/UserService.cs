@@ -11,15 +11,13 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class UserService : EntityResourceService<User>
+    public class UserService : BaseArchiveService<User>
     {
-        public UserRepository EntityRepository { get; }
-        public IJsonApiContext JsonApiContext { get; }
         public IOrganizationContext OrganizationContext { get; }
         public ICurrentUserContext CurrentUserContext { get; }
-        public UserRepository UserRepository { get; }
-        public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<UserRole> UserRolesRepository { get; }
+        public CurrentUserRepository CurrentUserRepository { get; }
+        public User CurrentUser { get; }
 
         public UserService(
             IJsonApiContext jsonApiContext,
@@ -31,13 +29,11 @@ namespace SIL.Transcriber.Services
             IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, entityRepository, loggerFactory)
         {
-            this.EntityRepository = (UserRepository)entityRepository;
-            JsonApiContext = jsonApiContext;
             OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
-            UserRepository = userRepository;
-            CurrentUserRepository = currentUserRepository;
             UserRolesRepository = userRolesRepository;
+            CurrentUserRepository = currentUserRepository;
+            CurrentUser = currentUserRepository.GetCurrentUser().Result;
         }
 
         public override async Task<IEnumerable<User>> GetAsync()
@@ -50,9 +46,8 @@ namespace SIL.Transcriber.Services
         public override async Task<User> GetAsync(int id)
         {
             
-            var currentUser = await CurrentUserRepository.GetCurrentUser();
-            if (id == 0) id = currentUser.Id;
-            if (currentUser.Id == id)
+            if (id == 0) id = CurrentUser.Id;
+            if (CurrentUser.Id == id)
             {
                 return await base.GetAsync(id);
             }

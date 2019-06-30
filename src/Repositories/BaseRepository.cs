@@ -5,6 +5,7 @@ using JsonApiDotNetCore.Models;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
@@ -29,7 +30,7 @@ namespace SIL.Transcriber.Repositories
         protected readonly DbSet<TEntity> dbSet;
         protected readonly CurrentUserRepository currentUserRepository;
         //protected readonly EntityHooksService<TEntity, TId> statusUpdateService;
-        protected readonly DbContext dbContext;
+        protected readonly AppDbContext dbContext;
 
         public BaseRepository(
             ILoggerFactory loggerFactory,
@@ -39,7 +40,7 @@ namespace SIL.Transcriber.Repositories
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, contextResolver)
         {
-            this.dbContext = contextResolver.GetContext();
+            this.dbContext = (AppDbContext)contextResolver.GetContext();
             this.dbSet = contextResolver.GetDbSet<TEntity>();
             this.currentUserRepository = currentUserRepository;
             //SJH this.statusUpdateService = statusUpdateService;
@@ -57,14 +58,19 @@ namespace SIL.Transcriber.Repositories
             statusUpdateService.DidUpdate(retval);
             return retval;
         }
-
+        */
         public override async Task<TEntity> CreateAsync(TEntity entity)
         {
-            var retval = await base.CreateAsync(entity);
-            statusUpdateService.DidInsert(retval);
-            return retval;
+            try
+            {
+                return  await base.CreateAsync(entity);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw ex;  //does this go back to my controller?  Nope...eaten by JsonApiExceptionFilter.  TODO: Figure out a way to capture it and return a 400 instead
+            }
         }
-
+      /*
         public override async Task<bool> DeleteAsync(TId id)
         {
             var entity = await GetAsync(id);

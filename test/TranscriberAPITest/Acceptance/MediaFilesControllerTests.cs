@@ -96,6 +96,95 @@ namespace TranscriberAPI.Tests.Acceptance
 
             return _fixture.DeSerializer.Deserialize<Mediafile>(body);
         }
+        private static void UploadObject(string url, string filePath)
+        {
+            Console.WriteLine(url);
+            HttpWebRequest httpRequest = WebRequest.Create(url) as HttpWebRequest;
+            httpRequest.Method = "PUT";
+            using (Stream dataStream = httpRequest.GetRequestStream())
+            {
+                var buffer = new byte[8000];
+                using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                {
+                    int bytesRead = 0;
+                    while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        dataStream.Write(buffer, 0, bytesRead);
+                    }
+                }
+            }
+            try
+            {
+                HttpWebResponse response = httpRequest.GetResponse() as HttpWebResponse;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                throw;
+            }
+        }
+ 
+        [Fact]
+        public async Task<int> CreateOneWithSignedURL()
+        {
+            var route = $"/api/mediafiles";
+            var file = "NIV11-LUK-001-026038v01.mp3";
+            var media = _faker.Mediafile;
+            media.PassageId = null;  //not 0!
+            media.OriginalFile = file;
+            media.ContentType = "audit/mpeg";
+
+            var response = await PostAsJson($"/api/mediafiles", media);
+            Assert.True(HttpStatusCode.Created == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+            route = response.Headers.Location.OriginalString;
+
+            response = await _fixture.Client.GetAsync(route);
+
+            //assert
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+
+            var document = JsonConvert.DeserializeObject<Document>(body);
+            Assert.NotNull(document.Data);
+
+            var tagResponse = _fixture.DeSerializer.Deserialize<Mediafile>(body);
+            Assert.NotNull(tagResponse);
+
+            //have our signed url now so post the file
+            UploadObject(tagResponse.AudioUrl, "C:\\Users\\Sara Hentzel\\Music\\" + tagResponse.OriginalFile);
+            return tagResponse.Id;
+        }
+        [Fact]
+        public async Task GetOneWithSignedURL()
+        {
+            int id = await CreateOneWithSignedURL();
+            var route = $"/api/mediafiles/" + id.ToString() + "/fileurl";
+            
+            var response = await _fixture.Client.GetAsync(route);
+
+            //assert
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code with payload: {body}");
+
+            var document = JsonConvert.DeserializeObject<Document>(body);
+            Assert.NotNull(document.Data);
+
+            var tagResponse = _fixture.DeSerializer.Deserialize<Mediafile>(body);
+            Assert.NotNull(tagResponse);
+
+            //our get url is in the audiourl
+            route = tagResponse.AudioUrl;
+            var auth = _fixture.WebClient.DefaultRequestHeaders.GetValues("Authorization");
+            _fixture.WebClient.DefaultRequestHeaders.Remove("Authorization");
+
+            response = await _fixture.WebClient.GetAsync(route); //use webclient so it doesn't mess with the route;
+            Assert.True(HttpStatusCode.OK == response.StatusCode, $"{route} returned {response.StatusCode} status code");
+            _fixture.WebClient.DefaultRequestHeaders.Add("Authorization", auth);
+
+            var fileStream = new FileStream("myfile.mp3", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+            await response.Content.CopyToAsync(fileStream);
+            fileStream.Close();
+        }
         [Fact]
         public async Task CreateOneWithoutPassage()
         {
