@@ -52,7 +52,6 @@ namespace SIL.Transcriber.Repositories
             }
             var passagesections = dbContext.Passagesections.Join(sections, ps => ps.SectionId, s => s.Id, (ps, s) => ps);
 
-            //cast this to an ienumerable because to avoid error:A second operation started on this context before a previous operation completed. Any instance members are not guaranteed to be thread safe.
             return entities.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p);
         }
 
