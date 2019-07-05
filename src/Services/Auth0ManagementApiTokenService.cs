@@ -33,9 +33,9 @@ namespace SIL.Transcriber.Services
             get
             {
                 if (token == null) {
-                    var domainUrl = GetVarOrThrow("AUTH0_DOMAIN");
-                    var clientId = GetVarOrDefault("AUTH0_TOKEN_ACCESS_CLIENT_ID", "");
-                    var clientSecret = GetVarOrDefault("AUTH0_TOKEN_ACCESS_CLIENT_SECRET", "");
+                    var domainUrl = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
+                    var clientId = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID", "");
+                    var clientSecret = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET", "");
                     var client = new RestClient($"{domainUrl}/oauth/token");
                     var request = new RestRequest(Method.POST);
                     request.AddHeader("content-type", "application/json");
