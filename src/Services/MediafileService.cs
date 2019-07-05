@@ -70,7 +70,10 @@ namespace SIL.Transcriber.Services
         //set the version number
         private void InitNewMediafile(Mediafile entity)
         {
+            //aws versioning on
+            //entity.S3File = entity.OriginalFile;
             entity.S3File = Guid.NewGuid() + "_" + entity.OriginalFile;
+
             var mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
             if (mfs.Count() == 0)
                 entity.VersionNumber = 1;

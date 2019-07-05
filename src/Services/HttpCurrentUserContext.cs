@@ -49,7 +49,7 @@ namespace SIL.Transcriber.Services
                 if (managementApiClient == null)
                 {
                     var token = TokenService.Token;
-                    var domainUri = new Uri(GetVarOrThrow("AUTH0_DOMAIN"));
+                    var domainUri = new Uri(GetVarOrThrow("SIL_TR_AUTH0_DOMAIN"));
                     managementApiClient = new ManagementApiClient(token, domainUri.Host);
                 }
                 return managementApiClient;

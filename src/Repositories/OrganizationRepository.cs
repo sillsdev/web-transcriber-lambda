@@ -9,8 +9,6 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using static SIL.Transcriber.Utility.RepositoryExtensions;
 
 namespace SIL.Transcriber.Repositories
 {

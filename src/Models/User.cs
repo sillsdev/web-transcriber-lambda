@@ -39,19 +39,19 @@ namespace SIL.Transcriber.Models
         public string ExternalId { get; set; }
 
         [Attr("identity-token")]
-        public string identitytoken;
+        public string identitytoken { get; set; }
         [Attr("uilanguagebcp47")]
-        public string uilanguagebcp47;
+        public string uilanguagebcp47 { get; set; }
         [Attr("timercount-up")]
-        public Boolean timercountup;
+        public Boolean? timercountup { get; set;}
         [Attr("playback-speed")]
-        public int playbackspeed;
+        public int? playbackspeed { get; set; }
         [Attr("progressbar-typeid")]
-        public int progressbartypeid;
+        public int? progressbartypeid { get; set; }
         [Attr("avatar-url")]
-        public string avatarurl;
+        public string avatarurl { get; set; }
         [Attr("hot-keys")]
-        public string hotkeys; //json
+        public string hotkeys { get; set; } //json
 
         //[HasMany("owned-organizations")]
         //public virtual List<Organization> OwnedOrganizations { get; set; }

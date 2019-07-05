@@ -2,25 +2,23 @@
 using Amazon.S3.Model;
 using Amazon.S3.Util;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using SIL.Transcriber.Models;
-using Amazon.S3.Transfer;
 using System.IO;
 using Microsoft.AspNetCore.Http;
 using System.Net;
-using Newtonsoft.Json;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services
 {
     public class S3Service : IS3Service
     {
-        const string USERFILES_BUCKET = "sil-transcriber-userfiles";
+        private string USERFILES_BUCKET;
         private readonly IAmazonS3 _client;
         public S3Service(IAmazonS3 client)
         {
             _client = client;
+            USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
         }
 
         private string ProperFolder(string folder)
@@ -145,6 +143,9 @@ namespace SIL.Transcriber.Services
 
                 // create unique file name 
                 var fileName = Guid.NewGuid() + "_" + file.FileName;
+                //aws versioning on
+                //var fileName = file.FileName;
+
 
                 PutObjectResponse response = null;
                 using (var stream = new MemoryStream(fileBytes))
