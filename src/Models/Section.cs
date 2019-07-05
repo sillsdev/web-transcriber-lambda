@@ -19,10 +19,22 @@ namespace SIL.Transcriber.Models
         [HasOne("plan")]
         public virtual Plan Plan { get; set; }
 
+        [Attr("transcriber-id")]
+        public int? TranscriberId { get; set; }
+
+        [HasOne("Transcriber")]
+        public virtual User Transcriber { get; set; }
+
+        [Attr("reviewer-id")]
+        public int? ReviewerId { get; set; }
+
+        [HasOne("Reviewer")]
+        public virtual User Reviewer { get; set; }
+
         //causes errors when organization specified
-//        [NotMapped]
-//        [HasManyThrough(nameof(PassageSections))]
-//        public List<Passage> Passages { get; set; }
+        //        [NotMapped]
+        //        [HasManyThrough(nameof(PassageSections))]
+        //        public List<Passage> Passages { get; set; }
 
         [HasMany("passage-sections")]
         public List<PassageSection> PassageSections { get; set; }

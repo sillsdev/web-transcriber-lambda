@@ -109,21 +109,21 @@ namespace SIL.Transcriber
 
         public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
         {
-           /*( services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
-            {
-                options.Authority = GetVarOrThrow("AUTH0_DOMAIN");
-                options.Audience = GetVarOrThrow("AUTH0_AUDIENCE");
-            });
-            */
+            /*( services.AddAuthentication(options =>
+             {
+                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+             }).AddJwtBearer(options =>
+             {
+                 options.Authority = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
+                 options.Audience = GetVarOrThrow("SIL_TR_AUTH0_AUDIENCE");
+             });
+             */
             services.AddAuthentication()
             .AddJwtBearer(options =>
             {
-                options.Authority = GetVarOrThrow("AUTH0_DOMAIN");
-                options.Audience = GetVarOrThrow("AUTH0_AUDIENCE");
+                options.Authority = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
+                options.Audience = GetVarOrThrow("SIL_TR_AUTH0_AUDIENCE");
                 options.RequireHttpsMetadata = false;
                 options.SaveToken = true;
                 options.Events = new JwtBearerEvents

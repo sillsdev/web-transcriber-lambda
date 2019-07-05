@@ -37,7 +37,7 @@ namespace SIL.Transcriber.Repositories
             if (projects == null)
                 projects = ProjectRepository.UsersProjects(dbContext.Projects);
 
-            return entities.Where(p => projects.Contains(p.Project));
+            return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
 
         }
         public override IQueryable<Plan> Filter(IQueryable<Plan> entities, FilterQuery filterQuery)

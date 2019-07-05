@@ -71,12 +71,12 @@ namespace SIL.Transcriber
 
         private string GetAllowedOrigins()
         {
-            return GetVarOrDefault("OriginSites","*");
+            return GetVarOrDefault("SIL_TR_ORIGINSITES", "*");
         }
 
         private string GetConnectionString()
         {
-            return GetVarOrDefault("ConnectionString", Configuration["ConnectionString"]);
+            return GetVarOrDefault("SIL_TR_CONNECTIONSTRING", Configuration["ConnectionString"]);
         }
     }
 }
