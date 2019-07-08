@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Models;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using System.Data.Common;
 
 namespace SIL.Transcriber.Controllers
 {

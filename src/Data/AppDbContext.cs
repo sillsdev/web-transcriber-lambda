@@ -152,16 +152,38 @@ namespace SIL.Transcriber.Data
         }
         public override int SaveChanges()
         {
+            UpdateSoftDeleteStatuses();
             AddTimestamps();
             return base.SaveChanges();
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
+            UpdateSoftDeleteStatuses();
             AddTimestamps();
             return await base.SaveChangesAsync(cancellationToken);
         }
-
+        //The database would handle this on delete, but EFCore would throw an error,
+        //so handle it here too
+        private void UpdateSoftDeleteStatuses()
+        {
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.Entity is IArchive)
+                {
+                    switch (entry.State)
+                    {
+                        case EntityState.Added:
+                            entry.CurrentValues["Archived"] = false;
+                            break;
+                        case EntityState.Deleted:
+                            entry.State = EntityState.Modified;
+                            entry.CurrentValues["Archived"] = true;
+                            break;
+                    }
+                }
+            }
+        }
         public DbSet<Activitystate> Activitystates { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
