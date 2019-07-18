@@ -126,7 +126,7 @@ namespace SIL.Transcriber.Data
         { 
              var auth0Id = this.CurrentUserContext.Auth0Id; 
              var userFromResult = Users.Local.FirstOrDefault(u => u.ExternalId.Equals(auth0Id));
-             return userFromResult.Id;
+             return userFromResult == null ? -1 : userFromResult.Id;
         }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
         private void AddTimestamps()
@@ -144,24 +144,50 @@ namespace SIL.Transcriber.Data
                     trackDate.DateUpdated = now;
                 }
             }
-            entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            foreach (var entry in entries)
+            var userid = CurrentUserId();
+            if (userid > 0) // we allow s3 trigger anonymous access
             {
-                entry.CurrentValues["LastModifiedBy"] = CurrentUserId();
-             }
+                entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+                foreach (var entry in entries)
+                {
+                    entry.CurrentValues["LastModifiedBy"] = userid;
+                 }
+            }
         }
         public override int SaveChanges()
         {
+            UpdateSoftDeleteStatuses();
             AddTimestamps();
             return base.SaveChanges();
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
+            UpdateSoftDeleteStatuses();
             AddTimestamps();
             return await base.SaveChangesAsync(cancellationToken);
         }
-
+        //The database would handle this on delete, but EFCore would throw an error,
+        //so handle it here too
+        private void UpdateSoftDeleteStatuses()
+        {
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.Entity is IArchive)
+                {
+                    switch (entry.State)
+                    {
+                        case EntityState.Added:
+                            entry.CurrentValues["Archived"] = false;
+                            break;
+                        case EntityState.Deleted:
+                            entry.State = EntityState.Modified;
+                            entry.CurrentValues["Archived"] = true;
+                            break;
+                    }
+                }
+            }
+        }
         public DbSet<Activitystate> Activitystates { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
