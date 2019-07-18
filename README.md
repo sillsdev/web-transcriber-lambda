@@ -18,6 +18,9 @@ Mediafiles
 - Get:  {id}/file - will download the file directly  
 - Post: will create record and return the signed url to upload the file to S3 in audiourl field  
 - Post: /file - expects record and file in FormFile 
+Called from s3 trigger
+- Get:  fromfile/{s3file} - return mediafile associated with s3 filename
+- Patch: {id}/fileinfo/{filesize}/{duration} update filesize and duration only
 
 OrganizationMemberships  
 Organizations  

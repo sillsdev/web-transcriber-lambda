@@ -1,5 +1,6 @@
 using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -31,6 +32,9 @@ namespace SIL.Transcriber.Controllers
         //GET/{id} will return mediafile record without refreshing Audiourl.
         //GET/{id}/file will return the file directly
         //GET/{id}/fileurl will return mediafile with new GET signed url in Audiourl.
+        //AllowAnonymous
+        //GET/"fromfile/{s3File}" will return mediafile associated with s3 filename
+        //PATCH/{id}/fileinfo/{filesize}/{duration}") will update filesize and duration in mediafile
 
         [HttpGet("{id}/fileurl")]
         public IActionResult GetFile([FromRoute] int id)
@@ -38,7 +42,6 @@ namespace SIL.Transcriber.Controllers
             var response = _service.GetFileSignedUrl(id);
             return Ok(response);
         }
-        
         [HttpGet("{id}/file")]
         public async Task<IActionResult> GetFileDirect([FromRoute] int id)
         {
@@ -59,7 +62,7 @@ namespace SIL.Transcriber.Controllers
                 return NotFound();
             }
         }
-       
+
         [HttpPost("file")]
         public async Task<IActionResult> PostAsync([FromForm] string jsonString,
                                                     [FromForm] IFormFile file)
@@ -68,6 +71,27 @@ namespace SIL.Transcriber.Controllers
             entity = await _service.CreateAsyncWithFile(entity, file);
             return Created("/api/mediafiles/" + entity.Id.ToString(), entity);
         }
-        
+
+        //called from s3 trigger - no auth
+        [AllowAnonymous]
+        [HttpGet("fromfile/{s3File}")]
+        public async Task<IActionResult> GetFromFile([FromRoute] string s3File)
+        {
+            var response = await _service.GetFromFile(s3File);
+            if (response == null)
+                return NotFound();
+            return Ok(response);
+
+        }
+        [AllowAnonymous]
+        [HttpPatch("{id}/fileinfo/{filesize}/{duration}")]
+        public async Task<IActionResult> UpdateFileInformationAsync([FromRoute] int id, [FromRoute] long filesize, [FromRoute] decimal duration)
+        {
+            Mediafile mf = await _service.UpdateFileInfo(id, filesize, duration);
+            if (mf == null)
+                return NotFound();
+            return Ok(mf);
+        }
+
     }
 }
