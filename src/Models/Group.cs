@@ -16,6 +16,7 @@ namespace SIL.Transcriber.Models
 
         [HasOne("owner")]
         public virtual Organization Owner { get; set; }
+        [Attr("owner-id")]
         public int OwnerId { get; set; }
         
         [HasMany("projects")]
