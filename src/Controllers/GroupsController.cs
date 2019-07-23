@@ -16,19 +16,6 @@ namespace SIL.Transcriber.Controllers
             OrganizationService organizationService,
             UserService userService)
           : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
-        { }
-        /*
-        [HttpPost]
-        public override async Task<IActionResult> PostAsync([FromBody] Group entity)
-        {
-            if (OrganizationContext.SpecifiedOrganizationDoesNotExist) return StatusCode(StatusCodes.Status404NotFound);
-            if (!OrganizationContext.HasOrganization) return StatusCode(StatusCodes.Status422UnprocessableEntity);
-
-            entity.OwnerId = OrganizationContext.OrganizationId;
-
-            return await base.PostAsync(entity);
-        }
-        */
+        { }       
     }
-
 }
