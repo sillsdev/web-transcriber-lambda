@@ -12,6 +12,7 @@ using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using static SIL.Transcriber.Utility.ServiceExtensions;
@@ -142,17 +143,14 @@ namespace SIL.Transcriber.Services
 
             return response;
         }
-
-        public override async Task<bool> DeleteAsync(int id)
+        public async Task<S3Response> DeleteFile(int id)
         {
+            //delete the s3 file 
             Mediafile mf = MediafileRepository.Get(id);
             var plan = PlanRepository.GetWithProject(mf.PlanId);
-
             S3Response response = await _S3service.RemoveFile(mf.S3File, DirectoryName(plan));
-            if (response.Status == HttpStatusCode.OK || response.Status == HttpStatusCode.NoContent)
-                return await base.DeleteAsync(id);
-            else
-                throw new Exception(response.Message);
-        }        
+            return response;
+        }
+
     }
 }

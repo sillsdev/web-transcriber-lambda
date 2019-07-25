@@ -63,6 +63,16 @@ namespace SIL.Transcriber.Controllers
             }
         }
 
+        [HttpDelete("{id}/file")]
+        public async Task<IActionResult> DeleteFile([FromRoute] int id)
+        {
+            S3Response response = await _service.DeleteFile(id);
+            if (response.Status == HttpStatusCode.OK || response.Status == HttpStatusCode.NoContent)
+                return Ok();
+            else
+                return NotFound();
+        }
+
         [HttpPost("file")]
         public async Task<IActionResult> PostAsync([FromForm] string jsonString,
                                                     [FromForm] IFormFile file)
