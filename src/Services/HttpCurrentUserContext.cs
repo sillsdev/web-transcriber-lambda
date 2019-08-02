@@ -62,7 +62,18 @@ namespace SIL.Transcriber.Services
             {
                 if (auth0User == null)
                 {
-                    auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
+                    try
+                    {
+                        //auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
+
+                        auth0User = ManagementApiClient.Users.GetAsync(Auth0Id).Result;
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        throw;
+                    }
                 }
                 return auth0User;
             }
@@ -87,6 +98,8 @@ namespace SIL.Transcriber.Services
                 if (email == null)
                 {
                     email = this.HttpContext.GetAuth0Email();
+                    if (email is null)
+                        email = Auth0User.Email;
                 }
                 return email;
             }
@@ -104,7 +117,8 @@ namespace SIL.Transcriber.Services
                         try
                         {
                             // Use Auth0 Management API to get value
-                            givenName = Auth0User.UserMetadata.given_name;
+                            if (Auth0User.UserMetadata != null)
+                                givenName = Auth0User.UserMetadata.given_name;
                         }
                         catch (Exception ex)
                         {
@@ -132,7 +146,8 @@ namespace SIL.Transcriber.Services
                         try
                         {
                             // Use Auth0 Management API to get value
-                            familyName = Auth0User.UserMetadata.family_name;
+                            if (Auth0User.UserMetadata != null)
+                                familyName = Auth0User.UserMetadata.family_name;
                         }
                         catch (Exception ex)
                         {

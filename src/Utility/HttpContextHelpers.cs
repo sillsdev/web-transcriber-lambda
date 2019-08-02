@@ -47,7 +47,7 @@ namespace SIL.Transcriber.Utility
         {
             return context
                 .User.Claims
-                .First(c => c.Type == TYPE_NAME_EMAIL)
+                .FirstOrDefault(c => c.Type == TYPE_NAME_EMAIL)  //should be there but isnt...
                 ?.Value;
         }
 

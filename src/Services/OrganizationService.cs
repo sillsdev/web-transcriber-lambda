@@ -17,12 +17,16 @@ namespace SIL.Transcriber.Services
         public IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; }
         public IEntityRepository<UserRole> UserRolesRepository { get; }
         public CurrentUserRepository CurrentUserRepository { get; }
+        public IEntityRepository<Group> GroupRepository { get; }
+        public IEntityRepository<GroupMembership> GroupMembershipRepository { get; }
         public User CurrentUser { get; }
 
         public OrganizationService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Organization> organizationRepository,
             IEntityRepository<OrganizationMembership> organizationMembershipRepository,
+            IEntityRepository<Group> groupRepository,
+            IEntityRepository<GroupMembership> groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
             IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
@@ -30,6 +34,8 @@ namespace SIL.Transcriber.Services
             OrganizationMembershipRepository = organizationMembershipRepository;
             UserRolesRepository = userRolesRepository;
             CurrentUserRepository = currentUserRepository;
+            GroupMembershipRepository = groupMembershipRepository;
+            GroupRepository = groupRepository;
             CurrentUser = currentUserRepository.GetCurrentUser().Result;
         }
 
@@ -61,9 +67,24 @@ namespace SIL.Transcriber.Services
                 User = newEntity.Owner,
                 Organization = newEntity
             };
-
+            
             await OrganizationMembershipRepository.CreateAsync(membership);
 
+            //create an "all org group" and add the current user
+            var group = new Group
+            {
+                Name = newEntity.Name + " All",
+                Abbreviation = newEntity.Name.Substring(0, 3) + "All",
+                Owner = newEntity,
+            };
+            var newGroup = await GroupRepository.CreateAsync(group);
+            var groupmembership = new GroupMembership
+            {
+                Group = newGroup,
+                User = newEntity.Owner,
+                RoleId = (int) RoleName.OrganizationAdmin,
+            };
+            await GroupMembershipRepository.CreateAsync(groupmembership);
             return newEntity;
         }
 
