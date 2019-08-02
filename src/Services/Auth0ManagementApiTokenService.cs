@@ -34,12 +34,13 @@ namespace SIL.Transcriber.Services
             {
                 if (token == null) {
                     var domainUrl = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
+                    if (!domainUrl.EndsWith("/")) domainUrl += "/";
                     var clientId = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID", "");
                     var clientSecret = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET", "");
-                    var client = new RestClient($"{domainUrl}/oauth/token");
+                    var client = new RestClient($"{domainUrl}oauth/token");
                     var request = new RestRequest(Method.POST);
                     request.AddHeader("content-type", "application/json");
-                    request.AddParameter("application/json", $"{{\"grant_type\":\"client_credentials\",\"client_id\": \"{clientId}\",\"client_secret\": \"{clientSecret}\",\"audience\": \"{domainUrl}/api/v2/\"}}", ParameterType.RequestBody);
+                    request.AddParameter("application/json", $"{{\"grant_type\":\"client_credentials\",\"client_id\": \"{clientId}\",\"client_secret\": \"{clientSecret}\",\"audience\": \"{domainUrl}api/v2/\"}}", ParameterType.RequestBody);
                     IRestResponse response = client.Execute(request);
                     if (response.IsSuccessful)
                     {

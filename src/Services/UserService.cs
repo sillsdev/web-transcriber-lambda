@@ -47,6 +47,7 @@ namespace SIL.Transcriber.Services
         {
             
             if (id == 0) id = CurrentUser.Id;
+
             if (CurrentUser.Id == id)
             {
                 return await base.GetAsync(id);
@@ -68,11 +69,10 @@ namespace SIL.Transcriber.Services
         }
 
         public async Task<User> GetCurrentUser() {
-            var currentUser = await CurrentUserRepository.GetCurrentUser();
+            
+            if (null == CurrentUser) return null;
 
-            if (null == currentUser) return null;
-
-            return await base.GetAsync(currentUser.Id);
+            return await base.GetAsync(CurrentUser.Id);
         }
     }
 }

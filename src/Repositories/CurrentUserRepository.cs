@@ -36,21 +36,21 @@ namespace SIL.Transcriber.Repositories
         // this should be ok.
         public async Task<User> GetCurrentUser()
         {
-            var auth0Id = this.CurrentUserContext.Auth0Id; // RUNNING W/O AUTH! ?? "107708962143422938734";
+            var auth0Id = this.CurrentUserContext.Auth0Id; 
 
             var userFromResult = this.DBContext
                 .Users.Local
-                .FirstOrDefault(u => u.ExternalId.Equals(auth0Id));
+                .FirstOrDefault(u => !u.Archived && u.ExternalId.Equals(auth0Id));
 
             if (userFromResult != null) {
                 return await System.Threading.Tasks.Task.FromResult(userFromResult);
             }
 
-            var currentUser = await base.Get()
-                .Where(user => user.ExternalId.Equals(auth0Id))
+            var currentUser = await Get()
+                .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
                 .Include(user => user.OrganizationMemberships)
                 .Include(user => user.GroupMemberships)
-               .Include(user => user.UserRoles)
+                .Include(user => user.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync();
 
