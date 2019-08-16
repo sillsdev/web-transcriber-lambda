@@ -50,6 +50,7 @@ namespace SIL.Transcriber.Models
         public int? progressbartypeid { get; set; }
         [Attr("avatar-url")]
         public string avatarurl { get; set; }
+        [Column(TypeName = "jsonb")]
         [Attr("hot-keys")]
         public string hotkeys { get; set; } //json
 
