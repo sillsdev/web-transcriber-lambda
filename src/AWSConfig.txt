@@ -1,0 +1,91 @@
+﻿
+
+Create S3 buckets for userfiles:
+
+sil-transcriber-userfiles-dev
+sil-transcriber-userfiles-qa
+sil-transcriber-userfiles-prod
+with this CORS Configuration:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<CORSRule>
+    <AllowedOrigin>*</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedMethod>DELETE</AllowedMethod>
+    <AllowedHeader>*</AllowedHeader>
+</CORSRule>
+</CORSConfiguration>
+
+
+Create a policy called transcriber-userfiles-access:
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutAccountPublicAccessBlock",
+                "s3:GetAccountPublicAccessBlock",
+                "s3:ListAllMyBuckets",
+                "s3:HeadBucket"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::sil-transcriber-userfiles*"
+        }
+    ]
+}
+
+Create policy transcriber-log-access to allow Log access:
+NOTE: EDIT arn as necessary
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:us-east-1:620141372223:log-group:/aws/lambda/transcriber_api*",
+                "arn:aws:logs:us-east-1:620141372223:log-group:/aws/lambda/sil-transcriber-processnewfile*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "logs:CreateLogGroup",
+            "Resource": [
+                "arn:aws:logs:us-east-1:620141372223:log-group:/aws/lambda/transcriber_api*",
+                "arn:aws:logs:us-east-1:620141372223:log-group:/aws/lambda/sil-transcriber-processnewfile*"
+            ]
+        }
+    ]
+}
+
+Edit the permissions for the roles that the lambda functions run under (i.e.) transcriber_api-qa-us-east-2-lambdaRole and attach the above policies
+
+
+Create the Duration functions:
+Create a lambda function:
+sil-transcriber-processnewfile-dev
+sil-transcriber-processnewfile-qa
+sil-transcriber-processnewfile-prod
+
+upload zip file transcriber-processNewFile.zip built from repo transcriber-processNewFile
+change execution role to transcriber-api-{stage}*-lambdaRole
+add trigger for s3
+	bucket: sil-transcriber-userfiles-{stage}
+	all object create events
+
+change timeout to 30 secs
+add environment variables SIL_TR_HOST and SIL_TR_URLPATH as in serverless.env.yml
