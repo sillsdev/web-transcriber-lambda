@@ -42,6 +42,8 @@ namespace SIL.Transcriber.Controllers
             var response = _service.GetFileSignedUrl(id);
             return Ok(response);
         }
+
+        [AllowAnonymous]
         [HttpGet("{id}/file")]
         public async Task<IActionResult> GetFileDirect([FromRoute] int id)
         {

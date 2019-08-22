@@ -104,7 +104,7 @@ namespace SIL.Transcriber.Services
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             InitNewMediafile(entity); //set the version number
-            var response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity));
+            var response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
             entity.AudioUrl = response.Message;
             return await base.CreateAsync(entity);
         }
@@ -124,7 +124,7 @@ namespace SIL.Transcriber.Services
         public Mediafile GetFileSignedUrl(int id)
         {
             Mediafile mf = MediafileRepository.Get(id);
-            mf.AudioUrl = _S3service.SignedUrlForGet(mf.S3File, DirectoryName(mf)).Message;
+            mf.AudioUrl = _S3service.SignedUrlForGet(mf.S3File, DirectoryName(mf), mf.ContentType).Message;
             return mf;
         }
 

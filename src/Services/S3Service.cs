@@ -88,7 +88,7 @@ namespace SIL.Transcriber.Services
 
         }
 
-    private string SignedUrl(string key, HttpVerb action, string mimetype = "audio/mpeg")
+    private string SignedUrl(string key, HttpVerb action, string mimetype)
         {
             var s3Client = new AmazonS3Client();
 
@@ -98,7 +98,7 @@ namespace SIL.Transcriber.Services
                 Key = key,
                 Verb = action,
                 Expires = DateTime.Now.AddMinutes(25),
-               // ContentType = mimetype
+                ContentType = mimetype
             };
             try
             {
@@ -110,11 +110,11 @@ namespace SIL.Transcriber.Services
                 throw;
             }
         }
-        public S3Response SignedUrlForGet(string fileName, string folder = "")
+        public S3Response SignedUrlForGet(string fileName, string folder, string contentType)
         {
             try
             {
-                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET), HttpStatusCode.OK);
+                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET, contentType), HttpStatusCode.OK);
 
             }
             catch (AmazonS3Exception e)
@@ -126,11 +126,11 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public S3Response SignedUrlForPut(string fileName, string folder = "")
+        public S3Response SignedUrlForPut(string fileName, string folder, string contentType)
         {
             try
             {
-                string url = SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT);
+                string url = SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT, contentType);
                 return S3Response(url, HttpStatusCode.OK);
             }
             catch (AmazonS3Exception e)
