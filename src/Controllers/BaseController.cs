@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Models;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using SIL.Auth.Models;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -73,15 +75,20 @@ namespace SIL.Transcriber.Controllers
                 // current user has not yet been found for this request.
                 // find or create because users are managed by auth0 and
                 // creation isn't proxied through the api.
-                var user = FindOrCreateCurrentUser().Result;
+                try
+                {
+                    var user = FindOrCreateCurrentUser().Result;
+                    HttpContext.Items[CURRENT_USER_KEY] = user;
+                    return user;
 
-                HttpContext.Items[CURRENT_USER_KEY] = user;
-
-                return user;
+                }
+                catch (System.Exception )  //user must not exist in SIL db
+                {
+                    return null;
+                }
             }
-
         }
-
+       
         private async Task<User> FindOrCreateCurrentUser()
         {
             var existing = await userService.GetCurrentUser();
@@ -94,13 +101,16 @@ namespace SIL.Transcriber.Controllers
                 Email = currentUserContext.Email,
                 Name = currentUserContext.Name,
                 GivenName = currentUserContext.GivenName,
-                FamilyName = currentUserContext.FamilyName
+                FamilyName = currentUserContext.FamilyName,
+                SilUserid = currentUserContext.SilUserid
             };
 
             var newEntity = await userService.CreateAsync(newUser);
+            /* ask the sil auth if this user has any orgs */
+            List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
+            organizationService.JoinOrgs(orgs, newEntity, RoleName.Transcriber);
 
             return newEntity;
         }
     }
-
 }
