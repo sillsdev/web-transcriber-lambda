@@ -63,7 +63,7 @@ namespace SIL.Transcriber.Services
             {
                 if (silAuthClient == null)
                 {
-                    var domainUri = new Uri("https://dct0y3d7gl.execute-api.us-east-1.amazonaws.com/dev/api/");
+                    var domainUri = new Uri(GetVarOrThrow("SIL_TR_SILAUTH_API"));
                     var token = TokenService.SILAuthToken;
                     silAuthClient = new HttpClient();
                     silAuthClient.BaseAddress = domainUri;
