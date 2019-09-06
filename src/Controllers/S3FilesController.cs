@@ -43,7 +43,7 @@ namespace SIL.Transcriber.Controllers
             return Ok(s3response);
         }
 
-        private async Task<IActionResult> GetS3File(string folder, string fileName)
+        private async Task<IActionResult> GetS3File(string folder, string fileName, string fileNameOut = "")
         {
             S3Response response = await _service.ReadObjectDataAsync(fileName, folder);
 
@@ -51,10 +51,10 @@ namespace SIL.Transcriber.Controllers
             {
                 Response.Headers.Add("Content-Disposition", new ContentDisposition
                 {
-                    FileName = fileName,
+                    FileName = fileNameOut.Length > 0 ? fileNameOut : fileName,
                     Inline = true // false = prompt the user for downloading; true = browser to try to show the file inline
                 }.ToString());
-
+                Console.WriteLine("size:" + response.FileStream.Length.ToString());
                 return File(response.FileStream, response.ContentType);
             }
             else

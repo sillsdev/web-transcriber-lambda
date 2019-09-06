@@ -252,15 +252,18 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                var request = new GetObjectRequest()
+                GetObjectRequest request = new GetObjectRequest()
                 {
                     BucketName = USERFILES_BUCKET,
                     Key = ProperFolder(folder) + fileName,
+                    
                 };
 
-                using (var response = await _client.GetObjectAsync(request))
-                using (var responseStream = response.ResponseStream)
+                using (GetObjectResponse response = await _client.GetObjectAsync(request))
+                using (Stream responseStream = response.ResponseStream)
                 {
+                    Console.WriteLine("Meta", response.Metadata);
+                    Console.WriteLine("Headers", response.Headers);
                     var stream = new MemoryStream();
                     await responseStream.CopyToAsync(stream);
                     stream.Position = 0;

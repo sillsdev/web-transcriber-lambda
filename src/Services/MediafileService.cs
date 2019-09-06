@@ -140,7 +140,7 @@ namespace SIL.Transcriber.Services
                 };
             
             S3Response response = await _S3service.ReadObjectDataAsync(mf.S3File, DirectoryName(plan));
-
+            response.Message = mf.OriginalFile;
             return response;
         }
         public async Task<S3Response> DeleteFile(int id)
