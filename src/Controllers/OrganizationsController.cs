@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
+
 namespace SIL.Transcriber.Controllers
 {
     public class OrganizationsController : BaseController<Organization>
@@ -19,6 +20,13 @@ namespace SIL.Transcriber.Controllers
         [HttpPost]
         public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Organization entity)
         {
+            //make sure SIL Auth knows about this org
+
+            if (!organizationService.VerifyOrg(currentUserContext, entity))
+            {
+                throw new System.Exception("Organization does not exist in SIL Repository.");
+            }
+
             if (entity.Owner == null)
             {
                 entity.Owner = CurrentUser;

@@ -8,6 +8,7 @@ using SIL.Transcriber.Models;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using SIL.Auth.Models;
+using System;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -75,17 +76,9 @@ namespace SIL.Transcriber.Controllers
                 // current user has not yet been found for this request.
                 // find or create because users are managed by auth0 and
                 // creation isn't proxied through the api.
-                try
-                {
                     var user = FindOrCreateCurrentUser().Result;
                     HttpContext.Items[CURRENT_USER_KEY] = user;
                     return user;
-
-                }
-                catch (System.Exception )  //user must not exist in SIL db
-                {
-                    return null;
-                }
             }
         }
        
@@ -106,10 +99,12 @@ namespace SIL.Transcriber.Controllers
             };
 
             var newEntity = await userService.CreateAsync(newUser);
+            Console.WriteLine("New user created.");
             /* ask the sil auth if this user has any orgs */
             List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
+            Console.WriteLine("orgs", orgs.Count);
             organizationService.JoinOrgs(orgs, newEntity, RoleName.Transcriber);
-
+           
             return newEntity;
         }
     }
