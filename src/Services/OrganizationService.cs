@@ -96,11 +96,14 @@ namespace SIL.Transcriber.Services
                 var gm = GroupMembershipRepository.CreateAsync(groupmembership).Result;
             }
         }
-
+        public bool VerifyOrg(Organization newOrg)
+        {
+            return true;
+        }
         private Organization FromSILAuth(SILAuth_Organization entity)
         {
             Organization newEntity = new Organization();
-            newEntity.SilUserid = entity.id;
+            newEntity.SilId = entity.id;
             newEntity.LogoUrl = entity.logo;
             newEntity.Name= entity.name;
             newEntity.LogoUrl = entity.logo;

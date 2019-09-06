@@ -27,8 +27,8 @@ namespace SIL.Transcriber.Models
         public virtual User Owner { get; set; }
         public int OwnerId { get; set; }
 
-        [Attr("sil-userid")]
-        public int? SilUserid { get; set; }
+        [Attr("sil-id")]
+        public int? SilId { get; set; }
 
         [NotMapped]
         [HasManyThrough(nameof(OrganizationMemberships))]

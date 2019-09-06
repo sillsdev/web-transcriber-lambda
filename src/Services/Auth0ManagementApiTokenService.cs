@@ -70,9 +70,11 @@ namespace SIL.Transcriber.Services
             {
                 if (tokenSIL == null)
                 {
-                    var domainUrl = GetVarOrThrow("SIL_TR_SILAUTH_DOMAIN");
-                    tokenSIL = token(domainUrl);  
+                    //var domainUrl = GetVarOrThrow("SIL_TR_SILAUTH_DOMAIN"); TODO
+                    //tokenSIL = token(domainUrl);
+                    tokenSIL = token("https://transcriber-auth");
                 }
+                Console.WriteLine("SIL Auth token received.");
                 return tokenSIL;
             }
         }
