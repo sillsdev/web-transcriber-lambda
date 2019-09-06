@@ -26,6 +26,9 @@ provider:
     SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID}
     SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET}
     SIL_TR_USERFILES_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_USERFILES_BUCKET}
+    SIL_TR_SILAUTH_API: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_SILAUTH_API}
+    SIL_TR_SILAUTH_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_SILAUTH_DOMAIN}
+
 deploymentPrefix: AWSTranscriberAPI/
 package:
   artifact: bin/release/netcoreapp2.1/deploy-package_${self:custom.myStage}.zip

@@ -37,6 +37,8 @@ namespace SIL.Transcriber.Models
 
         [Attr("auth0Id")]
         public string ExternalId { get; set; }
+        [Attr("sil-userid")]
+        public int? SilUserid { get; set; }
 
         [Attr("identity-token")]
         public string identitytoken { get; set; }

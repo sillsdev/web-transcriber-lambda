@@ -96,9 +96,11 @@ namespace SIL.Transcriber.Services
                 var gm = GroupMembershipRepository.CreateAsync(groupmembership).Result;
             }
         }
-        public bool VerifyOrg(Organization newOrg)
+        public bool VerifyOrg(ICurrentUserContext currentUserContext, Organization newOrg)
         {
-            return true;
+            /* ask the sil auth if this user has any orgs */
+            List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
+            return orgs.Find(o => o.name == newOrg.Name && o.id == newOrg.SilId) != null;
         }
         private Organization FromSILAuth(SILAuth_Organization entity)
         {
