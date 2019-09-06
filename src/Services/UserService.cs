@@ -13,11 +13,11 @@ namespace SIL.Transcriber.Services
 {
     public class UserService : BaseArchiveService<User>
     {
-        public IOrganizationContext OrganizationContext { get; }
-        public ICurrentUserContext CurrentUserContext { get; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
-        public CurrentUserRepository CurrentUserRepository { get; }
-        public User CurrentUser { get; }
+        private IOrganizationContext OrganizationContext { get; }
+        private ICurrentUserContext CurrentUserContext { get; }
+        private IEntityRepository<UserRole> UserRolesRepository { get; }
+        private CurrentUserRepository CurrentUserRepository { get; }
+        private User CurrentUser { get; }
 
         public UserService(
             IJsonApiContext jsonApiContext,
@@ -33,8 +33,10 @@ namespace SIL.Transcriber.Services
             CurrentUserContext = currentUserContext;
             UserRolesRepository = userRolesRepository;
             CurrentUserRepository = currentUserRepository;
-            CurrentUser = currentUserRepository.GetCurrentUser().Result;
+            CurrentUser= currentUserRepository.GetCurrentUser().Result;
         }
+
+        
 
         public override async Task<IEnumerable<User>> GetAsync()
         {

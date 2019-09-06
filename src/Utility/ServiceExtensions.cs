@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Utility
@@ -32,7 +31,7 @@ namespace SIL.Transcriber.Utility
                     jsonApiContext.QuerySet = query;
                 }
 
-                if (organizationContext.HasOrganization) 
+                if (organizationContext.HasOrganization)
                 {
                     orgIdToFilterBy = organizationContext.OrganizationId.ToString();
                 }
@@ -47,16 +46,16 @@ namespace SIL.Transcriber.Utility
                               Func<Task<IEnumerable<T>>> baseQuery,
                               IJsonApiContext jsonApiContext)
         {
-                var query = jsonApiContext.QuerySet;
+            var query = jsonApiContext.QuerySet;
 
-                if (query == null)
-                {
-                    query = new QuerySet();
-                    jsonApiContext.QuerySet = query;
-                }
-                query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("currentuser", "currentuser", "eq"));
+            if (query == null)
+            {
+                query = new QuerySet();
+                jsonApiContext.QuerySet = query;
+            }
+            query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("currentuser", "currentuser", "eq"));
 
-                return await baseQuery();
+            return await baseQuery();
         }
     }
 }
