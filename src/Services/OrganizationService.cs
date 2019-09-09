@@ -55,7 +55,7 @@ namespace SIL.Transcriber.Services
         }
         private string OrgAllGroup(Organization entity)
         {
-            return entity.Name + " All";
+            return "All Users"; // entity.Name + " All";
         }
         public override async Task<Organization> CreateAsync(Organization entity)
         {
