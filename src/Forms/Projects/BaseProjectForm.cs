@@ -15,8 +15,7 @@ namespace SIL.Transcriber.Forms.Projects
         protected int InitialOrganizationId { get; set; }
         public BaseProjectForm(
             UserRepository userRepository,
-            IEntityRepository<UserRole> userRolesRepository,
-            ICurrentUserContext currentUserContext) : base(userRepository, userRolesRepository, currentUserContext)
+            ICurrentUserContext currentUserContext) : base(userRepository, currentUserContext)
         {
         }
 

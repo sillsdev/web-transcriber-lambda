@@ -17,6 +17,11 @@ namespace SIL.Transcriber.Models
         public virtual Role Role { get; set; }
         public int RoleId { get; set; }
 
+        [NotMapped]
+        public RoleName RoleName
+        {
+            get { return Role == null ? RoleName.Transcriber : Role.Rolename; }
+        }
         [Attr("font")]
         public string Font { get; set; }
 

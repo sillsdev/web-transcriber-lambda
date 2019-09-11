@@ -38,10 +38,6 @@ namespace SIL.Transcriber.Models
         [HasMany("groups")]
         public virtual List<Group> Groups { get; set; }
 
-        [HasMany("user-roles", Link.None)]
-        public virtual List<UserRole> UserRoles { get; set; }
-
-
         /*
         [HasMany("organization-memberships", Link.None)]
         public virtual List<OrganizationMembership> OrganizationMemberships { get; set; }

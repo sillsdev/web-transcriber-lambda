@@ -103,7 +103,7 @@ namespace SIL.Transcriber.Controllers
             /* ask the sil auth if this user has any orgs */
             List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
             Console.WriteLine("orgs", orgs.Count);
-            organizationService.JoinOrgs(orgs, newEntity, RoleName.Transcriber);
+            organizationService.JoinOrgs(orgs, newEntity, RoleName.Member);
            
             return newEntity;
         }

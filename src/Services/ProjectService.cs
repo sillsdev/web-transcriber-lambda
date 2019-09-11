@@ -19,7 +19,6 @@ namespace SIL.Transcriber.Services
         public UserRepository UserRepository { get; }
         public GroupRepository GroupRepository { get; }
         public IEntityRepository<Organization> OrganizationRepository { get; set; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
 
         public ProjectService(
             IJsonApiContext jsonApiContext,
@@ -29,7 +28,6 @@ namespace SIL.Transcriber.Services
             IEntityRepository<Project> projectRepository,
             GroupRepository groupRepository,
             IEntityRepository<Organization> organizationRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, projectRepository, loggerFactory)
         {
             OrganizationContext = organizationContext;
@@ -37,7 +35,6 @@ namespace SIL.Transcriber.Services
             UserRepository = userRepository;
             GroupRepository = groupRepository;
             OrganizationRepository = organizationRepository;
-            UserRolesRepository = userRolesRepository;
         }
         public override async Task<IEnumerable<Project>> GetAsync()
         {
@@ -65,7 +62,6 @@ namespace SIL.Transcriber.Services
                                            GroupRepository,
                                            CurrentUserContext,
                                            OrganizationRepository,
-                                           UserRolesRepository,
                                            OrganizationContext,
                                            (ProjectRepository)MyRepository);
             if (!updateForm.IsValid(id, resource))
@@ -82,7 +78,6 @@ namespace SIL.Transcriber.Services
             var createForm = new CreateForm(UserRepository,
                                            GroupRepository,
                                            CurrentUserContext,
-                                           UserRolesRepository,
                                            OrganizationRepository);
             if (!createForm.IsValid(resource))
             {

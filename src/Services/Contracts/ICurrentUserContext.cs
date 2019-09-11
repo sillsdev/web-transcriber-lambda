@@ -11,8 +11,7 @@ namespace SIL.Transcriber.Services
         string GivenName { get; }
         string FamilyName { get; }
         string Name { get; }
-        List<SILAuth_Organization> SILOrganizations
-        { get; }
+        List<SILAuth_Organization> SILOrganizations { get; }
         int SilUserid { get; }
     }
 }

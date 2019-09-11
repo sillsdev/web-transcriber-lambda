@@ -51,6 +51,7 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
             services.AddScoped<IResourceService<Group>, GroupService>();
             services.AddScoped<IResourceService<Integration>, IntegrationService>();
+            services.AddScoped<IResourceService<Invitation>, InvitationService>();
             services.AddScoped<IResourceService<Mediafile>, MediafileService>();
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
@@ -81,6 +82,7 @@ namespace SIL.Transcriber
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
+            services.AddScoped<InvitationService>();
             services.AddScoped<MediafileService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();

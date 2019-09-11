@@ -18,18 +18,15 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             IDbContextResolver contextResolver,
-            IEntityRepository<UserRole> userRolesRepository,
             ICurrentUserContext currentUserContext
        ) : base(loggerFactory, jsonApiContext, contextResolver)
         {
             this.DBContext = (AppDbContext)contextResolver.GetContext();
             this.CurrentUserContext = currentUserContext;
-            UserRolesRepository = userRolesRepository;
         }
 
         private AppDbContext DBContext { get; }
         private ICurrentUserContext CurrentUserContext { get; }
-        private IEntityRepository<UserRole> UserRolesRepository { get; }
 
         // memoize once per local thread,
         // since the current user can't change in a single request
@@ -50,19 +47,17 @@ namespace SIL.Transcriber.Repositories
                 .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
                 .Include(user => user.OrganizationMemberships)
                 .Include(user => user.GroupMemberships)
-                .Include(user => user.UserRoles)
-                    .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync();
 
             return currentUser;
         }
         public bool IsSuperAdmin(User currentuser)
         {
-            return currentuser.HasRole(RoleName.SuperAdmin);
+            return currentuser.HasOrgRole(RoleName.SuperAdmin, 0);
         }
         public bool IsOrgAdmin(User currentuser, int orgId)
         {
-            return currentuser.HasRole(RoleName.OrganizationAdmin, orgId);
+            return currentuser.HasOrgRole(RoleName.Admin, orgId);
         }
     }
 }

@@ -98,13 +98,6 @@ namespace TranscriberAPI.Tests.Acceptance
             };
             await SaveIt(routePrefix, $"/api/groupmemberships", gm2);
 
-            var ur = new UserRole()
-            {
-                UserId = user.Id,
-                OrganizationId = org.Id,
-                RoleId = 2
-            };
-            await SaveIt(routePrefix, $"/api/userroles", ur);
 
             await SaveIt(routePrefix, $"/api/projecttypes", projtype);
             project.ProjecttypeId = projtype.Id;

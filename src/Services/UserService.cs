@@ -15,7 +15,6 @@ namespace SIL.Transcriber.Services
     {
         private IOrganizationContext OrganizationContext { get; }
         private ICurrentUserContext CurrentUserContext { get; }
-        private IEntityRepository<UserRole> UserRolesRepository { get; }
         private CurrentUserRepository CurrentUserRepository { get; }
         private User CurrentUser { get; }
 
@@ -26,12 +25,10 @@ namespace SIL.Transcriber.Services
             UserRepository userRepository,
             CurrentUserRepository currentUserRepository,
             IEntityRepository<User> entityRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, entityRepository, loggerFactory)
         {
             OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
-            UserRolesRepository = userRolesRepository;
             CurrentUserRepository = currentUserRepository;
             CurrentUser= currentUserRepository.GetCurrentUser().Result;
         }

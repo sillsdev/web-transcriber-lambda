@@ -16,7 +16,6 @@ namespace SIL.Transcriber.Services
     public class OrganizationService : BaseArchiveService<Organization>
     {
         public IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
         public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<Group> GroupRepository { get; }
         public IEntityRepository<GroupMembership> GroupMembershipRepository { get; }
@@ -28,11 +27,9 @@ namespace SIL.Transcriber.Services
             IEntityRepository<Group> groupRepository,
             IEntityRepository<GroupMembership> groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
         {
             OrganizationMembershipRepository = organizationMembershipRepository;
-            UserRolesRepository = userRolesRepository;
             CurrentUserRepository = currentUserRepository;
             GroupMembershipRepository = groupMembershipRepository;
             GroupRepository = groupRepository;
@@ -42,7 +39,7 @@ namespace SIL.Transcriber.Services
         public override async Task<IEnumerable<Organization>> GetAsync()
         {
             //scope to user, unless user is super admin
-            var isScopeToUser = !CurrentUser().HasRole(RoleName.SuperAdmin);
+            var isScopeToUser = !CurrentUser().HasOrgRole(RoleName.SuperAdmin, 0);
             IEnumerable<Organization> entities = await base.GetAsync();
             if (isScopeToUser)
             {
@@ -73,27 +70,48 @@ namespace SIL.Transcriber.Services
             };
             var newGroup = await GroupRepository.CreateAsync(group);
 
-            JoinOrg(newEntity, newEntity.Owner, newGroup, RoleName.OrganizationAdmin);
+            JoinOrg(newEntity, newEntity.Owner, RoleName.Admin, RoleName.Admin);
             return newEntity;
         }
-        private void JoinOrg(Organization entity, User user, Group allGroup, RoleName role)
+        public void JoinOrg(Organization entity, User user, RoleName orgRole, RoleName groupRole)
         {
-            // an org can only be created by the owner of the org. (for now anyway)
-            var membership = new OrganizationMembership
+            Group allGroup = GroupRepository.Get().Where(g => g.Name == OrgAllGroup(entity) && g.OrganizationId == entity.Id).FirstOrDefault();
+
+            if (user.OrganizationMemberships == null || user.GroupMemberships == null)
+                user = CurrentUserRepository.Get().Include(o => o.OrganizationMemberships).Include(o => o.GroupMemberships).Where(e => e.Id == user.Id).SingleOrDefault();
+
+            OrganizationMembership membership = user.OrganizationMemberships.Where(om => om.OrganizationId == entity.Id).ToList().FirstOrDefault();
+            if (membership == null)
             {
-                User = user,
-                Organization = entity
-            };
-            var om = OrganizationMembershipRepository.CreateAsync(membership).Result;
+                membership = new OrganizationMembership
+                {
+                    User = user,
+                    UserId = user.Id,
+                    Organization = entity,
+                    OrganizationId = entity.Id,
+                    RoleId = (int)orgRole
+                };
+                var om = OrganizationMembershipRepository.CreateAsync(membership).Result;
+            }
+            else if (membership.RoleName != orgRole)
+            {
+                membership.RoleId = (int)orgRole;
+                var om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
+            }
+
             if (allGroup != null)
             {
-                var groupmembership = new GroupMembership
-                {
-                    Group = allGroup,
-                    User = user,
-                    RoleId = (int)role,
-                };
-                var gm = GroupMembershipRepository.CreateAsync(groupmembership).Result;
+                GroupMembership groupmembership = user.GroupMemberships.Where(gm => gm.GroupId == allGroup.Id).ToList().FirstOrDefault();
+                if (groupmembership == null)
+                { 
+                    groupmembership = new GroupMembership
+                    {
+                        GroupId = allGroup.Id,
+                        UserId = user.Id,
+                        RoleId = (int)groupRole,
+                    };
+                    var gm = GroupMembershipRepository.CreateAsync(groupmembership).Result;
+                }
             }
         }
         public bool VerifyOrg(ICurrentUserContext currentUserContext, Organization newOrg)
@@ -118,7 +136,7 @@ namespace SIL.Transcriber.Services
             return true;
         }
 
-        private Organization JoinOrg(SILAuth_Organization entity, User user, RoleName role)
+        private Organization JoinOrg(SILAuth_Organization entity, User user, RoleName orgRole)
         {
             try
             {
@@ -129,17 +147,15 @@ namespace SIL.Transcriber.Services
                     //will be added as owner
                     org = CreateAsync(entity, user).Result;
                 }
-                else if (org.OrganizationMemberships.Where(om => om.UserId == user.Id).ToList().Count == 0)
+                else 
                 {
-                    var group = GroupRepository.Get().Where(g => g.Name == OrgAllGroup(org)).FirstOrDefault();
-
-                    JoinOrg(org, user, group, role);
+                    JoinOrg(org, user, orgRole, RoleName.Transcriber);
                 }
                 return org;
             }
             catch (Exception ex)
             {
-                throw;
+                throw ex;
             }
         }
         public async Task<Organization> CreateAsync(SILAuth_Organization entity, User owner)

@@ -20,5 +20,15 @@ namespace SIL.Transcriber.Models
 
         [Attr("organization-id")]
         public int OrganizationId { get; set; }
+
+        [HasOne("role", Link.None)]
+        public virtual Role Role { get; set; }
+        public int RoleId { get; set; }
+
+        [NotMapped]
+        public RoleName RoleName
+        {
+            get { return Role == null ? RoleName.Member : Role.Rolename; }
+        }
     }
 }

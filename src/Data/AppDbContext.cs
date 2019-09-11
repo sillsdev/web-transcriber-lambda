@@ -52,7 +52,6 @@ namespace SIL.Transcriber.Data
 
             var userEntity = modelBuilder.Entity<User>();
             var roleEntity = modelBuilder.Entity<Role>();
-            var userRoleEntity = modelBuilder.Entity<UserRole>();
             var orgEntity = modelBuilder.Entity<Organization>();
             var orgMemberEntity = modelBuilder.Entity<OrganizationMembership>();
             var projectEntity = modelBuilder.Entity<Project>();
@@ -80,25 +79,12 @@ namespace SIL.Transcriber.Data
                 .WithOne(gm => gm.User)
                 .HasForeignKey(gm => gm.UserId);
 
-            userEntity
-                .HasMany(u => u.UserRoles)
-                .WithOne(r => r.User)
-                .HasForeignKey(r => r.UserId);
-
-            roleEntity
-                .HasMany(r => r.UserRoles)
-                .WithOne(ur => ur.Role)
-                .HasForeignKey(ur => ur.RoleId);
 
             orgEntity
                 .HasMany(o => o.OrganizationMemberships)
                 .WithOne(om => om.Organization)
                 .HasForeignKey(om => om.OrganizationId);
 
-            orgEntity
-                .HasMany(o => o.UserRoles)
-                .WithOne(r => r.Organization)
-                .HasForeignKey(r => r.OrganizationId);
 
             orgEntity
                 .HasMany(o => o.Groups)
@@ -192,6 +178,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
+        public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Mediafile> Mediafiles { get; set; }
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
@@ -205,7 +192,6 @@ namespace SIL.Transcriber.Data
         public DbSet<Reviewer> Reviewers { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Section> Sections { get; set; }
-        public DbSet<UserRole> Userroles { get; set; }
         public DbSet<UserPassage> Userpassages { get; set; }
         public DbSet<User> Users { get; set; }
 

@@ -20,8 +20,7 @@ namespace SIL.Transcriber.Forms.Groups
             UserRepository userRepository,
             GroupRepository groupRepository,
             IOrganizationContext organizationContext,
-            IEntityRepository<UserRole> userRolesRepository,
-            ICurrentUserContext currentUserContext): base(userRepository, userRolesRepository, currentUserContext)
+            ICurrentUserContext currentUserContext): base(userRepository, currentUserContext)
         {
             UserRepository = userRepository;
             GroupRepository = groupRepository;

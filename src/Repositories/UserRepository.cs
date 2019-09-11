@@ -96,7 +96,6 @@ namespace SIL.Transcriber.Repositories
                        .Where(e => e.ExternalId == auth0Id)
                        .Include(user => user.OrganizationMemberships)
                        .Include(user => user.GroupMemberships)
-                       .Include(user => user.UserRoles)
                        .FirstOrDefaultAsync();
         }
     }

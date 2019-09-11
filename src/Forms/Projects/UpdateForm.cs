@@ -22,9 +22,8 @@ namespace SIL.Transcriber.Forms.Projects
             GroupRepository groupRepository,
             ICurrentUserContext currentUserContext,
             IEntityRepository<Organization> organizationRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             IOrganizationContext organizationContext,
-            ProjectRepository projectRepository) : base(userRepository, userRolesRepository, currentUserContext)
+            ProjectRepository projectRepository) : base(userRepository, currentUserContext)
         {
             UserRepository = userRepository;
             GroupRepository = groupRepository;

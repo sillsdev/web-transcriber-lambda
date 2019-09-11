@@ -28,8 +28,8 @@ namespace SIL.Transcriber.Services
             IHttpContextAccessor httpContextAccessor,
             Auth0ManagementApiTokenService tokenService)
         {
-            this.HttpContext = httpContextAccessor.HttpContext;
-            this.TokenService = tokenService;
+            HttpContext = httpContextAccessor.HttpContext;
+            TokenService = tokenService;
         }
 
         private string AuthType
@@ -63,20 +63,7 @@ namespace SIL.Transcriber.Services
             {
                 if (silAuthClient == null)
                 {
-                    var domainUri = new Uri(GetVarOrThrow("SIL_TR_SILAUTH_API"));
-                    var token = TokenService.SILAuthToken;
-                    silAuthClient = new HttpClient();
-                    silAuthClient.BaseAddress = domainUri;
-                    try
-                    {
-                        silAuthClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        throw;
-                    }
-
+                   silAuthClient = SILIdentity.SILAuthApiClient(TokenService);
                 }
                 return silAuthClient;
             }
@@ -103,14 +90,7 @@ namespace SIL.Transcriber.Services
                 return auth0User;
             }
         }
-        private string GetData(string response)
-        {
-            //find the data
-            const string search = "\"data\":";
-            string data = response.Substring(response.IndexOf(search) + search.Length);
-            
-            return data.Remove(data.Length-1);
-        }
+
         private SILAuth_User SILUser
         {
             get
@@ -121,17 +101,9 @@ namespace SIL.Transcriber.Services
                     if (!response.IsSuccessStatusCode)
                         throw new Exception(response.ReasonPhrase);
 
-                    var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
-                    try
-                    {
+                    var jsonData = SILIdentity.GetData(response.Content.ReadAsStringAsync().Result);
                         List<SILAuth_User> users = JsonConvert.DeserializeObject<List<SILAuth_User>>(jsonData);
                         silUser = users[0];
-                    }
-                    catch (Exception ex)
-                    {
-
-                        Console.WriteLine(ex.Message);
-                    }
                 }
                 return silUser;
             }
@@ -145,7 +117,7 @@ namespace SIL.Transcriber.Services
                 HttpResponseMessage response = SILAuthApiClient.GetAsync("memberships").Result;
                 if (response.IsSuccessStatusCode)
                 {
-                    var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                    var jsonData = SILIdentity.GetData(response.Content.ReadAsStringAsync().Result);
                     try
                     {
                         List<SILAuth_Membership> memberships = JsonConvert.DeserializeObject<List<SILAuth_Membership>>(jsonData);
@@ -154,7 +126,7 @@ namespace SIL.Transcriber.Services
                         memberships.ForEach(m => silOrgs += m.orgId.ToString() + "|");
 
                         response = SILAuthApiClient.GetAsync("organizations").Result;
-                        jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                        jsonData = SILIdentity.GetData(response.Content.ReadAsStringAsync().Result);
                         orgs = JsonConvert.DeserializeObject<List<SILAuth_Organization>>(jsonData);
                         orgs = orgs.FindAll(o => silOrgs.Contains("|" + o.id.ToString() + "|"));
                     }

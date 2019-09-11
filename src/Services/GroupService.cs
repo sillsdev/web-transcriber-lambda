@@ -18,7 +18,6 @@ namespace SIL.Transcriber.Services
         public IOrganizationContext OrganizationContext { get; private set; }
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
 
         public GroupService(
             IJsonApiContext jsonApiContext,
@@ -26,13 +25,11 @@ namespace SIL.Transcriber.Services
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             IEntityRepository<Group> groupRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, groupRepository,  loggerFactory)
         {
             OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
             UserRepository = userRepository;
-            UserRolesRepository = userRolesRepository;
         }
 
 
@@ -55,7 +52,6 @@ namespace SIL.Transcriber.Services
             var updateForm = new UpdateForm(UserRepository,
                                              (GroupRepository)MyRepository,
                                              OrganizationContext,
-                                             UserRolesRepository,
                                              CurrentUserContext);
             if (!updateForm.IsValid(id, resource))
             {

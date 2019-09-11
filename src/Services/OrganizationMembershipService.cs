@@ -19,20 +19,17 @@ namespace SIL.Transcriber.Services
             UserRepository userRepository,
             ICurrentUserContext currentUserContext,
             IEntityRepository<OrganizationMembership> organizationMembershipRepository,
-            IEntityRepository<UserRole> userRoleRepository,
             IEntityRepository<Role> roleRepository,
             ILoggerFactory loggerFactory
         ) : base(jsonApiContext, organizationMembershipRepository, loggerFactory)
         {
             UserRepository = userRepository;
             OrganizationMembershipRepository = organizationMembershipRepository;
-            UserRoleRepository = userRoleRepository;
             RoleRepository = roleRepository;
 
         }
         private UserRepository UserRepository { get; set; }
         private IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; set; }
-        private IEntityRepository<UserRole> UserRoleRepository { get; }
         private IEntityRepository<Role> RoleRepository { get; }
 
         public async Task<OrganizationMembership> CreateByEmail(OrganizationMembership membership)
@@ -41,16 +38,14 @@ namespace SIL.Transcriber.Services
 
             User userForEmail = UserRepository.Get()
                 .Where(p => p.Email == membership.Email)
-                .Include(u => u.UserRoles)
                 .FirstOrDefault();
 
             if (userForEmail == null) return null;
 
             membership.UserId = userForEmail.Id;
+            membership.RoleId = (int)RoleName.Member;
             var organizationMembership = await this.MaybeCreateMembership(membership);
-
-            await this.MaybeApplyDefaultRole(userForEmail, organizationMembership);
-          
+         
             return organizationMembership;
         }
 
@@ -69,36 +64,6 @@ namespace SIL.Transcriber.Services
             }
 
             return await this.OrganizationMembershipRepository.CreateAsync(membership);
-        }
-
-        private async System.Threading.Tasks.Task MaybeApplyDefaultRole(User user, OrganizationMembership membership)
-        {
-            if (membership == null) return;
-
-            var existingRole = user.UserRoles
-                ?.Where(r => r.OrganizationId == membership.OrganizationId)
-                ?.FirstOrDefault();
-
-            // only add a default role if the user does not already have a role
-            // a user _may_ not have a role, but not having a role and using scriptoria
-            // *should* be rarer than needing a role. Not having a role is _essentially_
-            // read only access -- which doesn't allow for much.
-            if (existingRole != null) return;
-
-            var role = this.RoleRepository
-                .Get()
-                .Where(r => r.Rolename == RoleName.Transcriber)
-                .FirstOrDefault();
-
-            if (role == null) return;
-
-            var userRole = new UserRole {
-                User = user,
-                Role = role,
-                OrganizationId = membership.OrganizationId
-            };
-
-            await this.UserRoleRepository.CreateAsync(userRole);
         }
     }
 }

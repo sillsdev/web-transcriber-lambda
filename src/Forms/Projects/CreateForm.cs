@@ -21,9 +21,8 @@ namespace SIL.Transcriber.Forms.Projects
             UserRepository userRepository,
             GroupRepository groupRepository,
             ICurrentUserContext currentUserContext,
-            IEntityRepository<UserRole> userRolesRepository,
             IEntityRepository<Organization> organizationRepository)
-            : base(userRepository, userRolesRepository, currentUserContext)
+            : base(userRepository,  currentUserContext)
         {
             UserRepository = userRepository;
             GroupRepository = groupRepository;
@@ -47,10 +46,10 @@ namespace SIL.Transcriber.Forms.Projects
                        .Include(g => g.Owner).FirstOrDefaultAsync().Result;
                 ProjectOwner = UserRepository.Get()
                         .Where(u => u.Id == project.OwnerId)
-                        .Include(u => u.UserRoles)
-                            .ThenInclude(ur => ur.Role)
                         .Include(u => u.OrganizationMemberships)
                             .ThenInclude(om => om.Organization)
+                        .Include(u => u.GroupMemberships)
+                            .ThenInclude(gm => gm.Group)
                         .FirstOrDefaultAsync().Result;
                 CurrentUserOrgIds = CurrentUser.OrganizationIds.OrEmpty();
                 base.ValidateProject();

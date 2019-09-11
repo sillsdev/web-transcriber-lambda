@@ -38,7 +38,7 @@ namespace SIL.Transcriber.Repositories
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {
             var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            if (!CurrentUser.HasRole(RoleName.SuperAdmin))
+            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 //if I'm an admin in the org, give me all projects in all groups in that org
                 //otherwise give me just the projects in the groups I'm a member of

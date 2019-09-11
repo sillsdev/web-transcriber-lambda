@@ -67,14 +67,7 @@ namespace SIL.Transcriber.Models
 
         [HasMany("group-memberships", Link.None)]
         public virtual List<GroupMembership> GroupMemberships { get; set; }
-
-
-        [NotMapped]
-        //[HasManyThrough(nameof(UserRoles))]
-        //public List<Role> Roles { get; set; }
-        [HasMany("user-roles", Link.None)]
-        public virtual List<UserRole> UserRoles { get; set; }
-
+        
         [NotMapped]
         public IEnumerable<int> OrganizationIds => OrganizationMemberships?.Select(o => o.OrganizationId);
 
@@ -90,22 +83,32 @@ namespace SIL.Transcriber.Models
         //[NotMapped]
         //public IEnumerable<Group> ProjectIds => GroupMemberships?.Select(g => g.Group);
 
-        public bool HasRole(RoleName role)
+        public bool HasOrgRole(RoleName role, int orgId)
         {
-            var userRole = this
-                .UserRoles
-                .Where(r => r.RoleName == role)
-                .FirstOrDefault();
+            OrganizationMembership omSuper;
+            omSuper = this
+            .OrganizationMemberships
+            .Where(r => r.RoleName == RoleName.SuperAdmin)
+            .FirstOrDefault();
 
-            return userRole != null;
+            if (omSuper != null)
+                return true; //they have all the roles
+
+            return this.OrganizationMemberships.Where(r => r.OrganizationId == orgId && r.RoleName == role).FirstOrDefault() != null;
         }
-        public bool HasRole(RoleName role, int OrgId)
+        public bool HasGroupRole(RoleName role, int groupid)
         {
-            var userRole = this
-                .UserRoles
-                .Where(r => r.OrganizationId == OrgId && r.RoleName == role)
-                .FirstOrDefault();
-            return userRole != null;
+            OrganizationMembership omSuper;
+            omSuper = this
+            .OrganizationMemberships
+            .Where(r => r.RoleName == RoleName.SuperAdmin)
+            .FirstOrDefault();
+
+            if (omSuper != null)
+                return true; //they have all the roles
+
+            return this.GroupMemberships.Where(r => r.GroupId == groupid && r.RoleName == role).FirstOrDefault() != null;
+
         }
         /*
         public string LocaleOrDefault()

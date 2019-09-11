@@ -17,9 +17,11 @@
 
   <ItemGroup>
     <Compile Remove="Controllers\ProjectusersController.cs" />
+    <Compile Remove="Controllers\UserrolesController.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\transcriberContext.cs" />
+    <Compile Remove="Models\UserRole.cs" />
     <Compile Remove="Models\VwUserallowedgroups.cs" />
     <Compile Remove="Models\VwUserallowedpassages.cs" />
     <Compile Remove="Models\XEmails.cs" />

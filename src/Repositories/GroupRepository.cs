@@ -25,11 +25,11 @@ namespace SIL.Transcriber.Repositories
         private IQueryable<Group> UsersGroups(IQueryable<Group> entities)
         {
             var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            if (!CurrentUser.HasRole(RoleName.SuperAdmin))
+            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 //if I'm an admin in the org, give me all groups in that org
                 //otherwise give me just the groups I'm a member of
-                var orgadmins = orgIds.Where(o => CurrentUser.HasRole(RoleName.OrganizationAdmin, o));
+                var orgadmins = orgIds.Where(o => CurrentUser.HasOrgRole(RoleName.Admin, o));
 
                 entities = entities
                        .Where(g => orgadmins.Contains(g.OrganizationId) || CurrentUser.GroupIds.Contains(g.Id));

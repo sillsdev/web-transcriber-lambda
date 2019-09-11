@@ -18,17 +18,14 @@ namespace SIL.Transcriber.Forms
         public User CurrentUser { get; }
         protected IEnumerable<int> CurrentUserOrgIds { get; set; }
         public IOrganizationContext OrganizationContext { get; set; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
 
         public BaseForm(
             UserRepository userRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ICurrentUserContext currentUserContext
            )
         {
             Errors = new ErrorCollection();
             CurrentUser = userRepository.GetByAuth0Id(currentUserContext.Auth0Id).Result;
-            UserRolesRepository = userRolesRepository;
         }
 
         public void AddError(string message, int errorType = 422)
@@ -68,12 +65,7 @@ namespace SIL.Transcriber.Forms
         }
         protected bool IsCurrentUserSuperAdmin()
         {
-            var userRole = UserRolesRepository.Get()
-                .Include(ur => ur.User)
-                .Include(ur => ur.Role)
-                .Where(ur => ur.UserId == CurrentUser.Id && ur.Role.Rolename == RoleName.SuperAdmin)
-                .FirstOrDefault();
-            return userRole != null;
+            return CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0);
         }
 
     }
