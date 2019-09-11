@@ -97,7 +97,7 @@ namespace SIL.Transcriber.Services
             requestObj = new JObject(
                 new JProperty("email", entity.Email),
                 new JProperty("orgName", entity.Organization.Name),
-                new JProperty("inviteid", invite.id));
+                new JProperty("inviteId", invite.id));
 
             //call the Identity api and receive an invitation id
             SILAuthApiClient.PostAsync("sendEmail", new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json"));
