@@ -20,15 +20,17 @@ namespace SIL.Transcriber.Services
         private string auth0Id;
         private string authType;
         private ManagementApiClient managementApiClient;
-        private HttpClient silAuthClient;
         private User auth0User;
         private SILAuth_User silUser;
+        private ISILIdentityService SILIdentity;
 
         public HttpCurrentUserContext(
             IHttpContextAccessor httpContextAccessor,
-            Auth0ManagementApiTokenService tokenService)
+             ISILIdentityService silIdentityService,
+             Auth0ManagementApiTokenService tokenService)
         {
             HttpContext = httpContextAccessor.HttpContext;
+            SILIdentity = silIdentityService;
             TokenService = tokenService;
         }
 
@@ -57,17 +59,7 @@ namespace SIL.Transcriber.Services
                 return managementApiClient;
             }
         }
-        private HttpClient SILAuthApiClient
-        {
-            get
-            {
-                if (silAuthClient == null)
-                {
-                   silAuthClient = SILIdentity.SILAuthApiClient(TokenService);
-                }
-                return silAuthClient;
-            }
-        }
+
         private User Auth0User
         {
             get
@@ -97,13 +89,7 @@ namespace SIL.Transcriber.Services
             {
                 if (silUser == null)
                 {
-                    HttpResponseMessage response = SILAuthApiClient.GetAsync("user/" + Auth0Id).Result;
-                    if (!response.IsSuccessStatusCode)
-                        throw new Exception(response.ReasonPhrase);
-
-                    var jsonData = SILIdentity.GetData(response.Content.ReadAsStringAsync().Result);
-                        List<SILAuth_User> users = JsonConvert.DeserializeObject<List<SILAuth_User>>(jsonData);
-                        silUser = users[0];
+                    silUser = SILIdentity.GetUser(Auth0Id);
                 }
                 return silUser;
             }
@@ -113,30 +99,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                List<SILAuth_Organization> orgs = null;
-                HttpResponseMessage response = SILAuthApiClient.GetAsync("memberships").Result;
-                if (response.IsSuccessStatusCode)
-                {
-                    var jsonData = SILIdentity.GetData(response.Content.ReadAsStringAsync().Result);
-                    try
-                    {
-                        List<SILAuth_Membership> memberships = JsonConvert.DeserializeObject<List<SILAuth_Membership>>(jsonData);
-                        memberships = memberships.FindAll(m => m.userId == SILUser.id);
-                        string silOrgs = "|";
-                        memberships.ForEach(m => silOrgs += m.orgId.ToString() + "|");
-
-                        response = SILAuthApiClient.GetAsync("organizations").Result;
-                        jsonData = SILIdentity.GetData(response.Content.ReadAsStringAsync().Result);
-                        orgs = JsonConvert.DeserializeObject<List<SILAuth_Organization>>(jsonData);
-                        orgs = orgs.FindAll(o => silOrgs.Contains("|" + o.id.ToString() + "|"));
-                    }
-                    catch (Exception ex)
-                    {
-
-                        Console.WriteLine(ex.Message);
-                    }
-                }
-                return orgs;
+                return SILIdentity.GetOrganizations(SILUser.id);
             }
         }
         public string Auth0Id

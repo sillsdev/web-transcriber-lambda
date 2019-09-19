@@ -66,7 +66,8 @@ namespace SIL.Transcriber
             services.AddScoped<IS3Service, S3Service>();
             services.AddScoped<IParatextService, ParatextService>();
             services.AddScoped<IUserAccessor, UserAccessor>();
-            //services.AddScoped<IQueryParser, OrbitJSQueryParser>();
+            services.AddScoped<ISILIdentityService, SILIdentityService>();
+
 
             // EventDispatchers
             services.AddScoped<UserRepository>();
@@ -94,7 +95,7 @@ namespace SIL.Transcriber
             services.AddScoped<SectionService>();
             services.AddScoped<UserPassageService>();
             services.AddScoped<UserService>();
-
+            services.AddScoped<SILIdentityService>();
             services.AddScoped<Auth0ManagementApiTokenService>();
             //services.AddScoped<SendNotificationService>();
             //services.AddScoped<SendEmailService>();

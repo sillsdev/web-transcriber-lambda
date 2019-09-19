@@ -8,27 +8,32 @@ namespace SIL.Transcriber.Models
 {
     public partial class Organization : BaseModel, IArchive
     {
+        /* from identity */
+        [Attr("sil-id")]
+        public int SilId { get; set; }
+
         [Attr("name")]
         public string Name { get; set; }
-
-        [Attr("slug")]
-        public string Slug { get; set; }
 
         [Attr("website-url")]
         public string WebsiteUrl { get; set; }
 
+        [Attr("description")]
+        public string Description { get; set; }
+
         [Attr("logo-url")]
         public string LogoUrl { get; set; }
 
+        /* local fields */
+        [Attr("slug")]
+        public string Slug { get; set; }
+        
         [Attr("public-by-default")]
         public bool? PublicByDefault { get; set; } = true;
 
         [HasOne("owner")]
         public virtual User Owner { get; set; }
         public int OwnerId { get; set; }
-
-        [Attr("sil-id")]
-        public int? SilId { get; set; }
 
         [NotMapped]
         [HasManyThrough(nameof(OrganizationMemberships))]

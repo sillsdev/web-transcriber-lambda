@@ -22,6 +22,7 @@ namespace SIL.Auth.Models
         public string name { get; set; }
         public string description { get; set; }
         public string logo { get; set; }
+        public string websiteurl { get; set; }
         public bool verified { get; set; }
         public string verifiedby { get; set; }
         public string verifieddate { get; set; }

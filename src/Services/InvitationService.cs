@@ -1,50 +1,34 @@
 ﻿using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using System.Collections.Generic;
-using System.Net.Http;
-using SIL.Transcriber.Utility;
-using System.Text;
 using System;
-using SIL.Auth.Models;
-using Newtonsoft.Json;
 using System.Threading.Tasks;
+
 
 namespace SIL.Transcriber.Services
 {
     public class InvitationService : BaseService<Invitation>
     {
-        private Auth0ManagementApiTokenService TokenService;
-        private HttpClient silAuthClient;
+        //private Auth0ManagementApiTokenService TokenService;
         private OrganizationService OrganizationService;
         public CurrentUserRepository CurrentUserRepository { get; }
+        private ISILIdentityService SILIdentity;
 
         public InvitationService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Invitation> invitationRepository,
             OrganizationService organizationService,
-            Auth0ManagementApiTokenService tokenService,
             CurrentUserRepository currentUserRepository,
+            ISILIdentityService silIdentityService,
             ILoggerFactory loggerFactory
         ) : base(jsonApiContext, invitationRepository, loggerFactory)
         {
-            TokenService = tokenService;
+            //TokenService = tokenService;
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
-        }
-        private HttpClient SILAuthApiClient
-        {
-            get
-            {
-                if (silAuthClient == null)
-                {
-                    silAuthClient = SILIdentity.SILAuthApiClient(TokenService);
-                }
-                return silAuthClient;
-            }
+            SILIdentity = silIdentityService;
         }
         public override async Task<Invitation> CreateAsync(Invitation entity)
         {
@@ -58,18 +42,17 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation> UpdateAsync(int id, Invitation entity)
         {
             var currentUser = CurrentUserRepository.GetCurrentUser().Result;
-            //verify current user is logged in with invitation email
-            if (entity.Email !=currentUser.Email)
-            {
-                throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + entity.Email);
-            }
             var oldentity = MyRepository.GetAsync(id).Result;
+            //verify current user is logged in with invitation email
+            if (oldentity.Email !=currentUser.Email)
+            {
+                throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity.Email + "  Currently logged in as " + currentUser.Email);
+            }
             if (entity.Accepted && !oldentity.Accepted)
             {
                 //add the user to the org
-                var org = await OrganizationService.GetAsync(entity.OrganizationId);
-                OrganizationService.JoinOrg(org, currentUser, (RoleName)entity.RoleId, RoleName.Transcriber);
-                entity.Accepted = true;
+                var org = await OrganizationService.GetAsync(oldentity.OrganizationId);
+                OrganizationService.JoinOrg(org, currentUser, (RoleName)oldentity.RoleId, RoleName.Transcriber);
             }
             return await base.UpdateAsync(id, entity);
         }
@@ -77,32 +60,11 @@ namespace SIL.Transcriber.Services
         public int SendInvitation(Invitation entity)
         {
             User current = CurrentUserRepository.GetCurrentUser().Result;
-            if (entity.Organization == null || entity.Organization.SilId == null)
+            if (entity.Organization == null || entity.Organization.SilId == 0)
             {
                 throw new Exception("Organization does not exist in SIL Identity.");
             }
-            var requestObj = new JObject(
-                new JProperty("email", entity.Email),
-                new JProperty("orgId", entity.Organization.SilId),
-                new JProperty("userId", current.SilUserid ?? 1));
-
-            //call the Identity api and receive an invitation id
-            HttpResponseMessage response = SILAuthApiClient.PostAsync("invite", new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json")).Result;
-            if (!response.IsSuccessStatusCode)
-                throw new Exception(response.ReasonPhrase);
-
-            var jsonData = SILIdentity.GetData(response.Content.ReadAsStringAsync().Result);
-            SILAuth_Invite invite = JsonConvert.DeserializeObject<SILAuth_Invite>(jsonData);
-
-            requestObj = new JObject(
-                new JProperty("email", entity.Email),
-                new JProperty("orgName", entity.Organization.Name),
-                new JProperty("inviteId", invite.id));
-
-            //call the Identity api and receive an invitation id
-            SILAuthApiClient.PostAsync("sendEmail", new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json"));
-
-            return invite.id;
+            return SILIdentity.CreateInvite(entity.Email, entity.Organization.Name, entity.Organization.SilId,current.SilUserid ?? 1);
         }
     }
 }
