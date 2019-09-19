@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -55,6 +56,10 @@ namespace SIL.Transcriber.Services
             //return ((SectionRepository)MyRepository).GetWithPassageAssignments(id);
             return ((SectionRepository)MyRepository).GetPassageAssignments(id);
         }
-
+        public int GetProjectId(int sectionId)
+        {
+            var section = MyRepository.Get().Where(s => s.Id == sectionId).Include(s => s.Plan).FirstOrDefault();
+            return section.Plan.ProjectId;
+        }
     }
 }

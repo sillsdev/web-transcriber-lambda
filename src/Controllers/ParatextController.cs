@@ -2,6 +2,7 @@
 using System.Security;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
@@ -53,6 +54,21 @@ namespace SIL.Transcriber.Controllers
             return Ok(username);
             */
             return Ok("sara_hentzel");
+        }
+        [AllowAnonymous] //temp for testing
+        [HttpGet("section/{sectionid}")]
+        public async Task<ActionResult<List<ParatextChapter>>> GetSectionBookAsync([FromRoute] int sectionId)
+        {
+            UserSecret userSecret = await _paratextService.ParatextLogin();
+            List<ParatextChapter> chapters = await _paratextService.GetSectionChaptersAsync(userSecret, sectionId);
+            return Ok(chapters);
+        }
+        [HttpPost("section/{sectionid}")]
+        public async Task<ActionResult<List<ParatextChapter>>> PostSectionAsync([FromRoute] int sectionId)
+        {
+            UserSecret userSecret = await _paratextService.ParatextLogin();
+            List<ParatextChapter> chapters = await _paratextService.SyncSectionAsync(userSecret, sectionId);
+            return Ok(chapters);
         }
     }
 }

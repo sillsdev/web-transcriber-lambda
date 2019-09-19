@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Forms.Projects;
 using SIL.Transcriber.Models;
@@ -86,6 +87,14 @@ namespace SIL.Transcriber.Services
             var project = await base.CreateAsync(resource);
 
             return project;
+        }
+        public string IntegrationSettings(int projectId, string integration)
+        {
+            Project project = MyRepository.Get().Where(p => p.Id == projectId).Include(p => p.ProjectIntegrations).ThenInclude(pi => pi.Integration).FirstOrDefault();
+            ProjectIntegration projectIntegration = project.ProjectIntegrations.Where(pi => pi.Integration.Name == integration).FirstOrDefault();
+            if (projectIntegration == null)
+                return "";
+            return projectIntegration.Settings;
         }
     }
 

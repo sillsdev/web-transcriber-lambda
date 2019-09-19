@@ -151,6 +151,9 @@ namespace SIL.Transcriber.Services
             S3Response response = await _S3service.RemoveFile(mf.S3File, DirectoryName(plan));
             return response;
         }
-
+        public Mediafile GetLatest(int passageId)
+        {
+            return MediafileRepository.Get().Where(mf => mf.PassageId == passageId).OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
+        }
     }
 }

@@ -29,14 +29,24 @@ namespace SIL.Transcriber.Services
         private readonly HttpClient _dataAccessClient;
         private readonly HttpClient _registryClient;
 
-        public ParatextService(IHostingEnvironment env) //,IOptions<ParatextOptions> options,
+        private PassageService PassageService;
+        private SectionService SectionService;
+        private ProjectService ProjectService;
+
+        public ParatextService(IHostingEnvironment env,
+            PassageService passageService,
+            SectionService sectionService,
+            ProjectService projectService) //,IOptions<ParatextOptions> options,
             // IRepository<UserSecret> userSecret) , IRealtimeService realtimeService)
         {
             // _options = options;
             //_userSecret = userSecret;
             //_realtimeService = realtimeService;
+            PassageService = passageService;
+            SectionService = sectionService;
+            ProjectService = projectService;
 
-            _httpClientHandler = new HttpClientHandler();
+             _httpClientHandler = new HttpClientHandler();
             _dataAccessClient = new HttpClient(_httpClientHandler);
             _registryClient = new HttpClient(_httpClientHandler);
             if (env.IsDevelopment() || env.IsEnvironment("Testing"))
@@ -196,7 +206,17 @@ namespace SIL.Transcriber.Services
         {
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"text/{projectId}/{bookId}");
         }
-
+        public Task<string> GetChapterTextAsync(UserSecret userSecret, string projectId, string bookId, int chapter)
+        {
+            return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"text/{projectId}/{bookId}/{chapter}");
+        }
+        /// <summary>Update cloud with new edits in usxText and return the combined result.</summary>
+        public Task<string> UpdateChapterTextAsync(UserSecret userSecret, string projectId, string bookId, int chapter,
+            string revision, string usxText)
+        {
+            return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Post,
+                $"text/{projectId}/{revision}/{bookId}/{chapter}", usxText);
+        }
         /// <summary>Update cloud with new edits in usxText and return the combined result.</summary>
         public Task<string> UpdateBookTextAsync(UserSecret userSecret, string projectId, string bookId,
             string revision, string usxText)
@@ -278,6 +298,68 @@ namespace SIL.Transcriber.Services
             }
 
             throw new SecurityException("The current user's Paratext access token is invalid.");
+        }
+        private async Task<ParatextChapter> GetParatextChapterAsync(UserSecret userSecret, string paratextId, string book, int number)
+        {
+            ParatextChapter chapter = new ParatextChapter();
+            chapter.Book = book;
+            chapter.Chapter = number;
+            //get the text out of paratext
+            string bookText = await GetChapterTextAsync(userSecret, paratextId, book, number);
+            var bookTextElem = XElement.Parse(bookText);
+            chapter.Project = (string)bookTextElem.Attribute("project");
+            chapter.Revision = (string)bookTextElem.Attribute("revision");
+            chapter.OriginalValue = bookTextElem.Value;
+            chapter.OriginalUSX = bookTextElem.Element("usx").ToString();
+            return chapter;
+        }
+        private async Task<List<ParatextChapter>> GetPassageChaptersAsync(UserSecret userSecret, string paratextId, IQueryable<Passage> passages)
+        {
+            var chapterList = new List<ParatextChapter>();
+            string book_chapter = "";
+            foreach (Passage p in passages)
+            {
+                if (p.Book + p.StartChapter != book_chapter)
+                {
+                    book_chapter = p.Book + p.StartChapter;
+                    chapterList.Add(await GetParatextChapterAsync(userSecret, paratextId, p.Book, p.StartChapter));
+                }
+                if (p.Book + p.EndChapter != book_chapter)
+                {
+                    book_chapter = p.Book + p.EndChapter;
+                    chapterList.Add(GetParatextChapterAsync(userSecret, paratextId, p.Book, p.EndChapter).Result);
+                }
+            }
+            return chapterList;
+        }
+
+        public async Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId)
+        {
+            string paratextId = ParatextHelpers.ParatextProject(SectionService.GetProjectId(sectionId), ProjectService);
+            var passages = PassageService.GetBySection(sectionId).OrderBy(p => p.Book);
+            return await GetPassageChaptersAsync(userSecret, paratextId, passages);
+        }
+
+        public async Task<List<ParatextChapter>> SyncSectionAsync(UserSecret userSecret, int sectionId)
+        {
+            string paratextId = ParatextHelpers.ParatextProject(SectionService.GetProjectId(sectionId), ProjectService);
+            var passages = PassageService.GetBySection(sectionId).OrderBy(p => p.Book);
+            var chapterList = await GetPassageChaptersAsync(userSecret, paratextId, passages);
+            chapterList.ForEach(c => c.NewUSX = c.OriginalUSX);
+            ParatextChapter chapter;
+            foreach (Passage p in passages)
+            {
+                chapter = chapterList.Where(c => c.Chapter == p.StartChapter).First();
+                chapter.NewUSX = ParatextHelpers.GenerateParatextData(p, chapter.NewUSX, PassageService.GetTranscription(p) ?? "").ToString();
+            }
+            foreach (ParatextChapter c in chapterList)
+            {
+                string bookText = await UpdateChapterTextAsync(userSecret, paratextId, c.Book, c.Chapter, c.Revision, c.NewUSX.ToString());
+                var bookTextElem = XElement.Parse(bookText);
+                c.NewValue = bookTextElem.Value;
+                c.NewUSX = bookTextElem.Element("usx").ToString();
+            }
+            return chapterList;
         }
 
         protected /* override  DisposableBase */ void DisposeManagedResources()

@@ -17,5 +17,7 @@ namespace SIL.Transcriber.Services
             string revision, string usxText);
         Task<string> GetNotesAsync(UserSecret userSecret, string projectId, string bookId);
         Task<string> UpdateNotesAsync(UserSecret userSecret, string projectId, string notesText);
+        Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId);
+        Task<List<ParatextChapter>> SyncSectionAsync(UserSecret userSecret, int sectionId);
     }
 }
