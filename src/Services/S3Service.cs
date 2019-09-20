@@ -98,8 +98,9 @@ namespace SIL.Transcriber.Services
                 Key = key,
                 Verb = action,
                 Expires = DateTime.Now.AddMinutes(25),
-                ContentType = mimetype
             };
+            if (mimetype.Length > 0)
+                request.ContentType = mimetype;
             try
             {
                 return s3Client.GetPreSignedURL(request);
@@ -114,7 +115,7 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET, contentType), HttpStatusCode.OK);
+                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET, ""), HttpStatusCode.OK);
 
             }
             catch (AmazonS3Exception e)
