@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 namespace SIL.Transcriber.Utility
 {
@@ -14,83 +15,89 @@ namespace SIL.Transcriber.Utility
         public static string ParatextProject(int projectId, ProjectService projectService)
         {
             var paratextSettings = projectService.IntegrationSettings(projectId, "paratext");
-            if (paratextSettings != null)
+            if ((paratextSettings ?? "") == "")
             {
-                dynamic settings = JsonConvert.DeserializeObject(paratextSettings);
-                return settings.ParatextId;
+                throw new Exception("No Paratext Integration Settings for this project " + projectId.ToString());
             }
-            return null;
+            dynamic settings = JsonConvert.DeserializeObject(paratextSettings);
+            return settings.ParatextId;
         }
 
-        public static StringBuilder GenerateParatextData(Passage currentPassage, string chapterContent, string transcription, string heading = "")
+        public static XElement GenerateParatextData(Passage currentPassage, XElement chapterContent, string transcription, string heading = "")
         {
-            var sb = new StringBuilder();
-            var firstIndex = 0;
-            var list = chapterContent.Split(new[] { "\\v" }, StringSplitOptions.None).ToList();
+            var verses = chapterContent.Nodes().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == "verse");
 
-            if (!chapterContent.Contains(@"\c " + currentPassage.StartChapter))
+            if (chapterContent.Descendants("chapter").Count() == 0)
             {
-                list.Insert(1, @"\c " + currentPassage.StartChapter);
+                //chapterContent.Add()
+            }
+            var verse = verses.Where(n => ((XElement)n).FirstAttribute.Value == currentPassage.StartVerse + "-" + currentPassage.EndVerse).FirstOrDefault();
+            if (verse != null)
+            {
+                if (verse.NextNode.NodeType != System.Xml.XmlNodeType.Text)
+                    verse.AddAfterSelf(new XText(""));
+                ((XText)verse.NextNode).Value = transcription;
             }
 
-            var startContains = list.FirstOrDefault(f => f.TrimStart().StartsWith(currentPassage.StartVerse.ToString() + " ")
-                                                         || f.TrimStart().StartsWith(currentPassage.StartVerse.ToString() + "-")
-                                                         || f.TrimStart().StartsWith(currentPassage.StartVerse.ToString() + "\r\n"));
-            if (startContains == null)
-            {
-                firstIndex = InsertVerseAsNew(currentPassage, null, ref list);
-            }
-            else if (startContains.Trim().IndexOf('-') > 0 && startContains.Trim().IndexOf('-') <= 4)
-            {
-                firstIndex = InsertVerseWithRange(startContains, currentPassage, firstIndex, ref list);
-            }
-            else
-            {
-                firstIndex = InsertVerseWithoutRange(currentPassage, ref list);
-            }
+            /*
+             var startContains = verses.FirstOrDefault(n => n.  f => f.TrimStart().StartsWith(currentPassage.StartVerse.ToString() + " ")
+                                                          || f.TrimStart().StartsWith(currentPassage.StartVerse.ToString() + "-")
+                                                          || f.TrimStart().StartsWith(currentPassage.StartVerse.ToString() + "\r\n"));
+             if (startContains == null)
+             {
+                 firstIndex = InsertVerseAsNew(currentPassage, null, ref list);
+             }
+             else if (startContains.Trim().IndexOf('-') > 0 && startContains.Trim().IndexOf('-') <= 4)
+             {
+                 firstIndex = InsertVerseWithRange(startContains, currentPassage, firstIndex, ref list);
+             }
+             else
+             {
+                 firstIndex = InsertVerseWithoutRange(currentPassage, ref list);
+             }
 
-            var verseFormat = " " + currentPassage.StartVerse + "-" + currentPassage.EndVerse;
-            var pContentFormat = " " + transcription + "\r\n";
-            list.Insert(firstIndex, verseFormat + pContentFormat);
+             var verseFormat = " " + currentPassage.StartVerse + "-" + currentPassage.EndVerse;
+             var pContentFormat = " " + transcription + "\r\n";
+             list.Insert(firstIndex, verseFormat + pContentFormat);
 
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i].Trim().Length == 0) continue;
-                if (i == 0 || list[i].Contains(@"\c " + Convert.ToInt32(currentPassage.StartChapter)))
-                {
-                    if (i == 0 && currentPassage.StartVerse == 1)
-                    {
-                        list[i] = RemovePreviousSection(list[i], heading != string.Empty);
-                    }
-                    if (i == 0 && !list[i].EndsWith("\r\n") || i > 0)
-                    {
-                        sb.Append(list[i].Trim() + Environment.NewLine);
-                    }
-                    else
-                    {
-                        sb.Append(list[i]);
-                    }
-                }
-                else
-                {
-                    if (i == firstIndex)
-                    {
-                        sb.Append(heading != string.Empty
-                            ? $@"\s1 {heading}{Environment.NewLine}\p \v{list[i]}"
-                            : $@"\v{list[i]}");
-                    }
-                    else
-                    {
-                        if (i == firstIndex - 1)
-                        {
-                            list[i] = RemovePreviousSection(list[i], heading != string.Empty);
-                        }
-                        sb.Append($@"\v{list[i]}");
-                    }
-                }
-            }
-
-            return sb;
+             for (int i = 0; i < list.Count; i++)
+             {
+                 if (list[i].Trim().Length == 0) continue;
+                 if (i == 0 || list[i].Contains(@"\c " + Convert.ToInt32(currentPassage.StartChapter)))
+                 {
+                     if (i == 0 && currentPassage.StartVerse == 1)
+                     {
+                         list[i] = RemovePreviousSection(list[i], heading != string.Empty);
+                     }
+                     if (i == 0 && !list[i].EndsWith("\r\n") || i > 0)
+                     {
+                         sb.Append(list[i].Trim() + Environment.NewLine);
+                     }
+                     else
+                     {
+                         sb.Append(list[i]);
+                     }
+                 }
+                 else
+                 {
+                     if (i == firstIndex)
+                     {
+                         sb.Append(heading != string.Empty
+                             ? $@"\s1 {heading}{Environment.NewLine}\p \v{list[i]}"
+                             : $@"\v{list[i]}");
+                     }
+                     else
+                     {
+                         if (i == firstIndex - 1)
+                         {
+                             list[i] = RemovePreviousSection(list[i], heading != string.Empty);
+                         }
+                         sb.Append($@"\v{list[i]}");
+                     }
+                 }
+             }
+             */
+            return chapterContent;
         }
 
         private static string RemovePreviousSection(string verseContent, bool isHeadingIncluded)

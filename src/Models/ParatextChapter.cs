@@ -13,8 +13,8 @@ namespace SIL.Transcriber.Models
         public int Chapter { get; set; }
         public string Revision { get; set; }
         public string OriginalValue { get; set; }
-        public string OriginalUSX { get; set; }
+        public XElement OriginalUSX { get; set; }
         public string NewValue { get; set; }
-        public string NewUSX { get; set; }
+        public XElement NewUSX { get; set; }
     }
 }

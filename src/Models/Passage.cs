@@ -33,6 +33,10 @@ namespace SIL.Transcriber.Models
         public List<UserPassage> UserPassages { get; set; }
         public bool Archived { get; set; }
 
+        public bool ReadyToSync
+        {
+            get { return State == "approved"; }
+        }
         private int startChapter = 0, endChapter = 0, startVerse = 0, endVerse = 0;
         public int StartChapter
         {

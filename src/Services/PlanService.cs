@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -34,7 +35,10 @@ namespace SIL.Transcriber.Services
                 */
 
         }
-
+        public Plan GetWithSections(int id)
+        {
+            return MyRepository.Get().Where(p => p.Id == id).Include(p => p.Sections).ThenInclude(s=> s.PassageSections).ThenInclude(ps=> ps.Passage).FirstOrDefault();
+        }
         public override async Task<Plan> GetAsync(int id)
         {
             var plans = await GetAsync();

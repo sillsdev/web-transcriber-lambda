@@ -20,7 +20,7 @@ namespace SIL.Transcriber.Services
         public UserRepository UserRepository { get; }
         public GroupRepository GroupRepository { get; }
         public IEntityRepository<Organization> OrganizationRepository { get; set; }
-
+        private SectionService SectionService;
         public ProjectService(
             IJsonApiContext jsonApiContext,
             IOrganizationContext organizationContext,
@@ -29,6 +29,7 @@ namespace SIL.Transcriber.Services
             IEntityRepository<Project> projectRepository,
             GroupRepository groupRepository,
             IEntityRepository<Organization> organizationRepository,
+            SectionService sectionService,
             ILoggerFactory loggerFactory) : base(jsonApiContext, projectRepository, loggerFactory)
         {
             OrganizationContext = organizationContext;
@@ -36,6 +37,7 @@ namespace SIL.Transcriber.Services
             UserRepository = userRepository;
             GroupRepository = groupRepository;
             OrganizationRepository = organizationRepository;
+            SectionService = sectionService;
         }
         public override async Task<IEnumerable<Project>> GetAsync()
         {
@@ -95,6 +97,12 @@ namespace SIL.Transcriber.Services
             if (projectIntegration == null)
                 return "";
             return projectIntegration.Settings;
+        }
+        public async Task<IEnumerable<Section> > GetSectionsAtStatus(int projectId, string status)
+        {
+            //var project = MyRepository.Get().Where(p => p.Id == projectId).Include(p => p.Plans).ThenInclude(pl => pl.Sections).ThenInclude(s => s.PassageSections).ThenInclude(ps => ps.Passage).FirstOrDefault();
+
+            return SectionService.GetSectionsAtStatus(projectId, status);
         }
     }
 

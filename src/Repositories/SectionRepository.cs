@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Repositories
             //you'd think this would work...but you'd be wrong;
             //return Include(Get(), "passagesections");
             //no error...but no passagesections either  return Get().Include(s => s.PassageSections);
-            var sections =  UsersSections(Include(dbContext.Sections, "passage-sections" ));
+            var sections =  UsersSections(Include(dbContext.Sections, "passage-sections"));
             return sections;
         }
 
@@ -81,6 +81,16 @@ namespace SIL.Transcriber.Repositories
                 return UsersSections(entities);
             }
             return base.Filter(entities, filterQuery);
+        }
+        #endregion
+        #region ParatextSync
+        public IQueryable<Section> GetSectionsAtStatus(int projectId, string status)
+        {
+            return GetWithPassageSections().Where(s => s.Id == 721 || s.Id == 722);
+            /*var sections = GetWithPassageSections().Include(s => s.Plan);
+            var projectsections = projects.Join(sections, p => p.Id, s => s.Plan.ProjectId, (p, s) => s);
+            return projectsections.Where(s => s.PassageSections.All(ps => ps.Passage.State == status));
+            */
         }
         #endregion
         #region Assignments

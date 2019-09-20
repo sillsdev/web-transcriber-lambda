@@ -1,7 +1,9 @@
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {

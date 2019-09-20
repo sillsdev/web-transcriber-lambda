@@ -61,5 +61,9 @@ namespace SIL.Transcriber.Services
             var section = MyRepository.Get().Where(s => s.Id == sectionId).Include(s => s.Plan).FirstOrDefault();
             return section.Plan.ProjectId;
         }
+        public IEnumerable<Section> GetSectionsAtStatus(int projectId, string status)
+        {
+            return ((SectionRepository)MyRepository).GetSectionsAtStatus(projectId, status);
+        }
     }
 }

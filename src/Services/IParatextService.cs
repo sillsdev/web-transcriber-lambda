@@ -19,5 +19,6 @@ namespace SIL.Transcriber.Services
         Task<string> UpdateNotesAsync(UserSecret userSecret, string projectId, string notesText);
         Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId);
         Task<List<ParatextChapter>> SyncSectionAsync(UserSecret userSecret, int sectionId);
+        Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId);
     }
 }

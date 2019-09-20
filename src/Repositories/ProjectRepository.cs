@@ -96,6 +96,14 @@ namespace SIL.Transcriber.Repositories
         {
             return base.Sort(entities, sortQueries);
         }
-
+        public List<Section> doit(int projectid, string status)
+        {
+            return (from project in this.dbContext.Projects.Where(p=>p.Id == projectid)
+                from plan in project.Plans
+                from section in plan.Sections
+                from passagesection in section.PassageSections
+                select section)
+                .ToList();
+        }
     }
 }

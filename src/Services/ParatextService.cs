@@ -32,10 +32,12 @@ namespace SIL.Transcriber.Services
         private PassageService PassageService;
         private SectionService SectionService;
         private ProjectService ProjectService;
+        private PlanService PlanService;
 
         public ParatextService(IHostingEnvironment env,
             PassageService passageService,
             SectionService sectionService,
+            PlanService planService,
             ProjectService projectService) //,IOptions<ParatextOptions> options,
             // IRepository<UserSecret> userSecret) , IRealtimeService realtimeService)
         {
@@ -45,6 +47,7 @@ namespace SIL.Transcriber.Services
             PassageService = passageService;
             SectionService = sectionService;
             ProjectService = projectService;
+            PlanService = planService;
 
              _httpClientHandler = new HttpClientHandler();
             _dataAccessClient = new HttpClient(_httpClientHandler);
@@ -76,6 +79,10 @@ namespace SIL.Transcriber.Services
             request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
             request.Headers.Add("Authorization", "Bearer eyJhbGciOiJFUzI1NiJ9.eyJzY29wZXMiOlsib2F1dGg6YXV0aG9yaXphdGlvbl9jb2RlIiwib2F1dGg6cmVmcmVzaF90b2tlbiIsIm9hdXRoOnBhc3N3b3JkIl0sImp0aSI6IkpvemMzWWZQam42UEd0S0gzIiwiYXVkIjpbImh0dHBzOi8vcmVnaXN0cnktZGV2LnBhcmF0ZXh0Lm9yZyJdLCJwcmltYXJ5X29yZ19pZCI6ImM4YmQyNDIxNmRiOWU2YjJiYWVmZDE5MiIsInN1YiI6IllEckpnamY4TWhkNUg1eHNhIiwiYXpwIjoiWURySmdqZjhNaGQ1SDV4c2EiLCJpYXQiOjE1NjY5MzM1MzQsImlzcyI6InB0cmVnIn0.uxFYKfZBu8eUbZav4JotABoqnXA9z6JiEDOohM8d0MJHCxNRtRDOlGovmtKqsVc22-jcSc4ZoXv0G_ce0RXYxg");
             HttpResponseMessage response = await _registryClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception("Unable to login to Paratext");
+            }
             response.EnsureSuccessStatusCode();
 
             string responseJson = await response.Content.ReadAsStringAsync();
@@ -310,8 +317,18 @@ namespace SIL.Transcriber.Services
             chapter.Project = (string)bookTextElem.Attribute("project");
             chapter.Revision = (string)bookTextElem.Attribute("revision");
             chapter.OriginalValue = bookTextElem.Value;
-            chapter.OriginalUSX = bookTextElem.Element("usx").ToString();
+            chapter.OriginalUSX = bookTextElem.Element("usx");
             return chapter;
+        }
+        private async Task<List<ParatextChapter>> GetPassageChaptersAsync(UserSecret userSecret, string paratextId, IList<string> chapters)
+        {
+            var chapterList = new List<ParatextChapter>();
+
+            foreach (string c in chapters)
+            {
+                chapterList.Add(await GetParatextChapterAsync(userSecret, paratextId, c.Substring(0, c.Length - 3), int.Parse(c.Substring(c.Length - 3))));
+            }
+            return chapterList;
         }
         private async Task<List<ParatextChapter>> GetPassageChaptersAsync(UserSecret userSecret, string paratextId, IQueryable<Passage> passages)
         {
@@ -339,7 +356,43 @@ namespace SIL.Transcriber.Services
             var passages = PassageService.GetBySection(sectionId).OrderBy(p => p.Book);
             return await GetPassageChaptersAsync(userSecret, paratextId, passages);
         }
-
+        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId)
+        {
+            var plan = PlanService.GetWithSections(planId);
+            string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
+            //gather all the passages from all the sections that are approved
+            SortedList<string, SortedList<int, Passage>> passages = new SortedList<string, SortedList<int, Passage>>();
+            foreach (Section s in plan.Sections)
+            {
+                foreach (PassageSection ps in s.PassageSections)
+                {
+                    if (ps.Passage.ReadyToSync)
+                    {
+                        if (!passages.ContainsKey(ps.Passage.Book + ps.Passage.StartChapter.ToString().PadLeft(3)))
+                            passages.Add(ps.Passage.Book + ps.Passage.StartChapter.ToString().PadLeft(3), new SortedList<int, Passage>());
+                        passages[ps.Passage.Book + ps.Passage.StartChapter.ToString().PadLeft(3)].Add(ps.Passage.StartVerse, ps.Passage);
+                    }
+                }
+            }
+            var chapterList = await GetPassageChaptersAsync(userSecret, paratextId, passages.Keys);
+            chapterList.ForEach(c => c.NewUSX = c.OriginalUSX);
+            ParatextChapter chapter;
+            
+            foreach (string bookchapter in passages.Keys)
+            {
+                chapter = chapterList.Where(c => c.Book == bookchapter.Substring(0, bookchapter.Length-3) &&  c.Chapter == int.Parse(bookchapter.Substring(bookchapter.Length - 3))).First();
+                foreach (Passage p in passages[bookchapter].Values)
+                    chapter.NewUSX = ParatextHelpers.GenerateParatextData(p, chapter.NewUSX, PassageService.GetTranscription(p) ?? "");
+            }
+            foreach (ParatextChapter c in chapterList)
+            {
+                string bookText = await UpdateChapterTextAsync(userSecret, paratextId, c.Book, c.Chapter, c.Revision, c.NewUSX.ToString());
+                var bookTextElem = XElement.Parse(bookText);
+                c.NewValue = bookTextElem.Value;
+                c.NewUSX = bookTextElem.Element("usx");
+            }
+            return chapterList;
+        }
         public async Task<List<ParatextChapter>> SyncSectionAsync(UserSecret userSecret, int sectionId)
         {
             string paratextId = ParatextHelpers.ParatextProject(SectionService.GetProjectId(sectionId), ProjectService);
@@ -350,14 +403,14 @@ namespace SIL.Transcriber.Services
             foreach (Passage p in passages)
             {
                 chapter = chapterList.Where(c => c.Chapter == p.StartChapter).First();
-                chapter.NewUSX = ParatextHelpers.GenerateParatextData(p, chapter.NewUSX, PassageService.GetTranscription(p) ?? "").ToString();
+                chapter.NewUSX = ParatextHelpers.GenerateParatextData(p, chapter.NewUSX, PassageService.GetTranscription(p) ?? "");
             }
             foreach (ParatextChapter c in chapterList)
             {
                 string bookText = await UpdateChapterTextAsync(userSecret, paratextId, c.Book, c.Chapter, c.Revision, c.NewUSX.ToString());
                 var bookTextElem = XElement.Parse(bookText);
                 c.NewValue = bookTextElem.Value;
-                c.NewUSX = bookTextElem.Element("usx").ToString();
+                c.NewUSX = bookTextElem.Element("usx");
             }
             return chapterList;
         }
