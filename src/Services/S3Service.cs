@@ -63,7 +63,7 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                if (await AmazonS3Util.DoesS3BucketExistAsync(_client, bucketName)==false)
+                if (await AmazonS3Util.DoesS3BucketExistAsync(_client, bucketName) == false)
                 {
                     var putBucketRequest = new PutBucketRequest
                     {
@@ -88,7 +88,7 @@ namespace SIL.Transcriber.Services
 
         }
 
-    private string SignedUrl(string key, HttpVerb action, string mimetype)
+        private string SignedUrl(string key, HttpVerb action, string mimetype)
         {
             var s3Client = new AmazonS3Client();
 
@@ -208,7 +208,7 @@ namespace SIL.Transcriber.Services
                 };
 
                 var response = await _client.DeleteObjectAsync(request);
-                return S3Response(fileName,response.HttpStatusCode);
+                return S3Response(fileName, response.HttpStatusCode);
 
             }
             catch (AmazonS3Exception e)
@@ -238,7 +238,7 @@ namespace SIL.Transcriber.Services
                     }
                     list += "]";
                 }
-                return S3Response(list, response.HttpStatusCode, null,"application/json");
+                return S3Response(list, response.HttpStatusCode, null, "application/json");
             }
             catch (AmazonS3Exception e)
             {
@@ -257,7 +257,7 @@ namespace SIL.Transcriber.Services
                 {
                     BucketName = USERFILES_BUCKET,
                     Key = ProperFolder(folder) + fileName,
-                    
+
                 };
 
                 using (GetObjectResponse response = await _client.GetObjectAsync(request))
