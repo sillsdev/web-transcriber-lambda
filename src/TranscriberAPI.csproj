@@ -16,10 +16,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\HomeController.cs" />
     <Compile Remove="Controllers\ProjectusersController.cs" />
     <Compile Remove="Controllers\UserrolesController.cs" />
+    <Compile Remove="Data\IRepository.cs" />
+    <Compile Remove="Data\IUpdateBuilder.cs" />
+    <Compile Remove="Models\Chapter.cs" />
+    <Compile Remove="Models\ErrorViewModel.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
+    <Compile Remove="Models\SFProject.cs" />
+    <Compile Remove="Models\TextInfo.cs" />
     <Compile Remove="Models\transcriberContext.cs" />
     <Compile Remove="Models\UserRole.cs" />
     <Compile Remove="Models\VwUserallowedgroups.cs" />
@@ -41,6 +48,9 @@
     <Compile Remove="Models\XStores.cs" />
     <Compile Remove="Models\XStoretypes.cs" />
     <Compile Remove="Models\XSystemstatuses.cs" />
+    <Compile Remove="Models\XtranscriberContext.cs" />
+    <Compile Remove="Models\XVwUserallowedgroups.cs" />
+    <Compile Remove="Models\XVwUserallowedpassages.cs" />
     <Compile Remove="Models\XWorkflowdefinitions.cs" />
     <Compile Remove="Models\XWorkflowglobalparameter.cs" />
     <Compile Remove="Models\XWorkflowinbox.cs" />
@@ -51,9 +61,11 @@
     <Compile Remove="Models\XWorkflowprocesstimer.cs" />
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
+    <Compile Remove="Services\IUserAccessor.cs" />
     <Compile Remove="Services\PlantypeService.cs" />
     <Compile Remove="Services\ProjecttypeService.cs" />
     <Compile Remove="Services\RoleService.cs" />
+    <Compile Remove="Services\UserAccessor.cs" />
   </ItemGroup>
 
   <ItemGroup>

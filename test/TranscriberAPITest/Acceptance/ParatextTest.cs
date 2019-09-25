@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Data;
 using Xunit;

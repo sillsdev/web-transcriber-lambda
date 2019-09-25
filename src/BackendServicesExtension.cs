@@ -64,7 +64,6 @@ namespace SIL.Transcriber
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
             services.AddScoped<IParatextService, ParatextService>();
-            services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddScoped<ISILIdentityService, SILIdentityService>();
 
 
