@@ -22,7 +22,6 @@
     <Compile Remove="Data\IRepository.cs" />
     <Compile Remove="Data\IUpdateBuilder.cs" />
     <Compile Remove="Models\Chapter.cs" />
-    <Compile Remove="Models\ErrorViewModel.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\SFProject.cs" />
