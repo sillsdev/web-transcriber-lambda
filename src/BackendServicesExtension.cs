@@ -33,15 +33,14 @@ namespace SIL.Transcriber
             services.AddHttpContextAccessor();
 
             // Add service / repository overrides
-            services.AddScoped<IEntityRepository<User>, UserRepository>();
-            //services.AddScoped<IEntityRepository<UserPassage>, UserTaskRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
-            services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
-            services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
-            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
-            services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
+            services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
+            services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
+            services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
+            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
+            services.AddScoped<IEntityRepository<User>, UserRepository>();
             //services.AddScoped<IEntityRepository<OrganizationInviteRequest>, OrganizationInviteRequestRepository>();
             //services.AddScoped<IEntityRepository<Notification>, NotificationRepository>();
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();

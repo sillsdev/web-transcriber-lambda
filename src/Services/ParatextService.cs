@@ -1,7 +1,8 @@
 ﻿using IdentityModel;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json.Linq;
-using SIL.Transcriber.Data;
+using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
 using System;
@@ -17,14 +18,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
+
 namespace SIL.Transcriber.Services
 {
     /// <summary>Exchanges data with PT projects in the cloud.</summary>
     public class ParatextService : IParatextService //  DisposableBase, IParatextService
     {
         //private readonly IOptions<ParatextOptions> _options;
-        //private readonly IRepository<UserSecret> _userSecret; //IRepository
-                                                              //private readonly IRealtimeService _realtimeService;
+        protected ICurrentUserContext CurrentUserContext;
+        //private readonly IRealtimeService _realtimeService;
         private readonly HttpClientHandler _httpClientHandler;
         private readonly HttpClient _dataAccessClient;
         private readonly HttpClient _registryClient;
@@ -33,23 +36,29 @@ namespace SIL.Transcriber.Services
         private SectionService SectionService;
         private ProjectService ProjectService;
         private PlanService PlanService;
+        private HttpContext HttpContext;
+
 
         public ParatextService(IHostingEnvironment env,
+            IHttpContextAccessor httpContextAccessor,
+            ICurrentUserContext currentUserContext,
             PassageService passageService,
             SectionService sectionService,
             PlanService planService,
             ProjectService projectService) //,IOptions<ParatextOptions> options,
-            // IRepository<UserSecret> userSecret) , IRealtimeService realtimeService)
+            //IRepository<UserSecret> userSecret)// , IRealtimeService realtimeService)
         {
+            HttpContext = httpContextAccessor.HttpContext;
             // _options = options;
-            //_userSecret = userSecret;
+           // _userSecret = userSecret;
             //_realtimeService = realtimeService;
             PassageService = passageService;
             SectionService = sectionService;
             ProjectService = projectService;
             PlanService = planService;
+            CurrentUserContext = currentUserContext;
 
-             _httpClientHandler = new HttpClientHandler();
+            _httpClientHandler = new HttpClientHandler();
             _dataAccessClient = new HttpClient(_httpClientHandler);
             _registryClient = new HttpClient(_httpClientHandler);
             if (env.IsDevelopment() || env.IsEnvironment("Testing"))
@@ -66,42 +75,26 @@ namespace SIL.Transcriber.Services
             }
             _registryClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
-        public async Task<UserSecret> ParatextLogin()
+        public UserSecret ParatextLogin()
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
-            var requestObj = new JObject(
-                new JProperty("grant_type", "password"),
-                new JProperty("username", "Sara Hentzel"),
-                new JProperty("password", "XGAJ4F-V2RWXF-C23QFG-7UZ168-B7UR6V"),
-                //new JProperty("authorization_code", "3D9gskbYkLtUnL5aNq412cNi62xayGu4ZhVprUBIztpeP"),
-                new JProperty("scope", "users.org:read orgs:read projects:read data_access projects.members:read projects.members:write")); 
+            var userSecret = CurrentUserContext.ParatextLogin("Paratext-Transcriber");
 
-            request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
-            request.Headers.Add("Authorization", "Bearer eyJhbGciOiJFUzI1NiJ9.eyJzY29wZXMiOlsib2F1dGg6YXV0aG9yaXphdGlvbl9jb2RlIiwib2F1dGg6cmVmcmVzaF90b2tlbiIsIm9hdXRoOnBhc3N3b3JkIl0sImp0aSI6IkpvemMzWWZQam42UEd0S0gzIiwiYXVkIjpbImh0dHBzOi8vcmVnaXN0cnktZGV2LnBhcmF0ZXh0Lm9yZyJdLCJwcmltYXJ5X29yZ19pZCI6ImM4YmQyNDIxNmRiOWU2YjJiYWVmZDE5MiIsInN1YiI6IllEckpnamY4TWhkNUg1eHNhIiwiYXpwIjoiWURySmdqZjhNaGQ1SDV4c2EiLCJpYXQiOjE1NjY5MzM1MzQsImlzcyI6InB0cmVnIn0.uxFYKfZBu8eUbZav4JotABoqnXA9z6JiEDOohM8d0MJHCxNRtRDOlGovmtKqsVc22-jcSc4ZoXv0G_ce0RXYxg");
-            HttpResponseMessage response = await _registryClient.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
+            if (userSecret == null)
             {
-                throw new Exception("Unable to login to Paratext");
+                throw new Exception("User is not logged in to Paratext-Transcriber");
             }
-            response.EnsureSuccessStatusCode();
-
-            string responseJson = await response.Content.ReadAsStringAsync();
-            var responseObj = JObject.Parse(responseJson);
-            var userSecret = new UserSecret
-            {
-                ParatextTokens = new Tokens
-                {
-                    AccessToken = (string)responseObj["access_token"],
-                    RefreshToken = (string)responseObj["refresh_token"]
-                }
-            };
             return userSecret;
         }
-
+        private Claim GetClaim(string AccessToken, string claimtype)
+        {
+            var accessToken = new JwtSecurityToken(AccessToken);
+            return accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
+        }
         public async Task<System.Collections.Generic.IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
-            var accessToken = new JwtSecurityToken(userSecret.ParatextTokens.AccessToken);
-            Claim usernameClaim = accessToken.Claims.FirstOrDefault(c => c.Type == "username");
+            VerifyUserSecret(userSecret);
+            
+            Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             string username = usernameClaim?.Value;
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, "projects");
             var reposElem = XElement.Parse(response);
@@ -175,12 +168,10 @@ namespace SIL.Transcriber.Services
 
         public async Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId)
         {
-            if (userSecret.ParatextTokens == null)
-                return Attempt.Failure((string)null, "The current user is not signed into Paratext.");
+            VerifyUserSecret( userSecret);
             try
             {
-                var accessToken = new JwtSecurityToken(userSecret.ParatextTokens.AccessToken);
-                Claim subClaim = accessToken.Claims.FirstOrDefault(c => c.Type == JwtClaimTypes.Subject);
+                Claim subClaim = GetClaim(userSecret.ParatextTokens.AccessToken, JwtClaimTypes.Subject);
                 string response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get,
                     $"projects/{paratextId}/members/{subClaim.Value}");
                 var memberObj = JObject.Parse(response);
@@ -191,18 +182,24 @@ namespace SIL.Transcriber.Services
                 return Attempt.Failure((string)null, ex.Message);
             }
         }
-
+        private bool VerifyUserSecret(UserSecret userSecret)
+        {
+            if (userSecret is null || userSecret.ParatextTokens is null)
+                throw new SecurityException("Paratext credentials not provided.");
+            if (userSecret.ParatextTokens.AccessToken is null || userSecret.ParatextTokens.AccessToken.Length == 0)
+                throw new SecurityException("Current user is not logged in to Paratext.");
+            return true;
+        }
         public string GetParatextUsername(UserSecret userSecret)
         {
-            if (userSecret.ParatextTokens == null)
-                return null;
-            var accessToken = new JwtSecurityToken(userSecret.ParatextTokens.AccessToken);
-            Claim usernameClaim = accessToken.Claims.FirstOrDefault(c => c.Type == "username");
+            VerifyUserSecret(userSecret);
+            Claim usernameClaim = GetClaim (userSecret.ParatextTokens.AccessToken, "username");
             return usernameClaim?.Value;
         }
 
         public async Task<System.Collections.Generic.IReadOnlyList<string>> GetBooksAsync(UserSecret userSecret, string projectId)
         {
+            VerifyUserSecret(userSecret);
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"books/{projectId}");
             var books = XElement.Parse(response);
             string[] bookIds = books.Elements("Book").Select(b => (string)b.Attribute("id")).ToArray();
@@ -211,16 +208,19 @@ namespace SIL.Transcriber.Services
 
         public Task<string> GetBookTextAsync(UserSecret userSecret, string projectId, string bookId)
         {
+            VerifyUserSecret(userSecret);
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"text/{projectId}/{bookId}");
         }
         public Task<string> GetChapterTextAsync(UserSecret userSecret, string projectId, string bookId, int chapter)
         {
+            VerifyUserSecret(userSecret);
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"text/{projectId}/{bookId}/{chapter}");
         }
         /// <summary>Update cloud with new edits in usxText and return the combined result.</summary>
         public Task<string> UpdateChapterTextAsync(UserSecret userSecret, string projectId, string bookId, int chapter,
             string revision, string usxText)
         {
+            VerifyUserSecret(userSecret);
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Post,
                 $"text/{projectId}/{revision}/{bookId}/{chapter}", usxText);
         }
@@ -228,29 +228,31 @@ namespace SIL.Transcriber.Services
         public Task<string> UpdateBookTextAsync(UserSecret userSecret, string projectId, string bookId,
             string revision, string usxText)
         {
+            VerifyUserSecret(userSecret);
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Post,
                 $"text/{projectId}/{revision}/{bookId}", usxText);
         }
 
         public Task<string> GetNotesAsync(UserSecret userSecret, string projectId, string bookId)
         {
+            VerifyUserSecret(userSecret);
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"notes/{projectId}/{bookId}");
         }
 
-        public Task<string> UpdateNotesAsync(UserSecret userSecret, string projectId, string notesText)
+        public Task<string> UpdateNotesAsync(UserSecret userSecret,string projectId, string notesText)
         {
+            VerifyUserSecret(userSecret);
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Post, $"notes/{projectId}", notesText);
         }
 
         private async Task RefreshAccessTokenAsync(UserSecret userSecret)
         {
+            VerifyUserSecret(userSecret);
             var request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
-
-            //ParatextOptions options = _options.Value;
             var requestObj = new JObject(
                 new JProperty("grant_type", "refresh_token"),
-                new JProperty("client_id", "TODO"), //where to get a clientid? options.ClientId),
-                new JProperty("client_secret", "TODO"), // options.ClientSecret),
+                new JProperty("client_id", GetVarOrDefault("SIL_TR_PARATEXT_CLIENT_ID", "")),
+                new JProperty("client_secret", GetVarOrDefault("SIL_TR_PARATEXT_CLIENT_SECRET", "")),
                 new JProperty("refresh_token", userSecret.ParatextTokens.RefreshToken));
             request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
             HttpResponseMessage response = await _registryClient.SendAsync(request);
@@ -269,8 +271,7 @@ namespace SIL.Transcriber.Services
         private async Task<string> CallApiAsync(HttpClient client, UserSecret userSecret, HttpMethod method,
             string url, string content = null)
         {
-            if (userSecret == null)
-                throw new SecurityException("The current user is not signed into Paratext.");
+            VerifyUserSecret(userSecret);
 
             bool expired = !userSecret.ParatextTokens.ValidateLifetime();
             bool refreshed = false;
@@ -308,7 +309,9 @@ namespace SIL.Transcriber.Services
         }
         private async Task<ParatextChapter> GetParatextChapterAsync(UserSecret userSecret, string paratextId, string book, int number)
         {
-            ParatextChapter chapter = new ParatextChapter();
+            VerifyUserSecret(userSecret);
+
+           ParatextChapter chapter = new ParatextChapter();
             chapter.Book = book;
             chapter.Chapter = number;
             //get the text out of paratext

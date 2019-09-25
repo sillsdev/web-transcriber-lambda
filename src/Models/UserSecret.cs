@@ -1,6 +1,6 @@
 ﻿using JsonApiDotNetCore.Models;
 
-namespace SIL.Transcriber.Models
+namespace SIL.Paratext.Models
 {
          /// <summary>
         /// This model is used to store user data that we don't want to leak to the front-end. This is stored in a separate

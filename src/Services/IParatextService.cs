@@ -1,13 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using SIL.Transcriber.Models;
+using SIL.Paratext.Models;
 using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 { 
     public interface IParatextService
     {
-        Task<UserSecret> ParatextLogin();
+        UserSecret ParatextLogin();
         Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret);
         string GetParatextUsername(UserSecret userSecret);
         Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId);

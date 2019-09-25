@@ -1,13 +1,12 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using JsonApiDotNetCore.Models;
+using Microsoft.IdentityModel.Tokens;
 using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace SIL.Transcriber.Models
+
+namespace SIL.Paratext.Models
 {
-    public class Tokens
+    public class Tokens : Identifiable<int>
     {
         public string AccessToken { get; set; }
         public string RefreshToken { get; set; }

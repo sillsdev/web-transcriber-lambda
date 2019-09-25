@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SIL.Transcriber.Models
+namespace SIL.Paratext.Models
 {
     public class ParatextProject
     {
