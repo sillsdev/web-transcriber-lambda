@@ -33,15 +33,14 @@ namespace SIL.Transcriber
             services.AddHttpContextAccessor();
 
             // Add service / repository overrides
-            services.AddScoped<IEntityRepository<User>, UserRepository>();
-            //services.AddScoped<IEntityRepository<UserPassage>, UserTaskRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
-            services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
-            services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
-            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
-            services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
+            services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
+            services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
+            services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
+            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
+            services.AddScoped<IEntityRepository<User>, UserRepository>();
             //services.AddScoped<IEntityRepository<OrganizationInviteRequest>, OrganizationInviteRequestRepository>();
             //services.AddScoped<IEntityRepository<Notification>, NotificationRepository>();
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
@@ -64,8 +63,9 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<User>, UserService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
+            services.AddScoped<IParatextService, ParatextService>();
+            services.AddScoped<ISILIdentityService, SILIdentityService>();
 
-            //services.AddScoped<IQueryParser, OrbitJSQueryParser>();
 
             // EventDispatchers
             services.AddScoped<UserRepository>();
@@ -93,7 +93,7 @@ namespace SIL.Transcriber
             services.AddScoped<SectionService>();
             services.AddScoped<UserPassageService>();
             services.AddScoped<UserService>();
-
+            services.AddScoped<SILIdentityService>();
             services.AddScoped<Auth0ManagementApiTokenService>();
             //services.AddScoped<SendNotificationService>();
             //services.AddScoped<SendEmailService>();

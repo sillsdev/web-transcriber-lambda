@@ -3,6 +3,7 @@
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using SIL.Paratext.Models;
 using System;
 using System.Linq;
 using System.Threading;
@@ -194,6 +195,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Section> Sections { get; set; }
         public DbSet<UserPassage> Userpassages { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserSecret> Usersecrets { get; set; }
 
     }
 }

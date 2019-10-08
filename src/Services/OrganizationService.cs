@@ -19,6 +19,7 @@ namespace SIL.Transcriber.Services
         public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<Group> GroupRepository { get; }
         public IEntityRepository<GroupMembership> GroupMembershipRepository { get; }
+        private ISILIdentityService SILIdentity;
 
         public OrganizationService(
             IJsonApiContext jsonApiContext,
@@ -27,12 +28,14 @@ namespace SIL.Transcriber.Services
             IEntityRepository<Group> groupRepository,
             IEntityRepository<GroupMembership> groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
+            ISILIdentityService silIdentityService,
+           ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
         {
             OrganizationMembershipRepository = organizationMembershipRepository;
             CurrentUserRepository = currentUserRepository;
             GroupMembershipRepository = groupMembershipRepository;
             GroupRepository = groupRepository;
+            SILIdentity = silIdentityService;
         }
         private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
 
@@ -55,7 +58,7 @@ namespace SIL.Transcriber.Services
         }
         private string OrgAllGroup(Organization entity)
         {
-            return entity.Name + " All";
+            return "All Users"; // entity.Name + " All";
         }
         public override async Task<Organization> CreateAsync(Organization entity)
         {
@@ -118,17 +121,16 @@ namespace SIL.Transcriber.Services
         {
             /* ask the sil auth if this user has any orgs */
             List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
-            return orgs.Find(o => o.name == newOrg.Name && o.id == newOrg.SilId) != null;
+            var silOrg = orgs.Find(o =>o.id == newOrg.SilId);
+            if (silOrg != null)
+            {
+                /* merge the info */
+                newOrg = SILIdentity.OrgFromSILAuth(newOrg, silOrg);
+                return true;
+            }
+            return false;
         }
-        private Organization FromSILAuth(SILAuth_Organization entity)
-        {
-            Organization newEntity = new Organization();
-            newEntity.SilId = entity.id;
-            newEntity.LogoUrl = entity.logo;
-            newEntity.Name = entity.name;
-            newEntity.LogoUrl = entity.logo;
-            return newEntity;
-        }
+
 
         public bool JoinOrgs(List<SILAuth_Organization> orgs, User user, RoleName role)
         {
@@ -160,7 +162,7 @@ namespace SIL.Transcriber.Services
         }
         public async Task<Organization> CreateAsync(SILAuth_Organization entity, User owner)
         {
-            Organization newEntity = FromSILAuth(entity);
+            Organization newEntity = SILIdentity.OrgFromSILAuth(entity);
             newEntity.Owner = owner;
             return await CreateAsync(newEntity);
         }

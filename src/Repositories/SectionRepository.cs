@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
@@ -59,7 +60,7 @@ namespace SIL.Transcriber.Repositories
             //you'd think this would work...but you'd be wrong;
             //return Include(Get(), "passagesections");
             //no error...but no passagesections either  return Get().Include(s => s.PassageSections);
-            var sections =  UsersSections(Include(dbContext.Sections, "passage-sections" ));
+            var sections =  UsersSections(Include(dbContext.Sections, "passage-sections"));
             return sections;
         }
 
@@ -81,6 +82,36 @@ namespace SIL.Transcriber.Repositories
                 return UsersSections(entities);
             }
             return base.Filter(entities, filterQuery);
+        }
+        #endregion
+        #region ParatextSync
+        public IQueryable<Section> GetSectionsAtStatus(int projectId, string status)
+        {
+            return GetWithPassageSections().Where(s => s.Id == 721 || s.Id == 722);
+            /*var sections = GetWithPassageSections().Include(s => s.Plan);
+            var projectsections = projects.Join(sections, p => p.Id, s => s.Plan.ProjectId, (p, s) => s);
+            return projectsections.Where(s => s.PassageSections.All(ps => ps.Passage.State == status));
+            */
+        }
+        public async Task<IList<SectionSummary>> SectionSummary(int PlanId, string book, int chapter)
+        {
+            IList<SectionSummary> ss = new List<SectionSummary>();
+            var passagesections = dbContext.Passagesections.Join(dbContext.Sections.Where(section => section.PlanId == PlanId), ps => ps.SectionId, section => section.Id, (ps, section) => new { ps.PassageId, section });
+            var passages = dbContext.Passages.Join(passagesections, passage => passage.Id, ps => ps.PassageId, (passage, ps) => new { passage, ps.section }).Where(x => x.passage.Book == book && x.passage.StartChapter == chapter);
+            await passages.GroupBy(p => p.section).ForEachAsync(ps =>
+              {
+                  var newss = new SectionSummary()
+                  {
+                      section = ps.FirstOrDefault().section,
+                      Book = book,
+                      startChapter = chapter,
+                      endChapter = chapter,
+                      startVerse = ps.Min(a => a.passage.StartVerse),
+                      endVerse = ps.Max(a => a.passage.EndVerse),
+                  };
+                  ss.Add(newss);
+              });
+            return ss;
         }
         #endregion
         #region Assignments

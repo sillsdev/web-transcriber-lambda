@@ -33,3 +33,5 @@ yarn-error.log*
 serverless.env.yml
 
 ../test/
+
+models/X*

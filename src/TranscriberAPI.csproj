@@ -16,10 +16,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\HomeController.cs" />
     <Compile Remove="Controllers\ProjectusersController.cs" />
     <Compile Remove="Controllers\UserrolesController.cs" />
+    <Compile Remove="Data\IRepository.cs" />
+    <Compile Remove="Data\IUpdateBuilder.cs" />
+    <Compile Remove="Models\Chapter.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
+    <Compile Remove="Models\ParatextVerse.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
+    <Compile Remove="Models\SFProject.cs" />
+    <Compile Remove="Models\TextInfo.cs" />
     <Compile Remove="Models\transcriberContext.cs" />
     <Compile Remove="Models\UserRole.cs" />
     <Compile Remove="Models\VwUserallowedgroups.cs" />
@@ -41,6 +48,9 @@
     <Compile Remove="Models\XStores.cs" />
     <Compile Remove="Models\XStoretypes.cs" />
     <Compile Remove="Models\XSystemstatuses.cs" />
+    <Compile Remove="Models\XtranscriberContext.cs" />
+    <Compile Remove="Models\XVwUserallowedgroups.cs" />
+    <Compile Remove="Models\XVwUserallowedpassages.cs" />
     <Compile Remove="Models\XWorkflowdefinitions.cs" />
     <Compile Remove="Models\XWorkflowglobalparameter.cs" />
     <Compile Remove="Models\XWorkflowinbox.cs" />
@@ -51,15 +61,18 @@
     <Compile Remove="Models\XWorkflowprocesstimer.cs" />
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
+    <Compile Remove="Services\IUserAccessor.cs" />
     <Compile Remove="Services\PlantypeService.cs" />
     <Compile Remove="Services\ProjecttypeService.cs" />
     <Compile Remove="Services\RoleService.cs" />
+    <Compile Remove="Services\UserAccessor.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Auth0.ManagementApi" Version="6.0.0" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.100.1" />
     <PackageReference Include="AWSSDK.S3" Version="3.3.101.11" />
+    <PackageReference Include="IdentityModel" Version="3.10.10" />
     <PackageReference Include="JsonApiDotNetCore" Version="3.1.0" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.4" />

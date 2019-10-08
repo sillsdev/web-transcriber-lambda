@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using JsonApiDotNetCore.Models;
+
 
 namespace SIL.Transcriber.Models
 {
