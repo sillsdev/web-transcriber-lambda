@@ -35,6 +35,10 @@ namespace SIL.Transcriber.Services
                 */
 
         }
+        public Plan Get(int id)
+        {
+            return MyRepository.Get().Where(p => p.Id == id).FirstOrDefault();
+        }
         public Plan GetWithSections(int id)
         {
             return MyRepository.Get().Where(p => p.Id == id).Include(p => p.Sections).ThenInclude(s=> s.PassageSections).ThenInclude(ps=> ps.Passage).FirstOrDefault();

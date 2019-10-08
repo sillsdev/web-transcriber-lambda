@@ -80,6 +80,18 @@ namespace SIL.Transcriber.Models
                 return endVerse;
             }
         }
+        public string Verses
+        {
+            get
+            {
+                if (StartChapter != EndChapter)
+                    return Reference;
+                if (StartVerse != EndVerse)
+                    return StartVerse.ToString() + "-" + EndVerse.ToString();
+                return StartVerse.ToString();
+            }
+        }
+
         private bool ParseReferencePart(string reference, out int chapter, out int verse)
         {
             bool ok;

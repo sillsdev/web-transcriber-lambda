@@ -46,11 +46,11 @@ namespace SIL.Transcriber.Services
             SectionService sectionService,
             PlanService planService,
             ProjectService projectService) //,IOptions<ParatextOptions> options,
-            //IRepository<UserSecret> userSecret)// , IRealtimeService realtimeService)
+                                           //IRepository<UserSecret> userSecret)// , IRealtimeService realtimeService)
         {
             HttpContext = httpContextAccessor.HttpContext;
             // _options = options;
-           // _userSecret = userSecret;
+            // _userSecret = userSecret;
             //_realtimeService = realtimeService;
             PassageService = passageService;
             SectionService = sectionService;
@@ -93,7 +93,7 @@ namespace SIL.Transcriber.Services
         public async Task<System.Collections.Generic.IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
             VerifyUserSecret(userSecret);
-            
+
             Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             string username = usernameClaim?.Value;
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, "projects");
@@ -106,12 +106,6 @@ namespace SIL.Transcriber.Services
                     ?.FirstOrDefault(ue => (string)ue.Element("name") == username);
                 repos[projId] = (string)userElem?.Element("role");
             }
-            //
-            //Dictionary<string, SFProject> existingProjects = (await _realtimeService
-            //    .QuerySnapshots<SFProject>(RootDataTypes.Projects)
-            //    .Where(p => repos.Keys.Contains(p.ParatextId))
-            //    .ToListAsync()).ToDictionary(p => p.ParatextId);
-
             response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "projects");
             var projectArray = JArray.Parse(response);
             var projects = new List<ParatextProject>();
@@ -124,43 +118,39 @@ namespace SIL.Transcriber.Services
                 string paratextId = (string)identificationObj["text"];
                 if (!repos.TryGetValue(paratextId, out string role))
                     continue;
-                /*
 
-                    // determine if the project is connectable, i.e. either the project exists and the user hasn't been
-                    // added to the project, or the project doesn't exist and the user is the administrator
-                    bool isConnectable;
-                    bool isConnected = false;
-                    string projectId = null;
-                    if (existingProjects.TryGetValue(paratextId, out SFProject project))
-                    {
-                        projectId = project.Id;
-                        isConnected = true;
-                        isConnectable = !project.UserRoles.ContainsKey(userSecret.Id);
-                    }
-                    else if (role == SFProjectRoles.Administrator)
-                    {
-                        isConnectable = true;
-                    }
-                    else
-                    {
-                        isConnectable = false;
-                    }
-*/
-                    var langName = (string)projectObj["language_iso"];
-                    //if (StandardSubtags.TryGetLanguageFromIso3Code(langName, out LanguageSubtag subtag))
-                    //    langName = subtag.Name;
+                // determine if the project is connectable, i.e. either the project exists and the user hasn't been
+                // added to the project, or the project doesn't exist and the user is the administrator
+                bool isConnected = false;
+                bool isConnectable = false;
+                int? projectId = null;
+                Project project = ProjectService.LinkedToParatext(paratextId).Result;
+                if (project != null)
+                {
+                    projectId = project.Id;
+                    isConnected = true;
+                    isConnectable = true; // !project.UserRoles.ContainsKey(userSecret.Id);
+                }
+                else if (role == ParatextProjectRoles.Administrator || role == ParatextProjectRoles.Translator)
+                {
+                    isConnectable = true;
+                }
+ 
+                var langName = (string)projectObj["language_iso"];
+                //if (StandardSubtags.TryGetLanguageFromIso3Code(langName, out LanguageSubtag subtag))
+                //    langName = subtag.Name;
 
-                    projects.Add(new ParatextProject
-                    {
-                        ParatextId = paratextId,
-                        Name = (string)identificationObj["fullname"],
-                        LanguageTag = (string)projectObj["language_ldml"],
-                        LanguageName = langName,
-                        ProjectId = "",// projectId,
-                        IsConnectable = false, // isConnectable,
-                        IsConnected = false // isConnected
-                    });
-                
+                projects.Add(new ParatextProject
+                {
+                    ParatextId = paratextId,
+                    Name = (string)identificationObj["fullname"],
+                    LanguageTag = (string)projectObj["language_ldml"],
+                    LanguageName = langName,
+                    ProjectId = projectId,
+                    IsConnected = isConnected,
+                    IsConnectable = isConnectable,
+                    CurrentUserRole = role,
+                });
             }
 
             return projects;
@@ -168,7 +158,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId)
         {
-            VerifyUserSecret( userSecret);
+            VerifyUserSecret(userSecret);
             try
             {
                 Claim subClaim = GetClaim(userSecret.ParatextTokens.AccessToken, JwtClaimTypes.Subject);
@@ -193,7 +183,7 @@ namespace SIL.Transcriber.Services
         public string GetParatextUsername(UserSecret userSecret)
         {
             VerifyUserSecret(userSecret);
-            Claim usernameClaim = GetClaim (userSecret.ParatextTokens.AccessToken, "username");
+            Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             return usernameClaim?.Value;
         }
 
@@ -239,7 +229,7 @@ namespace SIL.Transcriber.Services
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"notes/{projectId}/{bookId}");
         }
 
-        public Task<string> UpdateNotesAsync(UserSecret userSecret,string projectId, string notesText)
+        public Task<string> UpdateNotesAsync(UserSecret userSecret, string projectId, string notesText)
         {
             VerifyUserSecret(userSecret);
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Post, $"notes/{projectId}", notesText);
@@ -311,7 +301,7 @@ namespace SIL.Transcriber.Services
         {
             VerifyUserSecret(userSecret);
 
-           ParatextChapter chapter = new ParatextChapter();
+            ParatextChapter chapter = new ParatextChapter();
             chapter.Book = book;
             chapter.Chapter = number;
             //get the text out of paratext
@@ -333,92 +323,122 @@ namespace SIL.Transcriber.Services
             }
             return chapterList;
         }
-        private async Task<List<ParatextChapter>> GetPassageChaptersAsync(UserSecret userSecret, string paratextId, IQueryable<Passage> passages)
+        private class BookChapter : IEquatable<BookChapter>
+        {
+            public string Book { get; }
+            public int Chapter { get; }
+            public BookChapter(string book, int chapter)
+            {
+                Book = book;
+                Chapter = chapter;
+            }
+            public bool Equals(BookChapter other)
+            {
+
+                //Check whether the compared object is null. 
+                if (Object.ReferenceEquals(other, null)) return false;
+
+                //Check whether the compared object references the same data. 
+                if (Object.ReferenceEquals(this, other)) return true;
+
+                //Check whether the products' properties are equal. 
+                return Book.Equals(other.Book) && Chapter.Equals(other.Chapter);
+            }
+            public override int GetHashCode()
+            {
+
+                //Get hash code for the Name field if it is not null. 
+                int hashBook = Book.GetHashCode();
+
+                //Get hash code for the Code field. 
+                int hashChapter = Chapter.GetHashCode();
+
+                //Calculate the hash code for the product. 
+                return hashBook ^ hashChapter;
+            }
+        }
+        private async Task<List<ParatextChapter>> GetPassageChaptersAsync(UserSecret userSecret, string paratextId, IEnumerable<BookChapter> book_chapters)
         {
             var chapterList = new List<ParatextChapter>();
-            string book_chapter = "";
-            foreach (Passage p in passages)
+
+            foreach (BookChapter bc in book_chapters)
             {
-                if (p.Book + p.StartChapter != book_chapter)
-                {
-                    book_chapter = p.Book + p.StartChapter;
-                    chapterList.Add(await GetParatextChapterAsync(userSecret, paratextId, p.Book, p.StartChapter));
-                }
-                if (p.Book + p.EndChapter != book_chapter)
-                {
-                    book_chapter = p.Book + p.EndChapter;
-                    chapterList.Add(GetParatextChapterAsync(userSecret, paratextId, p.Book, p.EndChapter).Result);
-                }
+                chapterList.Add(await GetParatextChapterAsync(userSecret, paratextId, bc.Book, bc.Chapter));
             }
             return chapterList;
         }
-
+        private IEnumerable<BookChapter> BookChapters(IQueryable<Passage> passages)
+        {
+            return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct<BookChapter>();
+        }
         public async Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId)
         {
             string paratextId = ParatextHelpers.ParatextProject(SectionService.GetProjectId(sectionId), ProjectService);
-            var passages = PassageService.GetBySection(sectionId).OrderBy(p => p.Book);
-            return await GetPassageChaptersAsync(userSecret, paratextId, passages);
+            var passages = PassageService.GetBySection(sectionId);
+            return await GetPassageChaptersAsync(userSecret, paratextId, BookChapters(passages));
         }
-        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId)
+        public async Task<int> PlanPassagesToSyncCountAsync(int planId)
         {
-            var plan = PlanService.GetWithSections(planId);
-            string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
-            //gather all the passages from all the sections that are approved
-            SortedList<string, SortedList<int, Passage>> passages = new SortedList<string, SortedList<int, Passage>>();
-            foreach (Section s in plan.Sections)
-            {
-                foreach (PassageSection ps in s.PassageSections)
-                {
-                    if (ps.Passage.ReadyToSync)
-                    {
-                        if (!passages.ContainsKey(ps.Passage.Book + ps.Passage.StartChapter.ToString().PadLeft(3)))
-                            passages.Add(ps.Passage.Book + ps.Passage.StartChapter.ToString().PadLeft(3), new SortedList<int, Passage>());
-                        passages[ps.Passage.Book + ps.Passage.StartChapter.ToString().PadLeft(3)].Add(ps.Passage.StartVerse, ps.Passage);
-                    }
-                }
-            }
-            var chapterList = await GetPassageChaptersAsync(userSecret, paratextId, passages.Keys);
-            chapterList.ForEach(c => c.NewUSX = c.OriginalUSX);
-            ParatextChapter chapter;
-            
-            foreach (string bookchapter in passages.Keys)
-            {
-                chapter = chapterList.Where(c => c.Book == bookchapter.Substring(0, bookchapter.Length-3) &&  c.Chapter == int.Parse(bookchapter.Substring(bookchapter.Length - 3))).First();
-                foreach (Passage p in passages[bookchapter].Values)
-                    chapter.NewUSX = ParatextHelpers.GenerateParatextData(p, chapter.NewUSX, PassageService.GetTranscription(p) ?? "");
-            }
-            foreach (ParatextChapter c in chapterList)
-            {
-                string bookText = await UpdateChapterTextAsync(userSecret, paratextId, c.Book, c.Chapter, c.Revision, c.NewUSX.ToString());
-                var bookTextElem = XElement.Parse(bookText);
-                c.NewValue = bookTextElem.Value;
-                c.NewUSX = bookTextElem.Element("usx");
-            }
-            return chapterList;
+            var passages = await PassageService.ReadyToSyncAsync(planId);
+            return passages.Count();
         }
-        public async Task<List<ParatextChapter>> SyncSectionAsync(UserSecret userSecret, int sectionId)
+        public async Task<int> ProjectPassagesToSyncCountAsync(int projectId)
         {
-            string paratextId = ParatextHelpers.ParatextProject(SectionService.GetProjectId(sectionId), ProjectService);
-            var passages = PassageService.GetBySection(sectionId).OrderBy(p => p.Book);
-            var chapterList = await GetPassageChaptersAsync(userSecret, paratextId, passages);
-            chapterList.ForEach(c => c.NewUSX = c.OriginalUSX);
-            ParatextChapter chapter;
-            foreach (Passage p in passages)
+            var project = await ProjectService.GetWithPlansAsync(projectId);
+            int total = 0;
+            foreach(Plan p in project.Plans)
             {
-                chapter = chapterList.Where(c => c.Chapter == p.StartChapter).First();
-                chapter.NewUSX = ParatextHelpers.GenerateParatextData(p, chapter.NewUSX, PassageService.GetTranscription(p) ?? "");
+                var passages = await PassageService.ReadyToSyncAsync(p.Id);
+                total += passages.Count();
             }
-            foreach (ParatextChapter c in chapterList)
-            {
-                string bookText = await UpdateChapterTextAsync(userSecret, paratextId, c.Book, c.Chapter, c.Revision, c.NewUSX.ToString());
-                var bookTextElem = XElement.Parse(bookText);
-                c.NewValue = bookTextElem.Value;
-                c.NewUSX = bookTextElem.Element("usx");
-            }
-            return chapterList;
+            return total;
         }
 
-        protected /* override  DisposableBase */ void DisposeManagedResources()
+        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId)
+        {
+            var plan = PlanService.Get(planId);
+            var passages = await PassageService.ReadyToSyncAsync(planId);
+            //assume startChapter=endChapter for all passages
+            IEnumerable<BookChapter> book_chapters = BookChapters(passages);
+
+            string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
+            var chapterList = await GetPassageChaptersAsync(userSecret, paratextId, book_chapters);
+            chapterList.ForEach(c => c.NewUSX = c.OriginalUSX);
+            ParatextChapter chapter;
+
+            foreach (BookChapter bookchapter in book_chapters)
+            {
+                chapter = chapterList.Where(c => c.Book == bookchapter.Book &&  c.Chapter == bookchapter.Chapter).First();
+                //make sure we have the chapter number
+                chapter.NewUSX = ParatextHelpers.AddParatextChapter(chapter.NewUSX, chapter.Book, chapter.Chapter);
+                IEnumerable<SectionSummary> ss = SectionService.GetSectionSummary(planId, chapter.Book, chapter.Chapter);
+                chapter.NewUSX = ParatextHelpers.AddSectionHeaders(chapter.NewUSX, ss);
+                foreach (Passage passage in passages.Where(p=>p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
+                    chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);
+            }
+            foreach (ParatextChapter c in chapterList)
+            {
+                string bookText = await UpdateChapterTextAsync(userSecret, paratextId, c.Book, c.Chapter, c.Revision, c.NewUSX.ToString());
+                var bookTextElem = XElement.Parse(bookText);
+                c.NewValue = bookTextElem.Value;
+                c.NewUSX = bookTextElem.Element("usx");
+            }
+            return chapterList;
+        }
+        public async Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId)
+        {
+            var project = await ProjectService.GetWithPlansAsync(projectId);
+            List<ParatextChapter> chapters = new List<ParatextChapter>();
+            foreach (Plan p in project.Plans)
+            {
+                chapters.AddRange(await SyncPlanAsync(userSecret, p.Id));
+            }
+            return chapters;
+
+        }
+
+        protected /* override  DisposableBase */
+            void DisposeManagedResources()
         {
             _dataAccessClient.Dispose();
             _registryClient.Dispose();

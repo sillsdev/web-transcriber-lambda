@@ -57,13 +57,21 @@ namespace SIL.Transcriber.Controllers
             List<ParatextChapter> chapters = await _paratextService.GetSectionChaptersAsync(userSecret, sectionId);
             return Ok(chapters);
         }
-        [HttpPost("section/{sectionid}")]
-        public async Task<ActionResult<List<ParatextChapter>>> PostSectionAsync([FromRoute] int sectionId)
+        [HttpGet("project/{projectId}/count")]
+        public async Task<ActionResult<int>> ProjectPassagesToSyncCount([FromRoute] int projectId)
         {
-            UserSecret userSecret = _paratextService.ParatextLogin();
-            List<ParatextChapter> chapters = await _paratextService.SyncSectionAsync(userSecret, sectionId);
-            return Ok(chapters);
+
+            int passages = await _paratextService.ProjectPassagesToSyncCountAsync(projectId);
+            return Ok(passages);
         }
+
+        [HttpGet("plan/{planid}/count")]
+        public async Task<ActionResult<int>> PassageReadyToSyncCount([FromRoute] int planId)
+        {
+            int passages = await _paratextService.PlanPassagesToSyncCountAsync(planId);
+            return Ok(passages);
+        }
+
         [HttpPost("plan/{planid}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostPlanAsync([FromRoute] int planId)
         {
@@ -77,9 +85,7 @@ namespace SIL.Transcriber.Controllers
         public async Task<ActionResult<List<ParatextChapter>>> PostProjectAsync([FromRoute] int projectId)
         {
             UserSecret userSecret = _paratextService.ParatextLogin();
-            /* get all the sections that are ready to sync */
-
-            //List<ParatextChapter> chapters = await _paratextService.SyncSectionAsync(userSecret, sectionId);
+            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(userSecret, projectId);
             return Ok();
         }
 

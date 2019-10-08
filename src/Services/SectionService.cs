@@ -65,5 +65,9 @@ namespace SIL.Transcriber.Services
         {
             return ((SectionRepository)MyRepository).GetSectionsAtStatus(projectId, status);
         }
+        public IEnumerable<SectionSummary> GetSectionSummary(int PlanId, string book, int chapter)
+        {
+            return ((SectionRepository)MyRepository).SectionSummary(PlanId, book, chapter).Result;
+        }
     }
 }

@@ -6,6 +6,8 @@ using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Forms.Projects;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -57,7 +59,12 @@ namespace SIL.Transcriber.Services
 
             return projects.SingleOrDefault(g => g.Id == id);
         }
-
+        public async Task<Project> GetWithPlansAsync(int id)
+        {
+            return await ((ProjectRepository)MyRepository).Get()
+                              .Where(p => p.Id == id)
+                              .Include(p => p.Plans).FirstOrDefaultAsync();
+        }
         public override async Task<Project> UpdateAsync(int id, Project resource)
         {
             //If changing organization, validate the change
@@ -90,19 +97,32 @@ namespace SIL.Transcriber.Services
 
             return project;
         }
+        public string ParatextProject(int projectId)
+        {
+            var paratextSettings = IntegrationSettings(projectId, "paratext");
+            if ((paratextSettings ?? "") == "")
+            {
+                return "";
+            }
+            dynamic settings = JsonConvert.DeserializeObject(paratextSettings);
+            return settings.ParatextId;
+        }
         public string IntegrationSettings(int projectId, string integration)
         {
-            Project project = MyRepository.Get().Where(p => p.Id == projectId).Include(p => p.ProjectIntegrations).ThenInclude(pi => pi.Integration).FirstOrDefault();
-            ProjectIntegration projectIntegration = project.ProjectIntegrations.Where(pi => pi.Integration.Name == integration).FirstOrDefault();
-            if (projectIntegration == null)
-                return "";
-            return projectIntegration.Settings;
+            return ((ProjectRepository)MyRepository).IntegrationSettings(projectId, integration);
         }
-        public async Task<IEnumerable<Section> > GetSectionsAtStatus(int projectId, string status)
+        public IEnumerable<Section> GetSectionsAtStatus(int projectId, string status)
         {
-            //var project = MyRepository.Get().Where(p => p.Id == projectId).Include(p => p.Plans).ThenInclude(pl => pl.Sections).ThenInclude(s => s.PassageSections).ThenInclude(ps => ps.Passage).FirstOrDefault();
-
             return SectionService.GetSectionsAtStatus(projectId, status);
+        }
+        public bool IsLinkedToParatext(Project p, string ParatextId)
+        {
+            return ParatextProject(p.Id) == ParatextId;
+        }
+        public async Task<Project> LinkedToParatext(string paratextId)
+        {
+            ProjectRepository pr = (ProjectRepository)MyRepository;
+            return await pr.HasIntegrationSetting("paratext", "ParatextId", paratextId).FirstOrDefaultAsync(); 
         }
     }
 

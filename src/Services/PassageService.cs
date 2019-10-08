@@ -54,6 +54,11 @@ namespace SIL.Transcriber.Services
                     .Include(p=> p.Mediafiles);
             
         }
+        public async Task<IQueryable<Passage>> ReadyToSyncAsync(int PlanId)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+            return await pr.ReadyToSyncAsync(PlanId);
+        }
         public string GetTranscription(Passage passage)
         {
             PassageRepository pr = (PassageRepository)MyRepository;
