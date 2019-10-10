@@ -2,7 +2,7 @@
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using RestSharp;
 using Newtonsoft.Json.Linq;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Services
 {
@@ -25,8 +25,10 @@ namespace SIL.Transcriber.Services
     {
         public  string tokenAuth;
         private string tokenSIL;
-        public Auth0ManagementApiTokenService()
+        protected ILogger<Auth0ManagementApiTokenService> Logger { get; set; }
+        public Auth0ManagementApiTokenService(ILoggerFactory loggerFactory)
         {
+            this.Logger = loggerFactory.CreateLogger<Auth0ManagementApiTokenService>();
         }
         private string token(string audience)
         {
@@ -46,7 +48,7 @@ namespace SIL.Transcriber.Services
             }
             else
             {
-                Log.Error($"Failed to request token from Auth0: Status={response.StatusDescription}, Content={response.Content}");
+                Logger.LogCritical($"Failed to request token from Auth0: Status={response.StatusDescription}, Content={response.Content}");
                 return "";
             }
         }

@@ -1,6 +1,7 @@
 ﻿using IdentityModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
@@ -37,6 +38,7 @@ namespace SIL.Transcriber.Services
         private ProjectService ProjectService;
         private PlanService PlanService;
         private HttpContext HttpContext;
+        protected ILogger<ParatextService> Logger { get; set; }
 
 
         public ParatextService(IHostingEnvironment env,
@@ -45,7 +47,8 @@ namespace SIL.Transcriber.Services
             PassageService passageService,
             SectionService sectionService,
             PlanService planService,
-            ProjectService projectService) //,IOptions<ParatextOptions> options,
+            ProjectService projectService,
+            ILoggerFactory loggerFactory) //,IOptions<ParatextOptions> options,
                                            //IRepository<UserSecret> userSecret)// , IRealtimeService realtimeService)
         {
             HttpContext = httpContextAccessor.HttpContext;
@@ -57,11 +60,12 @@ namespace SIL.Transcriber.Services
             ProjectService = projectService;
             PlanService = planService;
             CurrentUserContext = currentUserContext;
+            this.Logger = loggerFactory.CreateLogger<ParatextService>();
 
             _httpClientHandler = new HttpClientHandler();
             _dataAccessClient = new HttpClient(_httpClientHandler);
             _registryClient = new HttpClient(_httpClientHandler);
-            if (env.IsDevelopment() || env.IsEnvironment("Testing"))
+            if (env.IsDevelopment() || env.IsStaging() || env.IsEnvironment("Testing"))
             {
                 _httpClientHandler.ServerCertificateCustomValidationCallback
                     = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
@@ -237,6 +241,7 @@ namespace SIL.Transcriber.Services
 
         private async Task RefreshAccessTokenAsync(UserSecret userSecret)
         {
+            Logger.LogInformation("Refresh Paratext Token");
             VerifyUserSecret(userSecret);
             var request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
             var requestObj = new JObject(
@@ -246,6 +251,7 @@ namespace SIL.Transcriber.Services
                 new JProperty("refresh_token", userSecret.ParatextTokens.RefreshToken));
             request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
             HttpResponseMessage response = await _registryClient.SendAsync(request);
+            Logger.Log(response.IsSuccessStatusCode ? LogLevel.Information : LogLevel.Error, "Paratext Refresh" + response.IsSuccessStatusCode.ToString() + response.ReasonPhrase);
             response.EnsureSuccessStatusCode();
 
             string responseJson = await response.Content.ReadAsStringAsync();

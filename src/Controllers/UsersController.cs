@@ -1,22 +1,23 @@
-using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using System.Threading.Tasks;
 using SIL.Transcriber.Services;
 using JsonApiDotNetCore.Internal;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
     public class UsersController : BaseController<User>
     {
         public UsersController(
-           IJsonApiContext jsonApiContext,
+            ILoggerFactory loggerFactory,
+            IJsonApiContext jsonApiContext,
                IResourceService<User> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
-         : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+         : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
 
         [HttpPost]

@@ -6,11 +6,9 @@ using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using SIL.Auth.Models;
 using SIL.Paratext.Models;
-using System.Net.Http;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Services
 {
@@ -26,15 +24,18 @@ namespace SIL.Transcriber.Services
         private User auth0User;
         private SILAuth_User silUser;
         private ISILIdentityService SILIdentity;
+        protected ILogger<ICurrentUserContext> Logger { get; set; }
 
         public HttpCurrentUserContext(
-            IHttpContextAccessor httpContextAccessor,
+             ILoggerFactory loggerFactory,
+             IHttpContextAccessor httpContextAccessor,
              ISILIdentityService silIdentityService,
              Auth0ManagementApiTokenService tokenService)
         {
             HttpContext = httpContextAccessor.HttpContext;
             SILIdentity = silIdentityService;
             TokenService = tokenService;
+            Logger = loggerFactory.CreateLogger<ICurrentUserContext>();
         }
 
         private string AuthType
@@ -172,6 +173,7 @@ namespace SIL.Transcriber.Services
                     ParatextTokens = newPTTokens
                 };
             }
+            Logger.LogInformation("Paratext Login - no connection");
             return null;
         }
     }
