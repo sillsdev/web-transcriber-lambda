@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
@@ -23,10 +24,12 @@ namespace SIL.Transcriber.Repositories
         {
             this.DBContext = (AppDbContext)contextResolver.GetContext();
             this.CurrentUserContext = currentUserContext;
+            this.Logger = loggerFactory.CreateLogger<User>();
         }
 
         private AppDbContext DBContext { get; }
         private ICurrentUserContext CurrentUserContext { get; }
+        protected ILogger<User> Logger { get; set; }
 
         // memoize once per local thread,
         // since the current user can't change in a single request

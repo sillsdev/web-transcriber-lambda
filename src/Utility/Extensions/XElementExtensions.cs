@@ -12,8 +12,9 @@ namespace TranscriberAPI.Utility.Extensions
     {
         public static string Verses(this XElement value)
         {
+            Debug.Assert(value.Name.LocalName == "verse");
             if (value.Name.LocalName != "verse")
-                return "";
+                return null;
             return value.Attribute("number").Value;
         }
         public static void SetReference(this XElement value, string reference)

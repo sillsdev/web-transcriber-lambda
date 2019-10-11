@@ -159,10 +159,7 @@ namespace SIL.Transcriber.Utility
                     else
                     {
                         var prev = verse.PreviousNode;
-                        if (!verse.Parent.IsPara())
-                        {
-                            MoveToPara(verse);
-                        }
+                        MoveToPara(verse);
                         prev.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader()));
                     }
                 }
@@ -203,20 +200,20 @@ namespace SIL.Transcriber.Utility
                 }
                 else
                 {
-                    if (nextVerse.Parent.IsPara())
-                        nextVerse = nextVerse.Parent;
-                    //see if the verse we're adding before is in a section
-                    var checkSection = sectionSummaryList.FirstOrDefault(s => nextVerse.StartVerse() > s.startVerse && nextVerse.StartVerse() < s.endVerse);
+                     //see if the verse we're adding before is in a section
+                    var checkSection = sectionSummaryList.FirstOrDefault(s => nextVerse.StartVerse() >= s.startVerse && nextVerse.StartVerse() <= s.endVerse);
                     if (checkSection != null)
                     {
                         //do I have a section header?
-                        var sectionSummary = sectionSummaryList.FirstOrDefault(s => currentPassage.StartVerse > s.startVerse && currentPassage.StartVerse < s.endVerse);
+                        var sectionSummary = sectionSummaryList.FirstOrDefault(s => currentPassage.StartVerse >= s.startVerse && currentPassage.StartVerse <= s.endVerse);
                         if (sectionSummary != checkSection)
                         {
                             //put it before the section header
                             nextVerse = sections.FirstOrDefault(s => s.SectionText() == checkSection.SectionHeader());
                         }
                     }
+                    if (nextVerse.Parent.IsPara())
+                        nextVerse = nextVerse.Parent;
                     nextVerse.AddBeforeSelf(ParatextVerse(currentPassage.Verses, transcription));
                 }
             }

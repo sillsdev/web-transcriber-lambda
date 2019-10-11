@@ -2,19 +2,20 @@ using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
     public class OrganizationsController : BaseController<Organization>
     {
          public OrganizationsController(
+             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
                 IResourceService<Organization> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
-          : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
 
         [HttpPost]

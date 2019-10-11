@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.IO;
 using System.Net;
 using System.Net.Mime;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -18,12 +18,13 @@ namespace SIL.Transcriber.Controllers
         MediafileService _service;
 
         public MediafilesController(
+             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             IResourceService<Mediafile> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
-          : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         {
             _service = (MediafileService)resourceService;
         }

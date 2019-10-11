@@ -12,7 +12,7 @@ using JsonApiDotNetCore.Extensions;
 using SIL.Transcriber.Services;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using Amazon.S3;
-
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber
 {
@@ -49,7 +49,7 @@ namespace SIL.Transcriber
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             if (env.IsDevelopment())
             {
@@ -60,6 +60,9 @@ namespace SIL.Transcriber
                 app.UseExceptionHandler("/Home/Error");
                 app.UseHsts();
             }
+            var config = Configuration.GetAWSLoggingConfigSection();
+            loggerFactory.AddAWSProvider(config);
+           
             app.UseAuthentication();
 
             app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()).AllowAnyHeader());

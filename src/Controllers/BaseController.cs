@@ -9,18 +9,20 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using SIL.Auth.Models;
 using System;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
     public class BaseController<T> : BaseController<T, int> where T : class, IIdentifiable<int>
     {
         public BaseController(
+            ILoggerFactory loggerFactory, 
             IJsonApiContext jsonApiContext,
             IResourceService<T, int> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService
-            ) : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+            ) : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         {
         }
     }
@@ -32,8 +34,10 @@ namespace SIL.Transcriber.Controllers
         protected UserService userService;
         protected OrganizationService organizationService;
         protected ICurrentUserContext currentUserContext;
+        protected ILogger<T> Logger { get; set; }
 
         public BaseController(
+            ILoggerFactory loggerFactory, 
             IJsonApiContext jsonApiContext,
             IResourceService<T, TId> resourceService,
             ICurrentUserContext currentUserContext,
@@ -46,6 +50,7 @@ namespace SIL.Transcriber.Controllers
             this.userService = userService;
             this.organizationService = organizationService;
             this.currentUserContext = currentUserContext;
+            this.Logger = loggerFactory.CreateLogger<T>();
         }
         private static string CURRENT_USER_KEY = "CurrentUser";
 
