@@ -43,6 +43,8 @@ namespace SIL.Transcriber.Models
         public string S3File { get; set; }
         [Attr("filesize")]
         public long Filesize { get; set; }
+        [Attr("position")]
+        public double Position { get; set; }
 
         public bool Archived { get; set; }
 

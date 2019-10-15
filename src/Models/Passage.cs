@@ -12,8 +12,6 @@ namespace SIL.Transcriber.Models
         public string Book { get; set; }
         [Attr("reference")]
         public string Reference { get; set; }
-        [Attr("position")]
-        public double? Position { get; set; }
         [Attr("state")]
         public string State { get; set; }
         [Attr("hold")]
