@@ -127,7 +127,7 @@ namespace SIL.Transcriber.Utility
             //remove any that don't match
             IEnumerable<XElement> changedSections = existingsections.Where(s => sectionList.FirstOrDefault(h => h == s.SectionText()) == null).ToList();
             foreach (XElement s in changedSections)
-                s.Remove();
+                    s.Remove();
 
             foreach (SectionSummary sectionInfo in sectionSummaryList)
             {
@@ -137,7 +137,7 @@ namespace SIL.Transcriber.Utility
                 //is it in the right place?
                 if (section != null)
                 {
-                    if (verse == null || verse.Parent.PreviousNode != section)
+                    if (verse == null || MoveToPara(verse).PreviousNode != section)
                     {
                         section.Remove();  // remove it...we'll readd it rather than trying to move it.
                         section = null;
@@ -158,8 +158,8 @@ namespace SIL.Transcriber.Utility
                     }
                     else
                     {
+                        verse = (XElement)MoveToPara(verse);
                         var prev = verse.PreviousNode;
-                        MoveToPara(verse);
                         prev.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader()));
                     }
                 }
