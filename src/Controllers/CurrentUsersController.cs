@@ -19,7 +19,8 @@ namespace SIL.Transcriber.Controllers
             UserService userService)
          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
-
+        //prevent async function not waiting compile warning
+        #pragma warning disable 1998
         [HttpPost]
         public override async Task<IActionResult> PostAsync([FromBody] User entity)
         {
@@ -33,6 +34,6 @@ namespace SIL.Transcriber.Controllers
 
             return Ok(currentUser);
         }
-
+        #pragma warning restore 1998
     }
 }

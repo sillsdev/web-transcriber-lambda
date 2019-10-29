@@ -9,6 +9,6 @@ namespace SIL.Paratext.Models
         
         public class UserSecret : Identifiable<int>
     {
-            public Tokens ParatextTokens { get; set; }
+            public ParatextToken ParatextTokens { get; set; }
     }
 }

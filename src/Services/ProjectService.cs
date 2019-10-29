@@ -119,10 +119,10 @@ namespace SIL.Transcriber.Services
         {
             return ParatextProject(p.Id) == ParatextId;
         }
-        public async Task<Project> LinkedToParatext(string paratextId)
+        public IEnumerable<Project> LinkedToParatext(string paratextId)
         {
             ProjectRepository pr = (ProjectRepository)MyRepository;
-            return await pr.HasIntegrationSetting("paratext", "ParatextId", paratextId).FirstOrDefaultAsync(); 
+            return pr.HasIntegrationSetting("paratext", "ParatextId", paratextId).AsEnumerable<Project>(); 
         }
     }
 

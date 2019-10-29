@@ -19,6 +19,12 @@ namespace SIL.Transcriber.Models
         [Attr("project-id")]
         public int ProjectId { get; set; }
 
+        [HasOne("owner")]
+        public virtual User Owner { get; set; }
+        [Attr("owner-id")]
+        public int OwnerId { get; set; }
+
+
         [HasOne("plantype")]
         public PlanType Plantype { get; set; }
         [Attr("plantype-id")]

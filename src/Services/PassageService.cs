@@ -27,14 +27,6 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
-
-            /*               return await GetScopedToOrganization<Passage>(
-                           base.GetAsync,
-                           OrganizationContext,
-                           JsonApiContext); 
-
-               var entities = await base.GetAsync();
-               return ((PassageRepository)MyRepository).UsersPassages(entities); */
         }
 
         public override async Task<Passage> GetAsync(int id)
@@ -54,10 +46,10 @@ namespace SIL.Transcriber.Services
                     .Include(p=> p.Mediafiles);
             
         }
-        public async Task<IQueryable<Passage>> ReadyToSyncAsync(int PlanId)
+        public IQueryable<Passage> ReadyToSync(int PlanId)
         {
             PassageRepository pr = (PassageRepository)MyRepository;
-            return await pr.ReadyToSyncAsync(PlanId);
+            return pr.ReadyToSync(PlanId);
         }
         public string GetTranscription(Passage passage)
         {

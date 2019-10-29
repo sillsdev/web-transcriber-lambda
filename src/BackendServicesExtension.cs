@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SIL.Paratext.Models;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -54,6 +55,7 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Mediafile>, MediafileService>();
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
+            services.AddScoped<IResourceService<ParatextToken>, ParatextTokenService>();
             services.AddScoped<IResourceService<Passage>, PassageService>();
             services.AddScoped<IResourceService<PassageSection>, PassageSectionService>();
             services.AddScoped<IResourceService<Plan>, PlanService>();
@@ -86,6 +88,7 @@ namespace SIL.Transcriber
             services.AddScoped<MediafileService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();
+            services.AddScoped<ParatextTokenService>();
             services.AddScoped<PassageService>();
             services.AddScoped<PassageSectionService>();
             services.AddScoped<PlanService>();

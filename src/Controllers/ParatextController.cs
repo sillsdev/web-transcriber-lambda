@@ -15,13 +15,10 @@ namespace SIL.Transcriber.Controllers
     [ApiController]
     public class ParatextController : ControllerBase
     {
-        private readonly IEntityRepository<UserSecret> _userSecrets;
         private readonly IParatextService _paratextService;
 
-        public ParatextController(IEntityRepository<UserSecret> userSecrets, 
-            IParatextService paratextService)
+        public ParatextController(IParatextService paratextService)
         {
-            _userSecrets = userSecrets;
             _paratextService = paratextService;
         }
 
@@ -42,7 +39,7 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("username")]
-        public async Task<ActionResult<string>> UsernameAsync()
+        public ActionResult<string> Username()
         {
             UserSecret userSecret = _paratextService.ParatextLogin();
 
@@ -66,26 +63,23 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("plan/{planid}/count")]
-        public async Task<ActionResult<int>> PassageReadyToSyncCount([FromRoute] int planId)
+        public ActionResult<int> PassageReadyToSyncCount([FromRoute] int planId)
         {
-            int passages = await _paratextService.PlanPassagesToSyncCountAsync(planId);
+            int passages = _paratextService.PlanPassagesToSyncCount(planId);
             return Ok(passages);
         }
 
         [HttpPost("plan/{planid}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostPlanAsync([FromRoute] int planId)
         {
-            UserSecret userSecret = _paratextService.ParatextLogin();
             /* get all the sections that are ready to sync */
-            
-            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(userSecret, planId);
+            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(_paratextService.ParatextLogin(), planId);
             return Ok(chapters);
         }
         [HttpPost("project/{projectid}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostProjectAsync([FromRoute] int projectId)
         {
-            UserSecret userSecret = _paratextService.ParatextLogin();
-            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(userSecret, projectId);
+            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(_paratextService.ParatextLogin(), projectId);
             return Ok();
         }
 

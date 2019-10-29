@@ -45,7 +45,7 @@ namespace SIL.Transcriber.Controllers
             return Ok(((SectionService)service).DeleteAssignment(Id, role));
         }
         [HttpGet("project/{id}/status/{status}")]
-        public async Task<IActionResult> GetSectionsWithStatus([FromRoute] int id, [FromRoute] string status)
+        public IActionResult GetSectionsWithStatus([FromRoute] int id, [FromRoute] string status)
         {
             var sections = SectionService.GetSectionsAtStatus(id, status);
             return Ok(sections);

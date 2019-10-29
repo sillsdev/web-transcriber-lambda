@@ -183,6 +183,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Mediafile> Mediafiles { get; set; }
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
+        public DbSet<ParatextToken> Paratexttokens { get; set; }
         public DbSet<Passage> Passages { get; set; }
         public DbSet<PassageSection> Passagesections { get; set; }
         public DbSet<Plan> Plans { get; set; }
@@ -195,7 +196,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Section> Sections { get; set; }
         public DbSet<UserPassage> Userpassages { get; set; }
         public DbSet<User> Users { get; set; }
-        public DbSet<UserSecret> Usersecrets { get; set; }
+
 
     }
 }
