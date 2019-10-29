@@ -24,7 +24,7 @@ namespace SIL.Transcriber.Services
 
         public override async Task<IEnumerable<Passage>> GetAsync()
         {
-            return  await GetScopedToCurrentUser(
+            return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
         }
