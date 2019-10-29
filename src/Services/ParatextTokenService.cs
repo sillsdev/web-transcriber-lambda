@@ -27,12 +27,10 @@ namespace SIL.Transcriber.Services
     public override async Task<IEnumerable<ParatextToken>> GetAsync()
         {
             var currentUser = await CurrentUserRepository.GetCurrentUser();
-            Logger.LogDebug("current User {user}", currentUser.Id);
             /* this fails since we havent' come from a controller
             ** var tokens = await base.GetAsync();
             */
             var tokens = TokenRepository.Get();
-            Logger.LogDebug(tokens != null ? tokens.Count().ToString() : "null");
             return tokens.Where(t => t.UserId == currentUser.Id);
         }
     }

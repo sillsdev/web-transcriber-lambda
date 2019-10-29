@@ -286,7 +286,6 @@ namespace SIL.Transcriber.Services
             var responseObj = JObject.Parse(responseJson);
             userSecret.ParatextTokens.AccessToken = (string)responseObj["access_token"];
             userSecret.ParatextTokens.RefreshToken = (string)responseObj["refresh_token"];
-            Logger.LogInformation(userSecret.ParatextTokens.RefreshToken);
             await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
         }
 
