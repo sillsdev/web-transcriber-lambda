@@ -39,7 +39,7 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("username")]
-        public ActionResult<string> UsernameAsync()
+        public ActionResult<string> Username()
         {
             UserSecret userSecret = _paratextService.ParatextLogin();
 
