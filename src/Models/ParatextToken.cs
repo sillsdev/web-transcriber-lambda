@@ -1,16 +1,19 @@
 ﻿using JsonApiDotNetCore.Models;
 using Microsoft.IdentityModel.Tokens;
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.IdentityModel.Tokens.Jwt;
 
 
 namespace SIL.Paratext.Models
 {
-    public class Tokens : Identifiable<int>
+    public class ParatextToken : Identifiable<int>
     {
         public string AccessToken { get; set; }
         public string RefreshToken { get; set; }
+        public int UserId { get; set; }
 
+        [NotMapped]
         public DateTime IssuedAt
         {
             get

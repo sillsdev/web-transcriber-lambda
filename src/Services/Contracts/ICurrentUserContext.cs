@@ -13,6 +13,6 @@ namespace SIL.Transcriber.Services
         string Name { get; }
         List<SILAuth_Organization> SILOrganizations { get; }
         int SilUserid { get; }
-        UserSecret ParatextLogin(string connection);
+        UserSecret ParatextLogin(string connection, int userId);
     }
 }
