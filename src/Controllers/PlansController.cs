@@ -21,18 +21,9 @@ namespace SIL.Transcriber.Controllers
         [HttpPost]
         public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Plan entity)
         {
-            if (entity.ProjectId == 0)
+            if (entity.OwnerId == 0)
             {
-                //save the project
-                if (entity.Project != null)
-                {
-                    if (entity.Project.Id > 0)
-                        entity.ProjectId = entity.Project.Id;
-                    else
-                    {
-                        //save it;
-                    }
-                };
+                entity.OwnerId = CurrentUser.Id;
             }
             return await base.PostAsync(entity);
         }

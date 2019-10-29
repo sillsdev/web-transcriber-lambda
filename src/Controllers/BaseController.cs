@@ -89,7 +89,7 @@ namespace SIL.Transcriber.Controllers
        
         private async Task<User> FindOrCreateCurrentUser()
         {
-            var existing = await userService.GetCurrentUser();
+            var existing = userService.GetCurrentUser();
 
             if (existing != null) return existing;
 

@@ -55,7 +55,7 @@ namespace SIL.Transcriber.Repositories
             return entities.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p);
         }
 
-        public async System.Threading.Tasks.Task<IQueryable<Passage>> ReadyToSyncAsync(int PlanId)
+        public IQueryable<Passage> ReadyToSync(int PlanId)
         {
             var passagesections = dbContext.Passagesections.Join(dbContext.Sections.Where(s => s.PlanId == PlanId), ps => ps.SectionId, s => s.Id, (ps, s)  => new { ps.PassageId, s.Sequencenum });
             var passages = dbContext.Passages.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p).Where(p => p.ReadyToSync);

@@ -16,7 +16,6 @@ namespace SIL.Transcriber.Services
         private IOrganizationContext OrganizationContext { get; }
         private ICurrentUserContext CurrentUserContext { get; }
         private CurrentUserRepository CurrentUserRepository { get; }
-        private User CurrentUser { get; }
 
         public UserService(
             IJsonApiContext jsonApiContext,
@@ -30,7 +29,6 @@ namespace SIL.Transcriber.Services
             OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;
-            CurrentUser= currentUserRepository.GetCurrentUser().Result;
         }
 
         
@@ -44,7 +42,8 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<User> GetAsync(int id)
         {
-            
+            User CurrentUser = CurrentUserRepository.GetCurrentUser().Result;
+
             if (id == 0) id = CurrentUser.Id;
 
             if (CurrentUser.Id == id)
@@ -67,11 +66,9 @@ namespace SIL.Transcriber.Services
             return await base.UpdateAsync(id, resource);
         }
 
-        public async Task<User> GetCurrentUser() {
-            
-            if (null == CurrentUser) return null;
+        public User GetCurrentUser() {
 
-            return await base.GetAsync(CurrentUser.Id);
+            return CurrentUserRepository.GetCurrentUser().Result;
         }
     }
 }

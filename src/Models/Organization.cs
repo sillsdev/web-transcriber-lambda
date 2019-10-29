@@ -38,6 +38,7 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         [HasManyThrough(nameof(OrganizationMemberships))]
         public List<User> Users { get; set; }
+        [HasMany("organization-memberships")]
         public List<OrganizationMembership> OrganizationMemberships { get; set; }
 
         [HasMany("groups")]
