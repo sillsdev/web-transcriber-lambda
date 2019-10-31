@@ -3,7 +3,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class GroupMembership : BaseModel
+    public partial class GroupMembership : BaseModel, IArchive
     {
         [HasOne("user")]
         public virtual User User { get; set; }
@@ -27,5 +27,7 @@ namespace SIL.Transcriber.Models
 
         [Attr("font-size")]
         public string FontSize { get; set; }
+
+        public bool Archived { get; set; }
     }
 }
