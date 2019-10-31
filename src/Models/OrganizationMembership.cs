@@ -3,7 +3,7 @@ using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class OrganizationMembership :BaseModel
+    public partial class OrganizationMembership :BaseModel, IArchive
     {
         [NotMapped]
         [Attr("email")]  //user's email?
@@ -30,5 +30,6 @@ namespace SIL.Transcriber.Models
         {
             get { return Role == null ? RoleName.Member : Role.Rolename; }
         }
+        public bool Archived { get; set; }
     }
 }
