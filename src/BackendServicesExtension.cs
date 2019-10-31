@@ -61,7 +61,6 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Plan>, PlanService>();
             services.AddScoped<IResourceService<Project>, ProjectService>();
             services.AddScoped<IResourceService<Section>, SectionService>();
-            services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
             services.AddScoped<IResourceService<User>, UserService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
@@ -94,7 +93,6 @@ namespace SIL.Transcriber
             services.AddScoped<PlanService>();
             services.AddScoped<ProjectService>();
             services.AddScoped<SectionService>();
-            services.AddScoped<UserPassageService>();
             services.AddScoped<UserService>();
             services.AddScoped<SILIdentityService>();
             services.AddScoped<Auth0ManagementApiTokenService>();
