@@ -33,7 +33,6 @@ Plantypes
 Projectintegrations  
 Projects  
 Projecttypes  
-Reviewers  
 Roles  
 S3Files  
 - Get: List files  
@@ -47,6 +46,4 @@ Sections
 - Post: {Id}/{role}/{userId} i.e. sections/356/Reviewer/2  will assign all passages in section 356 to user 2 as Reviewer  
 - Del:  {Id}/{role}          i.e. sections/356/Reviewer will remove all reviewer assignments  
 
-Userpassages  
-Userroles  
 Users  
