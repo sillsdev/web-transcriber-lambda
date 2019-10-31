@@ -7,7 +7,7 @@ DEV:  https://9u6wlhwuha.execute-api.us-east-2.amazonaws.com/dev/api
 QA:  https://ukepgrpe6l.execute-api.us-east-2.amazonaws.com/qa/api  
   ./buildqa.ps1 in src dir  
 
-PROD: https://kg9bz1c7f9.execute-api.us-east-1.amazonaws.com/prod/api
+PROD: https://kg9bz1c7f9.execute-api.us-east-1.amazonaws.com/prod/api  
   ./buildprod.ps1 in src dir
   
 ActivityStates  
