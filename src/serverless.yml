@@ -30,6 +30,11 @@ provider:
     SIL_TR_SILAUTH_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_SILAUTH_DOMAIN}
     SIL_TR_PARATEXT_CLIENT_ID:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_ID}
     SIL_TR_PARATEXT_CLIENT_SECRET:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_SECRET}
+    SIL_TR_EMAIL_FROM:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_FROM}
+    SIL_TR_EMAIL_SMTP_USERNAME:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_SMTP_USERNAME}
+    SIL_TR_EMAIL_SMTP_PASSWORD:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_SMTP_PASSWORD}
+    SIL_TR_EMAIL_HOST:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_HOST}
+
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
 
 deploymentPrefix: AWSTranscriberAPI/
@@ -40,94 +45,104 @@ functions:
   api:
     handler: TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync
     name: transcriber_api_${self:custom.myStage}
-    timeout: 30
+    timeout: 90
     events:
        - http:
             path: /api/{proxy+}
             method: ANY
             cors: true  #this doesn't actually work with proxy above but leave it in here as a note that we want cors
  
+
 # Create our resources with separate CloudFormation templates
 resources:
+  Conditions:
+    IsProd: {"Fn::Equals" : ["${self:custom.myStage}", "prod"]}
+    CreateResources: !Not [Condition: IsProd]
   Resources:
-# This worked for dev and qa but we were out of vpcs by prod time, so I used the default vpc
-### Create database - needs VPC with two subnets
-#   transcriberlambdavpc:
-#      Type: AWS::EC2::VPC
-#      Properties:
-#        CidrBlock: "10.0.0.0/16"
+## Create database - needs VPC with two subnets
+   transcriberlambdavpc:
+      Condition: CreateResources
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: "10.0.0.0/16"
 
-#   transcriberlambdasubnetA:
-#      DependsOn: transcriberlambdavpc
-#      Type: AWS::EC2::Subnet
-#      Properties:
-#        VpcId:
-#          Ref: transcriberlambdavpc
-#        AvailabilityZone: ${self:provider.region}a
-#        CidrBlock: "10.0.0.0/24"
+   transcriberlambdasubnetA:
+      Condition: CreateResources
+      DependsOn: transcriberlambdavpc
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: transcriberlambdavpc
+        AvailabilityZone: ${self:provider.region}a
+        CidrBlock: "10.0.0.0/24"
 
-#   transcriberlambdasubnetB:
-#      DependsOn: transcriberlambdavpc
-#      Type: AWS::EC2::Subnet
-#      Properties:
-#        VpcId:
-#          Ref: transcriberlambdavpc
-#        AvailabilityZone: ${self:provider.region}b
-#        CidrBlock: "10.0.1.0/24"
+   transcriberlambdasubnetB:
+      Condition: CreateResources
+      DependsOn: transcriberlambdavpc
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: transcriberlambdavpc
+        AvailabilityZone: ${self:provider.region}b
+        CidrBlock: "10.0.1.0/24"
 
-#   transcriberlambdasg:
-#      DependsOn: transcriberlambdavpc
-#      Type: AWS::EC2::SecurityGroup
-#      Properties:
-#        GroupDescription: SecurityGroup for Serverless Functions
-#        VpcId:
-#          Ref: transcriberlambdavpc
+   transcriberlambdasg:
+      Condition: CreateResources
+      DependsOn: transcriberlambdavpc
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup for Serverless Functions
+        VpcId:
+          Ref: transcriberlambdavpc
 
-#   transcriberdatasg:
-#      DependsOn: transcriberlambdavpc
-#      Type: AWS::EC2::SecurityGroup
-#      Properties:
-#        GroupDescription: SecurityGroup for RDS Instance
-#        VpcId:
-#          Ref: transcriberlambdavpc
-#        SecurityGroupIngress:
-#        - IpProtocol: tcp
-#          FromPort: '5432'
-#          ToPort: '5432'
-#          SourceSecurityGroupId:
-#            Ref: transcriberlambdasg
-#        - IpProtocol: tcp
-#          FromPort: '11211'
-#          ToPort: '11211'
-#          SourceSecurityGroupId:
-#            Ref: transcriberlambdasg
-#        - IpProtocol: tcp
-#          FromPort: '5432'
-#          ToPort: '5432'
-#          CidrIp: 0.0.0.0/0
+   transcriberdatasg:
+      Condition: CreateResources
+      DependsOn: transcriberlambdavpc
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup for RDS Instance
+        VpcId:
+          Ref: transcriberlambdavpc
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          SourceSecurityGroupId:
+            Ref: transcriberlambdasg
+        - IpProtocol: tcp
+          FromPort: '11211'
+          ToPort: '11211'
+          SourceSecurityGroupId:
+            Ref: transcriberlambdasg
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          CidrIp: 0.0.0.0/0
           
-#   transcriberdatasubnet:
-#      Type: AWS::RDS::DBSubnetGroup
-#      Properties:
-#        DBSubnetGroupDescription: "RDS Subnet Group"
-#        SubnetIds:
-#        - Ref: transcriberlambdasubnetA
-#        - Ref: transcriberlambdasubnetB
-##Create the RDS Cluster and database -- naming it doesn't work so rename manually if desired
-#   transcriberrdscluster:
-##      Type: AWS::RDS::DBInstance
-#      Properties:
-#        #DBClusterIdentifier: transdata${self:custom.myStage}
-#        Engine: Postgres
-#        DBName: transcriberdb
-#        MasterUsername: ${self:custom.userName}
-#        MasterUserPassword: ${self:custom.pwd}
-#        DBInstanceClass: db.t3.micro
-#        AllocatedStorage: 10
-#        VPCSecurityGroups:
-#        - "Fn::GetAtt": transcriberdatasg.GroupId
-#        DBSubnetGroupName:
-#          Ref: transcriberdatasubnet
+   transcriberdatasubnet:
+      Condition: CreateResources
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupDescription: "RDS Subnet Group"
+        SubnetIds:
+        - Ref: transcriberlambdasubnetA
+        - Ref: transcriberlambdasubnetB
+#Create the RDS Cluster and database -- naming it doesn't work so rename manually if desired
+   transcriberrdscluster:
+      Condition: CreateResources
+      Type: AWS::RDS::DBInstance
+      Properties:
+        #DBClusterIdentifier: transdata${self:custom.myStage}
+        Engine: Postgres
+        DBName: transcriberdb
+        MasterUsername: ${self:custom.userName}
+        MasterUserPassword: ${self:custom.pwd}
+        DBInstanceClass: db.t3.micro
+        AllocatedStorage: 10
+        VPCSecurityGroups:
+        - "Fn::GetAtt": transcriberdatasg.GroupId
+        DBSubnetGroupName:
+          Ref: transcriberdatasubnet
 
 # API Gateway Errors
 #  - ${file(resources/api-gateway-errors.yml)}

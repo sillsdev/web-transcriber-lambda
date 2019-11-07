@@ -112,7 +112,7 @@ namespace SIL.Transcriber.Data
         private int CurrentUserId()
         { 
              var auth0Id = this.CurrentUserContext.Auth0Id; 
-             var userFromResult = Users.Local.FirstOrDefault(u => u.ExternalId.Equals(auth0Id));
+             var userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
              return userFromResult == null ? -1 : userFromResult.Id;
         }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
@@ -191,10 +191,8 @@ namespace SIL.Transcriber.Data
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectType> Projecttypes { get; set; }
-        public DbSet<Reviewer> Reviewers { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Section> Sections { get; set; }
-        public DbSet<UserPassage> Userpassages { get; set; }
         public DbSet<User> Users { get; set; }
 
 

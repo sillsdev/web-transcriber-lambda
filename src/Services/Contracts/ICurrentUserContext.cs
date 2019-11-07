@@ -11,8 +11,10 @@ namespace SIL.Transcriber.Services
         string GivenName { get; }
         string FamilyName { get; }
         string Name { get; }
-        List<SILAuth_Organization> SILOrganizations { get; }
-        int SilUserid { get; }
+        string Avatar { get; }
+        bool EmailVerified { get; }
+        //List<SILAuth_Organization> SILOrganizations { get; }
+        //int SilUserid { get; }
         UserSecret ParatextLogin(string connection, int userId);
     }
 }

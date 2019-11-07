@@ -19,12 +19,10 @@ namespace SIL.Transcriber.Forms.Groups
         public UpdateForm(
             UserRepository userRepository,
             GroupRepository groupRepository,
-            IOrganizationContext organizationContext,
             ICurrentUserContext currentUserContext): base(userRepository, currentUserContext)
         {
             UserRepository = userRepository;
             GroupRepository = groupRepository;
-            OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
         }
         public bool IsValid(int id, Group group)

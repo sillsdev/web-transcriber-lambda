@@ -21,6 +21,7 @@ namespace SIL.Transcriber.Services
         Organization OrgFromSILAuth(SILAuth_Organization entity);
         Organization OrgFromSILAuth(Organization newEntity, SILAuth_Organization entity);
         SILAuth_User GetUser(string Auth0Id);
+        SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId);
         int CreateInvite(string email, string orgName, int silOrgId, int silUserId);
     }
     public class SILIdentityService : ISILIdentityService
@@ -39,10 +40,11 @@ namespace SIL.Transcriber.Services
             silAuthClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", HttpContext.GetJWT().Result);
         }
 
-        private string GetData(string response)
+        private string GetData(string response, string searchstring = "data")
         {
             //find the data
-            const string search = "\"data\":";
+            //const string search = "\"data\":";
+            string search = "\"" + searchstring + "\":";
             string data = response.Substring(response.IndexOf(search) + search.Length);
 
             return data.Remove(data.Length - 1);
@@ -117,6 +119,24 @@ namespace SIL.Transcriber.Services
             var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
             List<SILAuth_User> users = JsonConvert.DeserializeObject<List<SILAuth_User>>(jsonData); //because of bad data it could be a list
             return users[0];
+        }
+        public SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId)
+        {
+            var requestObj = new JObject(
+                new JProperty("name ", name),
+                new JProperty("givenname ", givenName),
+                new JProperty("familyname ",familyName),
+                new JProperty("email  ", email),
+                new JProperty("externalid  ", externalId)
+                );
+
+            //call the Identity api and receive an invitation id
+            HttpResponseMessage response = silAuthClient.PostAsync("user", new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json")).Result;
+            if (!response.IsSuccessStatusCode)
+                throw new Exception(response.ReasonPhrase);
+
+            var jsonData = GetData(response.Content.ReadAsStringAsync().Result, "user");
+           return JsonConvert.DeserializeObject<SILAuth_User>(jsonData);
         }
         public int CreateInvite(string email, string orgName, int silOrgId, int silUserId)
         {

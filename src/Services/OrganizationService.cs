@@ -18,7 +18,7 @@ namespace SIL.Transcriber.Services
         public IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; }
         public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<Group> GroupRepository { get; }
-        public IEntityRepository<GroupMembership> GroupMembershipRepository { get; }
+        public GroupMembershipRepository GroupMembershipRepository { get; }
         private ISILIdentityService SILIdentity;
 
         public OrganizationService(
@@ -26,7 +26,7 @@ namespace SIL.Transcriber.Services
             IEntityRepository<Organization> organizationRepository,
             IEntityRepository<OrganizationMembership> organizationMembershipRepository,
             IEntityRepository<Group> groupRepository,
-            IEntityRepository<GroupMembership> groupMembershipRepository,
+            GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
             ISILIdentityService silIdentityService,
            ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
@@ -104,31 +104,25 @@ namespace SIL.Transcriber.Services
 
             if (allGroup != null)
             {
-                GroupMembership groupmembership = user.GroupMemberships.Where(gm => gm.GroupId == allGroup.Id).ToList().FirstOrDefault();
-                if (groupmembership == null)
-                { 
-                    groupmembership = new GroupMembership
-                    {
-                        GroupId = allGroup.Id,
-                        UserId = user.Id,
-                        RoleId = (int)groupRole,
-                    };
-                    var gm = GroupMembershipRepository.CreateAsync(groupmembership).Result;
-                }
+                GroupMembershipRepository.JoinGroup(user.Id, allGroup.Id, groupRole);
             }
         }
         public bool VerifyOrg(ICurrentUserContext currentUserContext, Organization newOrg)
         {
+            return true;
+
             /* ask the sil auth if this user has any orgs */
-            List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
-            var silOrg = orgs.Find(o =>o.id == newOrg.SilId);
-            if (silOrg != null)
-            {
-                /* merge the info */
-                newOrg = SILIdentity.OrgFromSILAuth(newOrg, silOrg);
-                return true;
-            }
-            return false;
+            /*
+             * List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
+             * var silOrg = orgs.Find(o =>o.id == newOrg.SilId);
+             * if (silOrg != null)
+             * {
+             *     /* merge the info *
+             * newOrg = SILIdentity.OrgFromSILAuth(newOrg, silOrg);
+             *     return true;
+             *  }
+             * return false;
+            */
         }
 
 

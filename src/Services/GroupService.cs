@@ -51,8 +51,7 @@ namespace SIL.Transcriber.Services
         {
             var updateForm = new UpdateForm(UserRepository,
                                              (GroupRepository)MyRepository,
-                                             OrganizationContext,
-                                             CurrentUserContext);
+                                            CurrentUserContext);
             if (!updateForm.IsValid(id, resource))
             {
                 throw new JsonApiException(updateForm.Errors);

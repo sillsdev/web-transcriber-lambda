@@ -64,9 +64,6 @@ namespace SIL.Transcriber.Models
         [Attr("date-archived")]
         public DateTime? DateArchived { get; set; }
 
-        [HasMany("reviewers", Link.None)]
-        public virtual List<Reviewer> Reviewers { get; set; }
-
         [HasMany("project-integrations")]
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
         //[HasManyThrough(nameof(ProjectIntegrations))]
