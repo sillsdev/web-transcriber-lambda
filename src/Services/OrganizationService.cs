@@ -119,16 +119,20 @@ namespace SIL.Transcriber.Services
         }
         public bool VerifyOrg(ICurrentUserContext currentUserContext, Organization newOrg)
         {
+            return true;
+
             /* ask the sil auth if this user has any orgs */
-            List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
-            var silOrg = orgs.Find(o =>o.id == newOrg.SilId);
-            if (silOrg != null)
-            {
-                /* merge the info */
-                newOrg = SILIdentity.OrgFromSILAuth(newOrg, silOrg);
-                return true;
-            }
-            return false;
+            /*
+             * List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
+             * var silOrg = orgs.Find(o =>o.id == newOrg.SilId);
+             * if (silOrg != null)
+             * {
+             *     /* merge the info *
+             * newOrg = SILIdentity.OrgFromSILAuth(newOrg, silOrg);
+             *     return true;
+             *  }
+             * return false;
+            */
         }
 
 

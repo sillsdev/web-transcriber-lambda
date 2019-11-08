@@ -100,15 +100,15 @@ namespace SIL.Transcriber.Controllers
                 Name = currentUserContext.Name,
                 GivenName = currentUserContext.GivenName,
                 FamilyName = currentUserContext.FamilyName,
-                SilUserid = currentUserContext.SilUserid
+                avatarurl = currentUserContext.Avatar,
+                SilUserid = 0 //  currentUserContext.SilUserid
             };
 
             var newEntity = await userService.CreateAsync(newUser);
             Console.WriteLine("New user created.");
             /* ask the sil auth if this user has any orgs */
-            List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
-            Console.WriteLine("orgs", orgs.Count);
-            organizationService.JoinOrgs(orgs, newEntity, RoleName.Member);
+            //List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
+            //organizationService.JoinOrgs(orgs, newEntity, RoleName.Member);
            
             return newEntity;
         }

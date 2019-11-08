@@ -91,7 +91,7 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin()
         {
             var currentUser = CurrentUserRepository.GetCurrentUser().Result;
-            UserSecret newPTToken = CurrentUserContext.ParatextLogin("Paratext-Transcriber", currentUser.Id);
+            UserSecret newPTToken = CurrentUserContext.ParatextLogin("paratext-transcriber", currentUser.Id);
 
             if (newPTToken == null)
             {
