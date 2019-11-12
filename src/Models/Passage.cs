@@ -27,8 +27,6 @@ namespace SIL.Transcriber.Models
  //     public List<Section> Sections { get; set; }
         [HasMany("passage-sections")]
         public List<PassageSection> PassageSections { get; set; }
-        [HasMany("user-passages")]
-        public List<UserPassage> UserPassages { get; set; }
         public bool Archived { get; set; }
 
         public bool ReadyToSync

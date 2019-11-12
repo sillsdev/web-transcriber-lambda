@@ -9,6 +9,8 @@ namespace SIL.Transcriber.Controllers
 {
     public class SectionsController : BaseController<Section>
     {
+        SectionService SectionService;
+
         public SectionsController(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
@@ -19,30 +21,6 @@ namespace SIL.Transcriber.Controllers
          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         {
             SectionService = (SectionService)resourceService;
-        }
-        SectionService SectionService;
-        [HttpPost("{Id}/{role}/{userId}")]
-        public async Task<IActionResult> AssignAsync([FromRoute] int Id, [FromRoute] int userId, [FromRoute] string role)
-        {
-            if (await SectionService.GetAsync(Id) == null)
-                return NotFound();
-
-            return Ok(((SectionService)service).AssignUser(Id, userId, role));    
-        }
-        [HttpGet("{Id}/assignments")]
-        public async Task<IActionResult> GetAssignAsync([FromRoute] int Id)
-        {
-            if (await SectionService.GetAsync(Id) == null)
-                return NotFound();
-            return Ok(((SectionService)service).GetAssignedUsers(Id));
-        }
-        [HttpDelete("{Id}/{role}")]
-        public async Task<IActionResult> DeleteAssignment([FromRoute] int Id, [FromRoute] string role)
-        {
-            if (await SectionService.GetAsync(Id) == null)
-                return NotFound();
-
-            return Ok(((SectionService)service).DeleteAssignment(Id, role));
         }
         [HttpGet("project/{id}/status/{status}")]
         public IActionResult GetSectionsWithStatus([FromRoute] int id, [FromRoute] string status)

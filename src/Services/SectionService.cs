@@ -43,19 +43,6 @@ namespace SIL.Transcriber.Services
             return sections.SingleOrDefault(g => g.Id == id);
         }
 
-        public IEnumerable<Passage> AssignUser(int id, int userId, string role)
-        {
-            return ((SectionRepository)MyRepository).AssignUser(id, userId, role);
-        }
-        public IEnumerable<Passage> DeleteAssignment(int id, string role)
-        {
-            return ((SectionRepository)MyRepository).DeleteAssignment(id, role);
-        }
-        public IEnumerable<Assignment> GetAssignedUsers(int id)
-        {
-            //return ((SectionRepository)MyRepository).GetWithPassageAssignments(id);
-            return ((SectionRepository)MyRepository).GetPassageAssignments(id);
-        }
         public int GetProjectId(int sectionId)
         {
             var section = MyRepository.Get().Where(s => s.Id == sectionId).Include(s => s.Plan).FirstOrDefault();

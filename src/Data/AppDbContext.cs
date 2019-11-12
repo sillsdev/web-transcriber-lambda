@@ -191,10 +191,8 @@ namespace SIL.Transcriber.Data
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectType> Projecttypes { get; set; }
-        public DbSet<Reviewer> Reviewers { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Section> Sections { get; set; }
-        public DbSet<UserPassage> Userpassages { get; set; }
         public DbSet<User> Users { get; set; }
 
 
