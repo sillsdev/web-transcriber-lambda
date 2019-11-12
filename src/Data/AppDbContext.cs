@@ -112,7 +112,7 @@ namespace SIL.Transcriber.Data
         private int CurrentUserId()
         { 
              var auth0Id = this.CurrentUserContext.Auth0Id; 
-             var userFromResult = Users.Local.FirstOrDefault(u => u.ExternalId.Equals(auth0Id));
+             var userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
              return userFromResult == null ? -1 : userFromResult.Id;
         }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
