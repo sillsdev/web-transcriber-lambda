@@ -56,10 +56,7 @@ namespace SIL.Transcriber.Services
 
             return entities;
         }
-        private string OrgAllGroup(Organization entity)
-        {
-            return "All Users"; // entity.Name + " All";
-        }
+
         public override async Task<Organization> CreateAsync(Organization entity)
         {
             var newEntity = await base.CreateAsync(entity);
@@ -67,9 +64,10 @@ namespace SIL.Transcriber.Services
             //create an "all org group" and add the current user
             var group = new Group
             {
-                Name = OrgAllGroup(newEntity),
+                Name = entity.AllUsersName ?? "All Users",
                 Abbreviation = newEntity.Name.Substring(0, 3) + "All",
                 Owner = newEntity,
+                AllUsers = true,
             };
             var newGroup = await GroupRepository.CreateAsync(group);
 
@@ -78,7 +76,7 @@ namespace SIL.Transcriber.Services
         }
         public void JoinOrg(Organization entity, User user, RoleName orgRole, RoleName groupRole)
         {
-            Group allGroup = GroupRepository.Get().Where(g => g.Name == OrgAllGroup(entity) && g.OrganizationId == entity.Id).FirstOrDefault();
+            Group allGroup = GroupRepository.Get().Where(g => g.AllUsers && g.OrganizationId == entity.Id).FirstOrDefault();
 
             if (user.OrganizationMemberships == null || user.GroupMemberships == null)
                 user = CurrentUserRepository.Get().Include(o => o.OrganizationMemberships).Include(o => o.GroupMemberships).Where(e => e.Id == user.Id).SingleOrDefault();

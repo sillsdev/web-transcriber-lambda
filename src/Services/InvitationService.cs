@@ -39,7 +39,7 @@ namespace SIL.Transcriber.Services
         {
             //localize...
             string app = strings["App"] ?? "missing App: SIL Transcriber";
-            string invite = strings["Invitation"] ?? "missing Invitation: You have been invited to join";
+            string invite = strings["Invitation"] ?? "missing Invitation: has invited you to join";
             string instructions = strings["Instructions"] ?? "missing Instructions: Please click the following link to accept the invitation.";
             string SILorg = strings["SILOrg"] ?? "missing SILOrg: SIL International";
 
@@ -53,8 +53,8 @@ namespace SIL.Transcriber.Services
             const string table4 = "<br /> <br />";
             const string table5 = "</td></tr><tr><td><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/left.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td><td style=\"font-size: 0; line-height: 0;\" width=\"20\">&nbsp;</td><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/right.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr><td bgcolor=\"#EE4C50\" style=\"padding: 30px; width: 305px;\" colspan=\"2\"><table border = \"0\" cellpadding = \"0\" cellspacing = \"0\" width = \"100%\"><tbody><tr><td style = \"color: #ffffff; font-family: Arial, sans-serif; font-size: 14px;\" width = \"75%\"> &reg; <a href = \"https://www.sil.org/\">";
             const string table6 = "</a> 2019</td><td align=\"right\" width=\"25%\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tbody><tr><td style=\"font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;\"></td><td style=\"font-size: 0; line-height: 0;\" width=\"20\">&nbsp;</td><td style=\"font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;\"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>";
-
-            return string.Format("{0}{1}{2}{3}{4} '{5}'. {6}{7}{8}{9}{10}{11}{12}", header, table1, app, table2, invite, entity.Organization.Name, table3, instructions, table4, href, table5, SILorg, table6);
+            string body = string.Format("{0}{1}{2}{3}{4} {5} '{6}'. {7}{8}{9}{10}{11}{12}{13}", header, table1, app, table2, entity.InvitedBy, invite, entity.Organization.Name, table3, instructions, table4, href, table5, SILorg, table6);
+            return body;
         }
 
         public override async Task<Invitation> CreateAsync(Invitation entity)

@@ -14,6 +14,8 @@ namespace SIL.Transcriber.Models
         public bool Accepted { get; set; }
         [Attr("login-link")]
         public string LoginLink { get; set; }
+        [Attr("invited-by")]
+        public string InvitedBy { get; set; }
         [Attr("sil-id")]
         public int SilId { get; set; }
 

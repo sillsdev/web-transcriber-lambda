@@ -31,6 +31,10 @@ namespace SIL.Transcriber.Models
         [Attr("public-by-default")]
         public bool? PublicByDefault { get; set; } = true;
 
+        [NotMapped]
+        [Attr("all-users-name")]
+        public string AllUsersName { get; set; }
+
         [HasOne("owner")]
         public virtual User Owner { get; set; }
         public int OwnerId { get; set; }
