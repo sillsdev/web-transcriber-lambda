@@ -14,6 +14,9 @@ namespace SIL.Transcriber.Models
         [Attr("abbreviation")]
         public string Abbreviation { get; set; }
 
+        [Attr("all-users")]
+        public bool AllUsers { get; set; }
+
         [HasOne("owner")]
         public virtual Organization Owner { get; set; }
         [Attr("owner-id")]

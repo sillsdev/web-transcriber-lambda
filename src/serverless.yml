@@ -30,6 +30,11 @@ provider:
     SIL_TR_SILAUTH_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_SILAUTH_DOMAIN}
     SIL_TR_PARATEXT_CLIENT_ID:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_ID}
     SIL_TR_PARATEXT_CLIENT_SECRET:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_SECRET}
+    SIL_TR_EMAIL_FROM:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_FROM}
+    SIL_TR_EMAIL_SMTP_USERNAME:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_SMTP_USERNAME}
+    SIL_TR_EMAIL_SMTP_PASSWORD:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_SMTP_PASSWORD}
+    SIL_TR_EMAIL_HOST:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_HOST}
+
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
 
 deploymentPrefix: AWSTranscriberAPI/
@@ -40,7 +45,7 @@ functions:
   api:
     handler: TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync
     name: transcriber_api_${self:custom.myStage}
-    timeout: 30
+    timeout: 90
     events:
        - http:
             path: /api/{proxy+}

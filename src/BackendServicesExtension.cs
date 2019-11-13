@@ -35,6 +35,7 @@ namespace SIL.Transcriber
 
             // Add service / repository overrides
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
+            services.AddScoped<IEntityRepository<GroupMembership>, GroupMembershipRepository>();
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
@@ -71,6 +72,7 @@ namespace SIL.Transcriber
             // EventDispatchers
             services.AddScoped<UserRepository>();
             services.AddScoped<GroupRepository>();
+            services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<ProjectRepository>();
             services.AddScoped<PlanRepository>();
             services.AddScoped<SectionRepository>();
