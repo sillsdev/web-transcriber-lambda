@@ -12,7 +12,7 @@ namespace SIL.Transcriber.Services
 {
     public class InvitationService : BaseService<Invitation>
     {
-        //private Auth0ManagementApiTokenService TokenService;
+        private ILoggerFactory LoggerFactory;
         private OrganizationService OrganizationService;
         private GroupMembershipRepository GroupMembershipRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
@@ -28,7 +28,7 @@ namespace SIL.Transcriber.Services
             ILoggerFactory loggerFactory
         ) : base(jsonApiContext, invitationRepository, loggerFactory)
         {
-            //TokenService = tokenService;
+            LoggerFactory = loggerFactory;
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
             GroupMembershipRepository = groupMembershipRepository;
@@ -51,7 +51,8 @@ namespace SIL.Transcriber.Services
             const string table2 = "</td></tr><tr><td bgcolor=\"#FFFFFF\" style=\"padding: 40px 30px 40px 30px;\" colspan=\"2\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td style=\"color: #153643; font-family: Arial, sans-serif; font-size: 24px;\"><b>";
             const string table3 = "</b></td></tr><tr><td style=\"padding: 20px 0 30px 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\">";
             const string table4 = "<br /> <br />";
-            const string table5 = "</td></tr><tr><td><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/left.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td><td style=\"font-size: 0; line-height: 0;\" width=\"20\">&nbsp;</td><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/right.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr><td bgcolor=\"#EE4C50\" style=\"padding: 30px; width: 305px;\" colspan=\"2\"><table border = \"0\" cellpadding = \"0\" cellspacing = \"0\" width = \"100%\"><tbody><tr><td style = \"color: #ffffff; font-family: Arial, sans-serif; font-size: 14px;\" width = \"75%\"> &reg; <a href = \"https://www.sil.org/\">";
+            //const string table5img = "</td></tr><tr><td><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/left.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td><td style=\"font-size: 0; line-height: 0;\" width=\"20\">&nbsp;</td><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/right.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr><td bgcolor=\"#EE4C50\" style=\"padding: 30px; width: 305px;\" colspan=\"2\"><table border = \"0\" cellpadding = \"0\" cellspacing = \"0\" width = \"100%\"><tbody><tr><td style = \"color: #ffffff; font-family: Arial, sans-serif; font-size: 14px;\" width = \"75%\"> &reg; <a href = \"https://www.sil.org/\">";
+            const string table5 = "</td></tr></tbody></table></td></tr><tr><td bgcolor=\"#EE4C50\" style=\"padding: 30px; width: 305px;\" colspan=\"2\"><table border = \"0\" cellpadding = \"0\" cellspacing = \"0\" width = \"100%\"><tbody><tr><td style = \"color: #ffffff; font-family: Arial, sans-serif; font-size: 14px;\" width = \"75%\"> &reg; <a href = \"https://www.sil.org/\">";
             const string table6 = "</a> 2019</td><td align=\"right\" width=\"25%\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tbody><tr><td style=\"font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;\"></td><td style=\"font-size: 0; line-height: 0;\" width=\"20\">&nbsp;</td><td style=\"font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;\"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>";
             string body = string.Format("{0}{1}{2}{3}{4} {5} '{6}'. {7}{8}{9}{10}{11}{12}{13}", header, table1, app, table2, entity.InvitedBy, invite, entity.Organization.Name, table3, instructions, table4, href, table5, SILorg, table6);
             return body;
@@ -60,6 +61,7 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation> CreateAsync(Invitation entity)
         {
             //call the Identity api and receive an invitation id
+            Console.WriteLine("creating invitation");
             var org = await OrganizationService.GetAsync(entity.OrganizationId);
             entity.Organization = org;
             //entity.SilId = SendInvitation(entity);
@@ -70,12 +72,13 @@ namespace SIL.Transcriber.Services
             {
                 dynamic strings = JObject.Parse(entity.Strings);
                 string subject = strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
-                Email.SendEmail(entity.Email, subject, BuildEmailBody(strings, entity));
+                Email.SendEmailAPI(entity.Email, subject, BuildEmailBody(strings, entity));
+                Console.WriteLine("returned from sendEmail");
                 return entity;
             }
             catch (Exception ex)
             {
-                base.DeleteAsync(entity.Id); //yes I know, I'm not going to wait
+                await base.DeleteAsync(entity.Id); //yes I know, I'm not going to wait
                 Console.WriteLine("The email was not sent.");
                 Console.WriteLine("Error message: " + ex.Message);
                 throw ex;

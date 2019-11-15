@@ -73,6 +73,7 @@
     <PackageReference Include="AWS.Logger.AspNetCore" Version="2.0.0" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.100.1" />
     <PackageReference Include="AWSSDK.S3" Version="3.3.101.11" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.69" />
     <PackageReference Include="IdentityModel" Version="3.10.10" />
     <PackageReference Include="JsonApiDotNetCore" Version="3.1.0" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
