@@ -22,7 +22,6 @@ namespace SIL.Transcriber.Services
     public class MediafileService : BaseArchiveService<Mediafile>
     {
         private IS3Service _S3service { get; }
-        private IOrganizationContext OrganizationContext { get; set; }
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
 
@@ -30,12 +29,10 @@ namespace SIL.Transcriber.Services
             IJsonApiContext jsonApiContext,
             IEntityRepository<Mediafile> basemediafileRepository,
             PlanRepository planRepository,
-            IOrganizationContext organizationContext,
             ILoggerFactory loggerFactory,
             IS3Service service) : base(jsonApiContext, basemediafileRepository, loggerFactory)
         {
             _S3service = service;
-            OrganizationContext = organizationContext;
             PlanRepository = planRepository;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
         }
@@ -45,11 +42,6 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
              base.GetAsync,
              JsonApiContext);
-/*            return await GetScopedToOrganization<Mediafile>(
-                base.GetAsync,
-                OrganizationContext,
-                JsonApiContext); */
-
         }
         public override async Task<Mediafile> GetAsync(int id)
         {

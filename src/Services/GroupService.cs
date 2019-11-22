@@ -15,19 +15,16 @@ namespace SIL.Transcriber.Services
 {
     public class GroupService : BaseArchiveService<Group>
     {
-        public IOrganizationContext OrganizationContext { get; private set; }
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
 
         public GroupService(
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             IEntityRepository<Group> groupRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, groupRepository,  loggerFactory)
         {
-            OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
             UserRepository = userRepository;
         }
@@ -38,9 +35,6 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
-            /*return await GetScopedToOrganization<Group>(base.GetAsync,
-                                                        OrganizationContext,
-                                                        JsonApiContext); */
         }
         public override async Task<Group> GetAsync(int id)
         {

@@ -17,7 +17,6 @@ namespace SIL.Transcriber.Services
 {
     public class ProjectService : BaseArchiveService<Project>
     {
-        public IOrganizationContext OrganizationContext { get; private set; }
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
         public GroupRepository GroupRepository { get; }
@@ -25,7 +24,6 @@ namespace SIL.Transcriber.Services
         private SectionService SectionService;
         public ProjectService(
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             IEntityRepository<Project> projectRepository,
@@ -34,7 +32,6 @@ namespace SIL.Transcriber.Services
             SectionService sectionService,
             ILoggerFactory loggerFactory) : base(jsonApiContext, projectRepository, loggerFactory)
         {
-            OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
             UserRepository = userRepository;
             GroupRepository = groupRepository;
@@ -46,11 +43,6 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
               base.GetAsync,
               JsonApiContext);
-/*            return await GetScopedToOrganization<Project>(
-                    base.GetAsync,
-                    OrganizationContext,
-                    JsonApiContext);
-*/
         }
 
         public override async Task<Project> GetAsync(int id)
@@ -72,7 +64,6 @@ namespace SIL.Transcriber.Services
                                            GroupRepository,
                                            CurrentUserContext,
                                            OrganizationRepository,
-                                           OrganizationContext,
                                            (ProjectRepository)MyRepository);
             if (!updateForm.IsValid(id, resource))
             {

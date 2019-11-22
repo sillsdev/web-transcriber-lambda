@@ -13,30 +13,24 @@ namespace SIL.Transcriber.Services
 {
     public class UserService : BaseArchiveService<User>
     {
-        private IOrganizationContext OrganizationContext { get; }
         private ICurrentUserContext CurrentUserContext { get; }
         private CurrentUserRepository CurrentUserRepository { get; }
 
         public UserService(
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             CurrentUserRepository currentUserRepository,
             IEntityRepository<User> entityRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, entityRepository, loggerFactory)
         {
-            OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;
         }
 
-        
-
         public override async Task<IEnumerable<User>> GetAsync()
         {
             return await GetScopedToOrganization<User>(base.GetAsync,
-                                   OrganizationContext,
                                    JsonApiContext);
 
         }

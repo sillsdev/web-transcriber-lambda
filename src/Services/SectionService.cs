@@ -13,27 +13,17 @@ namespace SIL.Transcriber.Services
 {
     public class SectionService : BaseArchiveService<Section>
     {
-        public IOrganizationContext OrganizationContext { get; private set; }
-
         public SectionService(
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
-            IEntityRepository<Section> sectionRepository,
+           IEntityRepository<Section> sectionRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, sectionRepository, loggerFactory)
         {
-            OrganizationContext = organizationContext;
-        }
+         }
         public override async Task<IEnumerable<Section>> GetAsync()
         {
             return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
-
-            /*return await GetScopedToOrganization<Section>(
-                base.GetAsync,
-                OrganizationContext,
-                JsonApiContext);
-            */
         }
 
         public override async Task<Section> GetAsync(int id)

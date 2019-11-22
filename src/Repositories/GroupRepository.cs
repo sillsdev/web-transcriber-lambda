@@ -49,16 +49,6 @@ namespace SIL.Transcriber.Repositories
                 return UsersGroups(entities);
             }
             return base.Filter(entities, filterQuery);
-            /* deprecated....
-             return entities.OptionallyFilterOnQueryParam(filterQuery,
-                                                       "organization-header",
-                                                       UserRepository,
-                                                       CurrentUserContext,
-                                                       GetWithFilter,
-                                                       base.Filter,
-                                                       GetWithUserContext,
-                                                       GetWithOrganizationContext); 
-                                                       */
         }
 
     }

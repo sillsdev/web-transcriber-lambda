@@ -13,16 +13,9 @@ namespace SIL.Transcriber.Utility
     {
         public static async Task<IEnumerable<T>> GetScopedToOrganization<T>(
             Func<Task<IEnumerable<T>>> baseQuery,
-            IOrganizationContext organizationContext,
             IJsonApiContext jsonApiContext)
         {
-            if (organizationContext.SpecifiedOrganizationDoesNotExist)
-            {
-                return Enumerable.Empty<T>().AsQueryable();
-            }
-            else
-            {
-                var query = jsonApiContext.QuerySet;
+                 var query = jsonApiContext.QuerySet;
                 var orgIdToFilterBy = "";
 
                 if (query == null)
@@ -31,14 +24,9 @@ namespace SIL.Transcriber.Utility
                     jsonApiContext.QuerySet = query;
                 }
 
-                if (organizationContext.HasOrganization)
-                {
-                    orgIdToFilterBy = organizationContext.OrganizationId.ToString();
-                }
                 query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("organization-header", orgIdToFilterBy, "eq"));
 
                 return await baseQuery();
-            }
 
         }
 

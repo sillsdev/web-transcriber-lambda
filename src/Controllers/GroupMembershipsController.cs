@@ -6,7 +6,6 @@ namespace SIL.Transcriber.Controllers
 {
     public class GroupmembershipsController : BaseController<GroupMembership>
     {
-        public IOrganizationContext OrganizationContext { get; set; }
         public GroupmembershipsController(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,

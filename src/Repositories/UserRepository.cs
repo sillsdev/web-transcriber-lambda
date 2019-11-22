@@ -16,18 +16,15 @@ namespace SIL.Transcriber.Repositories
 {
     public class UserRepository : BaseRepository<User>
     {
-        public IOrganizationContext OrganizationContext { get; }
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
             ICurrentUserContext currentUserContext,
             CurrentUserRepository currentUserRepository,
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository,  contextResolver)
         {
-            this.OrganizationContext = organizationContext;
             this.CurrentUserContext = currentUserContext;
         }
 
@@ -55,7 +52,7 @@ namespace SIL.Transcriber.Repositories
                                           GetWithFilter,
                                           base.Filter,
                                          GetAllUsersByCurrentUser,
-                                         GetWithOrganizationContext);
+                                         null);
 
         }
         private IQueryable<User> GetAllUsersByCurrentUser(IQueryable<User> query,
@@ -70,14 +67,7 @@ namespace SIL.Transcriber.Repositories
                             .Intersect(orgIds)
                             .Any());
         }
-        private IQueryable<User> GetWithOrganizationContext(IQueryable<User> query,
-                                                IEnumerable<int> orgIds)
-        {
-            // Get users in the current organization
-            return query
-                .Where(u => u.OrganizationMemberships
-                            .Any(o => o.OrganizationId == OrganizationContext.OrganizationId));
-        }
+
         private IQueryable<User> GetWithOrganizationId(IQueryable<User> query,
                string value,
                UserRepository userRepository,

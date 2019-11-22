@@ -108,7 +108,6 @@ namespace SIL.Transcriber
 
         public static IServiceCollection AddContextServices(this IServiceCollection services)
         {
-            services.AddScoped<IOrganizationContext, HttpOrganizationContext>();
             services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 
             return services;
