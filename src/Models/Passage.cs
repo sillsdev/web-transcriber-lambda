@@ -18,6 +18,8 @@ namespace SIL.Transcriber.Models
         public Boolean Hold { get; set; }
         [Attr("title")]
         public string Title { get; set; }
+        [Attr("last-comment")]
+        public string LastComment { get; set; }
 
         [HasMany("mediafiles")]
         public virtual List<Mediafile> Mediafiles { get; set; }

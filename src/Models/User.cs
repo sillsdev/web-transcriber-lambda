@@ -55,7 +55,8 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         [Attr("hot-keys")]
         public string hotkeys { get; set; } //json
-
+        [Attr("notifications")]
+        public int? Notifications { get; set; }
         //[HasMany("owned-organizations")]
         //public virtual List<Organization> OwnedOrganizations { get; set; }
 

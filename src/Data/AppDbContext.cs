@@ -186,6 +186,7 @@ namespace SIL.Transcriber.Data
         public DbSet<ParatextToken> Paratexttokens { get; set; }
         public DbSet<Passage> Passages { get; set; }
         public DbSet<PassageSection> Passagesections { get; set; }
+        public DbSet<PassageStateChange> Passagestatechanges { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
@@ -194,7 +195,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Role> Roles { get; set; }
         public DbSet<Section> Sections { get; set; }
         public DbSet<User> Users { get; set; }
-
+        public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
 
     }
 }

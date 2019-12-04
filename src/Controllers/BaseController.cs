@@ -93,6 +93,12 @@ namespace SIL.Transcriber.Controllers
 
             if (existing != null) return existing;
 
+            if (currentUserContext.Auth0Id == null)
+            {
+                Console.WriteLine("No Auth0 user.");
+                return null;
+            }
+
             var newUser = new User
             {
                 ExternalId = currentUserContext.Auth0Id,

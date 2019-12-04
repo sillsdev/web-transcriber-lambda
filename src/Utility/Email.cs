@@ -1,17 +1,77 @@
 ﻿using Amazon;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
+using Amazon.Lambda;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mail;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using System.IO;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Amazon.Lambda.Model;
 
 namespace TranscriberAPI.Utility
 {
     public static class Email
     {
-        public static void SendEmail(string To, string Subject, string body)
+        public static async Task SendEmailAsync(string To, string Subject, string body)
+        {
+            bool isLambda = GetVarOrDefault("LAMBDA_TASK_ROOT", "") != "";
+            Console.WriteLine("SendEmailAsync " + To);
+            Console.WriteLine(isLambda);
+
+            if (isLambda)
+            {
+                await SendEmailLambdaAsync(To, Subject, body);
+            }
+            else
+            {
+                await SendEmailAPIAsync(To, Subject, body);
+            }
+        }
+        public class EmailData
+        {
+            public string[] ToAddresses { get; set; }
+            public string BodyHtml { get; set; }
+            public string Subject { get; set; }
+            public string FromEmail { get; set; }
+        }
+        private static async Task SendEmailLambdaAsync(string To, string Subject, string body)
+        {
+            string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
+            Console.WriteLine("send email lambda: " + To);
+            EmailData payload = new EmailData {
+                ToAddresses = To.Split(";"),
+                BodyHtml = body,
+                Subject = Subject,
+                FromEmail = FROM
+            };
+
+            InvokeRequest ir = new InvokeRequest
+            {
+                FunctionName = "SendSESEmail",
+                InvocationType = Amazon.Lambda.InvocationType.RequestResponse,
+                LogType = "Tail",
+                Payload = JsonConvert.SerializeObject(payload)
+            };
+            AmazonLambdaClient lambdaClient = new AmazonLambdaClient(RegionEndpoint.USEast1);
+            try
+            {
+                InvokeResponse response = await lambdaClient.InvokeAsync(ir);
+                Console.WriteLine("Invoke complete");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SendEmailLambda error");
+                Console.WriteLine(ex);
+                throw ex;
+            }
+
+        }
+
+        private static void SendEmailSMTP(string To, string Subject, string body)
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
             string SMTP_USERNAME = GetVarOrThrow("SIL_TR_EMAIL_SMTP_USERNAME");
@@ -57,13 +117,10 @@ namespace TranscriberAPI.Utility
                 }
             }
         }
-        public static void SendEmailAPI(string To, string Subject, string body)
+        private static async Task SendEmailAPIAsync(string To, string Subject, string body)
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
-            string SMTP_USERNAME = GetVarOrThrow("SIL_TR_EMAIL_SMTP_USERNAME");
-            string SMTP_PASSWORD = GetVarOrThrow("SIL_TR_EMAIL_SMTP_PASSWORD");
-            string HOST = GetVarOrThrow("SIL_TR_EMAIL_HOST");
-
+            Console.WriteLine("SendEmailAPIAsync " + To);
             using (var client = new AmazonSimpleEmailServiceClient(RegionEndpoint.USEast1))
             {
                 var sendRequest = new SendEmailRequest
@@ -96,7 +153,7 @@ namespace TranscriberAPI.Utility
                 };
                 try
                 {
-                    var response = client.SendEmailAsync(sendRequest);
+                    var response = await client.SendEmailAsync(sendRequest); 
                     Console.WriteLine("The email was sent successfully.");
                 }
                 catch (Exception ex)

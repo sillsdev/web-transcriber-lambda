@@ -63,6 +63,7 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Project>, ProjectService>();
             services.AddScoped<IResourceService<Section>, SectionService>();
             services.AddScoped<IResourceService<User>, UserService>();
+            services.AddScoped<IResourceService<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
             services.AddScoped<IParatextService, ParatextService>();
@@ -96,6 +97,8 @@ namespace SIL.Transcriber
             services.AddScoped<ProjectService>();
             services.AddScoped<SectionService>();
             services.AddScoped<UserService>();
+            services.AddScoped<VwPassageStateHistoryEmailService>();
+
             services.AddScoped<SILIdentityService>();
             services.AddScoped<Auth0ManagementApiTokenService>();
             //services.AddScoped<SendNotificationService>();
