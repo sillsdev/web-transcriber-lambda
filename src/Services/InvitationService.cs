@@ -5,6 +5,9 @@ using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using TranscriberAPI.Utility;
 
@@ -34,7 +37,16 @@ namespace SIL.Transcriber.Services
             GroupMembershipRepository = groupMembershipRepository;
             //SILIdentity = silIdentityService;
         }
-
+        private string LoadResource(string name) {
+            //Load the file
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith(name));
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+               return  reader.ReadToEnd();
+            }
+        }
         private string BuildEmailBody(dynamic strings, Invitation entity)
         {
             //localize...
@@ -42,20 +54,21 @@ namespace SIL.Transcriber.Services
             string invite = strings["Invitation"] ?? "missing Invitation: has invited you to join";
             string instructions = strings["Instructions"] ?? "missing Instructions: Please click the following link to accept the invitation.";
             string SILorg = strings["SILOrg"] ?? "missing SILOrg: SIL International";
+            string questions = strings["Questions"] ?? "missing Questions: Questions? Contact ";
+            string join = strings["Join"] ?? "missing Join: Join ";
 
             string link = entity.LoginLink + "?inviteId=" + entity.Id;
-            string href = string.Format("<a href=\"{0}\" target=\"_blank\" rel=\"noopener\">{0}</a>", link);
 
-            const string header = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" /><title>Demystifying Email Design</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/></head><body style=\"margin: 0; padding: 0;\">";
-            const string table1 = "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td style=\"padding: 10px 0 30px 0;\"><table align=\"center\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"600\" style=\"border: 1px solid #cccccc; border-collapse: collapse;\"><tbody><tr><td align=\"center\" bgcolor=\"#70BBD9\"><img src=\"https://sil-transcriber-logos.s3.amazonaws.com/transcriber9.png\" alt=\"\" width=\"200\" height=\"200\" /></td><td bgcolor = \"#70BBD9\" style = \"padding: 40px 0px 30px; color: #153643; font-size: 28px; font-weight: bold; font-family: Arial, sans-serif; width: 294px;\" >";
-            const string table2 = "</td></tr><tr><td bgcolor=\"#FFFFFF\" style=\"padding: 40px 30px 40px 30px;\" colspan=\"2\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td style=\"color: #153643; font-family: Arial, sans-serif; font-size: 24px;\"><b>";
-            const string table3 = "</b></td></tr><tr><td style=\"padding: 20px 0 30px 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\">";
-            const string table4 = "<br /> <br />";
-            //const string table5img = "</td></tr><tr><td><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/left.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td><td style=\"font-size: 0; line-height: 0;\" width=\"20\">&nbsp;</td><td width=\"260\" valign=\"top\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tbody><tr><td><img src=\"https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/right.gif\" alt=\"\" width=\"100%\" height=\"140\" style=\"display: block;\" /></td></tr><tr><td style=\"padding: 25px 0 0 0; color: #153643; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px;\"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr><td bgcolor=\"#EE4C50\" style=\"padding: 30px; width: 305px;\" colspan=\"2\"><table border = \"0\" cellpadding = \"0\" cellspacing = \"0\" width = \"100%\"><tbody><tr><td style = \"color: #ffffff; font-family: Arial, sans-serif; font-size: 14px;\" width = \"75%\"> &reg; <a href = \"https://www.sil.org/\">";
-            const string table5 = "</td></tr></tbody></table></td></tr><tr><td bgcolor=\"#EE4C50\" style=\"padding: 30px; width: 305px;\" colspan=\"2\"><table border = \"0\" cellpadding = \"0\" cellspacing = \"0\" width = \"100%\"><tbody><tr><td style = \"color: #ffffff; font-family: Arial, sans-serif; font-size: 14px;\" width = \"75%\"> &reg; <a href = \"https://www.sil.org/\">";
-            const string table6 = "</a> 2019</td><td align=\"right\" width=\"25%\"><table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tbody><tr><td style=\"font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;\"></td><td style=\"font-size: 0; line-height: 0;\" width=\"20\">&nbsp;</td><td style=\"font-family: Arial, sans-serif; font-size: 12px; font-weight: bold;\"></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table></body></html>";
-            string body = string.Format("{0}{1}{2}{3}{4} {5} '{6}'. {7}{8}{9}{10}{11}{12}{13}", header, table1, app, table2, entity.InvitedBy, invite, entity.Organization.Name, table3, instructions, table4, href, table5, SILorg, table6);
-            return body;
+            string html = LoadResource("invitation.html");
+            
+            return html.Replace("{{App}}", app)
+                        .Replace("{Invitation}", string.Format("{0} {1} '{2}'.", entity.InvitedBy, invite, entity.Organization.Name))
+                        .Replace("{{Instructions}}", instructions)
+                        .Replace("{Button}", join + ' ' + entity.Organization.Name) //TODO
+                        .Replace("{Link}", link)
+                        .Replace("{Questions}", questions + ' ' + entity.InvitedBy)
+                        .Replace("{Year}", DateTime.Today.Year.ToString())
+                        .Replace("{{SIL}}", SILorg);
         }
 
         public override async Task<Invitation> CreateAsync(Invitation entity)
@@ -72,14 +85,13 @@ namespace SIL.Transcriber.Services
             {
                 dynamic strings = JObject.Parse(entity.Strings);
                 string subject = strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
-                Email.SendEmailAPI(entity.Email, subject, BuildEmailBody(strings, entity));
-                Console.WriteLine("returned from sendEmail");
+                await Email.SendEmailAsync(entity.Email, subject, BuildEmailBody(strings, entity));
                 return entity;
             }
             catch (Exception ex)
             {
-                await base.DeleteAsync(entity.Id); //yes I know, I'm not going to wait
-                Console.WriteLine("The email was not sent.");
+                await base.DeleteAsync(entity.Id); 
+                Console.WriteLine("The email was not sent so invitation was deleted.");
                 Console.WriteLine("Error message: " + ex.Message);
                 throw ex;
             }

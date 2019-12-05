@@ -69,6 +69,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="resources\invitation.html" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="resources\invitation.html" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Auth0.ManagementApi" Version="6.0.0" />
     <PackageReference Include="AWS.Logger.AspNetCore" Version="2.0.0" />
     <PackageReference Include="AWSSDK.Core" Version="3.3.103.66" />
