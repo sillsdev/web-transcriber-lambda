@@ -57,6 +57,10 @@ namespace SIL.Transcriber.Models
         public string hotkeys { get; set; } //json
         [Attr("notifications")]
         public int? Notifications { get; set; }
+        [Attr("digest-preference")]
+        public int? DigestPreference { get; set; }
+        [Attr("news-preference")]
+        public bool? NewsPreference { get; set; }
         //[HasMany("owned-organizations")]
         //public virtual List<Organization> OwnedOrganizations { get; set; }
 
