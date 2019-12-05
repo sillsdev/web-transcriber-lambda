@@ -107,6 +107,7 @@ namespace SIL.Transcriber.Controllers
                 GivenName = currentUserContext.GivenName,
                 FamilyName = currentUserContext.FamilyName,
                 avatarurl = currentUserContext.Avatar,
+                Notifications = 1,
                 SilUserid = 0 //  currentUserContext.SilUserid
             };
 
