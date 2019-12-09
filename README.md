@@ -1,11 +1,15 @@
 # web-transcriber-lambda
 REST API for transcriber - hosted in AWS lambda function  
 
-DEV:  https://9u6wlhwuha.execute-api.us-east-2.amazonaws.com/dev/api  
+DEV:  https://2e0azjfrgi.execute-api.us-east-1.amazonaws.com/dev/api  
   ./build.ps1 in src dir  
   
-QA:  https://ukepgrpe6l.execute-api.us-east-2.amazonaws.com/qa/api  
+QA:  https://ktiyfgd6cj.execute-api.us-east-1.amazonaws.com/qa/api 
   ./buildqa.ps1 in src dir  
+  
+PROD: https://kg9bz1c7f9.execute-api.us-east-1.amazonaws.com/prod/api
+  ./buildprod.ps1 in src dir  
+  
 
 All Controllers have a GET route since/{datetime}:
 i.e.  api/passages/since/2019-12-06T20:00:35

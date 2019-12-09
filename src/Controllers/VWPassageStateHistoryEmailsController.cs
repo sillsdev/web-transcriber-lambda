@@ -42,8 +42,8 @@ namespace SIL.Transcriber.Controllers
             myService = (VwPassageStateHistoryEmailService)resourceService;
         }
         [AllowAnonymous]
-        [HttpGet("since/{since}")]
-        public ActionResult<List<StateChange>> GetSince([FromRoute] string since)
+        [HttpGet("history/{since}")]  //same as since/since but allowing anonymous
+        public ActionResult<List<VwPassageStateHistoryEmail>> GetHistorySince([FromRoute] string since)
         {
             DateTime dateValue;
             if (DateTime.TryParse(since, out dateValue))
