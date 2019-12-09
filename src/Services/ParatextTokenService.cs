@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Services
 {
-    public class ParatextTokenService : BaseService<ParatextToken>
+    public class ParatextTokenService : EntityResourceService<ParatextToken>
     {
         public CurrentUserRepository CurrentUserRepository { get; }
         IEntityRepository<ParatextToken> TokenRepository;

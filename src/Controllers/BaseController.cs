@@ -11,10 +11,12 @@ using SIL.Auth.Models;
 using System;
 using Microsoft.Extensions.Logging;
 using System.Web;
+using Microsoft.AspNetCore.Mvc;
+using JsonApiDotNetCore.Internal;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class BaseController<T> : BaseController<T, int> where T : class, IIdentifiable<int>
+    public class BaseController<T> : BaseController<T, int> where T : BaseModel, IIdentifiable<int>
     {
         public BaseController(
             ILoggerFactory loggerFactory, 
@@ -28,9 +30,9 @@ namespace SIL.Transcriber.Controllers
         }
     }
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class BaseController<T, TId> : JsonApiController<T, TId> where T : class, IIdentifiable<TId>
+    public class BaseController<T, TId> : JsonApiController<T, TId> where T : BaseModel, IIdentifiable<TId>
     {
-        protected IResourceService<T, TId> service;
+        protected BaseService<T> service;
         protected IJsonApiContext jsonApiContext;
         protected UserService userService;
         protected OrganizationService organizationService;
@@ -47,7 +49,7 @@ namespace SIL.Transcriber.Controllers
             UserService userService
             ) : base(jsonApiContext, resourceService)
         {
-            this.service = resourceService;
+            this.service = (BaseService<T>)resourceService;
             this.jsonApiContext = jsonApiContext;
             this.userService = userService;
             this.organizationService = organizationService;
@@ -57,6 +59,17 @@ namespace SIL.Transcriber.Controllers
         }
         private static string CURRENT_USER_KEY = "CurrentUser";
 
+        [HttpGet("since/{since}")]
+        public ActionResult<List<T>> GetSince([FromRoute] string since)
+        {
+            DateTime dateValue;
+            if (DateTime.TryParse(since, out dateValue))
+            {
+                return Ok(service.GetChangedSince(dateValue));
+            }
+            else
+                throw new JsonApiException(400, $"Invalid Date");
+        }
         /*  Nice try...but the errors don't come back to here...have to interrupt the jsonapi error handling
         public override async Task<IActionResult> PostAsync([FromBody] T entity)
         {

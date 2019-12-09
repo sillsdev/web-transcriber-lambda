@@ -2,13 +2,17 @@
 using JsonApiDotNetCore.Models;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Models;
+using System;
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Services
 {
     public class BaseService<TResource> : EntityResourceService<TResource>
-        where TResource : class, IIdentifiable<int>
+        where TResource : BaseModel
     {
         protected IEntityRepository<TResource> MyRepository { get; }
         protected IJsonApiContext JsonApiContext { get; }
@@ -23,6 +27,10 @@ namespace SIL.Transcriber.Services
             this.MyRepository = myRepository;
             JsonApiContext = jsonApiContext;
             this.Logger = loggerFactory.CreateLogger<TResource>();
+        }
+        public IEnumerable<TResource> GetChangedSince(DateTime since)
+        {
+            return GetAsync().Result.Where(h => h.DateUpdated > since);
         }
 
     }

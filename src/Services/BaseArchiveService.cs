@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace SIL.Transcriber.Services
 {
     public class BaseArchiveService<TResource> : BaseService<TResource>
-         where TResource : class, IIdentifiable<int>, IArchive
+         where TResource : BaseModel, IIdentifiable<int>, IArchive
     {
         public BaseArchiveService(
             IJsonApiContext jsonApiContext,
