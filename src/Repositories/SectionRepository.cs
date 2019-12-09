@@ -87,11 +87,9 @@ namespace SIL.Transcriber.Repositories
         #region ParatextSync
         public IQueryable<Section> GetSectionsAtStatus(int projectId, string status)
         {
-            return GetWithPassageSections().Where(s => s.Id == 721 || s.Id == 722);
-            /*var sections = GetWithPassageSections().Include(s => s.Plan);
-            var projectsections = projects.Join(sections, p => p.Id, s => s.Plan.ProjectId, (p, s) => s);
+            var sections = GetWithPassageSections().Include(s => s.Plan);
+            var projectsections = dbContext.Projects.Join(sections, p => p.Id, s => s.Plan.ProjectId, (p, s) => s);
             return projectsections.Where(s => s.PassageSections.All(ps => ps.Passage.State == status));
-            */
         }
         public async Task<IList<SectionSummary>> SectionSummary(int PlanId, string book, int chapter)
         {

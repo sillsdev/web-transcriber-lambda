@@ -444,8 +444,12 @@ namespace SIL.Transcriber.Services
                 chapter.NewUSX = ParatextHelpers.AddParatextChapter(chapter.NewUSX, chapter.Book, chapter.Chapter);
                 IEnumerable<SectionSummary> ss = SectionService.GetSectionSummary(planId, chapter.Book, chapter.Chapter);
                 chapter.NewUSX = ParatextHelpers.AddSectionHeaders(chapter.NewUSX, ss);
-                foreach (Passage passage in passages.Where(p=>p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
+                foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
+                {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);
+                    passage.State = "synced";
+                    await PassageService.UpdateAsync(passage.Id, passage);
+                }
             }
             foreach (ParatextChapter c in chapterList)
             {
