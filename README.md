@@ -6,12 +6,17 @@ DEV:  https://9u6wlhwuha.execute-api.us-east-2.amazonaws.com/dev/api
   
 QA:  https://ukepgrpe6l.execute-api.us-east-2.amazonaws.com/qa/api  
   ./buildqa.ps1 in src dir  
-  
+
+All Controllers have a GET route since/{datetime}:
+i.e.  api/passages/since/2019-12-06T20:00:35
+returns all records created or modified since the provided datetime
+
 ActivityStates  
 CurrentUsers - Get Only, returns logged in user  
 GroupMemberships  
 Groups  
 Integrations  
+Invitations
 Mediafiles   
 - Get:  standard db record  
 - Get:  {id}/fileurl - will return a signed url to download S3 file in audiourl field  
@@ -28,12 +33,12 @@ Organizations
 
 Passages  
 PassageSections (Use sections post instead)  
+PassageStateChanges
 Plans  
 Plantypes  
 Projectintegrations  
 Projects  
 Projecttypes  
-Reviewers  
 Roles  
 S3Files  
 - Get: List files  
@@ -47,6 +52,6 @@ Sections
 - Post: {Id}/{role}/{userId} i.e. sections/356/Reviewer/2  will assign all passages in section 356 to user 2 as Reviewer  
 - Del:  {Id}/{role}          i.e. sections/356/Reviewer will remove all reviewer assignments  
 
-Userpassages  
-Userroles  
+Statehistory (VwPassageStateHistoryEmail view)
+	Get since only
 Users  
