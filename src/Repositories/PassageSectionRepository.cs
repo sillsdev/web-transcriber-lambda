@@ -16,12 +16,12 @@ using static SIL.Transcriber.Utility.RepositoryExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class PassageRepository : BaseRepository<Passage>
+    public class PassageSectionRepository : BaseRepository<PassageSection>
     {
 
         private SectionRepository SectionRepository;
 
-        public PassageRepository(
+        public PassageSectionRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
@@ -32,14 +32,14 @@ namespace SIL.Transcriber.Repositories
             SectionRepository = sectionRepository;
         }
        
-        public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, IQueryable<Project> projects)
+        public IQueryable<PassageSection> UsersPassageSections(IQueryable<PassageSection> entities, IQueryable<Project> projects)
         {
             var sections = SectionRepository.UsersSections(dbContext.Sections, projects);
 
-            return UsersPassages(entities, sections);
+            return UsersPassageSections(entities, sections);
         }
 
-        public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, IQueryable<Section> sections = null)
+        public IQueryable<PassageSection> UsersPassageSections(IQueryable<PassageSection> entities, IQueryable<Section> sections = null)
         {
             if (sections == null)
             {
@@ -47,28 +47,19 @@ namespace SIL.Transcriber.Repositories
                 //this is faster...
                 sections = SectionRepository.UsersSections(dbContext.Sections);
             }
-            var passagesections = dbContext.Passagesections.Join(sections, ps => ps.SectionId, s => s.Id, (ps, s) => ps);
-
-            return entities.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p);
+            return entities.Join(sections, ps => ps.SectionId, s => s.Id, (ps, s) => ps);
         }
 
-        public IQueryable<Passage> ReadyToSync(int PlanId)
-        {
-            var passagesections = dbContext.Passagesections.Join(dbContext.Sections.Where(s => s.PlanId == PlanId), ps => ps.SectionId, s => s.Id, (ps, s)  => new { ps.PassageId, s.Sequencenum });
-            var passages = dbContext.Passages.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p).Where(p => p.ReadyToSync);
-
-            return passages;
-        }
-        public override IQueryable<Passage> Filter(IQueryable<Passage> entities, FilterQuery filterQuery)
+        public override IQueryable<PassageSection> Filter(IQueryable<PassageSection> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
                 var projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-                return UsersPassages(entities, projects);
+                return UsersPassageSections(entities, projects);
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
-                return UsersPassages(entities);
+                return UsersPassageSections(entities);
             }
             return base.Filter(entities, filterQuery); 
         }

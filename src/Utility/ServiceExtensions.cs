@@ -41,9 +41,11 @@ namespace SIL.Transcriber.Utility
                 query = new QuerySet();
                 jsonApiContext.QuerySet = query;
             }
-            query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("currentuser", "currentuser", "eq"));
+            if (query.Filters.Find(fq => fq.Attribute == "currentuser") == null)
+                query.Filters.Add(new JsonApiDotNetCore.Internal.Query.FilterQuery("currentuser", "currentuser", "eq"));
 
             return await baseQuery();
         }
+
     }
 }

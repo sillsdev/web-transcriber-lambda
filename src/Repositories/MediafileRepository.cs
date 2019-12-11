@@ -15,21 +15,16 @@ namespace SIL.Transcriber.Repositories
     public class MediafileRepository : BaseRepository<Mediafile>
     {
 
-        private ProjectRepository ProjectRepository;
         private PlanRepository PlanRepository;
-        private AppDbContext AppDbContext;
 
         public MediafileRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            ProjectRepository projectRepository,
             PlanRepository planRepository,
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
-            ProjectRepository = projectRepository;
-            AppDbContext = contextResolver.GetContext() as AppDbContext;
             PlanRepository = planRepository;
         }
 
@@ -52,7 +47,7 @@ namespace SIL.Transcriber.Repositories
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                var projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
 				return UsersMediafiles(entities, projects);
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))

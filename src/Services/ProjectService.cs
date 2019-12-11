@@ -20,16 +20,19 @@ namespace SIL.Transcriber.Services
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
         public GroupRepository GroupRepository { get; }
-        public IEntityRepository<Organization> OrganizationRepository { get; set; }
+        public OrganizationRepository OrganizationRepository { get; set; }
         private SectionService SectionService;
+        private ProjectIntegrationRepository ProjectIntegrationRepository;
+
         public ProjectService(
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             IEntityRepository<Project> projectRepository,
             GroupRepository groupRepository,
-            IEntityRepository<Organization> organizationRepository,
+            OrganizationRepository organizationRepository,
             SectionService sectionService,
+            ProjectIntegrationRepository projectIntegrationRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, projectRepository, loggerFactory)
         {
             CurrentUserContext = currentUserContext;
@@ -37,8 +40,9 @@ namespace SIL.Transcriber.Services
             GroupRepository = groupRepository;
             OrganizationRepository = organizationRepository;
             SectionService = sectionService;
-        }
-        public override async Task<IEnumerable<Project>> GetAsync()
+            ProjectIntegrationRepository= projectIntegrationRepository;
+    }
+    public override async Task<IEnumerable<Project>> GetAsync()
         {
             return await GetScopedToCurrentUser(
               base.GetAsync,
@@ -100,7 +104,7 @@ namespace SIL.Transcriber.Services
         }
         public string IntegrationSettings(int projectId, string integration)
         {
-            return ((ProjectRepository)MyRepository).IntegrationSettings(projectId, integration);
+            return ProjectIntegrationRepository.IntegrationSettings(projectId, integration);
         }
         public IEnumerable<Section> GetSectionsAtStatus(int projectId, string status)
         {

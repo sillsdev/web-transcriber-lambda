@@ -28,7 +28,7 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         public RoleName RoleName
         {
-            get { return Role == null ? RoleName.Member : Role.Rolename; }
+            get { return (RoleName)RoleId; }
         }
         public bool Archived { get; set; }
     }

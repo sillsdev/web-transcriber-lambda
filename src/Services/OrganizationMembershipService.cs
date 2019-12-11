@@ -1,18 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Forms.GroupMemberships;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class OrganizationMembershipService : EntityResourceService<OrganizationMembership>
+    public class OrganizationMembershipService : BaseArchiveService<OrganizationMembership>
     {
         public OrganizationMembershipService(
             IJsonApiContext jsonApiContext,
@@ -32,6 +32,12 @@ namespace SIL.Transcriber.Services
         private IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; set; }
         private IEntityRepository<Role> RoleRepository { get; }
 
+        public override async Task<IEnumerable<OrganizationMembership>> GetAsync()
+        {
+            return await GetScopedToCurrentUser(
+                base.GetAsync,
+                JsonApiContext);
+        }
         public async Task<OrganizationMembership> CreateByEmail(OrganizationMembership membership)
         {
             if (membership.Email == null || membership.OrganizationId == 0) return null;

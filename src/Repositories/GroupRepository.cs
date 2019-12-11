@@ -22,11 +22,11 @@ namespace SIL.Transcriber.Repositories
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
         }
-        private IQueryable<Group> UsersGroups(IQueryable<Group> entities)
+        public IQueryable<Group> UsersGroups(IQueryable<Group> entities)
         {
-            var orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
+                var orgIds = CurrentUser.OrganizationIds.OrEmpty();
                 //if I'm an admin in the org, give me all groups in that org
                 //otherwise give me just the groups I'm a member of
                 var orgadmins = orgIds.Where(o => CurrentUser.HasOrgRole(RoleName.Admin, o));
@@ -41,7 +41,6 @@ namespace SIL.Transcriber.Repositories
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-
                 return entities = entities.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
