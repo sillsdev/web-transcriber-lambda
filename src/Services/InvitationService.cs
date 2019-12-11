@@ -5,11 +5,13 @@ using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using TranscriberAPI.Utility;
+using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
@@ -36,6 +38,12 @@ namespace SIL.Transcriber.Services
             OrganizationService = organizationService;
             GroupMembershipRepository = groupMembershipRepository;
             //SILIdentity = silIdentityService;
+        }
+        public override async Task<IEnumerable<Invitation>> GetAsync()
+        {
+            return await GetScopedToCurrentUser(
+                base.GetAsync,
+                JsonApiContext);
         }
         private string LoadResource(string name) {
             //Load the file

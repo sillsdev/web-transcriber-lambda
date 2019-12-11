@@ -20,6 +20,16 @@ namespace SIL.Transcriber.Services
             ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
         {
         }
+        public async Task<IEnumerable<TResource>> GetDeleted()
+        {
+            //return unarchived
+            IEnumerable<TResource> entities = await base.GetAsync();
+            if (typeof(IArchive).IsAssignableFrom(typeof(TResource)))
+            {
+                entities = entities.Where(t => t.Archived);
+            }
+            return entities;
+        }
         public override async Task<IEnumerable<TResource>> GetAsync()
         {
             //return unarchived

@@ -6,11 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Models;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using SIL.Auth.Models;
 using System;
 using Microsoft.Extensions.Logging;
-using System.Web;
 
 namespace SIL.Transcriber.Controllers
 {

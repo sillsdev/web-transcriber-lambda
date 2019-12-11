@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
+﻿using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +6,9 @@ using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.IEnumerableExtensions;
 using static SIL.Transcriber.Utility.RepositoryExtensions;
@@ -19,27 +18,22 @@ namespace SIL.Transcriber.Repositories
     public class SectionRepository : BaseRepository<Section>
     {
 
-        private ProjectRepository ProjectRepository;
         private PlanRepository PlanRepository;
-        private AppDbContext AppDbContext;
         public SectionRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            ProjectRepository projectRepository,
             PlanRepository planRepository,
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
-            ProjectRepository = projectRepository;
             PlanRepository = planRepository;
-            AppDbContext = contextResolver.GetContext() as AppDbContext;
         }
         #region ScopeToUser
         //get my sections in these projects
         public IQueryable<Section> UsersSections(IQueryable<Section> entities, IQueryable<Project> projects)
         {
-            var plans = PlanRepository.UsersPlans(AppDbContext.Plans, projects);
+            var plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
             return UsersSections(entities, plans);
         }
 
@@ -72,7 +66,7 @@ namespace SIL.Transcriber.Repositories
             {
                 if (filterQuery.HasSpecificOrg())
                 {
-                    var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                    var projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                     return UsersSections(entities, projects);
                 }
                 return UsersSections(entities);

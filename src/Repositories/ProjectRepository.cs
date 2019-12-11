@@ -15,7 +15,6 @@ using static SIL.Transcriber.Utility.RepositoryExtensions;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.Extensions.StringExtensions;
 using SIL.Transcriber.Utility;
-using SIL.Transcriber.Data;
 using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Repositories
@@ -23,23 +22,13 @@ namespace SIL.Transcriber.Repositories
     public class ProjectRepository : BaseRepository<Project>
     {
 
-        private AppDbContext AppDbContext;
-        private IEntityRepository<Integration> IntegrationRepository;
-        private IEntityRepository<ProjectIntegration> ProjectIntegrationRepository;
-
         public ProjectRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            IEntityRepository<Integration> integrationRepository,
-            IEntityRepository<ProjectIntegration> projectIntegrationRepository,
-            //EntityHooksService<Project> statusUpdateService,
             IDbContextResolver contextResolver
         ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
-            AppDbContext = contextResolver.GetContext() as AppDbContext;
-            IntegrationRepository = integrationRepository;
-            ProjectIntegrationRepository = projectIntegrationRepository;
         }
 
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
@@ -103,21 +92,14 @@ namespace SIL.Transcriber.Repositories
         {
             return base.Sort(entities, sortQueries);
         }
-        public string IntegrationSettings(int projectId, string integration)
-        {
-            ProjectIntegration projectIntegration = Get().Where(p => p.Id == projectId).Join(ProjectIntegrationRepository.Get(), p => p.Id, pi => pi.ProjectId, (p, pi) => pi).Join(IntegrationRepository.Get().Where(i => i.Name == integration), pi => pi.IntegrationId, i => i.Id, (pi, i) => pi).FirstOrDefault() ;
-            if (projectIntegration == null)
-                return "";
-            return projectIntegration.Settings;
-        }
-        private string SettingOrDefault(string json, string settingName)
+                private string SettingOrDefault(string json, string settingName)
         {
             dynamic settings = JObject.Parse(json);
             return settings[settingName] ?? "";
         }
         public IQueryable<Project> HasIntegrationSetting(string integrationName, string settingName, string value)
         {
-            return IntegrationRepository.Get().Where(i => i.Name == integrationName).Join(ProjectIntegrationRepository.Get().Where(pi => SettingOrDefault(pi.Settings,settingName) == value), i => i.Id, pi => pi.IntegrationId, (p, pi) => pi).Join(Get(), pi => pi.ProjectId, p => p.Id, (pi, p) => p);
+            return dbContext.Integrations.Where(i => i.Name == integrationName).Join(dbContext.Projectintegrations.Where(pi => SettingOrDefault(pi.Settings, settingName) == value), i => i.Id, pi => pi.IntegrationId, (p, pi) => pi).Join(Get(), pi => pi.ProjectId, p => p.Id, (pi, p) => p);
         }
     }
 }

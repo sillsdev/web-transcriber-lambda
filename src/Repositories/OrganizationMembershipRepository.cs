@@ -1,21 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using System.Linq;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrganizationRepository : BaseRepository<Organization>
+    public class OrganizationMembershipRepository : BaseRepository<OrganizationMembership>
     {
-        public OrganizationRepository(
+        public OrganizationMembershipRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
@@ -23,16 +20,21 @@ namespace SIL.Transcriber.Repositories
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
         }
-        public IQueryable<Organization> UsersOrganizations(IQueryable<Organization> entities)
+        public IQueryable<OrganizationMembership> UsersOrganizationMemberships(IQueryable<OrganizationMembership> entities)
         {
+            var orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                return entities.Join(dbContext.Organizationmemberships.Where(om => om.UserId == CurrentUser.Id), o => o.Id, om => om.OrganizationId, (o, om) => o).GroupBy(o => o.Id).Select(g => g.First());
+                //if I'm an admin in the org, give me all oms in that org
+                //otherwise give me just the oms I'm a member of
+                var orgadmins = orgIds.Where(o => CurrentUser.HasOrgRole(RoleName.Admin, o));
+                entities = entities
+                       .Where(om => orgadmins.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id);
             }
             return entities;
         }
         #region Overrides
-        public override IQueryable<Organization> Filter(IQueryable<Organization> entities, FilterQuery filterQuery)
+        public override IQueryable<OrganizationMembership> Filter(IQueryable<OrganizationMembership> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
@@ -40,13 +42,13 @@ namespace SIL.Transcriber.Repositories
                 {
                     int specifiedOrgId;
                     var hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
-                    return UsersOrganizations(entities).Where(om => om.Id == specifiedOrgId) ;
+                    return UsersOrganizationMemberships(entities).Where(om => om.Id == specifiedOrgId) ;
                 }
-                return UsersOrganizations(entities);
+                return UsersOrganizationMemberships(entities);
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
-                return UsersOrganizations(entities);
+                return UsersOrganizationMemberships(entities);
             }
             return base.Filter(entities, filterQuery);
         }
