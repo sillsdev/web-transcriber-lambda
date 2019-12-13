@@ -22,16 +22,13 @@ namespace SIL.Transcriber.Forms.Projects
             GroupRepository groupRepository,
             ICurrentUserContext currentUserContext,
             IEntityRepository<Organization> organizationRepository,
-            IEntityRepository<UserRole> userRolesRepository,
-            IOrganizationContext organizationContext,
-            ProjectRepository projectRepository) : base(userRepository, userRolesRepository, currentUserContext)
+            ProjectRepository projectRepository) : base(userRepository, currentUserContext)
         {
             UserRepository = userRepository;
             GroupRepository = groupRepository;
             CurrentUserContext = currentUserContext;
             OrganizationRepository = organizationRepository;
             ProjectRepository = projectRepository;
-            OrganizationContext = organizationContext;
         }
 
         public bool IsValid(int id, Project project)
@@ -46,7 +43,6 @@ namespace SIL.Transcriber.Forms.Projects
                               .Include(p => p.Group)
                                  .ThenInclude(g => g.Owner)
                               .FirstOrDefaultAsync().Result;
-            ValidateOrganizationHeader(original.OrganizationId, "project");
             if ((project.OrganizationId != VALUE_NOT_SET)
                 || (project.OwnerId != VALUE_NOT_SET)
                 || (project.GroupId != VALUE_NOT_SET))

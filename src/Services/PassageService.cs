@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
@@ -26,14 +27,6 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
-
-            /*               return await GetScopedToOrganization<Passage>(
-                           base.GetAsync,
-                           OrganizationContext,
-                           JsonApiContext); 
-
-               var entities = await base.GetAsync();
-               return ((PassageRepository)MyRepository).UsersPassages(entities); */
         }
 
         public override async Task<Passage> GetAsync(int id)
@@ -43,5 +36,30 @@ namespace SIL.Transcriber.Services
             return passages.SingleOrDefault(g => g.Id == id);
         }
         
+        public IQueryable<Passage> GetBySection(int SectionId)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+            return pr.Get()
+                    .Include(p => p.PassageSections)
+                    .ThenInclude(ps => ps.Section)
+                    .Where(p => p.PassageSections.Any(ps => ps.SectionId == SectionId))
+                    .Include(p=> p.Mediafiles);
+            
+        }
+        public IQueryable<Passage> ReadyToSync(int PlanId)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+            return pr.ReadyToSync(PlanId);
+        }
+        public string GetTranscription(Passage passage)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+            if (passage.Mediafiles == null)
+            {
+                passage = pr.Get().Where(p => p.Id == passage.Id).Include(p => p.Mediafiles).FirstOrDefault();
+            }
+            Mediafile mediafile = passage.Mediafiles.OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
+            return mediafile != null ? mediafile.Transcription ?? "" : "";
+        }
     }
 }

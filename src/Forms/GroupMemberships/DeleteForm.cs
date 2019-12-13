@@ -17,9 +17,8 @@ namespace SIL.Transcriber.Forms.GroupMemberships
             UserRepository userRepository,
             ProjectRepository projectRepository,
             IEntityRepository<GroupMembership> groupMembershipRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ICurrentUserContext currentUserContext
-            ) : base(userRepository, userRolesRepository, currentUserContext)
+            ) : base(userRepository, currentUserContext)
         {
             ProjectRepository = projectRepository;
             GroupMembershipRepository = groupMembershipRepository;

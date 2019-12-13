@@ -7,6 +7,7 @@ using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 
@@ -24,7 +25,11 @@ namespace SIL.Transcriber.Repositories
         }
         public IQueryable<Organization> UsersOrganizations(IQueryable<Organization> entities)
         {
-            return entities.Join(dbContext.Organizationmemberships.Where(om=>om.UserId == CurrentUser.Id), o => o.Id, om => om.OrganizationId, (o, om) => o);
+            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
+            {
+                return entities.Join(dbContext.Organizationmemberships.Where(om => om.UserId == CurrentUser.Id), o => o.Id, om => om.OrganizationId, (o, om) => o).GroupBy(o => o.Id).Select(g => g.First());
+            }
+            return entities;
         }
         #region Overrides
         public override IQueryable<Organization> Filter(IQueryable<Organization> entities, FilterQuery filterQuery)

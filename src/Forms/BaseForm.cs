@@ -17,18 +17,14 @@ namespace SIL.Transcriber.Forms
         public ErrorCollection Errors { get; set; }
         public User CurrentUser { get; }
         protected IEnumerable<int> CurrentUserOrgIds { get; set; }
-        public IOrganizationContext OrganizationContext { get; set; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
 
         public BaseForm(
             UserRepository userRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ICurrentUserContext currentUserContext
            )
         {
             Errors = new ErrorCollection();
             CurrentUser = userRepository.GetByAuth0Id(currentUserContext.Auth0Id).Result;
-            UserRolesRepository = userRolesRepository;
         }
 
         public void AddError(string message, int errorType = 422)
@@ -41,39 +37,9 @@ namespace SIL.Transcriber.Forms
         {
             return Errors.Errors.Count == 0;
         }
-        protected void ValidateOrganizationHeader(int initialOrganizationId, string objectType)
-        {
-            if (OrganizationContext.SpecifiedOrganizationDoesNotExist)
-            {
-                var message = "The organization specified in the header does not exist";
-                AddError(message);
-            }
-            else
-            {
-                // Treating these errors as Not Found errors
-                if (OrganizationContext.HasOrganization)
-                {
-                    if (initialOrganizationId != OrganizationContext.OrganizationId)
-                    {
-                        var message = $"The current {objectType} doesn't belong to the organization specified in the header";
-                        AddError(message, 404);
-                    }
-                }
-                if (!CurrentUserOrgIds.Contains(initialOrganizationId))
-                {
-                    var message = $"The current user is not a member of the {objectType} organization";
-                    AddError(message, 404);
-                }
-            }
-        }
         protected bool IsCurrentUserSuperAdmin()
         {
-            var userRole = UserRolesRepository.Get()
-                .Include(ur => ur.User)
-                .Include(ur => ur.Role)
-                .Where(ur => ur.UserId == CurrentUser.Id && ur.Role.Rolename == RoleName.SuperAdmin)
-                .FirstOrDefault();
-            return userRole != null;
+            return CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0);
         }
 
     }

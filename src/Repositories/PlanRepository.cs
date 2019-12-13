@@ -1,13 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
+﻿using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using System.Linq;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.IEnumerableExtensions;
 using static SIL.Transcriber.Utility.RepositoryExtensions;
@@ -18,19 +16,16 @@ namespace SIL.Transcriber.Repositories
     {
 
         private ProjectRepository ProjectRepository;
-        private OrganizationRepository OrganizationRepository;
 
         public PlanRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
             ProjectRepository projectRepository,
-            OrganizationRepository organizationRepository,
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             ProjectRepository = projectRepository;
-            OrganizationRepository = organizationRepository;
         }
         public IQueryable<Plan> UsersPlans(IQueryable<Plan> entities, IQueryable<Project> projects = null)
         {

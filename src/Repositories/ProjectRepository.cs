@@ -15,30 +15,26 @@ using static SIL.Transcriber.Utility.RepositoryExtensions;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.Extensions.StringExtensions;
 using SIL.Transcriber.Utility;
-using SIL.Transcriber.Data;
+using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Repositories
 {
     public class ProjectRepository : BaseRepository<Project>
     {
 
-        private AppDbContext AppDbContext;
-
         public ProjectRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            //EntityHooksService<Project> statusUpdateService,
             IDbContextResolver contextResolver
         ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
-            AppDbContext = contextResolver.GetContext() as AppDbContext;
         }
 
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {
             var orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            if (!CurrentUser.HasRole(RoleName.SuperAdmin))
+            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 //if I'm an admin in the org, give me all projects in all groups in that org
                 //otherwise give me just the projects in the groups I'm a member of
@@ -96,6 +92,14 @@ namespace SIL.Transcriber.Repositories
         {
             return base.Sort(entities, sortQueries);
         }
-
+                private string SettingOrDefault(string json, string settingName)
+        {
+            dynamic settings = JObject.Parse(json);
+            return settings[settingName] ?? "";
+        }
+        public IQueryable<Project> HasIntegrationSetting(string integrationName, string settingName, string value)
+        {
+            return dbContext.Integrations.Where(i => i.Name == integrationName).Join(dbContext.Projectintegrations.Where(pi => SettingOrDefault(pi.Settings, settingName) == value), i => i.Id, pi => pi.IntegrationId, (p, pi) => pi).Join(Get(), pi => pi.ProjectId, p => p.Id, (pi, p) => p);
+        }
     }
 }

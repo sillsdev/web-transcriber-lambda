@@ -5,6 +5,11 @@ namespace SIL.Transcriber.Models
 {
     public partial class Integration : BaseModel, IArchive
     {
+        public enum Integrations
+        {
+            Paratext = 1
+        }
+
         [Attr("name")]
         public string Name { get; set; }
 

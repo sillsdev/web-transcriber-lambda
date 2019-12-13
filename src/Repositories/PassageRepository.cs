@@ -19,19 +19,16 @@ namespace SIL.Transcriber.Repositories
     public class PassageRepository : BaseRepository<Passage>
     {
 
-        private ProjectRepository ProjectRepository;
         private SectionRepository SectionRepository;
 
         public PassageRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            ProjectRepository projectRepository,
             SectionRepository sectionRepository,
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
-            ProjectRepository = projectRepository;
             SectionRepository = sectionRepository;
         }
        
@@ -55,12 +52,18 @@ namespace SIL.Transcriber.Repositories
             return entities.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p);
         }
 
+        public IQueryable<Passage> ReadyToSync(int PlanId)
+        {
+            var passagesections = dbContext.Passagesections.Join(dbContext.Sections.Where(s => s.PlanId == PlanId), ps => ps.SectionId, s => s.Id, (ps, s)  => new { ps.PassageId, s.Sequencenum });
+            var passages = dbContext.Passages.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p).Where(p => p.ReadyToSync);
 
+            return passages;
+        }
         public override IQueryable<Passage> Filter(IQueryable<Passage> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                var projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                 return UsersPassages(entities, projects);
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))

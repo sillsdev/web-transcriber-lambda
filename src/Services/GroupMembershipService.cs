@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal;
@@ -7,10 +7,11 @@ using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Forms.GroupMemberships;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class GroupMembershipService : BaseService<GroupMembership>
+    public class GroupMembershipService : BaseArchiveService<GroupMembership>
     {
         public GroupMembershipService(
             IJsonApiContext jsonApiContext,
@@ -18,7 +19,6 @@ namespace SIL.Transcriber.Services
             ProjectRepository projectRepository,
             ICurrentUserContext currentUserContext,
             IEntityRepository<GroupMembership> groupMembershipRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory
         ) : base(jsonApiContext, groupMembershipRepository, loggerFactory)
         {
@@ -26,21 +26,26 @@ namespace SIL.Transcriber.Services
             ProjectRepository = projectRepository;
             CurrentUserContext = currentUserContext;
             GroupMembershipRepository = groupMembershipRepository;
-            UserRolesRepository = userRolesRepository;
         }
 
         public UserRepository UserRepository { get; }
         public ProjectRepository ProjectRepository { get; }
         public ICurrentUserContext CurrentUserContext { get; }
         public IEntityRepository<GroupMembership> GroupMembershipRepository { get; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
+
+
+        public override async Task<IEnumerable<GroupMembership>> GetAsync()
+        {
+            return await GetScopedToCurrentUser(
+                base.GetAsync,
+                JsonApiContext);
+        }
 
         public override async Task<bool> DeleteAsync(int id)
         {
             var deleteForm = new DeleteForm(UserRepository,
                                             ProjectRepository,
                                             GroupMembershipRepository,
-                                            UserRolesRepository,
                                             CurrentUserContext);
             if (!deleteForm.IsValid(id))
             {

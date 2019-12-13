@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SIL.Paratext.Models;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -28,22 +29,27 @@ namespace SIL.Transcriber
                 options.IncludeTotalRecordCount = false;
                 options.DefaultPageSize = 0;
                 //options.EnableOperations = true;
+                options.BuildResourceGraph((builder) => {
+                    builder.AddResource<DataChanges>();
+                });
             });
 
             services.AddHttpContextAccessor();
 
             // Add service / repository overrides
-            services.AddScoped<IEntityRepository<User>, UserRepository>();
-            //services.AddScoped<IEntityRepository<UserPassage>, UserTaskRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
-            services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
-            services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
-            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
-            services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
+            services.AddScoped<IEntityRepository<GroupMembership>, GroupMembershipRepository>();
+            services.AddScoped<IEntityRepository<Invitation>, InvitationRepository>();
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
-            //services.AddScoped<IEntityRepository<OrganizationInviteRequest>, OrganizationInviteRequestRepository>();
-            //services.AddScoped<IEntityRepository<Notification>, NotificationRepository>();
+            services.AddScoped<IEntityRepository<OrganizationMembership>, OrganizationMembershipRepository>();
+            services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
+            services.AddScoped<IEntityRepository<PassageSection>, PassageSectionRepository>();
+            services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
+            services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
+            services.AddScoped<IEntityRepository<ProjectIntegration>, ProjectIntegrationRepository>();
+            services.AddScoped<IEntityRepository<Section>, SectionRepository>();
+            services.AddScoped<IEntityRepository<User>, UserRepository>();
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
 
             // services
@@ -51,45 +57,61 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
             services.AddScoped<IResourceService<Group>, GroupService>();
             services.AddScoped<IResourceService<Integration>, IntegrationService>();
+            services.AddScoped<IResourceService<Invitation>, InvitationService>();
             services.AddScoped<IResourceService<Mediafile>, MediafileService>();
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
+            services.AddScoped<IResourceService<ParatextToken>, ParatextTokenService>();
             services.AddScoped<IResourceService<Passage>, PassageService>();
+            services.AddScoped<IResourceService<PassageSection>, PassageSectionService>();
             services.AddScoped<IResourceService<Plan>, PlanService>();
             services.AddScoped<IResourceService<Project>, ProjectService>();
+            services.AddScoped<IResourceService<ProjectIntegration>, ProjectIntegrationService>();
             services.AddScoped<IResourceService<Section>, SectionService>();
-            services.AddScoped<IResourceService<UserPassage>, UserPassageService>();
             services.AddScoped<IResourceService<User>, UserService>();
+            services.AddScoped<IResourceService<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
+            services.AddScoped<IParatextService, ParatextService>();
+            services.AddScoped<ISILIdentityService, SILIdentityService>();
 
-            //services.AddScoped<IQueryParser, OrbitJSQueryParser>();
 
             // EventDispatchers
-            services.AddScoped<UserRepository>();
-            services.AddScoped<GroupRepository>();
-            services.AddScoped<ProjectRepository>();
-            services.AddScoped<PlanRepository>();
-            services.AddScoped<SectionRepository>();
-            services.AddScoped<PassageRepository>();
-            services.AddScoped<MediafileRepository>();
-            services.AddScoped<OrganizationRepository>();
             services.AddScoped<CurrentUserRepository>();
+            services.AddScoped<GroupMembershipRepository>();
+            services.AddScoped<GroupRepository>();
+            services.AddScoped<InvitationRepository>();
+            services.AddScoped<MediafileRepository>();
+            services.AddScoped<OrganizationMembershipRepository>();
+            services.AddScoped<OrganizationRepository>();
+            services.AddScoped<PassageRepository>();
+            services.AddScoped<PassageSectionRepository>();
+            services.AddScoped<PassageRepository>();
+            services.AddScoped<PlanRepository>();
+            services.AddScoped<ProjectIntegrationRepository>();
+            services.AddScoped<ProjectRepository>();
+            services.AddScoped<SectionRepository>();
+            services.AddScoped<UserRepository>();
 
             services.AddScoped<ActivitystateService>();
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
+            services.AddScoped<InvitationService>();
             services.AddScoped<MediafileService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();
+            services.AddScoped<ParatextTokenService>();
+            services.AddScoped<PassageSectionService>();
             services.AddScoped<PassageService>();
             services.AddScoped<PlanService>();
+            services.AddScoped<ProjectIntegrationService>();
             services.AddScoped<ProjectService>();
             services.AddScoped<SectionService>();
-            services.AddScoped<UserPassageService>();
             services.AddScoped<UserService>();
+            services.AddScoped<VwPassageStateHistoryEmailService>();
 
+            services.AddScoped<SILIdentityService>();
             services.AddScoped<Auth0ManagementApiTokenService>();
             //services.AddScoped<SendNotificationService>();
             //services.AddScoped<SendEmailService>();
@@ -101,7 +123,6 @@ namespace SIL.Transcriber
 
         public static IServiceCollection AddContextServices(this IServiceCollection services)
         {
-            services.AddScoped<IOrganizationContext, HttpOrganizationContext>();
             services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 
             return services;

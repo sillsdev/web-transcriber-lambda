@@ -19,7 +19,7 @@
 .env.development.local
 .env.test.local
 .env.production.local
-
+aws-logger-errors.txt
 appsettings.Development.json
 
 .serverless/*
@@ -33,3 +33,5 @@ yarn-error.log*
 serverless.env.yml
 
 ../test/
+
+models/X*

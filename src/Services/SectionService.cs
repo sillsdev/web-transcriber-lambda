@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -12,27 +13,17 @@ namespace SIL.Transcriber.Services
 {
     public class SectionService : BaseArchiveService<Section>
     {
-        public IOrganizationContext OrganizationContext { get; private set; }
-
         public SectionService(
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
-            IEntityRepository<Section> sectionRepository,
+           IEntityRepository<Section> sectionRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, sectionRepository, loggerFactory)
         {
-            OrganizationContext = organizationContext;
-        }
+         }
         public override async Task<IEnumerable<Section>> GetAsync()
         {
             return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
-
-            /*return await GetScopedToOrganization<Section>(
-                base.GetAsync,
-                OrganizationContext,
-                JsonApiContext);
-            */
         }
 
         public override async Task<Section> GetAsync(int id)
@@ -42,19 +33,18 @@ namespace SIL.Transcriber.Services
             return sections.SingleOrDefault(g => g.Id == id);
         }
 
-        public IEnumerable<Passage> AssignUser(int id, int userId, string role)
+        public int GetProjectId(int sectionId)
         {
-            return ((SectionRepository)MyRepository).AssignUser(id, userId, role);
+            var section = MyRepository.Get().Where(s => s.Id == sectionId).Include(s => s.Plan).FirstOrDefault();
+            return section.Plan.ProjectId;
         }
-        public IEnumerable<Passage> DeleteAssignment(int id, string role)
+        public IEnumerable<Section> GetSectionsAtStatus(int projectId, string status)
         {
-            return ((SectionRepository)MyRepository).DeleteAssignment(id, role);
+            return ((SectionRepository)MyRepository).GetSectionsAtStatus(projectId, status);
         }
-        public IEnumerable<Assignment> GetAssignedUsers(int id)
+        public IEnumerable<SectionSummary> GetSectionSummary(int PlanId, string book, int chapter)
         {
-            //return ((SectionRepository)MyRepository).GetWithPassageAssignments(id);
-            return ((SectionRepository)MyRepository).GetPassageAssignments(id);
+            return ((SectionRepository)MyRepository).SectionSummary(PlanId, book, chapter).Result;
         }
-
     }
 }

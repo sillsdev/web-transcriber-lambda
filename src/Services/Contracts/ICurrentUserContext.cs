@@ -1,5 +1,6 @@
-﻿using System;
-using SIL.Transcriber.Models;
+﻿using System.Collections.Generic;
+using SIL.Auth.Models;
+using SIL.Paratext.Models;
 
 namespace SIL.Transcriber.Services
 {
@@ -10,5 +11,10 @@ namespace SIL.Transcriber.Services
         string GivenName { get; }
         string FamilyName { get; }
         string Name { get; }
+        string Avatar { get; }
+        bool EmailVerified { get; }
+        //List<SILAuth_Organization> SILOrganizations { get; }
+        //int SilUserid { get; }
+        UserSecret ParatextLogin(string connection, int userId);
     }
 }

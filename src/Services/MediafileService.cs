@@ -12,6 +12,7 @@ using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using static SIL.Transcriber.Utility.ServiceExtensions;
@@ -21,7 +22,6 @@ namespace SIL.Transcriber.Services
     public class MediafileService : BaseArchiveService<Mediafile>
     {
         private IS3Service _S3service { get; }
-        private IOrganizationContext OrganizationContext { get; set; }
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
 
@@ -29,12 +29,10 @@ namespace SIL.Transcriber.Services
             IJsonApiContext jsonApiContext,
             IEntityRepository<Mediafile> basemediafileRepository,
             PlanRepository planRepository,
-            IOrganizationContext organizationContext,
             ILoggerFactory loggerFactory,
             IS3Service service) : base(jsonApiContext, basemediafileRepository, loggerFactory)
         {
             _S3service = service;
-            OrganizationContext = organizationContext;
             PlanRepository = planRepository;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
         }
@@ -44,11 +42,6 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
              base.GetAsync,
              JsonApiContext);
-/*            return await GetScopedToOrganization<Mediafile>(
-                base.GetAsync,
-                OrganizationContext,
-                JsonApiContext); */
-
         }
         public override async Task<Mediafile> GetAsync(int id)
         {
@@ -56,6 +49,12 @@ namespace SIL.Transcriber.Services
 
             return files.SingleOrDefault(g => g.Id == id);
         }
+        public async Task<Mediafile> GetFromFile(string s3File )
+        {
+            var files = await base.GetAsync();
+            return files.SingleOrDefault(p => p.S3File == s3File);
+        }
+
         private string DirectoryName(Plan plan)
         {
             return plan.Project.Organization.Slug + "/" + plan.Slug;
@@ -84,10 +83,20 @@ namespace SIL.Transcriber.Services
                 entity.PassageId = last.PassageId;
             }
         }
+        public async Task<Mediafile> UpdateFileInfo(int id, long filesize, decimal duration)
+        {
+            Mediafile mf = MediafileRepository.Get(id);
+
+            mf.Filesize = filesize / 1024;
+            mf.Duration = (int)duration;  
+            await base.UpdateAsync(id, mf);
+            return mf;
+        }
+
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             InitNewMediafile(entity); //set the version number
-            var response = _S3service.PutSignedUrl(entity.S3File, DirectoryName(entity));
+            var response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
             entity.AudioUrl = response.Message;
             return await base.CreateAsync(entity);
         }
@@ -107,7 +116,7 @@ namespace SIL.Transcriber.Services
         public Mediafile GetFileSignedUrl(int id)
         {
             Mediafile mf = MediafileRepository.Get(id);
-            mf.AudioUrl = _S3service.GetSignedUrl(mf.S3File, DirectoryName(mf)).Message;
+            mf.AudioUrl = _S3service.SignedUrlForGet(mf.S3File, DirectoryName(mf), mf.ContentType).Message;
             return mf;
         }
 
@@ -116,23 +125,27 @@ namespace SIL.Transcriber.Services
             Mediafile mf = MediafileRepository.Get(id);
             var plan = PlanRepository.GetWithProject(mf.PlanId);
             if (mf.S3File.Length == 0 || !(await _S3service.FileExistsAsync(mf.S3File, DirectoryName(plan))))
-                return null;
-
+                return new S3Response
+                {
+                    Message = mf.S3File.Length > 0 ? mf.S3File : "",
+                    Status = HttpStatusCode.NotFound
+                };
+            
             S3Response response = await _S3service.ReadObjectDataAsync(mf.S3File, DirectoryName(plan));
-
+            response.Message = mf.OriginalFile;
             return response;
         }
-
-        public override async Task<bool> DeleteAsync(int id)
+        public async Task<S3Response> DeleteFile(int id)
         {
+            //delete the s3 file 
             Mediafile mf = MediafileRepository.Get(id);
             var plan = PlanRepository.GetWithProject(mf.PlanId);
-
             S3Response response = await _S3service.RemoveFile(mf.S3File, DirectoryName(plan));
-            if (response.Status == HttpStatusCode.OK || response.Status == HttpStatusCode.NoContent)
-                return await base.DeleteAsync(id);
-            else
-                throw new Exception(response.Message);
-        }        
+            return response;
+        }
+        public Mediafile GetLatest(int passageId)
+        {
+            return MediafileRepository.Get().Where(mf => mf.PassageId == passageId).OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
+        }
     }
 }

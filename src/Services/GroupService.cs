@@ -15,24 +15,18 @@ namespace SIL.Transcriber.Services
 {
     public class GroupService : BaseArchiveService<Group>
     {
-        public IOrganizationContext OrganizationContext { get; private set; }
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
 
         public GroupService(
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             IEntityRepository<Group> groupRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, groupRepository,  loggerFactory)
         {
-            OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
             UserRepository = userRepository;
-            UserRolesRepository = userRolesRepository;
         }
 
 
@@ -41,9 +35,6 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
-            /*return await GetScopedToOrganization<Group>(base.GetAsync,
-                                                        OrganizationContext,
-                                                        JsonApiContext); */
         }
         public override async Task<Group> GetAsync(int id)
         {
@@ -54,9 +45,7 @@ namespace SIL.Transcriber.Services
         {
             var updateForm = new UpdateForm(UserRepository,
                                              (GroupRepository)MyRepository,
-                                             OrganizationContext,
-                                             UserRolesRepository,
-                                             CurrentUserContext);
+                                            CurrentUserContext);
             if (!updateForm.IsValid(id, resource))
             {
                 throw new JsonApiException(updateForm.Errors);

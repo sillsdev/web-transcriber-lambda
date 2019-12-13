@@ -1,39 +1,29 @@
-﻿using JsonApiDotNetCore.Controllers;
-using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+﻿using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
     public class PlansController : BaseController<Plan>
     {
         public PlansController(
-           IJsonApiContext jsonApiContext,
+            ILoggerFactory loggerFactory,
+            IJsonApiContext jsonApiContext,
             IResourceService<Plan> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
-         : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+         : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
 
         [HttpPost]
         public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Plan entity)
         {
-            if (entity.ProjectId == 0)
+            if (entity.OwnerId == 0)
             {
-                //save the project
-                if (entity.Project != null)
-                {
-                    if (entity.Project.Id > 0)
-                        entity.ProjectId = entity.Project.Id;
-                    else
-                    {
-                        //save it;
-                    }
-                };
+                entity.OwnerId = CurrentUser.Id;
             }
             return await base.PostAsync(entity);
         }

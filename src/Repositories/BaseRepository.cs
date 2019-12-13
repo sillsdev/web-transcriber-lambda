@@ -31,6 +31,7 @@ namespace SIL.Transcriber.Repositories
         protected readonly CurrentUserRepository currentUserRepository;
         //protected readonly EntityHooksService<TEntity, TId> statusUpdateService;
         protected readonly AppDbContext dbContext;
+        protected ILogger<TEntity> Logger { get; set; }
 
         public BaseRepository(
             ILoggerFactory loggerFactory,
@@ -43,6 +44,7 @@ namespace SIL.Transcriber.Repositories
             this.dbContext = (AppDbContext)contextResolver.GetContext();
             this.dbSet = contextResolver.GetDbSet<TEntity>();
             this.currentUserRepository = currentUserRepository;
+            this.Logger = loggerFactory.CreateLogger<TEntity>();
             //SJH this.statusUpdateService = statusUpdateService;
         }
 

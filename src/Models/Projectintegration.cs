@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class ProjectIntegration :BaseModel
+    public partial class ProjectIntegration :BaseModel, IArchive
     {
         [Attr("project-id")]
         public int ProjectId { get; set; }
@@ -18,6 +18,8 @@ namespace SIL.Transcriber.Models
         [Attr("settings")]
         [Column(TypeName = "jsonb")]
         public string Settings { get; set; }
+
+        public bool Archived { get; set; }
 
     }
 }

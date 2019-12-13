@@ -4,30 +4,39 @@ using Auth0.ManagementApi.Models;
 using Microsoft.AspNetCore.Http;
 using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using Serilog;
+using SIL.Auth.Models;
+using SIL.Paratext.Models;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.Logging;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace SIL.Transcriber.Services
 {
     public class HttpCurrentUserContext : ICurrentUserContext
     {
+        private const string EMAIL_PATTERN = "^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9.-]+[.]+[a-zA-Z]{2,}$";
         public HttpContext HttpContext { get; set; }
         public Auth0ManagementApiTokenService TokenService { get; set; }
 
         private string auth0Id;
-        private string email;
-        private string givenName;
-        private string familyName;
-        private string name;
         private string authType;
         private ManagementApiClient managementApiClient;
         private User auth0User;
+        //private SILAuth_User silUser;
+        //private ISILIdentityService SILIdentity;
+        protected ILogger<ICurrentUserContext> Logger { get; set; }
 
         public HttpCurrentUserContext(
-            IHttpContextAccessor httpContextAccessor,
-            Auth0ManagementApiTokenService tokenService)
+             ILoggerFactory loggerFactory,
+             IHttpContextAccessor httpContextAccessor,
+             //ISILIdentityService silIdentityService,
+             Auth0ManagementApiTokenService tokenService)
         {
-            this.HttpContext = httpContextAccessor.HttpContext;
-            this.TokenService = tokenService;
+            HttpContext = httpContextAccessor.HttpContext;
+            //SILIdentity = silIdentityService;
+            TokenService = tokenService;
+            Logger = loggerFactory.CreateLogger<ICurrentUserContext>();
         }
 
         private string AuthType
@@ -62,12 +71,57 @@ namespace SIL.Transcriber.Services
             {
                 if (auth0User == null)
                 {
-                    auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
+                    try
+                    {
+                        //auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
+
+                        auth0User = ManagementApiClient.Users.GetAsync(Auth0Id).Result;
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        throw;
+                    }
                 }
                 return auth0User;
             }
         }
 
+        /*
+        private SILAuth_User SILUser
+        {
+            get
+            {
+                if (silUser == null)
+                {
+                    try
+                    {
+                        silUser = SILIdentity.GetUser(Auth0Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.Message == "Not Found")
+                        {
+                            silUser = SILIdentity.CreateUser(Name, GivenName, FamilyName, Email, Auth0Id);
+                        }
+                        else
+                        {
+                            throw ex;
+                        }
+                    }
+                }
+                return silUser;
+            }
+        }
+        public List<SILAuth_Organization> SILOrganizations
+        {
+            get
+            {
+                return SILIdentity.GetOrganizations(SILUser.id);
+            }
+        }
+        */
         public string Auth0Id
         {
             get
@@ -84,11 +138,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                if (email == null)
-                {
-                    email = this.HttpContext.GetAuth0Email();
-                }
-                return email;
+                return Auth0User.Email;
             }
         }
 
@@ -96,27 +146,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                if (givenName == null)
-                {
-                    var auth = AuthType;
-                    if (auth.StartsWith("auth0", StringComparison.Ordinal))
-                    {
-                        try
-                        {
-                            // Use Auth0 Management API to get value
-                            givenName = Auth0User.UserMetadata.given_name;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Error(ex, $"Failed to request given_name from Auth0: auth0id={Auth0Id}");
-                        }
-                    }
-                    else
-                    {
-                        givenName = this.HttpContext.GetAuth0GivenName();
-                    }
-                }
-                return givenName;
+                return Auth0User.FirstName;  //HttpContext.GetAuth0GivenName() ;
             }
         }
 
@@ -124,27 +154,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                if (familyName == null)
-                {
-                    var auth = AuthType;
-                    if (auth.StartsWith("auth0", StringComparison.Ordinal))
-                    {
-                        try
-                        {
-                            // Use Auth0 Management API to get value
-                            familyName = Auth0User.UserMetadata.family_name;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Error(ex, $"Failed to request family_name from Auth0: auth0id={Auth0Id}");
-                        }
-                    }
-                    else
-                    {
-                        familyName = this.HttpContext.GetAuth0SurName();
-                    }
-                }
-                return familyName;
+                return Auth0User.LastName;  //HttpContext.GetAuth0SurName();
             }
         }
 
@@ -152,12 +162,51 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                if (name == null)
-                {
-                    name = this.HttpContext.GetAuth0Name();
-                }
-                return name;
+                return Auth0User.FullName;  //HttpContext.GetAuth0Name();
             }
+        }
+        public string Avatar
+        {
+            get
+            {
+                return Auth0User.Picture;  //HttpContext.GetAuth0Name();
+            }
+        }
+        public bool EmailVerified
+        {
+            get
+            {
+                return Auth0User.EmailVerified ?? false;  //HttpContext.GetAuth0Name();
+            }
+        }
+        /*
+        public int SilUserid
+        {
+            get
+            {
+                return SILUser.id;
+            }
+        }
+        */
+        public UserSecret ParatextLogin(string connection, int userId)
+        {
+            var identities = Auth0User.Identities;
+            var ptIdentity = identities.FirstOrDefault(i => i.Connection.ToLower() == connection); //i.e. "Paratext-Transcriber"
+            if (ptIdentity != null)
+            {
+                var newPTTokens = new ParatextToken
+                {
+                    AccessToken = (string)ptIdentity.AccessToken,
+                    RefreshToken = (string)ptIdentity.RefreshToken,
+                    UserId = userId
+                };
+                return new UserSecret
+                {
+                    ParatextTokens = newPTTokens
+                };
+            }
+            Logger.LogInformation("Paratext Login - no connection");
+            return null;
         }
     }
 }

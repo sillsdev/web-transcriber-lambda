@@ -2,7 +2,7 @@
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using RestSharp;
 using Newtonsoft.Json.Linq;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Services
 {
@@ -23,36 +23,61 @@ namespace SIL.Transcriber.Services
     /// </summary>
     public class Auth0ManagementApiTokenService
     {
-        private string token;
-        public Auth0ManagementApiTokenService()
+        public  string tokenAuth;
+        private string tokenSIL;
+        protected ILogger<Auth0ManagementApiTokenService> Logger { get; set; }
+        public Auth0ManagementApiTokenService(ILoggerFactory loggerFactory)
         {
+            this.Logger = loggerFactory.CreateLogger<Auth0ManagementApiTokenService>();
+        }
+        private string token(string audience)
+        {
+            var domainUrl = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
+            if (!domainUrl.EndsWith("/")) domainUrl += "/";
+            var clientId = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID", "");
+            var clientSecret = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET", "");
+            var client = new RestClient($"{domainUrl}oauth/token");
+            var request = new RestRequest(Method.POST);
+            request.AddHeader("content-type", "application/json");
+            request.AddParameter("application/json", $"{{\"grant_type\":\"client_credentials\",\"client_id\": \"{clientId}\",\"client_secret\": \"{clientSecret}\",\"audience\": \"{audience}\"}}", ParameterType.RequestBody);
+            IRestResponse response = client.Execute(request);
+            if (response.IsSuccessful)
+            {
+                dynamic json = JObject.Parse(response.Content);
+                return json.access_token;
+            }
+            else
+            {
+                Logger.LogCritical($"Failed to request token from Auth0: Status={response.StatusDescription}, Content={response.Content}");
+                return "";
+            }
         }
 
         public string Token
         {
             get
             {
-                if (token == null) {
+                if (tokenAuth == null)
+                {
                     var domainUrl = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
-                    var clientId = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID", "");
-                    var clientSecret = GetVarOrDefault("SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET", "");
-                    var client = new RestClient($"{domainUrl}/oauth/token");
-                    var request = new RestRequest(Method.POST);
-                    request.AddHeader("content-type", "application/json");
-                    request.AddParameter("application/json", $"{{\"grant_type\":\"client_credentials\",\"client_id\": \"{clientId}\",\"client_secret\": \"{clientSecret}\",\"audience\": \"{domainUrl}/api/v2/\"}}", ParameterType.RequestBody);
-                    IRestResponse response = client.Execute(request);
-                    if (response.IsSuccessful)
-                    {
-                        dynamic json = JObject.Parse(response.Content);
-                        token = json.access_token;
-                    }
-                    else 
-                    {
-                        Log.Error($"Failed to request token from Auth0: Status={response.StatusDescription}, Content={response.Content}");
-                    }
+                    if (!domainUrl.EndsWith("/")) domainUrl += "/";
+                    tokenAuth = token(domainUrl + "api/v2/");
                 }
-                
-                return token;
+                return tokenAuth;
+            }
+        }
+        public string SILAuthToken
+        {
+            get
+            {
+                if (tokenSIL == null)
+                {
+                    //var domainUrl = GetVarOrThrow("SIL_TR_SILAUTH_DOMAIN"); TODO
+                    //tokenSIL = token(domainUrl);
+                    tokenSIL = token("https://transcriber-auth");
+                }
+                Console.WriteLine("SIL Auth token received.");
+                return tokenSIL;
             }
         }
     }

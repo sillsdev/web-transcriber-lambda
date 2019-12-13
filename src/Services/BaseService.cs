@@ -12,6 +12,7 @@ namespace SIL.Transcriber.Services
     {
         protected IEntityRepository<TResource> MyRepository { get; }
         protected IJsonApiContext JsonApiContext { get; }
+        protected ILogger<TResource> Logger { get; set; }
 
 
         public BaseService(
@@ -21,20 +22,9 @@ namespace SIL.Transcriber.Services
         {
             this.MyRepository = myRepository;
             JsonApiContext = jsonApiContext;
+            this.Logger = loggerFactory.CreateLogger<TResource>();
         }
 
-        //also a nice try but jsonapi filter eats it.
-        public override async Task<bool> DeleteAsync(int id)
-        {
-            try
-            {
-                return await base.DeleteAsync(id);
-            }
-            catch (DbException ex)
-            {
-                throw ex;
-            }
-        }
     }
 }
 

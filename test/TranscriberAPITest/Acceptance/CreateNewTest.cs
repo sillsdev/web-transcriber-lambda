@@ -98,13 +98,6 @@ namespace TranscriberAPI.Tests.Acceptance
             };
             await SaveIt(routePrefix, $"/api/groupmemberships", gm2);
 
-            var ur = new UserRole()
-            {
-                UserId = user.Id,
-                OrganizationId = org.Id,
-                RoleId = 2
-            };
-            await SaveIt(routePrefix, $"/api/userroles", ur);
 
             await SaveIt(routePrefix, $"/api/projecttypes", projtype);
             project.ProjecttypeId = projtype.Id;
@@ -180,34 +173,6 @@ namespace TranscriberAPI.Tests.Acceptance
             await SaveIt(routePrefix, $"/api/passagesections", ps4);
             Assert.NotEqual(0, ps4.Id);
 
-            var up1 = new UserPassage()
-            {
-                UserId = user.Id,
-                PassageId = passage1.Id,
-                RoleId = 3
-            };
-            await SaveIt(routePrefix, $"/api/userpassages", up1);
-            var up2 = new UserPassage()
-            {
-                UserId = user.Id,
-                PassageId = passage2.Id,
-                RoleId = 3
-            };
-            await SaveIt(routePrefix, $"/api/userpassages", up2);
-            var up3 = new UserPassage()
-            {
-                UserId = user.Id,
-                PassageId = passage3.Id,
-                RoleId = 3
-            };
-            await SaveIt(routePrefix, $"/api/userpassages", up3);
-            var up4 = new UserPassage()
-            {
-                UserId = user.Id,
-                PassageId = passage4.Id,
-                RoleId = 3
-            };
-            await SaveIt(routePrefix, $"/api/userpassages", up4);
             media.PassageId = passage1.Id;
             await SaveIt(routePrefix, $"/api/mediafiles", media);
 

@@ -63,7 +63,7 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                if (await AmazonS3Util.DoesS3BucketExistAsync(_client, bucketName)==false)
+                if (await AmazonS3Util.DoesS3BucketExistAsync(_client, bucketName) == false)
                 {
                     var putBucketRequest = new PutBucketRequest
                     {
@@ -88,7 +88,7 @@ namespace SIL.Transcriber.Services
 
         }
 
-        private string SignedUrl(string key, HttpVerb action, string mimetype = "audio/mpeg")
+        private string SignedUrl(string key, HttpVerb action, string mimetype)
         {
             var s3Client = new AmazonS3Client();
 
@@ -98,15 +98,24 @@ namespace SIL.Transcriber.Services
                 Key = key,
                 Verb = action,
                 Expires = DateTime.Now.AddMinutes(25),
-               // ContentType = mimetype
             };
-            return s3Client.GetPreSignedURL(request);
+            if (mimetype.Length > 0)
+                request.ContentType = mimetype;
+            try
+            {
+                return s3Client.GetPreSignedURL(request);
+            }
+            catch (WebException e)
+            {
+                Console.Write(e.Status);
+                throw;
+            }
         }
-        public S3Response GetSignedUrl(string fileName, string folder = "")
+        public S3Response SignedUrlForGet(string fileName, string folder, string contentType)
         {
             try
             {
-                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET), HttpStatusCode.OK);
+                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET, ""), HttpStatusCode.OK);
 
             }
             catch (AmazonS3Exception e)
@@ -118,11 +127,12 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public S3Response PutSignedUrl(string fileName, string folder = "")
+        public S3Response SignedUrlForPut(string fileName, string folder, string contentType)
         {
             try
             {
-                return S3Response(SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT), HttpStatusCode.OK);
+                string url = SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT, contentType);
+                return S3Response(url, HttpStatusCode.OK);
             }
             catch (AmazonS3Exception e)
             {
@@ -168,21 +178,6 @@ namespace SIL.Transcriber.Services
                     response = await _client.PutObjectAsync(request);
                 };
 
-                /*
-                var fileTransferUtility = new TransferUtility(_client);
-                var request = new TransferUtilityUploadRequest()
-                {
-                    BucketName = USERFILES_BUCKET,
-                    InputStream = stream,
-                    Key = fileName,
-                    StorageClass = S3StorageClass.Standard,
-                    PartSize = 6291456,//6M
-                    CannedACL = S3CannedACL.NoACL
-                };
-                request.Metadata.Add("Plan", "Genesis");
-
-                await fileTransferUtility.UploadAsync(stream, USERFILES_BUCKET, "myname");
-                */
                 return new S3Response
                 {
                     Message = fileName,
@@ -213,7 +208,7 @@ namespace SIL.Transcriber.Services
                 };
 
                 var response = await _client.DeleteObjectAsync(request);
-                return S3Response(fileName,response.HttpStatusCode);
+                return S3Response(fileName, response.HttpStatusCode);
 
             }
             catch (AmazonS3Exception e)
@@ -243,7 +238,7 @@ namespace SIL.Transcriber.Services
                     }
                     list += "]";
                 }
-                return S3Response(list, response.HttpStatusCode, null,"application/json");
+                return S3Response(list, response.HttpStatusCode, null, "application/json");
             }
             catch (AmazonS3Exception e)
             {
@@ -258,17 +253,22 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                var request = new GetObjectRequest()
+                GetObjectRequest request = new GetObjectRequest()
                 {
                     BucketName = USERFILES_BUCKET,
                     Key = ProperFolder(folder) + fileName,
+
                 };
-                using (var response = await _client.GetObjectAsync(request))
-                using (var responseStream = response.ResponseStream)
+
+                using (GetObjectResponse response = await _client.GetObjectAsync(request))
+                using (Stream responseStream = response.ResponseStream)
                 {
+                    Console.WriteLine("Meta", response.Metadata);
+                    Console.WriteLine("Headers", response.Headers);
                     var stream = new MemoryStream();
                     await responseStream.CopyToAsync(stream);
                     stream.Position = 0;
+
                     return S3Response(fileName, HttpStatusCode.OK, stream, response.Headers["Content-Type"]);
                 }
             }
@@ -281,5 +281,6 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
+
     }
 }

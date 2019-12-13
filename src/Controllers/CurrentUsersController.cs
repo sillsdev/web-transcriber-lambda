@@ -1,10 +1,9 @@
 ﻿using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
-using SIL.Transcriber.Controllers;
+using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
@@ -12,14 +11,16 @@ namespace SIL.Transcriber.Controllers
     public class CurrentusersController : BaseController<User>
     {
         public CurrentusersController(
-           IJsonApiContext jsonApiContext,
+            ILoggerFactory loggerFactory,
+            IJsonApiContext jsonApiContext,
                IResourceService<User> resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
-         : base(jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+         : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         { }
-
+        //prevent async function not waiting compile warning
+        #pragma warning disable 1998
         [HttpPost]
         public override async Task<IActionResult> PostAsync([FromBody] User entity)
         {
@@ -33,6 +34,6 @@ namespace SIL.Transcriber.Controllers
 
             return Ok(currentUser);
         }
-
+        #pragma warning restore 1998
     }
 }

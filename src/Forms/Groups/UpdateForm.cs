@@ -19,13 +19,10 @@ namespace SIL.Transcriber.Forms.Groups
         public UpdateForm(
             UserRepository userRepository,
             GroupRepository groupRepository,
-            IOrganizationContext organizationContext,
-            IEntityRepository<UserRole> userRolesRepository,
-            ICurrentUserContext currentUserContext): base(userRepository, userRolesRepository, currentUserContext)
+            ICurrentUserContext currentUserContext): base(userRepository, currentUserContext)
         {
             UserRepository = userRepository;
             GroupRepository = groupRepository;
-            OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
         }
         public bool IsValid(int id, Group group)
@@ -36,7 +33,6 @@ namespace SIL.Transcriber.Forms.Groups
                                           .Where(g => g.Id == id)
                                           .Include(g => g.Owner)
                                           .FirstOrDefaultAsync().Result;
-            ValidateOrganizationHeader(original.OwnerId, "group");
             if (group.OwnerId != VALUE_NOT_SET)
             {
                 if ((!CurrentUserOrgIds.Contains(group.OwnerId)) && (!IsCurrentUserSuperAdmin()))

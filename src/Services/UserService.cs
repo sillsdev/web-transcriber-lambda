@@ -13,40 +13,33 @@ namespace SIL.Transcriber.Services
 {
     public class UserService : BaseArchiveService<User>
     {
-        public IOrganizationContext OrganizationContext { get; }
-        public ICurrentUserContext CurrentUserContext { get; }
-        public IEntityRepository<UserRole> UserRolesRepository { get; }
-        public CurrentUserRepository CurrentUserRepository { get; }
-        public User CurrentUser { get; }
+        private ICurrentUserContext CurrentUserContext { get; }
+        private CurrentUserRepository CurrentUserRepository { get; }
 
         public UserService(
             IJsonApiContext jsonApiContext,
-            IOrganizationContext organizationContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             CurrentUserRepository currentUserRepository,
             IEntityRepository<User> entityRepository,
-            IEntityRepository<UserRole> userRolesRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, entityRepository, loggerFactory)
         {
-            OrganizationContext = organizationContext;
             CurrentUserContext = currentUserContext;
-            UserRolesRepository = userRolesRepository;
             CurrentUserRepository = currentUserRepository;
-            CurrentUser = currentUserRepository.GetCurrentUser().Result;
         }
 
         public override async Task<IEnumerable<User>> GetAsync()
         {
-            return await GetScopedToOrganization<User>(base.GetAsync,
-                                   OrganizationContext,
+            return await GetScopedToCurrentUser<User>(base.GetAsync,
                                    JsonApiContext);
 
         }
         public override async Task<User> GetAsync(int id)
         {
-            
+            User CurrentUser = CurrentUserRepository.GetCurrentUser().Result;
+
             if (id == 0) id = CurrentUser.Id;
+
             if (CurrentUser.Id == id)
             {
                 return await base.GetAsync(id);
@@ -67,12 +60,9 @@ namespace SIL.Transcriber.Services
             return await base.UpdateAsync(id, resource);
         }
 
-        public async Task<User> GetCurrentUser() {
-            var currentUser = await CurrentUserRepository.GetCurrentUser();
+        public User GetCurrentUser() {
 
-            if (null == currentUser) return null;
-
-            return await base.GetAsync(currentUser.Id);
+            return CurrentUserRepository.GetCurrentUser().Result;
         }
     }
 }

@@ -22,13 +22,13 @@ namespace SIL.Transcriber.Models
         [Attr("transcriber-id")]
         public int? TranscriberId { get; set; }
 
-        [HasOne("Transcriber")]
+        [HasOne("transcriber")]
         public virtual User Transcriber { get; set; }
 
         [Attr("reviewer-id")]
         public int? ReviewerId { get; set; }
 
-        [HasOne("Reviewer")]
+        [HasOne("reviewer")]
         public virtual User Reviewer { get; set; }
 
         //causes errors when organization specified
