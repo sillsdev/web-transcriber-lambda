@@ -121,7 +121,7 @@ namespace SIL.Transcriber.Data
              return userFromResult == null ? -1 : userFromResult.Id;
         }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
-        private async Task AddTimestampsAsync()
+        private void AddTimestamps()
         {
             var entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
             DateTime now = DateTime.UtcNow;
@@ -155,14 +155,14 @@ namespace SIL.Transcriber.Data
         public override int SaveChanges()
         {
             UpdateSoftDeleteStatuses();
-            AddTimestampsAsync();
+            AddTimestamps();
             return base.SaveChanges();
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             UpdateSoftDeleteStatuses();
-            AddTimestampsAsync();
+            AddTimestamps();
             return await base.SaveChangesAsync(cancellationToken);
         }
         //The database would handle this on delete, but EFCore would throw an error,
