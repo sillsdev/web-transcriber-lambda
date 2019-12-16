@@ -18,7 +18,7 @@ namespace SIL.Transcriber.Utility
         }
         public static string GetOrigin(this HttpContext context)
         {
-            return context.Request.Headers.FirstOrDefault(h => h.Key == "Origin").Value;
+            return context.Request.Headers.FirstOrDefault(h => h.Key.ToLower() == "origin").Value;
         }
 
         // NOTE: User Claims of Interest:
