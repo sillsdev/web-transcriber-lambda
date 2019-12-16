@@ -30,7 +30,7 @@ namespace SIL.Transcriber.Services
             }
             return entities;
         }
-        public new IEnumerable<TResource> GetChanges(IEnumerable<TResource> entities, int currentuser, string origin, DateTime since)
+        public IEnumerable<TResource> GetChanges(IEnumerable<TResource> entities, int currentuser, string origin, DateTime since)
         {
             return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
         }
