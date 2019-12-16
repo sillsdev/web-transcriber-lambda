@@ -21,7 +21,6 @@ namespace SIL.Transcriber.Services
         private OrganizationService OrganizationService;
         private GroupMembershipRepository GroupMembershipRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
-        //private ISILIdentityService SILIdentity;
 
         public InvitationService(
             IJsonApiContext jsonApiContext,
@@ -29,7 +28,6 @@ namespace SIL.Transcriber.Services
             OrganizationService organizationService,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
-            //ISILIdentityService silIdentityService,
             ILoggerFactory loggerFactory
         ) : base(jsonApiContext, invitationRepository, loggerFactory)
         {
@@ -37,7 +35,6 @@ namespace SIL.Transcriber.Services
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
             GroupMembershipRepository = groupMembershipRepository;
-            //SILIdentity = silIdentityService;
         }
         public override async Task<IEnumerable<Invitation>> GetAsync()
         {

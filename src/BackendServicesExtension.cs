@@ -73,7 +73,6 @@ namespace SIL.Transcriber
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
             services.AddScoped<IParatextService, ParatextService>();
-            services.AddScoped<ISILIdentityService, SILIdentityService>();
 
 
             // EventDispatchers
@@ -111,12 +110,8 @@ namespace SIL.Transcriber
             services.AddScoped<UserService>();
             services.AddScoped<VwPassageStateHistoryEmailService>();
 
-            services.AddScoped<SILIdentityService>();
             services.AddScoped<Auth0ManagementApiTokenService>();
-            //services.AddScoped<SendNotificationService>();
-            //services.AddScoped<SendEmailService>();
             services.AddScoped<OrganizationMembershipService>();
-            //services.AddScoped<OrganizationMembershipInviteService>();
 
             return services;
         }

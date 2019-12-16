@@ -52,8 +52,7 @@ namespace SIL.Transcriber.Controllers
             this.Logger = loggerFactory.CreateLogger<T>();
             _currentUser = CurrentUser; //make sure this happens first no matter what entrypoint is used
         }
-        private static string CURRENT_USER_KEY = "CurrentUser";
-
+       
         /*  Nice try...but the errors don't come back to here...have to interrupt the jsonapi error handling
         public override async Task<IActionResult> PostAsync([FromBody] T entity)
         {

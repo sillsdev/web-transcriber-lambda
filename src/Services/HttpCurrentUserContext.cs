@@ -23,18 +23,14 @@ namespace SIL.Transcriber.Services
         private string authType;
         private ManagementApiClient managementApiClient;
         private User auth0User;
-        //private SILAuth_User silUser;
-        //private ISILIdentityService SILIdentity;
         protected ILogger<ICurrentUserContext> Logger { get; set; }
 
         public HttpCurrentUserContext(
              ILoggerFactory loggerFactory,
              IHttpContextAccessor httpContextAccessor,
-             //ISILIdentityService silIdentityService,
              Auth0ManagementApiTokenService tokenService)
         {
             HttpContext = httpContextAccessor.HttpContext;
-            //SILIdentity = silIdentityService;
             TokenService = tokenService;
             Logger = loggerFactory.CreateLogger<ICurrentUserContext>();
         }

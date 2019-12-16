@@ -19,7 +19,6 @@ namespace SIL.Transcriber.Services
         public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<Group> GroupRepository { get; }
         public GroupMembershipRepository GroupMembershipRepository { get; }
-        private ISILIdentityService SILIdentity;
 
         public OrganizationService(
             IJsonApiContext jsonApiContext,
@@ -28,14 +27,12 @@ namespace SIL.Transcriber.Services
             IEntityRepository<Group> groupRepository,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
-            ISILIdentityService silIdentityService,
            ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
         {
             OrganizationMembershipRepository = organizationMembershipRepository;
             CurrentUserRepository = currentUserRepository;
             GroupMembershipRepository = groupMembershipRepository;
             GroupRepository = groupRepository;
-            SILIdentity = silIdentityService;
         }
         private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
 
@@ -123,6 +120,7 @@ namespace SIL.Transcriber.Services
             */
         }
 
+        /*
 
         public bool JoinOrgs(List<SILAuth_Organization> orgs, User user, RoleName role)
         {
@@ -158,7 +156,7 @@ namespace SIL.Transcriber.Services
             newEntity.Owner = owner;
             return await CreateAsync(newEntity);
         }
-
+        */
         public Organization FindByNameOrDefault(string name)
         {
             return MyRepository.Get().Include(o => o.OrganizationMemberships).Where(e => e.Name == name).SingleOrDefault();
