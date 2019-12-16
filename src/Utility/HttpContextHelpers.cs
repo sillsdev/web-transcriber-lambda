@@ -16,6 +16,10 @@ namespace SIL.Transcriber.Utility
 
             return token;
         }
+        public static string GetOrigin(this HttpContext context)
+        {
+            return context.Request.Headers.FirstOrDefault(h => h.Key == "Origin").Value;
+        }
 
         // NOTE: User Claims of Interest:
         //   - type of name => email the user signed up with

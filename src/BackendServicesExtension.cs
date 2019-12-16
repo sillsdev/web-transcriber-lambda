@@ -28,6 +28,7 @@ namespace SIL.Transcriber
                 options.Namespace = "api";
                 options.IncludeTotalRecordCount = false;
                 options.DefaultPageSize = 0;
+                options.AllowCustomQueryParameters = true;
                 //options.EnableOperations = true;
                 options.BuildResourceGraph((builder) => {
                     builder.AddResource<DataChanges>();
