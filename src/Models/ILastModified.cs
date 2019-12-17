@@ -8,5 +8,6 @@ namespace SIL.Transcriber.Models
     interface ILastModified
     {
         int? LastModifiedBy { get; set; }
+        string LastModifiedOrigin { get; set; }
     }
 }

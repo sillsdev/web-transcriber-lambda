@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace SIL.Transcriber.Services
 {
     public class BaseArchiveService<TResource> : BaseService<TResource>
-         where TResource : class, IIdentifiable<int>, IArchive
+         where TResource : BaseModel, IArchive
     {
         public BaseArchiveService(
             IJsonApiContext jsonApiContext,
@@ -22,13 +22,21 @@ namespace SIL.Transcriber.Services
         }
         public async Task<IEnumerable<TResource>> GetDeleted()
         {
-            //return unarchived
+            //return archived
             IEnumerable<TResource> entities = await base.GetAsync();
             if (typeof(IArchive).IsAssignableFrom(typeof(TResource)))
             {
                 entities = entities.Where(t => t.Archived);
             }
             return entities;
+        }
+        public IEnumerable<TResource> GetChanges(IEnumerable<TResource> entities, int currentuser, string origin, DateTime since)
+        {
+            return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
+        }
+        public IEnumerable<TResource> GetDeletedSince(int currentuser, string origin, DateTime since)
+        {
+            return GetChanges(GetDeleted().Result, currentuser, origin, since);
         }
         public override async Task<IEnumerable<TResource>> GetAsync()
         {

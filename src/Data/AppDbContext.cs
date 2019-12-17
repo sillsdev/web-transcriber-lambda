@@ -8,14 +8,19 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Data
 {
     public class AppDbContext : DbContext
     {
+        public HttpContext HttpContext { get; }
+
         protected ICurrentUserContext CurrentUserContext;
-        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext) : base(options)
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : base(options)
         {
+            HttpContext = httpContextAccessor.HttpContext;
             CurrentUserContext = currentUserContext;
         }
 
@@ -138,7 +143,13 @@ namespace SIL.Transcriber.Data
                 foreach (var entry in entries)
                 {
                     entry.CurrentValues["LastModifiedBy"] = userid;
-                 }
+                }
+            }
+            var origin = HttpContext.GetOrigin();
+            entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            foreach (var entry in entries)
+            {
+                entry.CurrentValues["LastModifiedOrigin"] = origin;
             }
         }
         public override int SaveChanges()

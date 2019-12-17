@@ -6,17 +6,19 @@ using System.Threading.Tasks;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class DatachangesController : ControllerBase
+    public class DatachangesController : BaseController<DataChanges> 
     {
         GroupMembershipService GMService;
         GroupService GroupService;
@@ -27,7 +29,7 @@ namespace SIL.Transcriber.Controllers
         PassageSectionService PSService;
         PassageService PassageService;
         PlanService PlanService;
-        IResourceService<ProjectIntegration> ProjIntService;
+        ProjectIntegrationService ProjIntService;
         ProjectService ProjectService;
         SectionService SectionService;
         UserService UserService;
@@ -39,6 +41,7 @@ namespace SIL.Transcriber.Controllers
             ILoggerFactory loggerFactory,
             ICurrentUserContext currentUserContext,
             IJsonApiContext jsonApiContext,
+            IResourceService<DataChanges> resourceService,
             GroupMembershipService gmService,
             GroupService groupService,
             InvitationService invitationService,
@@ -48,11 +51,11 @@ namespace SIL.Transcriber.Controllers
             PassageSectionService psService,
             PassageService passageService,
             PlanService planService,
-            IResourceService<ProjectIntegration> piService,
+            ProjectIntegrationService piService,
             ProjectService projectService,
             SectionService sectionService,
             UserService userService)
-         : base()
+         : base(loggerFactory, jsonApiContext,resourceService,currentUserContext,organizationService,userService)
         {
             LoggerFactory = loggerFactory;
             CurrentUserContext = currentUserContext;
@@ -82,56 +85,56 @@ namespace SIL.Transcriber.Controllers
             if (tblList.Count > 0)
                 addTo.Add(tblList.ToArray());
         }
-        [HttpGet("{since}")]
-        public ActionResult GetDataChanges([FromRoute] string since)
+        [HttpGet("since/{since}")]
+        public ActionResult GetDataChanges([FromRoute] string since, string origin)
         {
             DateTime dtSince;
             if (!DateTime.TryParse(since, out dtSince))
                 return new UnprocessableEntityResult();
-
+            dtSince = dtSince.ToUniversalTime();
             List<OrbitId[]> changes = new List<OrbitId[]>();
             List<OrbitId[]> deleted = new List<OrbitId[]>();
             DateTime dtNow = DateTime.UtcNow;
-            var pc = new PassagesController(LoggerFactory, JsonApiContext, PassageService, CurrentUserContext, OrganizationService, UserService);
+            int currentUser = CurrentUser.Id;
 
-            BuildList(GMService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "groupmembership", changes);
-            BuildList(GMService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "groupmembership", deleted);
+            BuildList(GMService.GetChanges(currentUser, origin, dtSince), "groupmembership", changes);
+            BuildList(GMService.GetDeletedSince(currentUser, origin, dtSince), "groupmembership", deleted);
 
-            BuildList(GroupService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "group", changes);
-            BuildList(GroupService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "group", deleted);
+            BuildList(GroupService.GetChanges(currentUser, origin, dtSince), "group", changes);
+            BuildList(GroupService.GetDeletedSince(currentUser, origin, dtSince), "group", deleted);
 
-            BuildList(InvitationService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "invitation", changes);
-            //BuildList(InvitationService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "invitation", deleted);
+            BuildList(InvitationService.GetChanges(currentUser, origin, dtSince), "invitation", changes);
+            //BuildList(InvitationService.GetDeleted().Result.Where(p => (p.LastModifiedBy != CurrentUser.Id || p.LastModifiedOrigin != HttpContext.GetOrigin()) && p.DateUpdated > dtSince), "invitation", deleted);
 
-            BuildList(MediafileService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "mediafile", changes);
-            BuildList(MediafileService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "mediafile", deleted);
+            BuildList(MediafileService.GetChanges(currentUser, origin, dtSince), "mediafile", changes);
+            BuildList(MediafileService.GetDeletedSince(currentUser, origin, dtSince), "mediafile", deleted);
 
-            BuildList(OrgMemService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "organizationmembership", changes);
-            BuildList(OrgMemService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "organizationmembership", deleted);
+            BuildList(OrgMemService.GetChanges(currentUser, origin, dtSince), "organizationmembership", changes);
+            BuildList(OrgMemService.GetDeletedSince(currentUser, origin, dtSince), "organizationmembership", deleted);
 
-            BuildList(OrganizationService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "organization", changes);
-            BuildList(OrganizationService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "organization", deleted);
+            BuildList(OrganizationService.GetChanges(currentUser, origin, dtSince), "organization", changes);
+            BuildList(OrganizationService.GetDeletedSince(currentUser, origin, dtSince), "organization", deleted);
 
-            BuildList(PSService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "passagesection", changes);
-            BuildList(PSService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "passagesection", deleted);
+            BuildList(PSService.GetChanges(currentUser, origin, dtSince), "passagesection", changes);
+            BuildList(PSService.GetDeletedSince(currentUser, origin, dtSince), "passagesection", deleted);
 
-            BuildList(PassageService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "passage", changes);
-            BuildList(PassageService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "passage", deleted);
+            BuildList(PassageService.GetChanges(currentUser, origin, dtSince), "passage", changes);
+            BuildList(PassageService.GetDeletedSince(currentUser, origin, dtSince), "passage", deleted);
 
-            BuildList(PlanService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "plan", changes);
-            BuildList(PlanService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "plan", deleted);
+            BuildList(PlanService.GetChanges(currentUser, origin, dtSince), "plan", changes);
+            BuildList(PlanService.GetDeletedSince(currentUser, origin, dtSince), "plan", deleted);
 
-            BuildList(ProjIntService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "projectintegration", changes);
+            BuildList(ProjIntService.GetChanges(currentUser, origin, dtSince), "projectintegration", changes);
             //BuildList(ProjIntService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "projectintegration", deleted);
 
-            BuildList(ProjectService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "project", changes);
-            BuildList(ProjectService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "project", deleted);
+            BuildList(ProjectService.GetChanges(currentUser, origin, dtSince), "project", changes);
+            BuildList(ProjectService.GetDeletedSince(currentUser, origin, dtSince), "project", deleted);
 
-            BuildList(SectionService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "section", changes);
-            BuildList(SectionService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "section", deleted);
+            BuildList(SectionService.GetChanges(currentUser, origin, dtSince), "section", changes);
+            BuildList(SectionService.GetDeletedSince(currentUser, origin, dtSince), "section", deleted);
 
-            BuildList(UserService.GetAsync().Result.Where(p => p.DateUpdated > dtSince), "user", changes);
-            BuildList(UserService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "user", deleted);
+            BuildList(UserService.GetChanges(currentUser, origin, dtSince), "user", changes);
+            BuildList(UserService.GetDeletedSince(currentUser, origin, dtSince), "user", deleted);
 
             var ret = new DataChanges() { Id = 1,  Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
             return Ok(ret);
