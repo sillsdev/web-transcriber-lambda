@@ -145,7 +145,7 @@ namespace SIL.Transcriber.Data
                     entry.CurrentValues["LastModifiedBy"] = userid;
                 }
             }
-            var origin = HttpContext.GetOrigin();
+            var origin = HttpContext.GetOrigin() ?? "anonymous";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (var entry in entries)
             {
