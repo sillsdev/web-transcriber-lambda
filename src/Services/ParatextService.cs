@@ -124,7 +124,7 @@ namespace SIL.Transcriber.Services
             var accessToken = new JwtSecurityToken(AccessToken);
             return accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
         }
-        public async Task<System.Collections.Generic.IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
+        public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
             VerifyUserSecret(userSecret);
 
@@ -161,7 +161,7 @@ namespace SIL.Transcriber.Services
                 if (projects != null && projects.Count() > 0)
                 {
                     isConnected = true;
-                    isConnectable = true; // !project.UserRoles.ContainsKey(userSecret.Id);
+                    isConnectable = true;// !project.UserRoles.ContainsKey(userSecret.Id);
                 }
                 else if (role == ParatextProjectRoles.Administrator || role == ParatextProjectRoles.Translator)
                 {
@@ -186,6 +186,11 @@ namespace SIL.Transcriber.Services
             }
 
             return projects;
+        }
+        public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag)
+        {
+            IReadOnlyList<ParatextProject> projects = await GetProjectsAsync(userSecret);
+            return projects.Where(p => p.LanguageTag == languageTag).ToList();
         }
 
         public async Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId)
@@ -219,7 +224,7 @@ namespace SIL.Transcriber.Services
             return usernameClaim?.Value;
         }
 
-        public async Task<System.Collections.Generic.IReadOnlyList<string>> GetBooksAsync(UserSecret userSecret, string projectId)
+        public async Task<IReadOnlyList<string>> GetBooksAsync(UserSecret userSecret, string projectId)
         {
             VerifyUserSecret(userSecret);
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"books/{projectId}");
@@ -400,7 +405,7 @@ namespace SIL.Transcriber.Services
         }
         private IEnumerable<BookChapter> BookChapters(IQueryable<Passage> passages)
         {
-            return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct<BookChapter>();
+            return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct();
         }
         public async Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId)
         {

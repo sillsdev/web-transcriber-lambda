@@ -37,6 +37,20 @@ namespace SIL.Transcriber.Controllers
                 return NoContent();
             }
         }
+        [HttpGet("projects/{languagetag}")]
+        public async Task<ActionResult<IEnumerable<ParatextProject>>> GetAsync([FromRoute] string languageTag)
+        {
+            UserSecret userSecret = _paratextService.ParatextLogin();
+            try
+            {
+                IReadOnlyList<ParatextProject> projects = await _paratextService.GetProjectsAsync(userSecret, languageTag);
+                return Ok(projects);
+            }
+            catch (SecurityException)
+            {
+                return NoContent();
+            }
+        }
 
         [HttpGet("username")]
         public ActionResult<string> Username()
