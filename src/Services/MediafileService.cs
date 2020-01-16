@@ -71,7 +71,7 @@ namespace SIL.Transcriber.Services
         {
             //aws versioning on
             //entity.S3File = entity.OriginalFile;
-            entity.S3File = Guid.NewGuid() + "_" + entity.OriginalFile;
+            entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile)  + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
 
             var mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
             if (mfs.Count() == 0)
