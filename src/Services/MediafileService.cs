@@ -147,5 +147,14 @@ namespace SIL.Transcriber.Services
         {
             return MediafileRepository.Get().Where(mf => mf.PassageId == passageId).OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
         }
+        public string EAF(int id)
+        {
+            Mediafile mf = MediafileRepository.Get(id);
+            string eaf = "";
+            if (!string.IsNullOrEmpty(mf.Transcription))
+                eaf =  "Eaf stuff" + mf.Transcription;
+
+            return eaf;
+        }
     }
 }

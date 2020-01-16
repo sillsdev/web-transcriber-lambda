@@ -73,6 +73,7 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
+            services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<IParatextService, ParatextService>();
 
 
@@ -113,6 +114,7 @@ namespace SIL.Transcriber
 
             services.AddScoped<Auth0ManagementApiTokenService>();
             services.AddScoped<OrganizationMembershipService>();
+            services.AddScoped<OfflineDataService>();
 
             return services;
         }
