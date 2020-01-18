@@ -69,10 +69,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="resources\EafTemplate.xml" />
     <None Remove="resources\invitation.html" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="resources\EafTemplate.xml" />
     <EmbeddedResource Include="resources\invitation.html" />
   </ItemGroup>
 

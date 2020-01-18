@@ -68,7 +68,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{id}/eaf")]
         public async Task<IActionResult> GetEaf([FromRoute] int id)
         {
-            var response = _service.EAF(id);
+            var response = _service.EAF(_service.GetAsync(id).Result);
 
            return Ok(response);
         }

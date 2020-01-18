@@ -40,10 +40,13 @@ namespace SIL.Transcriber.Services
         }
         private void AddEafEntry(ZipArchive zipArchive, string name, string eafxml)
         {
-            var entry = zipArchive.CreateEntry("media/" + name + ".eaf", CompressionLevel.Optimal);
-            using (StreamWriter sw = new StreamWriter(entry.Open()))
+            if (!String.IsNullOrEmpty(eafxml))
             {
-                sw.WriteLine(eafxml);
+                var entry = zipArchive.CreateEntry("media/" + Path.GetFileNameWithoutExtension(name) + ".eaf", CompressionLevel.Optimal);
+                using (StreamWriter sw = new StreamWriter(entry.Open()))
+                {
+                    sw.WriteLine(eafxml);
+                }
             }
         }
         private void AddStreamEntry(ZipArchive zipArchive, Stream fileStream, string dir, string newName)
@@ -99,7 +102,7 @@ namespace SIL.Transcriber.Services
                     var response = mediaService.GetFile(m.Id).Result;
                     AddStreamEntry(zipArchive, response.FileStream, "media/", m.S3File);
                     m.AudioUrl = "media/" + m.S3File;
-                    AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m.Id));
+                    AddEafEntry(zipArchive, m.S3File, m.EafUrl);
                 }
             });
         }

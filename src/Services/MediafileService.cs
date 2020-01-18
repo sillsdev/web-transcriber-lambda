@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Amazon.S3;
-using Amazon.S3.Model;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using static SIL.Transcriber.Utility.ServiceExtensions;
+using static SIL.Transcriber.Utility.ResourceHelpers;
+using static SIL.Transcriber.Utility.ParatextHelpers;
+using System.Xml.Linq;
+using System.Web;
 
 namespace SIL.Transcriber.Services
 {
@@ -24,7 +23,7 @@ namespace SIL.Transcriber.Services
         private IS3Service _S3service { get; }
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
-
+        private IJsonApiContext JsonApiContext { get; set; }
         public MediafileService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Mediafile> basemediafileRepository,
@@ -35,6 +34,7 @@ namespace SIL.Transcriber.Services
             _S3service = service;
             PlanRepository = planRepository;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
+            JsonApiContext = jsonApiContext;
         }
 
         public override async Task<IEnumerable<Mediafile>> GetAsync()
@@ -92,7 +92,6 @@ namespace SIL.Transcriber.Services
             await base.UpdateAsync(id, mf);
             return mf;
         }
-
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             InitNewMediafile(entity); //set the version number
@@ -100,6 +99,20 @@ namespace SIL.Transcriber.Services
             entity.AudioUrl = response.Message;
             return await base.CreateAsync(entity);
         }
+        public override async Task<Mediafile> UpdateAsync(int id, Mediafile media)
+        {
+            Mediafile mf = MediafileRepository.Get(id);
+            //if the transcription has changed...update the eafurl  //TODO RENAME TO EAF
+            if (JsonApiContext.AttributesToUpdate.Any(kvp=>kvp.Key.PublicAttributeName == "transcription"))
+            {
+                mf.Transcription = media.Transcription;
+                var contextEntity = JsonApiContext.ResourceGraph.GetContextEntity("mediafiles");
+                JsonApiContext.AttributesToUpdate[contextEntity.Attributes.Where(a => a.PublicAttributeName == "eaf-url").First()] = EAF(mf);
+            }
+            mf = await base.UpdateAsync(id, media);
+            return mf;
+        }
+
         public  async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
         {
            InitNewMediafile(entity);
@@ -147,12 +160,30 @@ namespace SIL.Transcriber.Services
         {
             return MediafileRepository.Get().Where(mf => mf.PassageId == passageId).OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
         }
-        public string EAF(int id)
+        public string EAF(Mediafile mf)
         {
-            Mediafile mf = MediafileRepository.Get(id);
             string eaf = "";
             if (!string.IsNullOrEmpty(mf.Transcription))
-                eaf =  "Eaf stuff" + mf.Transcription;
+            {
+                //get the project language
+                var plan = PlanRepository.GetWithProject(mf.PlanId);
+                var lang = !string.IsNullOrEmpty(plan.Project.Language) ? plan.Project.Language : "en";
+
+                eaf = LoadResource("EafTemplate.xml");
+                var eafContent = XElement.Parse(eaf);
+                //var sDebug = TraverseNodes(eafContent, 1);
+                XElement elem;
+                eafContent.Attribute("DATE").Value = DateTime.Now.ToString();
+                GetElement(eafContent, "TIER").Attribute("DEFAULT_LOCALE").Value = lang;
+                GetElement(eafContent, "LOCALE").Attribute("LANGUAGE_CODE").Value = lang;
+                GetElement(eafContent, "HEADER").Attribute("MEDIA_FILE").Value = mf.S3File;
+                GetElement(eafContent, "MEDIA_DESCRIPTOR").Attribute("MEDIA_URL").Value = mf.S3File;
+                GetElement(eafContent, "MEDIA_DESCRIPTOR").Attribute("MIME_TYPE").Value = mf.ContentType;
+                elem = GetElementsWithAttribute(eafContent, "TIME_SLOT", "ts2").First();
+                elem.Attribute("TIME_VALUE").Value = (mf.Duration * 1000).ToString();
+                GetElement(eafContent, "ANNOTATION_VALUE").Value = HttpUtility.HtmlEncode(mf.Transcription);
+                eaf = eafContent.ToString();
+            }
 
             return eaf;
         }
