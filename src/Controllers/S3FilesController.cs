@@ -54,7 +54,7 @@ namespace SIL.Transcriber.Controllers
                     FileName = fileNameOut.Length > 0 ? fileNameOut : fileName,
                     Inline = true // false = prompt the user for downloading; true = browser to try to show the file inline
                 }.ToString());
-                Console.WriteLine("size:" + response.FileStream.Length.ToString());
+                //Console.WriteLine("size:" + response.FileStream.Length.ToString());
                 return File(response.FileStream, response.ContentType);
             }
             else

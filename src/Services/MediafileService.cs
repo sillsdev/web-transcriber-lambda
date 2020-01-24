@@ -23,7 +23,6 @@ namespace SIL.Transcriber.Services
         private IS3Service _S3service { get; }
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
-        private IJsonApiContext JsonApiContext { get; set; }
         public MediafileService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Mediafile> basemediafileRepository,
@@ -34,7 +33,6 @@ namespace SIL.Transcriber.Services
             _S3service = service;
             PlanRepository = planRepository;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
-            JsonApiContext = jsonApiContext;
         }
 
         public override async Task<IEnumerable<Mediafile>> GetAsync()

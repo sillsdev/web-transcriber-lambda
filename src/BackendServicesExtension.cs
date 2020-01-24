@@ -32,6 +32,7 @@ namespace SIL.Transcriber
                 //options.EnableOperations = true;
                 options.BuildResourceGraph((builder) => {
                     builder.AddResource<DataChanges>();
+                    builder.AddResource<FileResponse>();
                 });
             });
 

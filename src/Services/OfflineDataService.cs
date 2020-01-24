@@ -12,6 +12,9 @@ using System.Collections.Generic;
 using System.Collections;
 using System;
 using JsonApiDotNetCore.Serialization;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Mvc;
 
 namespace SIL.Transcriber.Services
 {
@@ -20,18 +23,18 @@ namespace SIL.Transcriber.Services
         protected readonly AppDbContext dbContext;
         protected readonly IJsonApiSerializer jsonApiSerializer;
         protected readonly MediafileService mediaService;
+        private IS3Service _S3service;
 
-        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, MediafileService MediaService)//, OrganizationRepository organizationRepository, ProjectRepository projectRepository)
+        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, MediafileService MediaService, IS3Service service)
         {
-           // OrganizationRepository = organizationRepository;
-            //ProjectRepository = projectRepository;
             this.dbContext = (AppDbContext)contextResolver.GetContext();
             jsonApiSerializer = jsonSer;
             mediaService = MediaService;
+            _S3service = service;
         }
         private void AddJsonEntry(ZipArchive zipArchive, string table, IList list)
         {
-            var entry = zipArchive.CreateEntry(table + ".json", CompressionLevel.Fastest);
+            var entry = zipArchive.CreateEntry("data/" + table + ".json", CompressionLevel.Fastest);
             using (StreamWriter sw = new StreamWriter(entry.Open()))
             {
                 //sw.WriteLine(JsonConvert.SerializeObject(list, Formatting.Indented));
@@ -93,9 +96,10 @@ namespace SIL.Transcriber.Services
                 }
             });
         }
+   
         private void AddMedia(ZipArchive zipArchive, List<Mediafile> media)
         {
-            media.ForEach(m =>
+            media.ForEach( m =>
             {
                 if (!String.IsNullOrEmpty(m.S3File))
                 {
@@ -108,16 +112,16 @@ namespace SIL.Transcriber.Services
         }
         private FileResponse Export(int orgid, int projectid = 0)
         {
-            var response = new FileResponse();
             //export this organization
-            //Organization org = OrganizationRepository.Get().Where(o => o.Id == orgid).FirstOrDefaultAsync().Result;
             IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == orgid);
             IQueryable<Project> projects;
             if (orgs.Count() == 0)
             {
-                response.Status = System.Net.HttpStatusCode.NotFound;
-                response.Message = "Organization does not exist. " + orgid.ToString();
-                return response;
+                return new FileResponse()
+                {
+                    Status = System.Net.HttpStatusCode.NotFound,
+                    Message = "Organization does not exist. " + orgid.ToString()
+                };
             }
 
             if (projectid != 0)
@@ -183,20 +187,25 @@ namespace SIL.Transcriber.Services
 
             }
             ms.Position = 0;
-            response.ContentType = "application/zip";
-            response.Status = System.Net.HttpStatusCode.OK;
-            response.FileStream = ms;
-            if (projectid != 0)
+            const string ContentType = "application/zip";
+            const string ExportFolder = "exports";
+            string fileName = projectid != 0 ? string.Format("TranscriberProject_{0}.zip", projects.First().Slug) : string.Format("TranscriberOrg_{0}.zip", orgs.First().Slug);
+            var s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
+            if (s3response.Status == System.Net.HttpStatusCode.OK)
             {
-                response.Message = string.Format("TranscriberProject_{0}.zip", projects.First().Slug);
-
+                //get a signedurl for it now
+                return new FileResponse()
+                {
+                    Message = fileName,
+                    FileURL = _S3service.SignedUrlForGet(fileName, ExportFolder, ContentType).Message,
+                    Status = System.Net.HttpStatusCode.OK,
+                    ContentType = ContentType,
+                };
             }
             else
             {
-                response.Message = string.Format("TranscriberOrg_{0}.zip", orgs.First().Slug);
-
+                return s3response;
             }
-            return response;
         }
         public FileResponse ExportOrganization(int orgid)
         {
