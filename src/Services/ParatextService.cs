@@ -91,7 +91,7 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin()
         {
             var currentUser = CurrentUserRepository.GetCurrentUser().Result;
-            UserSecret newPTToken = CurrentUserContext.ParatextLogin("paratext-transcriber", currentUser.Id);
+            UserSecret newPTToken = CurrentUserContext.ParatextLogin(GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"), currentUser.Id);
 
             if (newPTToken == null)
             {
@@ -452,6 +452,7 @@ namespace SIL.Transcriber.Services
                 foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                 {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);
+                    HttpContext.SetOrigin("paratext");
                     passage.State = "synced";
                     await PassageService.UpdateAsync(passage.Id, passage);
                 }

@@ -187,7 +187,7 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin(string connection, int userId)
         {
             var identities = Auth0User.Identities;
-            var ptIdentity = identities.FirstOrDefault(i => i.Connection.ToLower() == connection); //i.e. "Paratext-Transcriber"
+            var ptIdentity = identities.FirstOrDefault(i => i.Connection == connection); //i.e. "Paratext-Transcriber"
             if (ptIdentity != null)
             {
                 var newPTTokens = new ParatextToken
