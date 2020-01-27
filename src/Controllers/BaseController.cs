@@ -103,7 +103,6 @@ namespace SIL.Transcriber.Controllers
                 GivenName = currentUserContext.GivenName,
                 FamilyName = currentUserContext.FamilyName,
                 avatarurl = currentUserContext.Avatar,
-                Notifications = 1, //remove
                 DigestPreference = 1,  // 0=none, >1=daily  room for future preferences
                 NewsPreference = false,
                 SilUserid = 0 //  currentUserContext.SilUserid

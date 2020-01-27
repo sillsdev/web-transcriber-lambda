@@ -55,8 +55,6 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         [Attr("hot-keys")]
         public string hotkeys { get; set; } //json
-        [Attr("notifications")]
-        public int? Notifications { get; set; }
         [Attr("digest-preference")]
         public int? DigestPreference { get; set; }
         [Attr("news-preference")]
