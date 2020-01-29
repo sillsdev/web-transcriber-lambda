@@ -20,7 +20,10 @@ namespace SIL.Transcriber.Utility
         {
             return context.Request.Headers.FirstOrDefault(h => h.Key.ToLower() == "origin").Value;
         }
-
+        public static void SetOrigin(this HttpContext context, string value)
+        {
+            context.Request.Headers["origin"]  = value;
+        }
         // NOTE: User Claims of Interest:
         //   - type of name => email the user signed up with
         //   - type of http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress => email address
