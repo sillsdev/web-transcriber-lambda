@@ -99,6 +99,7 @@ namespace SIL.Transcriber.Services
             }
             //get existing
             var tokens = ParatextTokenService.GetAsync().Result;
+            Console.WriteLine("stored paratext token count " + tokens.Count().ToString());
             if (tokens != null && tokens.Count() > 0)
             {
                 ParatextToken token = tokens.First();
@@ -106,6 +107,7 @@ namespace SIL.Transcriber.Services
                 {
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
+                    Console.WriteLine("Update to token" + token.ToString());
                     _userSecretRepository.UpdateAsync(token.Id, token);
                 }
                 else

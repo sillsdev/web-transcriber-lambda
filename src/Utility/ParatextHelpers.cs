@@ -155,12 +155,16 @@ namespace SIL.Transcriber.Utility
                 }
                 if (section == null) 
                 {
-                        //find the next verse to add it before if (verse == null)
-                        int lastinChapter = verses.LastOrDefault() != null ? int.Parse(verses.Last().FirstAttribute.Value) : 0;
-                        for (int ix = sectionInfo.startVerse; verse == null && ix <= lastinChapter; ix++)
-                        {
-                            verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
-                        }
+                    //find the next verse to add it before if (verse == null)
+                    int lastinChapter = 0;
+                    if (verses.LastOrDefault() != null)
+                    {
+                        lastinChapter = verses.Last().EndVerse();
+                    }
+                    for (int ix = sectionInfo.startVerse; verse == null && ix <= lastinChapter; ix++)
+                    {
+                        verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
+                    }
                     if (verse == null)
                     {
                         chapterContent.LastNode.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader()));

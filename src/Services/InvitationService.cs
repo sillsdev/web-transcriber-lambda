@@ -68,7 +68,6 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation> CreateAsync(Invitation entity)
         {
             //call the Identity api and receive an invitation id
-            Console.WriteLine("creating invitation");
             var org = await OrganizationService.GetAsync(entity.OrganizationId);
             entity.Organization = org;
             //entity.SilId = SendInvitation(entity);
