@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Auth.Models;
@@ -19,8 +20,10 @@ namespace SIL.Transcriber.Services
         public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<Group> GroupRepository { get; }
         public GroupMembershipRepository GroupMembershipRepository { get; }
+        private HttpContext HttpContext;
 
         public OrganizationService(
+            IHttpContextAccessor httpContextAccessor,
             IJsonApiContext jsonApiContext,
             IEntityRepository<Organization> organizationRepository,
             IEntityRepository<OrganizationMembership> organizationMembershipRepository,
@@ -29,6 +32,7 @@ namespace SIL.Transcriber.Services
             CurrentUserRepository currentUserRepository,
            ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
         {
+            HttpContext = httpContextAccessor.HttpContext;
             OrganizationMembershipRepository = organizationMembershipRepository;
             CurrentUserRepository = currentUserRepository;
             GroupMembershipRepository = groupMembershipRepository;
@@ -58,6 +62,7 @@ namespace SIL.Transcriber.Services
         {
             var newEntity = await base.CreateAsync(entity);
 
+            HttpContext.SetOrigin("api");
             //create an "all org group" and add the current user
             var group = new Group
             {
@@ -78,6 +83,7 @@ namespace SIL.Transcriber.Services
             if (user.OrganizationMemberships == null || user.GroupMemberships == null)
                 user = CurrentUserRepository.Get().Include(o => o.OrganizationMemberships).Include(o => o.GroupMemberships).Where(e => e.Id == user.Id).SingleOrDefault();
 
+            HttpContext.SetOrigin("api");
             OrganizationMembership membership = user.OrganizationMemberships.Where(om => om.OrganizationId == entity.Id).ToList().FirstOrDefault();
             if (membership == null)
             {
@@ -137,6 +143,7 @@ namespace SIL.Transcriber.Services
                 if (org == null)
                 {
                     //will be added as owner
+                    HttpContext.SetOrigin("api");
                     org = CreateAsync(entity, user).Result;
                 }
                 else 

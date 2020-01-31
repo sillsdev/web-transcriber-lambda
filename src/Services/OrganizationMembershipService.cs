@@ -38,38 +38,6 @@ namespace SIL.Transcriber.Services
                 base.GetAsync,
                 JsonApiContext);
         }
-        public async Task<OrganizationMembership> CreateByEmail(OrganizationMembership membership)
-        {
-            if (membership.Email == null || membership.OrganizationId == 0) return null;
 
-            User userForEmail = UserRepository.Get()
-                .Where(p => p.Email == membership.Email)
-                .FirstOrDefault();
-
-            if (userForEmail == null) return null;
-
-            membership.UserId = userForEmail.Id;
-            membership.RoleId = (int)RoleName.Member;
-            var organizationMembership = await this.MaybeCreateMembership(membership);
-         
-            return organizationMembership;
-        }
-
-        private async Task<OrganizationMembership> MaybeCreateMembership(OrganizationMembership membership)
-        {
-            var existingMembership = await this.OrganizationMembershipRepository
-                .Get()
-                .Where(om => (
-                    om.UserId == membership.UserId 
-                    && om.OrganizationId == membership.OrganizationId
-                ))
-                .FirstOrDefaultAsync();
-
-            if (existingMembership != null) {
-                return existingMembership;
-            }
-
-            return await this.OrganizationMembershipRepository.CreateAsync(membership);
-        }
     }
 }

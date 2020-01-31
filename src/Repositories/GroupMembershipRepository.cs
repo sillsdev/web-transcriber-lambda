@@ -8,13 +8,16 @@ using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.RepositoryExtensions;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using Microsoft.AspNetCore.Http;
 
 namespace SIL.Transcriber.Repositories
 {
     public class GroupMembershipRepository : BaseRepository<GroupMembership>
     {
         GroupRepository GroupRepository;
+        private HttpContext HttpContext;
         public GroupMembershipRepository(
+            IHttpContextAccessor httpContextAccessor,
           ILoggerFactory loggerFactory,
           IJsonApiContext jsonApiContext,
           CurrentUserRepository currentUserRepository,
@@ -22,6 +25,7 @@ namespace SIL.Transcriber.Repositories
           GroupRepository groupRepository
       ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
+            HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
         }
         private IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
@@ -57,6 +61,7 @@ namespace SIL.Transcriber.Repositories
             GroupMembership groupmembership = Get().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
             if (groupmembership == null)
             {
+                HttpContext.SetOrigin("api");
                 groupmembership = new GroupMembership
                 {
                     GroupId = groupId,
