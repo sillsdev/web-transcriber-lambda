@@ -69,6 +69,10 @@ namespace SIL.Transcriber.Repositories
                     RoleId = (int)groupRole,
                 };
                 groupmembership = CreateAsync(groupmembership).Result;
+            } else if (groupmembership.Archived)
+            {
+                groupmembership.Archived = false;
+                groupmembership = UpdateAsync(groupmembership.Id, groupmembership).Result;
             }
             return groupmembership;
         }

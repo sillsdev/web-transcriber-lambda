@@ -97,12 +97,15 @@ namespace SIL.Transcriber.Services
                 };
                 var om = OrganizationMembershipRepository.CreateAsync(membership).Result;
             }
-            else if (membership.RoleName != orgRole)
+            else
             {
-                membership.RoleId = (int)orgRole;
-                var om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
+                if (membership.Archived || membership.RoleName != orgRole)
+                {
+                    membership.RoleId = (int)orgRole;
+                    membership.Archived = false;
+                    var om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
+                }
             }
-
             if (allGroup != null)
             {
                 GroupMembershipRepository.JoinGroup(user.Id, allGroup.Id, groupRole);
