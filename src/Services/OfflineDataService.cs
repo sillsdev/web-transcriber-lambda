@@ -32,9 +32,19 @@ namespace SIL.Transcriber.Services
             mediaService = MediaService;
             _S3service = service;
         }
-        private void AddJsonEntry(ZipArchive zipArchive, string table, IList list)
+        private DateTime AddCheckEntry(ZipArchive zipArchive)
         {
-            var entry = zipArchive.CreateEntry("data/" + table + ".json", CompressionLevel.Fastest);
+            var entry = zipArchive.CreateEntry("SILTranscriber", CompressionLevel.Fastest);
+            var dt = DateTime.Now;
+            using (StreamWriter sw = new StreamWriter(entry.Open()))
+            {
+                sw.WriteLine(dt.ToString());
+            }
+            return dt;
+        }
+        private void AddJsonEntry(ZipArchive zipArchive, string table, IList list, char sort)
+        {
+            var entry = zipArchive.CreateEntry("data/" + sort + "_" + table + ".json", CompressionLevel.Fastest);
             using (StreamWriter sw = new StreamWriter(entry.Open()))
             {
                 //sw.WriteLine(JsonConvert.SerializeObject(list, Formatting.Indented));
@@ -132,57 +142,67 @@ namespace SIL.Transcriber.Services
             var ms = new MemoryStream();
             using (var zipArchive = new ZipArchive(ms, ZipArchiveMode.Create, true))
             {
-                var orgList = orgs.ToList();
-                AddOrgLogos(zipArchive, orgList);
-                AddJsonEntry(zipArchive, "organizations", orgList);
+                var exported= AddCheckEntry(zipArchive);
 
-                //organizationmemberships
                 var orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
-                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList());
+                
                 //users
                 var userList = orgmems.Join(dbContext.Users, om => om.UserId, u => u.Id, (om, u) => u).ToList();
                 AddUserAvatars(zipArchive, userList);
-                AddJsonEntry(zipArchive, "users",userList);
-                
+                AddJsonEntry(zipArchive, "users", userList, 'A');
+
+                //org
+                var orgList = orgs.ToList();
+                AddOrgLogos(zipArchive, orgList);
+                AddJsonEntry(zipArchive, "organizations", orgList, 'B');
+
+                //organizationmemberships
+                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
+
                 //groups
                 var groups = dbContext.Groups.Where(om => om.OwnerId == orgid);
-                AddJsonEntry(zipArchive, "groups", groups.ToList());
-                //groupmemberships
-                AddJsonEntry(zipArchive, "groupmemberships", groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).ToList());
-                //projects
-                AddJsonEntry(zipArchive, "projects", projects.ToList());
+                AddJsonEntry(zipArchive, "groups", groups.ToList(), 'C');
 
+                //groupmemberships
+                AddJsonEntry(zipArchive, "groupmemberships", groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).ToList(), 'D');
+
+                //projects
+                AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
+                projects.ToList().ForEach(p => {
+                    p.DateExported = exported;
+                    dbContext.Projects.Update(p);
+                });
                 //projectintegrations
-                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).ToList());
+                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).ToList(), 'E');
                 //plans
                 var plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl);
-                AddJsonEntry(zipArchive, "plans", plans.ToList());
+                AddJsonEntry(zipArchive, "plans", plans.ToList(), 'E');
                 //sections
                 var sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s);
-                AddJsonEntry(zipArchive, "sections", sections.ToList());
+                AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
                 //passagesections
                 var passagesections = sections.Join(dbContext.Passagesections, s => s.Id, ps => ps.SectionId, (s, ps) => ps);
-                AddJsonEntry(zipArchive, "passagesections", passagesections.ToList());
+                AddJsonEntry(zipArchive, "passagesections", passagesections.ToList(), 'H');
                 //passages
                 var passages = passagesections.Join(dbContext.Passages, ps => ps.PassageId, p => p.Id, (ps, p) => p);
-                AddJsonEntry(zipArchive, "passages", passages.ToList());
+                AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
                 //mediafiles
                 var mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
                 var mediaList = mediafiles.ToList();
                 AddMedia(zipArchive, mediaList);
-                AddJsonEntry(zipArchive, "mediafiles", mediaList);
+                AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
 
                 //ALL
                 //activitystates
-                AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList());
+                AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
                 //integrations
-                AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList());
+                AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
                 //projecttypes
-                AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList());
+                AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
                 //plantypes
-                AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList());
+                AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
                 //roles
-                AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList());
+                AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
                
 
             }
