@@ -70,7 +70,7 @@ namespace TranscriberAPI.Utility
             }
 
         }
-
+        /*
         private static void SendEmailSMTP(string To, string Subject, string body)
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
@@ -117,6 +117,7 @@ namespace TranscriberAPI.Utility
                 }
             }
         }
+        */
         private static async Task SendEmailAPIAsync(string To, string Subject, string body)
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.

@@ -91,7 +91,7 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin()
         {
             var currentUser = CurrentUserRepository.GetCurrentUser().Result;
-            UserSecret newPTToken = CurrentUserContext.ParatextLogin("paratext-transcriber", currentUser.Id);
+            UserSecret newPTToken = CurrentUserContext.ParatextLogin(GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"), currentUser.Id);
 
             if (newPTToken == null)
             {
@@ -99,6 +99,7 @@ namespace SIL.Transcriber.Services
             }
             //get existing
             var tokens = ParatextTokenService.GetAsync().Result;
+            Console.WriteLine("stored paratext token count " + tokens.Count().ToString());
             if (tokens != null && tokens.Count() > 0)
             {
                 ParatextToken token = tokens.First();
@@ -106,6 +107,7 @@ namespace SIL.Transcriber.Services
                 {
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
+                    Console.WriteLine("Update to token" + token.ToString());
                     _userSecretRepository.UpdateAsync(token.Id, token);
                 }
                 else
@@ -124,7 +126,7 @@ namespace SIL.Transcriber.Services
             var accessToken = new JwtSecurityToken(AccessToken);
             return accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
         }
-        public async Task<System.Collections.Generic.IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
+        public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
             VerifyUserSecret(userSecret);
 
@@ -161,7 +163,7 @@ namespace SIL.Transcriber.Services
                 if (projects != null && projects.Count() > 0)
                 {
                     isConnected = true;
-                    isConnectable = true; // !project.UserRoles.ContainsKey(userSecret.Id);
+                    isConnectable = true;// !project.UserRoles.ContainsKey(userSecret.Id);
                 }
                 else if (role == ParatextProjectRoles.Administrator || role == ParatextProjectRoles.Translator)
                 {
@@ -186,6 +188,11 @@ namespace SIL.Transcriber.Services
             }
 
             return projects;
+        }
+        public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag)
+        {
+            IReadOnlyList<ParatextProject> projects = await GetProjectsAsync(userSecret);
+            return projects.Where(p => p.LanguageTag == languageTag).ToList();
         }
 
         public async Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId)
@@ -219,7 +226,7 @@ namespace SIL.Transcriber.Services
             return usernameClaim?.Value;
         }
 
-        public async Task<System.Collections.Generic.IReadOnlyList<string>> GetBooksAsync(UserSecret userSecret, string projectId)
+        public async Task<IReadOnlyList<string>> GetBooksAsync(UserSecret userSecret, string projectId)
         {
             VerifyUserSecret(userSecret);
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"books/{projectId}");
@@ -400,7 +407,7 @@ namespace SIL.Transcriber.Services
         }
         private IEnumerable<BookChapter> BookChapters(IQueryable<Passage> passages)
         {
-            return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct<BookChapter>();
+            return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct();
         }
         public async Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId)
         {
@@ -444,6 +451,7 @@ namespace SIL.Transcriber.Services
                 chapter.NewUSX = ParatextHelpers.AddParatextChapter(chapter.NewUSX, chapter.Book, chapter.Chapter);
                 IEnumerable<SectionSummary> ss = SectionService.GetSectionSummary(planId, chapter.Book, chapter.Chapter);
                 chapter.NewUSX = ParatextHelpers.AddSectionHeaders(chapter.NewUSX, ss);
+                HttpContext.SetOrigin("paratext");
                 foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                 {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);

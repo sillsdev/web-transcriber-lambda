@@ -12,4 +12,7 @@ namespace SIL.Transcriber.Models
         public DateTime? DateUpdated { get; set; }
         [Attr("last-modified-by")]
         public int? LastModifiedBy { get; set; }
-    }}
+        [Attr("last-modified-origin")]
+        public string LastModifiedOrigin { get; set; }
+    }
+}

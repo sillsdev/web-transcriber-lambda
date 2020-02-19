@@ -21,6 +21,7 @@ namespace SIL.Transcriber.Models
 
         [Attr("organization")]
         public string Organization { get; set; }
+        [Attr("organizationid")]
         public int OrganizationId { get; set; }
         //[Attr("language")]
         public string Language { get; set; }

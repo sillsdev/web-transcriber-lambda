@@ -65,6 +65,13 @@ namespace SIL.Transcriber.Controllers
                 return NotFound();
             }
         }
+        [HttpGet("{id}/eaf")]
+        public IActionResult GetEaf([FromRoute] int id)
+        {
+            var response = _service.EAF(_service.GetAsync(id).Result);
+
+           return Ok(response);
+        }
 
         [HttpDelete("{id}/file")]
         public async Task<IActionResult> DeleteFile([FromRoute] int id)

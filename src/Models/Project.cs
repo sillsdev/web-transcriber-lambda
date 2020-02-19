@@ -64,6 +64,12 @@ namespace SIL.Transcriber.Models
         [Attr("date-archived")]
         public DateTime? DateArchived { get; set; }
 
+        [Attr("date-exported")]
+        public DateTime? DateExported { get; set; }
+
+        [Attr("date-imported")]
+        public DateTime? DateImported { get; set; }
+
         [HasMany("project-integrations")]
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
         //[HasManyThrough(nameof(ProjectIntegrations))]

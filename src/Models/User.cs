@@ -55,8 +55,6 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         [Attr("hot-keys")]
         public string hotkeys { get; set; } //json
-        [Attr("notifications")]
-        public int? Notifications { get; set; }
         [Attr("digest-preference")]
         public int? DigestPreference { get; set; }
         [Attr("news-preference")]
@@ -91,10 +89,10 @@ namespace SIL.Transcriber.Models
         public bool HasOrgRole(RoleName role, int orgId)
         {
             OrganizationMembership omSuper;
-            omSuper = this
-            .OrganizationMemberships
+            omSuper = OrganizationMemberships != null ? 
+             OrganizationMemberships
             .Where(r => r.RoleName == RoleName.SuperAdmin)
-            .FirstOrDefault();
+            .FirstOrDefault() : null;
 
             if (omSuper != null)
                 return true; //they have all the roles

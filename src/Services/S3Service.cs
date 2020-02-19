@@ -53,7 +53,7 @@ namespace SIL.Transcriber.Services
             }
             else
             {
-                //TODO don't eat the error?
+                Console.WriteLine("FileExistsAsync error:" + response.HttpStatusCode.ToString());
                 return false;
             }
             return false;
@@ -144,6 +144,47 @@ namespace SIL.Transcriber.Services
             }
         }
 
+        public async Task<S3Response> UploadFileAsync(Stream stream, bool overwriteifExists, string ContentType, string fileName, string folder = "")
+        {
+            try
+            {
+                if (overwriteifExists && await FileExistsAsync(fileName, folder))
+                {
+                    await RemoveFile(fileName, folder);
+                }
+
+                PutObjectResponse response = null;
+                var request = new PutObjectRequest
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = ProperFolder(folder) + fileName,
+                    InputStream = stream,
+                    ContentType = ContentType,
+                    StorageClass = S3StorageClass.Standard,
+                    CannedACL = S3CannedACL.NoACL
+                };
+                /*
+                request.Metadata.Add("Book", "Genesis");
+                request.Metadata.Add("Reference", "1:1-5");
+                request.Metadata.Add("Plan", "Creation");
+                */
+                response = await _client.PutObjectAsync(request);
+
+                return new S3Response
+                {
+                    Message = fileName,
+                    Status = response.HttpStatusCode
+                };
+            }
+            catch (AmazonS3Exception e)
+            {
+                return S3Response(e.Message, e.StatusCode);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
         public async Task<S3Response> UploadFileAsync(IFormFile file, string folder = "")
         {
             try
@@ -156,33 +197,7 @@ namespace SIL.Transcriber.Services
                 //aws versioning on
                 //var fileName = file.FileName;
 
-
-                PutObjectResponse response = null;
-                using (var stream = new MemoryStream(fileBytes))
-                {
-                    var request = new PutObjectRequest
-                    {
-                        BucketName = USERFILES_BUCKET,
-                        Key = ProperFolder(folder) + fileName,
-                        InputStream = stream,
-                        ContentType = file.ContentType,
-                        StorageClass = S3StorageClass.Standard,
-                        CannedACL = S3CannedACL.NoACL
-                    };
-                    request.Metadata.Add("OriginalFileName", file.FileName);
-                    /*
-                    request.Metadata.Add("Book", "Genesis");
-                    request.Metadata.Add("Reference", "1:1-5");
-                    request.Metadata.Add("Plan", "Creation");
-                    */
-                    response = await _client.PutObjectAsync(request);
-                };
-
-                return new S3Response
-                {
-                    Message = fileName,
-                    Status = response.HttpStatusCode
-                };
+                return await UploadFileAsync(new MemoryStream(fileBytes), false, file.ContentType, fileName, folder);
             }
             catch (AmazonS3Exception e)
             {
