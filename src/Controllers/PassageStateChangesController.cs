@@ -22,13 +22,6 @@ namespace SIL.Transcriber.Controllers
         : base(loggerFactory, jsonApiContext, myService, currentUserContext, organizationService, userService)
         {
         }
-#pragma warning disable 1998
-        [HttpPost]
-        public override async Task<IActionResult> PostAsync([FromBody] PassageStateChange entity)
-        {
-            throw new JsonApiException(405, $"Not implemented for State Change.");
-        }
-#pragma warning restore 1998
 
 #pragma warning disable 1998
         [HttpPatch("{id}")]
