@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -28,12 +29,33 @@ namespace SIL.Transcriber.Controllers
             _service = service;
         }
 
-        [AllowAnonymous]
         [HttpGet("project/{id}")]
         public IActionResult Export([FromRoute] int id)
         {
             FileResponse response = _service.ExportProject(id);
             return Ok(response);
         }
+
+        [HttpGet("project/import/{filename}")]
+        public IActionResult ImportFileUpload([FromRoute] string filename)
+        {
+            /* get a signed PUT url */
+            FileResponse response = _service.ImportFileURL(filename);
+            return Ok(response);
+        }
+
+        [AllowAnonymous]
+        [HttpPut("project/import/{filename}")]
+        public async Task<IActionResult> ProcessImportFileAsync([FromRoute] string filename)
+        {
+            FileResponse response = await _service.ImportFileAsync(filename);
+            if (response.Status == System.Net.HttpStatusCode.OK)
+                return Ok(response);
+            return BadRequest(response);
+        }
+
+
+
+
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
@@ -166,6 +167,7 @@ namespace SIL.Transcriber.Services
                 //get the project language
                 var plan = PlanRepository.GetWithProject(mf.PlanId);
                 var lang = !string.IsNullOrEmpty(plan.Project.Language) ? plan.Project.Language : "en";
+                string pattern = "([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?)";
 
                 eaf = LoadResource("EafTemplate.xml");
                 var eafContent = XElement.Parse(eaf);
@@ -179,7 +181,7 @@ namespace SIL.Transcriber.Services
                 GetElement(eafContent, "MEDIA_DESCRIPTOR").Attribute("MIME_TYPE").Value = mf.ContentType;
                 elem = GetElementsWithAttribute(eafContent, "TIME_SLOT", "ts2").First();
                 elem.Attribute("TIME_VALUE").Value = (mf.Duration * 1000).ToString();
-                GetElement(eafContent, "ANNOTATION_VALUE").Value = HttpUtility.HtmlEncode(mf.Transcription);
+                GetElement(eafContent, "ANNOTATION_VALUE").Value = Regex.Replace(HttpUtility.HtmlEncode(mf.Transcription), pattern, ""); //TEST THE REGEX
                 eaf = eafContent.ToString();
             }
 
