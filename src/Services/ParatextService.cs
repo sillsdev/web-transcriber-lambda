@@ -455,6 +455,7 @@ namespace SIL.Transcriber.Services
                 foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                 {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);
+                    HttpContext.SetOrigin("paratext");
                     passage.State = "synced";
                     await PassageService.UpdateAsync(passage.Id, passage);
                 }
