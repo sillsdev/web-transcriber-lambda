@@ -254,6 +254,9 @@ namespace SIL.Transcriber.Services
                 var mediaList = mediafiles.ToList();
                 AddMedia(zipArchive, mediaList);
                 AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
+                //passagestatechange
+                var passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
+                AddJsonEntry(zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H');
 
                 //ALL
                 //activitystates
