@@ -6,12 +6,10 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using TranscriberAPI.Utility;
 using static SIL.Transcriber.Utility.ServiceExtensions;
+using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Services
 {
@@ -21,7 +19,6 @@ namespace SIL.Transcriber.Services
         private OrganizationService OrganizationService;
         private GroupMembershipRepository GroupMembershipRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
-        //private ISILIdentityService SILIdentity;
 
         public InvitationService(
             IJsonApiContext jsonApiContext,
@@ -29,7 +26,6 @@ namespace SIL.Transcriber.Services
             OrganizationService organizationService,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
-            //ISILIdentityService silIdentityService,
             ILoggerFactory loggerFactory
         ) : base(jsonApiContext, invitationRepository, loggerFactory)
         {
@@ -37,7 +33,6 @@ namespace SIL.Transcriber.Services
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
             GroupMembershipRepository = groupMembershipRepository;
-            //SILIdentity = silIdentityService;
         }
         public override async Task<IEnumerable<Invitation>> GetAsync()
         {
@@ -45,16 +40,7 @@ namespace SIL.Transcriber.Services
                 base.GetAsync,
                 JsonApiContext);
         }
-        private string LoadResource(string name) {
-            //Load the file
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith(name));
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-            using (StreamReader reader = new StreamReader(stream))
-            {
-               return  reader.ReadToEnd();
-            }
-        }
+
         private string BuildEmailBody(dynamic strings, Invitation entity)
         {
             //localize...
@@ -82,7 +68,6 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation> CreateAsync(Invitation entity)
         {
             //call the Identity api and receive an invitation id
-            Console.WriteLine("creating invitation");
             var org = await OrganizationService.GetAsync(entity.OrganizationId);
             entity.Organization = org;
             //entity.SilId = SendInvitation(entity);

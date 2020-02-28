@@ -1,12 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using SIL.Paratext.Models;
+﻿using Newtonsoft.Json;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Xml.Linq;
 using TranscriberAPI.Utility.Extensions;
 
@@ -14,6 +11,19 @@ namespace SIL.Transcriber.Utility
 {
     public class ParatextHelpers
     {
+        public static IEnumerable<XElement> GetElements(XElement root, string name)
+        {
+            return root.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == name);
+        }
+        public static IEnumerable<XElement> GetElementsWithAttribute(XElement root, string name, string attributeValue)
+        {
+            return root.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == name && n.FirstAttribute.Value == attributeValue);
+        }
+
+        public static XElement GetElement(XElement root, string name)
+        {
+           return GetElements(root, name).FirstOrDefault();
+        }
         public static string ParatextProject(int projectId, ProjectService projectService)
         {
             var paratextSettings = projectService.IntegrationSettings(projectId, "paratext");
@@ -25,7 +35,7 @@ namespace SIL.Transcriber.Utility
             return settings.ParatextId;
         }
 
-        private static string TraverseNodes(XNode xml, int level)
+        public static string TraverseNodes(XNode xml, int level)
         {
             string myLevel = "";
             for (XNode n = xml; n != null; n = n.NextNode)
@@ -84,7 +94,7 @@ namespace SIL.Transcriber.Utility
 
         public static XElement GetParatextBook(XElement chapterContent, string code, bool addIt = false)
         {
-            var book = chapterContent.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == "book").FirstOrDefault();
+            var book = GetElement(chapterContent, "book");
             if (book == null && addIt)
             {
                 book = new XElement("book", new XAttribute("code", code));
@@ -116,13 +126,13 @@ namespace SIL.Transcriber.Utility
 
         public static XElement GetParatextChapter(XElement chapterContent)
         {
-            return chapterContent.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == "chapter").FirstOrDefault();
+            return GetElement(chapterContent, "chapter");
         }
 
         public static XElement AddSectionHeaders(XElement chapterContent, IEnumerable<SectionSummary> sectionSummaryList)
         {
-            IEnumerable<XElement> verses = chapterContent.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == "verse");
-            IEnumerable<XElement> existingsections = chapterContent.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == "para" && n.FirstAttribute.Value == "s");
+            IEnumerable<XElement> verses = GetElements(chapterContent, "verse");
+            IEnumerable<XElement> existingsections = GetElementsWithAttribute(chapterContent, "para", "s");
             IEnumerable<string> sectionList = sectionSummaryList.Select(s => s.SectionHeader());
             //remove any that don't match
             IEnumerable<XElement> changedSections = existingsections.Where(s => sectionList.FirstOrDefault(h => h == s.SectionText()) == null).ToList();
@@ -145,12 +155,16 @@ namespace SIL.Transcriber.Utility
                 }
                 if (section == null) 
                 {
-                        //find the next verse to add it before if (verse == null)
-                        int lastinChapter = verses.LastOrDefault() != null ? int.Parse(verses.Last().FirstAttribute.Value) : 0;
-                        for (int ix = sectionInfo.startVerse; verse == null && ix <= lastinChapter; ix++)
-                        {
-                            verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
-                        }
+                    //find the next verse to add it before if (verse == null)
+                    int lastinChapter = 0;
+                    if (verses.LastOrDefault() != null)
+                    {
+                        lastinChapter = verses.Last().EndVerse();
+                    }
+                    for (int ix = sectionInfo.startVerse; verse == null && ix <= lastinChapter; ix++)
+                    {
+                        verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
+                    }
                     if (verse == null)
                     {
                         chapterContent.LastNode.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader()));
@@ -172,8 +186,8 @@ namespace SIL.Transcriber.Utility
         {
             string sDebug = TraverseNodes(chapterContent, 1);
 
-            IEnumerable<XElement> verses = chapterContent.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == "verse");
-            IEnumerable<XElement> sections = chapterContent.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == "para" && n.FirstAttribute.Value == "s");
+            IEnumerable<XElement> verses = GetElements(chapterContent, "verse");
+            IEnumerable<XElement> sections = GetElementsWithAttribute(chapterContent, "para", "s");
 
             //find the verses that contain verses in my range
             SortedList<int, XElement> existing = new SortedList<int, XElement>();

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal;
@@ -39,6 +40,22 @@ namespace SIL.Transcriber.Services
             return await GetScopedToCurrentUser(
                 base.GetAsync,
                 JsonApiContext);
+        }
+        public override async Task<GroupMembership> CreateAsync(GroupMembership entity)
+        {
+            GroupMembership newEntity = GroupMembershipRepository.Get().Where(gm => gm.GroupId == entity.GroupId && gm.UserId == entity.UserId).FirstOrDefault();
+            if (newEntity == null)
+               newEntity = await base.CreateAsync(entity);
+            else
+            {
+                if (newEntity.Archived)
+                {
+                    newEntity.Archived = false;
+                    newEntity = base.UpdateAsync(newEntity.Id, newEntity).Result;
+                }
+
+            }
+            return newEntity;
         }
 
         public override async Task<bool> DeleteAsync(int id)

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Auth.Models;
@@ -19,23 +20,23 @@ namespace SIL.Transcriber.Services
         public CurrentUserRepository CurrentUserRepository { get; }
         public IEntityRepository<Group> GroupRepository { get; }
         public GroupMembershipRepository GroupMembershipRepository { get; }
-        private ISILIdentityService SILIdentity;
+        private HttpContext HttpContext;
 
         public OrganizationService(
+            IHttpContextAccessor httpContextAccessor,
             IJsonApiContext jsonApiContext,
             IEntityRepository<Organization> organizationRepository,
             IEntityRepository<OrganizationMembership> organizationMembershipRepository,
             IEntityRepository<Group> groupRepository,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
-            ISILIdentityService silIdentityService,
            ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
         {
+            HttpContext = httpContextAccessor.HttpContext;
             OrganizationMembershipRepository = organizationMembershipRepository;
             CurrentUserRepository = currentUserRepository;
             GroupMembershipRepository = groupMembershipRepository;
             GroupRepository = groupRepository;
-            SILIdentity = silIdentityService;
         }
         private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
 
@@ -61,6 +62,7 @@ namespace SIL.Transcriber.Services
         {
             var newEntity = await base.CreateAsync(entity);
 
+            HttpContext.SetOrigin("api");
             //create an "all org group" and add the current user
             var group = new Group
             {
@@ -81,6 +83,7 @@ namespace SIL.Transcriber.Services
             if (user.OrganizationMemberships == null || user.GroupMemberships == null)
                 user = CurrentUserRepository.Get().Include(o => o.OrganizationMemberships).Include(o => o.GroupMemberships).Where(e => e.Id == user.Id).SingleOrDefault();
 
+            HttpContext.SetOrigin("api");
             OrganizationMembership membership = user.OrganizationMemberships.Where(om => om.OrganizationId == entity.Id).ToList().FirstOrDefault();
             if (membership == null)
             {
@@ -94,12 +97,15 @@ namespace SIL.Transcriber.Services
                 };
                 var om = OrganizationMembershipRepository.CreateAsync(membership).Result;
             }
-            else if (membership.RoleName != orgRole)
+            else
             {
-                membership.RoleId = (int)orgRole;
-                var om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
+                if (membership.Archived || membership.RoleName != orgRole)
+                {
+                    membership.RoleId = (int)orgRole;
+                    membership.Archived = false;
+                    var om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
+                }
             }
-
             if (allGroup != null)
             {
                 GroupMembershipRepository.JoinGroup(user.Id, allGroup.Id, groupRole);
@@ -123,6 +129,7 @@ namespace SIL.Transcriber.Services
             */
         }
 
+        /*
 
         public bool JoinOrgs(List<SILAuth_Organization> orgs, User user, RoleName role)
         {
@@ -139,6 +146,7 @@ namespace SIL.Transcriber.Services
                 if (org == null)
                 {
                     //will be added as owner
+                    HttpContext.SetOrigin("api");
                     org = CreateAsync(entity, user).Result;
                 }
                 else 
@@ -158,7 +166,7 @@ namespace SIL.Transcriber.Services
             newEntity.Owner = owner;
             return await CreateAsync(newEntity);
         }
-
+        */
         public Organization FindByNameOrDefault(string name)
         {
             return MyRepository.Get().Include(o => o.OrganizationMemberships).Where(e => e.Name == name).SingleOrDefault();

@@ -23,18 +23,14 @@ namespace SIL.Transcriber.Services
         private string authType;
         private ManagementApiClient managementApiClient;
         private User auth0User;
-        //private SILAuth_User silUser;
-        //private ISILIdentityService SILIdentity;
         protected ILogger<ICurrentUserContext> Logger { get; set; }
 
         public HttpCurrentUserContext(
              ILoggerFactory loggerFactory,
              IHttpContextAccessor httpContextAccessor,
-             //ISILIdentityService silIdentityService,
              Auth0ManagementApiTokenService tokenService)
         {
             HttpContext = httpContextAccessor.HttpContext;
-            //SILIdentity = silIdentityService;
             TokenService = tokenService;
             Logger = loggerFactory.CreateLogger<ICurrentUserContext>();
         }
@@ -191,7 +187,7 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin(string connection, int userId)
         {
             var identities = Auth0User.Identities;
-            var ptIdentity = identities.FirstOrDefault(i => i.Connection.ToLower() == connection); //i.e. "Paratext-Transcriber"
+            var ptIdentity = identities.FirstOrDefault(i => i.Connection == connection); //i.e. "Paratext-Transcriber"
             if (ptIdentity != null)
             {
                 var newPTTokens = new ParatextToken

@@ -99,7 +99,7 @@ namespace SIL.Transcriber.Repositories
         }
         public IQueryable<Project> HasIntegrationSetting(string integrationName, string settingName, string value)
         {
-            return dbContext.Integrations.Where(i => i.Name == integrationName).Join(dbContext.Projectintegrations.Where(pi => SettingOrDefault(pi.Settings, settingName) == value), i => i.Id, pi => pi.IntegrationId, (p, pi) => pi).Join(Get(), pi => pi.ProjectId, p => p.Id, (pi, p) => p);
+            return dbContext.Integrations.Where(i => i.Name == integrationName).Join(dbContext.Projectintegrations.Where(pi => SettingOrDefault(pi.Settings, settingName) == value && !pi.Archived), i => i.Id, pi => pi.IntegrationId, (p, pi) => pi).Join(Get(), pi => pi.ProjectId, p => p.Id, (pi, p) => p);
         }
     }
 }

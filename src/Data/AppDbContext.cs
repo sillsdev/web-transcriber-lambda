@@ -145,12 +145,22 @@ namespace SIL.Transcriber.Data
                     entry.CurrentValues["LastModifiedBy"] = userid;
                 }
             }
-            var origin = HttpContext.GetOrigin();
+
+            var origin = HttpContext.GetOrigin() ?? "anonymous";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (var entry in entries)
             {
                 entry.CurrentValues["LastModifiedOrigin"] = origin;
             }
+        }
+        public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            foreach (var entry in entries)
+            {
+                entry.CurrentValues["LastModifiedOrigin"] = "electron";
+            }
+            return await base.SaveChangesAsync(cancellationToken);
         }
         public override int SaveChanges()
         {
