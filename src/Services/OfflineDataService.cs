@@ -421,12 +421,11 @@ namespace SIL.Transcriber.Services
         private string MediafileChangesReport(Mediafile online, Mediafile imported)
         {
             Dictionary<string, string> changes = new Dictionary<string, string>();
-            if (online.Transcription != imported.Transcription)
+            if (online.Transcription != imported.Transcription && online.Transcription != null)
             {
                 changes.Add("Previous Transcription", online.Transcription);
                 changes.Add("Imported Transcription", imported.Transcription);
             }
-            /* simplify the object to report on */
             if (changes.Count > 0)
                 return "Transcription:" + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
             return "";
