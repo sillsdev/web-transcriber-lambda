@@ -200,10 +200,6 @@ namespace SIL.Transcriber.Services
 
                 var orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
                 
-                //users
-                var userList = orgmems.Join(dbContext.Users, om => om.UserId, u => u.Id, (om, u) => u).ToList();
-                AddUserAvatars(zipArchive, userList);
-                AddJsonEntry(zipArchive, "users", userList, 'A');
 
                 //org
                 var orgList = orgs.ToList();
@@ -214,7 +210,7 @@ namespace SIL.Transcriber.Services
                 AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                 //groups
-                var groups = dbContext.Groups.Where(om => om.OwnerId == orgid);
+                var groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
                 AddJsonEntry(zipArchive, "groups", groups.ToList(), 'C');
 
                 //groupmemberships
@@ -224,6 +220,13 @@ namespace SIL.Transcriber.Services
                 {
                     fonts[font] = ""; //add it if it's not there
                 }
+
+                //users
+                var userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).ToList();
+                AddUserAvatars(zipArchive, userList);
+                AddJsonEntry(zipArchive, "users", userList, 'A');
+
+
                 //projects
                 projects.ToList().ForEach(p => {
                     p.DateExported = exported;
@@ -271,7 +274,7 @@ namespace SIL.Transcriber.Services
                 AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
             }
             ms.Position = 0;
-            const string ContentType = "application/zip";
+            const string ContentType = "application/ptf";
             string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Slug) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Slug);
             var s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == System.Net.HttpStatusCode.OK)
@@ -302,9 +305,9 @@ namespace SIL.Transcriber.Services
 
         public FileResponse ImportFileURL(string sFile)
         {
-            const string ContentType = "application/zip";
+            const string ContentType = "application/itf";
             // Project project = dbContext.Projects.Where(p => p.Id == id).First();
-            string fileName = string.Format("{0}_{1}.zip", Path.GetFileNameWithoutExtension(sFile), DateTime.Now.Ticks);
+            string fileName = string.Format("{0}_{1}.itf", Path.GetFileNameWithoutExtension(sFile), DateTime.Now.Ticks);
             //get a signedurl for it now
             return new FileResponse()
             {
@@ -314,10 +317,136 @@ namespace SIL.Transcriber.Services
                 ContentType = ContentType,
             };
         }
-        
-        public async Task<FileResponse> ImportFileAsync(string sFile)
+        private string UserChangesReport(User online, User imported)
         {
-            const string ContentType = "application/zip";
+            Dictionary<string, string> changes = new Dictionary<string, string>();
+            if (online.Name != imported.Name)
+            {
+                changes.Add("Previous Name", online.Name);
+                changes.Add("Imported Name", imported.Name);
+            }
+            if (online.FamilyName != imported.FamilyName)
+            {
+                changes.Add("Previous FamilyName", online.FamilyName);
+                changes.Add("Imported FamilyName", imported.FamilyName);
+            }
+            if (online.GivenName != imported.GivenName)
+            {
+                changes.Add("Previous GivenName", online.GivenName);
+                changes.Add("Imported GivenName", imported.GivenName);
+            }
+            if (online.Phone != imported.Phone)
+            {
+                changes.Add("Previous Phone", online.Phone);
+                changes.Add("Imported Phone", imported.Phone);
+            }
+            if (online.playbackspeed != imported.playbackspeed)
+            {
+                changes.Add("Previous playbackspeed", online.playbackspeed.ToString());
+                changes.Add("Imported playbackspeed", imported.playbackspeed.ToString());
+            }
+            if (online.progressbartypeid != imported.progressbartypeid)
+            {
+                changes.Add("Previous progressbartypeid", online.progressbartypeid.ToString());
+                changes.Add("Imported progressbartypeid", imported.progressbartypeid.ToString());
+            }
+            if (online.timercountup != imported.timercountup)
+            {
+                changes.Add("Previous timercountup", online.timercountup.ToString());
+                changes.Add("Imported timercountup", imported.timercountup.ToString());
+            }
+            if (online.Timezone != imported.Timezone)
+            {
+                changes.Add("Previous Timezone", online.Timezone.ToString());
+                changes.Add("Imported Timezone", imported.Timezone.ToString());
+            }
+            if (online.Locale != imported.Locale)
+            {
+                changes.Add("Previous Locale", online.Locale.ToString());
+                changes.Add("Imported Locale", imported.Locale.ToString());
+            }
+            if (online.uilanguagebcp47 != imported.uilanguagebcp47)
+            {
+                changes.Add("Previous uilanguagebcp47", online.uilanguagebcp47.ToString());
+                changes.Add("Imported uilanguagebcp47", imported.uilanguagebcp47.ToString());
+            }
+            if (online.NewsPreference != imported.NewsPreference)
+            {
+                changes.Add("Previous NewsPreference", online.NewsPreference.ToString());
+                changes.Add("Imported NewsPreference", imported.NewsPreference.ToString());
+            }
+            if (online.DigestPreference != imported.DigestPreference)
+            {
+                changes.Add("Previous DigestPreference", online.DigestPreference.ToString());
+                changes.Add("Imported DigestPreference", imported.DigestPreference.ToString());
+            }
+            if (changes.Count > 0)
+                return "User: " + online.Email + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
+            return "";
+        }
+        private string SectionChangesReport(Section online, Section imported)
+        {
+            Dictionary<string, string> changes = new Dictionary<string, string>();
+            if (online.ReviewerId != imported.ReviewerId)
+            {
+                changes.Add("Previous Reviewer", dbContext.Users.Find(online.ReviewerId).Name) ;
+                changes.Add("Imported Reviewer", dbContext.Users.Find(imported.ReviewerId).Name);
+            }
+            if (online.TranscriberId != imported.TranscriberId)
+            {
+                changes.Add("Previous Transcriber", dbContext.Users.Find(online.ReviewerId).Name);
+                changes.Add("Imported Transcriber", dbContext.Users.Find(imported.ReviewerId).Name);
+            }
+            if (online.State != imported.State)
+            {
+                changes.Add("Previous State", online.State);  //TODO fix the state display
+                changes.Add("Imported State", imported.State);
+            }
+            if (changes.Count > 0)
+                return "Section: " + dbContext.Plans.Find(online.PlanId).Name + ":" + online.Sequencenum + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
+            return "";
+       }
+        private string PassageChangesReport(Passage online, Passage imported)
+        {
+            Dictionary<string, string> changes = new Dictionary<string, string>();
+            if (online.State != imported.State)
+            {
+                changes.Add("Previous State", online.State);  //TODO fix the state display
+                changes.Add("Imported State", imported.State);
+            }
+            if (changes.Count > 0)
+                return "Passage: " + online.Sequencenum + " " + online.Book + " " + online.Reference + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
+            return "";
+        }
+        private string MediafileChangesReport(Mediafile online, Mediafile imported)
+        {
+            Dictionary<string, string> changes = new Dictionary<string, string>();
+            if (online.Transcription != imported.Transcription)
+            {
+                changes.Add("Previous Transcription", online.Transcription);
+                changes.Add("Imported Transcription", imported.Transcription);
+            }
+            /* simplify the object to report on */
+            if (changes.Count > 0)
+                return "Transcription:" + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
+            return "";
+        }
+        private string GrpMemChangesReport(GroupMembership online, GroupMembership imported)
+        {
+            Dictionary<string, string> changes = new Dictionary<string, string>();
+            if (online.FontSize != imported.FontSize)
+            {
+                changes.Add("Previous FontSize", online.FontSize);
+                changes.Add("Imported FontSize", imported.FontSize);
+            }
+            /* simplify the object to report on */
+            if (changes.Count > 0)
+                return "Preferences:" + dbContext.Groups.Find(online.GroupId).Name + "/" + dbContext.Users.Find(online.UserId).Name + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
+            return "";
+        }
+        public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
+        {
+            const string ContentType = "application/itf";
             DateTime sourceDate;
 
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
@@ -353,7 +482,44 @@ namespace SIL.Transcriber.Services
                     ContentType = ContentType,
                 };
             }
-            try {
+            //check project
+            Project project;
+            try
+            {
+                ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
+                if (projectsEntry==null)
+                    return new FileResponse()
+                    {
+                        Message = "Invalid ITF File - projects data not present",
+                        FileURL = sFile,
+                        Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                        ContentType = ContentType,
+                    };
+                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>("{data: " + new StreamReader(projectsEntry.Open()).ReadToEnd() + "}");
+                project = projects.Find(p => p.Id == projectid);
+                if (project==null)
+                    return new FileResponse()
+                    {
+                        Message = "This ITF File does not contain the current Project",
+                        FileURL = sFile,
+                        Status = (HttpStatusCode)450,
+                        ContentType = ContentType,
+                    };
+                
+            }
+            catch
+            {
+                return new FileResponse()
+                {
+                    Message = "Invalid ITF File - projects file not present",
+                    FileURL = sFile,
+                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                    ContentType = ContentType,
+                };
+            }
+
+            try
+            {
                 foreach (ZipArchiveEntry entry in archive.Entries)
                 {
                     if (!entry.FullName.StartsWith("data"))
@@ -365,14 +531,14 @@ namespace SIL.Transcriber.Services
                     {
                         case "users":
                             List<User> users = jsonApiDeSerializer.DeserializeList<User>(data);
-                            users.ForEach(u =>
-                            {
+                            var myUsers = users.Join(dbContext.Groupmemberships.Where(gm => gm.GroupId == project.GroupId), u => u.Id, grpmem => grpmem.UserId, (u, grpmem) => u);
+                            foreach(User u in myUsers)
+                            { 
                                 var user = dbContext.Users.Find(u.Id);
+                                
                                 if (user.DateUpdated > sourceDate)
-                                {
-                                    /* simplify the object to report on */
-                                    report += "User" + Environment.NewLine + JsonConvert.SerializeObject(new { user.Id, user.Email, user.FamilyName, user.GivenName, user.Name, user.Phone, user.Locale, user.Timezone, user.NewsPreference,  user.DigestPreference }, Formatting.Indented) + Environment.NewLine;
-                                }
+                                    report += UserChangesReport(user, u);
+
                                 user.DigestPreference = u.DigestPreference;
                                 user.FamilyName = u.FamilyName;
                                 user.GivenName = u.GivenName;
@@ -387,51 +553,48 @@ namespace SIL.Transcriber.Services
                                 user.uilanguagebcp47 = u.uilanguagebcp47;
                                 user.LastModifiedBy = u.LastModifiedBy;
                                 user.LastModifiedOrigin = "electron";
-                                user.DateUpdated = DateTime.UtcNow; // u.DateUpdated;
+                                user.DateUpdated = DateTime.UtcNow; 
                                 /* TODO: figure out if the avatar needs uploading */
                                 dbContext.Users.Update(user);
-                            });
+                            };
                             break;
 
                         case "sections":
                             List<Section> sections = jsonApiDeSerializer.DeserializeList<Section>(data);
-                            sections.ForEach(s =>
+                            var mysections = sections.Join(dbContext.Plans.Where(p => p.ProjectId == projectid), s => s.PlanId, pl => pl.Id, (s, pl) => s);
+                            foreach(Section s in mysections)
                             {
                                 var section = dbContext.Sections.Find(s.Id);
                                 if (section.DateUpdated > sourceDate)
-                                {
-                                    /* simplify the object to report on */
-                                    report += "Section" + Environment.NewLine + JsonConvert.SerializeObject(new {section.Id, section.PlanId, section.Plan, section.Sequencenum, section.ReviewerId, section.Reviewer, section.TranscriberId, section.Transcriber}) + Environment.NewLine;
-                                }
+                                        report += SectionChangesReport(section, s);
+
                                 section.ReviewerId = s.ReviewerId;
                                 section.TranscriberId = s.TranscriberId;
                                 section.State = s.State;
                                 section.LastModifiedBy = s.LastModifiedBy;
                                 section.LastModifiedOrigin = "electron";
-                                section.DateUpdated = DateTime.UtcNow; // s.DateUpdated;
+                                section.DateUpdated = DateTime.UtcNow; 
                                 dbContext.Sections.Update(section);
-                            });
+                            };
                             break;
 
                         case "passages":
                             List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
-                            passages.ForEach(p =>
+                            var mypassages = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passagesections, s => s.Id, ps => ps.SectionId, (s, ps) => ps).Join(passages, ps => ps.PassageId, p => p.Id, (ps, p) => p);
+                            foreach (Passage p in mypassages)
                             {
                                 var passage = dbContext.Passages.Find(p.Id);
                                 if (passage.State != p.State)
                                 {
                                     if (passage.DateUpdated > sourceDate)
-                                    {
-                                        /* simplify the object to report on */
-                                        report += "Passage" + Environment.NewLine + JsonConvert.SerializeObject(new { passage.Id, passage.Sequencenum, passage.Reference, passage.State }) + Environment.NewLine;
-                                    }
+                                        report += PassageChangesReport(passage, p);
                                     passage.State = p.State;
                                     passage.LastModifiedBy = p.LastModifiedBy;
                                     passage.LastModifiedOrigin = "electron";
-                                    passage.DateUpdated = DateTime.UtcNow; // p.DateUpdated;
+                                    passage.DateUpdated = DateTime.UtcNow;
                                     dbContext.Passages.Update(passage);
                                 }
-                            });
+                            };
                             break;
 
                         case "mediafiles":
@@ -443,43 +606,41 @@ namespace SIL.Transcriber.Services
                                 dbContext.Mediafiles.AddRange(newFiles);
                                 // upload the file 
                             } */
-                            mediafiles.ForEach(m =>
+                            var mymediafiles = mediafiles.Join(dbContext.Plans.Where(pl =>pl.ProjectId == projectid), mf => mf.PlanId, p => p.Id, (mf, p) => mf);
+                            foreach(Mediafile m in mymediafiles)
                             {
                                 var mediafile = dbContext.Mediafiles.Find(m.Id);
                                 if (mediafile.Transcription != m.Transcription || mediafile.Position != m.Position)
                                 {
                                     if (mediafile.DateUpdated > sourceDate)
-                                    {
-                                        /* simplify the object to report on */
-                                        /* TODO? get the passage info */
-                                        report += "Mediafile" + Environment.NewLine + JsonConvert.SerializeObject(new { mediafile.Id, mediafile.OriginalFile, mediafile.Position, mediafile.Transcription }) + Environment.NewLine;
-                                    }
+                                        report += MediafileChangesReport(mediafile, m);
                                     mediafile.Position = m.Position;
                                     mediafile.Transcription = m.Transcription;
                                     mediafile.LastModifiedBy = m.LastModifiedBy;
                                     mediafile.LastModifiedOrigin = "electron";
-                                    mediafile.DateUpdated = DateTime.UtcNow; //  m.DateUpdated;
+                                    mediafile.DateUpdated = DateTime.UtcNow;
+                                    dbContext.Mediafiles.Update(mediafile);
                                 }
-                            });
+                            };
                             break;
 
                         case "groupmemberships":
                             List<GroupMembership> grpmems = jsonApiDeSerializer.DeserializeList<GroupMembership>(data);
-                            grpmems.ForEach(gm =>
-                            {
+                            var mygrpmems = grpmems.Where(gm => gm.GroupId == project.GroupId);
+                            foreach(GroupMembership gm in mygrpmems)
+                            { 
                                 var grpmem = dbContext.Groupmemberships.Find(gm.Id);
                                 if (grpmem.FontSize != gm.FontSize)
                                 {
                                     if (grpmem.DateUpdated > sourceDate)
-                                    {
-                                        /* TODO? get the group and user info */
-                                        report += "GroupMembership" + Environment.NewLine + JsonConvert.SerializeObject(new { grpmem.Id, grpmem.GroupId, grpmem.Group, grpmem.FontSize }) + Environment.NewLine;
-                                    }
+                                        report += GrpMemChangesReport(grpmem, gm);
                                     grpmem.FontSize = gm.FontSize;
+                                    grpmem.LastModifiedBy = gm.LastModifiedBy;
                                     grpmem.LastModifiedOrigin = "electron";
                                     grpmem.DateUpdated = DateTime.UtcNow;
+                                    dbContext.Groupmemberships.Update(grpmem);
                                 }
-                            });
+                            };
                             break;
 
                         /*  Local changes to project integrations should just stay local
@@ -490,11 +651,17 @@ namespace SIL.Transcriber.Services
 
                         case "passagestatechanges":
                             List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
-                            pscs.ForEach(psc =>
+                            var mypscs = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passagesections, s => s.Id, ps => ps.SectionId, (s, ps) => ps).Join(pscs, ps => ps.PassageId, psc => psc.PassageId, (ps, psc) => psc);
+                            foreach(PassageStateChange psc in mypscs)
                             {
-                                psc.DateUpdated = DateTime.UtcNow;
-                                dbContext.Passagestatechanges.Update(psc);
-                            });
+                                //see if it's already there...
+                                var dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
+                                if (dups.Count() == 0)
+                                {
+                                    psc.DateUpdated = DateTime.UtcNow;
+                                    dbContext.Passagestatechanges.Add(psc);
+                                }
+                            };
                             break;
                     }
                 }

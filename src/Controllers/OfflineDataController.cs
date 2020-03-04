@@ -30,32 +30,25 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("project/{id}")]
-        public IActionResult Export([FromRoute] int id)
+        public ActionResult<FileResponse> Export([FromRoute] int id)
         {
             FileResponse response = _service.ExportProject(id);
-            return Ok(response);
+            return response;
         }
 
         [HttpGet("project/import/{filename}")]
-        public IActionResult ImportFileUpload([FromRoute] string filename)
+        public ActionResult<FileResponse> ImportFileUpload([FromRoute] string filename)
         {
             /* get a signed PUT url */
             FileResponse response = _service.ImportFileURL(filename);
-            return Ok(response);
+            return response;
         }
 
-        [AllowAnonymous]
-        [HttpPut("project/import/{filename}")]
-        public async Task<IActionResult> ProcessImportFileAsync([FromRoute] string filename)
+        [HttpPut("project/import/{projectid}/{filename}")]
+        public async Task<ActionResult<FileResponse>> ProcessImportFileAsync([FromRoute] int projectid, string filename)
         {
-            FileResponse response = await _service.ImportFileAsync(filename);
-            if (response.Status == System.Net.HttpStatusCode.OK)
-                return Ok(response);
-            return BadRequest(response);
+            return await _service.ImportFileAsync(projectid, filename);
         }
-
-
-
-
+                     
     }
 }
