@@ -26,7 +26,6 @@ namespace SIL.Transcriber.Controllers
         MediafileService MediafileService;
         OrganizationMembershipService OrgMemService;
         OrganizationService OrganizationService;
-        PassageSectionService PSService;
         PassageService PassageService;
         PlanService PlanService;
         ProjectIntegrationService ProjIntService;
@@ -48,7 +47,6 @@ namespace SIL.Transcriber.Controllers
             MediafileService mediafileService,
             OrganizationMembershipService omService,
             OrganizationService organizationService,
-            PassageSectionService psService,
             PassageService passageService,
             PlanService planService,
             ProjectIntegrationService piService,
@@ -66,7 +64,6 @@ namespace SIL.Transcriber.Controllers
             MediafileService = mediafileService;
             OrgMemService = omService;
             OrganizationService = organizationService;
-            PSService = psService;
             PassageService = passageService;
             PlanService = planService;
             ProjIntService = piService;
@@ -114,9 +111,6 @@ namespace SIL.Transcriber.Controllers
 
             BuildList(OrganizationService.GetChanges(currentUser, origin, dtSince), "organization", changes);
             BuildList(OrganizationService.GetDeletedSince(currentUser, origin, dtSince), "organization", deleted);
-
-            BuildList(PSService.GetChanges(currentUser, origin, dtSince), "passagesection", changes);
-            BuildList(PSService.GetDeletedSince(currentUser, origin, dtSince), "passagesection", deleted);
 
             BuildList(PassageService.GetChanges(currentUser, origin, dtSince), "passage", changes);
             BuildList(PassageService.GetDeletedSince(currentUser, origin, dtSince), "passage", deleted);

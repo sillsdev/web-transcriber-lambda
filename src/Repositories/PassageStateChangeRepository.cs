@@ -42,13 +42,9 @@ namespace SIL.Transcriber.Repositories
         {
             if (sections == null)
             {
-                // sections = SectionRepository.GetWithPassageSections();
-                //this is faster...
                 sections = SectionRepository.UsersSections(dbContext.Sections);
             }
-            var passagesections = dbContext.Passagesections.Join(sections, ps => ps.SectionId, s => s.Id, (ps, s) => ps);
-
-            return entities.Join(passagesections, psc => psc.PassageId, ps => ps.PassageId, (psc, ps) => psc);
+            return sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(entities, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
         }
 
         public override IQueryable<PassageStateChange> Filter(IQueryable<PassageStateChange> entities, FilterQuery filterQuery)

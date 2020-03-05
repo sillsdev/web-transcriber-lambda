@@ -40,9 +40,7 @@ namespace SIL.Transcriber.Services
         {
             PassageRepository pr = (PassageRepository)MyRepository;
             return pr.Get()
-                    .Include(p => p.PassageSections)
-                    .ThenInclude(ps => ps.Section)
-                    .Where(p => p.PassageSections.Any(ps => ps.SectionId == SectionId))
+                    .Include(p => p.Section)
                     .Include(p=> p.Mediafiles);
             
         }

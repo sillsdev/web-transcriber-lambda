@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
@@ -43,19 +40,15 @@ namespace SIL.Transcriber.Repositories
         {
             if (sections == null)
             {
-                // sections = SectionRepository.GetWithPassageSections();
-                //this is faster...
                 sections = SectionRepository.UsersSections(dbContext.Sections);
             }
-            var passagesections = dbContext.Passagesections.Join(sections, ps => ps.SectionId, s => s.Id, (ps, s) => ps);
-
-            return entities.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p);
+            return entities.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
         }
 
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {
-            var passagesections = dbContext.Passagesections.Join(dbContext.Sections.Where(s => s.PlanId == PlanId), ps => ps.SectionId, s => s.Id, (ps, s)  => new { ps.PassageId, s.Sequencenum });
-            var passages = dbContext.Passages.Join(passagesections, p => p.Id, ps => ps.PassageId, (p, ps) => p).Where(p => p.ReadyToSync);
+            var sections = dbContext.Sections.Where(s => s.PlanId == PlanId);
+            var passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(p => p.ReadyToSync);
 
             return passages;
         }

@@ -21,14 +21,15 @@ namespace SIL.Transcriber.Models
         [Attr("last-comment")]
         public string LastComment { get; set; }
 
+        [Attr("section-id")]
+        public int SectionId { get; set; }
+
+        [HasOne("section")]
+        public virtual Section Section { get; set; }
+        
         [HasMany("mediafiles")]
         public virtual List<Mediafile> Mediafiles { get; set; }
 
- //     [NotMapped]
- //     [HasManyThrough(nameof(PassageSections))]
- //     public List<Section> Sections { get; set; }
-        [HasMany("passage-sections")]
-        public List<PassageSection> PassageSections { get; set; }
         public bool Archived { get; set; }
 
         public bool ReadyToSync

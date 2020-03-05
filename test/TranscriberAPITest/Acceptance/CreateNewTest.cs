@@ -135,6 +135,10 @@ namespace TranscriberAPI.Tests.Acceptance
 
             var route = $"/api/passages";
             //assert
+            passage1.SectionId = section1.Id;
+            passage2.SectionId = section1.Id;
+            passage3.SectionId = section2.Id;
+            passage4.SectionId = section2.Id;
             await SaveIt(routePrefix, route, passage1);
             Assert.NotEqual(0, passage1.Id);
             await SaveIt(routePrefix, route, passage2);
@@ -143,35 +147,6 @@ namespace TranscriberAPI.Tests.Acceptance
             Assert.NotEqual(0, passage3.Id);
             await SaveIt(routePrefix, route, passage4);
             Assert.NotEqual(0, passage4.Id);
-
-            var ps1 = new PassageSection
-            {
-                PassageId = passage1.Id,
-                SectionId = section1.Id
-            };
-            await SaveIt(routePrefix, $"/api/passagesections", ps1);
-            Assert.NotEqual(0, ps1.Id);
-            var ps2 = new PassageSection
-            {
-                PassageId = passage2.Id,
-                SectionId = section1.Id
-            };
-            await SaveIt(routePrefix, $"/api/passagesections", ps2);
-            Assert.NotEqual(0, ps2.Id);
-            var ps3 = new PassageSection
-            {
-                PassageId = passage3.Id,
-                SectionId = section2.Id
-            };
-            await SaveIt(routePrefix, $"/api/passagesections", ps3);
-            Assert.NotEqual(0, ps3.Id);
-            var ps4 = new PassageSection
-            {
-                PassageId = passage4.Id,
-                SectionId = section2.Id
-            };
-            await SaveIt(routePrefix, $"/api/passagesections", ps4);
-            Assert.NotEqual(0, ps4.Id);
 
             media.PassageId = passage1.Id;
             await SaveIt(routePrefix, $"/api/mediafiles", media);
