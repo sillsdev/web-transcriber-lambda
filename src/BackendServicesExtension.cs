@@ -46,7 +46,6 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             services.AddScoped<IEntityRepository<OrganizationMembership>, OrganizationMembershipRepository>();
             services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
-            services.AddScoped<IEntityRepository<PassageSection>, PassageSectionRepository>();
             services.AddScoped<IEntityRepository<PassageStateChange>, PassageStateChangeRepository>();
             services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
@@ -66,7 +65,6 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
             services.AddScoped<IResourceService<ParatextToken>, ParatextTokenService>();
             services.AddScoped<IResourceService<Passage>, PassageService>();
-            services.AddScoped<IResourceService<PassageSection>, PassageSectionService>();
             services.AddScoped<IResourceService<PassageStateChange>, PassageStateChangeService>();
             services.AddScoped<IResourceService<Plan>, PlanService>();
             services.AddScoped<IResourceService<Project>, ProjectService>();
@@ -89,7 +87,6 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<PassageRepository>();
-            services.AddScoped<PassageSectionRepository>();
             services.AddScoped<PassageStateChangeRepository>();
             services.AddScoped<PlanRepository>();
             services.AddScoped<ProjectIntegrationRepository>();
@@ -107,7 +104,6 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationService>();
             services.AddScoped<ParatextTokenService>();
             services.AddScoped<PassageService>();
-            services.AddScoped<PassageSectionService>();
             services.AddScoped<PassageStateChangeService>();
             services.AddScoped<PlanService>();
             services.AddScoped<ProjectIntegrationService>();

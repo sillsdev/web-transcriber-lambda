@@ -246,11 +246,8 @@ namespace SIL.Transcriber.Services
                 //sections
                 var sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s);
                 AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
-                //passagesections
-                var passagesections = sections.Join(dbContext.Passagesections, s => s.Id, ps => ps.SectionId, (s, ps) => ps);
-                AddJsonEntry(zipArchive, "passagesections", passagesections.ToList(), 'H');
                 //passages
-                var passages = passagesections.Join(dbContext.Passages, ps => ps.PassageId, p => p.Id, (ps, p) => p);
+                var passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p);
                 AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
                 //mediafiles
                 var mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
@@ -579,7 +576,7 @@ namespace SIL.Transcriber.Services
 
                         case "passages":
                             List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
-                            var mypassages = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passagesections, s => s.Id, ps => ps.SectionId, (s, ps) => ps).Join(passages, ps => ps.PassageId, p => p.Id, (ps, p) => p);
+                            var mypassages = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(passages, s => s.Id, p => p.SectionId, (s, p) => p);
                             foreach (Passage p in mypassages)
                             {
                                 var passage = dbContext.Passages.Find(p.Id);
@@ -650,7 +647,7 @@ namespace SIL.Transcriber.Services
 
                         case "passagestatechanges":
                             List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
-                            var mypscs = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passagesections, s => s.Id, ps => ps.SectionId, (s, ps) => ps).Join(pscs, ps => ps.PassageId, psc => psc.PassageId, (ps, psc) => psc);
+                            var mypscs = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(pscs, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
                             foreach(PassageStateChange psc in mypscs)
                             {
                                 //see if it's already there...

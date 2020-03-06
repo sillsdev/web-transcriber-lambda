@@ -65,15 +65,6 @@ namespace SIL.Transcriber.Data
             var passageEntity = modelBuilder.Entity<Passage>();
             var sectionEntity = modelBuilder.Entity<Section>();
 
-            passageEntity
-                .HasMany(p => p.PassageSections)
-                .WithOne(ps => ps.Passage)
-                .HasForeignKey(ps => ps.PassageId);
-
-            sectionEntity
-                .HasMany(s => s.PassageSections)
-                .WithOne(ps => ps.Section)
-                .HasForeignKey(ps => ps.SectionId);
 
             userEntity
                 .HasMany(u => u.OrganizationMemberships)
@@ -206,7 +197,6 @@ namespace SIL.Transcriber.Data
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<ParatextToken> Paratexttokens { get; set; }
         public DbSet<Passage> Passages { get; set; }
-        public DbSet<PassageSection> Passagesections { get; set; }
         public DbSet<PassageStateChange> Passagestatechanges { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
