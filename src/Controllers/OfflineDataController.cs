@@ -1,4 +1,4 @@
-﻿using JsonApiDotNetCore.Services;
+using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;

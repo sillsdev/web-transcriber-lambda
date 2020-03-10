@@ -15,6 +15,7 @@ using JsonApiDotNetCore.Serialization;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc;
+
 using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Diagnostics;
@@ -172,6 +173,7 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
+
         private FileResponse Export(int orgid, int projectid = 0)
         {
             //export this organization
@@ -196,11 +198,11 @@ namespace SIL.Transcriber.Services
             {
                 Dictionary<string, string> fonts = new Dictionary<string, string>();
                 fonts.Add("Charis SIL", "");
+
                 var exported= AddCheckEntry(zipArchive);
 
                 var orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
                 
-
                 //org
                 var orgList = orgs.ToList();
                 AddOrgLogos(zipArchive, orgList);
@@ -210,7 +212,7 @@ namespace SIL.Transcriber.Services
                 AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                 //groups
-                var groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
+               var groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
                 AddJsonEntry(zipArchive, "groups", groups.ToList(), 'C');
 
                 //groupmemberships
@@ -228,6 +230,7 @@ namespace SIL.Transcriber.Services
 
 
                 //projects
+
                 projects.ToList().ForEach(p => {
                     p.DateExported = exported;
                     dbContext.Projects.Update(p);
@@ -238,6 +241,7 @@ namespace SIL.Transcriber.Services
                     fonts[font] = ""; //add it if it's not there
                 }
                 AddFonts(zipArchive, fonts.Keys);
+
                 //projectintegrations
                 AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).ToList(), 'E');
                 //plans
@@ -248,6 +252,7 @@ namespace SIL.Transcriber.Services
                 AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
                 //passages
                 var passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p);
+
                 AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
                 //mediafiles
                 var mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
@@ -273,6 +278,7 @@ namespace SIL.Transcriber.Services
             ms.Position = 0;
             const string ContentType = "application/ptf";
             string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Slug) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Slug);
+
             var s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == System.Net.HttpStatusCode.OK)
             {
