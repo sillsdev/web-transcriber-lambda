@@ -1,5 +1,3 @@
-﻿
-
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
@@ -55,7 +53,7 @@ namespace SIL.Transcriber.Data
         }
         private void DefineManyToMany(ModelBuilder modelBuilder)
         {
-
+            var groupEntity = modelBuilder.Entity<Group>();
             var userEntity = modelBuilder.Entity<User>();
             var roleEntity = modelBuilder.Entity<Role>();
             var orgEntity = modelBuilder.Entity<Organization>();
@@ -65,6 +63,11 @@ namespace SIL.Transcriber.Data
             var passageEntity = modelBuilder.Entity<Passage>();
             var sectionEntity = modelBuilder.Entity<Section>();
 
+
+            groupEntity
+                .HasMany(g => g.GroupMemberships)
+                .WithOne(gm => gm.Group)
+                .HasForeignKey(gm => gm.GroupId);
 
             userEntity
                 .HasMany(u => u.OrganizationMemberships)
@@ -82,11 +85,15 @@ namespace SIL.Transcriber.Data
                 .WithOne(om => om.Organization)
                 .HasForeignKey(om => om.OrganizationId);
 
-
             orgEntity
                 .HasMany(o => o.Groups)
                 .WithOne(g => g.Owner)
                 .HasForeignKey(g => g.OwnerId);
+
+            orgEntity
+                .HasMany(o => o.Projects)
+                .WithOne(p => p.Organization)
+                .HasForeignKey(p => p.OrganizationId);
 
             orgEntity
                 .Property(o => o.PublicByDefault)

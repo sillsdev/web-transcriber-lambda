@@ -33,6 +33,7 @@ namespace SIL.Transcriber
                 options.BuildResourceGraph((builder) => {
                     builder.AddResource<DataChanges>();
                     builder.AddResource<FileResponse>();
+                    builder.AddResource<OrgData>();
                 });
             });
 
@@ -75,6 +76,7 @@ namespace SIL.Transcriber
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
             services.AddScoped<IOfflineDataService, OfflineDataService>();
+            services.AddScoped<OrgDataService, OrgDataService>();
             services.AddScoped<IParatextService, ParatextService>();
 
 
@@ -115,6 +117,7 @@ namespace SIL.Transcriber
             services.AddScoped<Auth0ManagementApiTokenService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OfflineDataService>();
+            services.AddScoped<OrgDataService>();
 
             return services;
         }
