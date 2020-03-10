@@ -1,9 +1,10 @@
-﻿using JsonApiDotNetCore.Services;
+using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -28,12 +29,26 @@ namespace SIL.Transcriber.Controllers
             _service = service;
         }
 
-        [AllowAnonymous]
         [HttpGet("project/{id}")]
-        public IActionResult Export([FromRoute] int id)
+        public ActionResult<FileResponse> Export([FromRoute] int id)
         {
             FileResponse response = _service.ExportProject(id);
-            return Ok(response);
+            return response;
         }
+
+        [HttpGet("project/import/{filename}")]
+        public ActionResult<FileResponse> ImportFileUpload([FromRoute] string filename)
+        {
+            /* get a signed PUT url */
+            FileResponse response = _service.ImportFileURL(filename);
+            return response;
+        }
+
+        [HttpPut("project/import/{projectid}/{filename}")]
+        public async Task<ActionResult<FileResponse>> ProcessImportFileAsync([FromRoute] int projectid, string filename)
+        {
+            return await _service.ImportFileAsync(projectid, filename);
+        }
+                     
     }
 }

@@ -47,20 +47,18 @@ namespace SIL.Transcriber.Repositories
 
              return entities.Join(plans, s=>s.PlanId, p=>p.Id, (s, p) => s);
         }
-
-        // This is the set of all Sections that a user has access to.
-        public IQueryable<Section> GetWithPassageSections()
+         // This is the set of all Sections that a user has access to.
+        public IQueryable<Section> GetWithPassages()
         {
             //you'd think this would work...but you'd be wrong;
-            //return Include(Get(), "passagesections");
-            //no error...but no passagesections either  return Get().Include(s => s.PassageSections);
-            var sections =  UsersSections(Include(dbContext.Sections, "passage-sections"));
+            //return Include(Get(), "passages");
+            //no error...but no passages either  return Get().Include(s => s.Passages);
+            var sections = UsersSections(Include(dbContext.Sections, "passages"));
             return sections;
         }
-
-        #endregion
-        #region Overrides
-        public override IQueryable<Section> Filter(IQueryable<Section> entities, FilterQuery filterQuery)
+    #endregion
+    #region Overrides
+    public override IQueryable<Section> Filter(IQueryable<Section> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER)) 
             {
@@ -81,16 +79,15 @@ namespace SIL.Transcriber.Repositories
         #region ParatextSync
         public IQueryable<Section> GetSectionsAtStatus(int projectId, string status)
         {
-            var sections = GetWithPassageSections().Include(s => s.Plan);
+            var sections = GetWithPassages().Include(s => s.Plan);
             var projectsections = dbContext.Projects.Join(sections, p => p.Id, s => s.Plan.ProjectId, (p, s) => s);
-            return projectsections.Where(s => s.PassageSections.All(ps => ps.Passage.State == status));
+            return projectsections.Where(s => s.Passages.All(p => p.State == status));
         }
         public async Task<IList<SectionSummary>> SectionSummary(int PlanId, string book, int chapter)
         {
             IList<SectionSummary> ss = new List<SectionSummary>();
-            var passagesections = dbContext.Passagesections.Join(dbContext.Sections.Where(section => section.PlanId == PlanId), ps => ps.SectionId, section => section.Id, (ps, section) => new { ps.PassageId, section });
-            var passages = dbContext.Passages.Join(passagesections, passage => passage.Id, ps => ps.PassageId, (passage, ps) => new { passage, ps.section }).Where(x => x.passage.Book == book && x.passage.StartChapter == chapter);
-            await passages.GroupBy(p => p.section).ForEachAsync(ps =>
+            var passagewithsection = dbContext.Passages.Join(dbContext.Sections.Where(section => section.PlanId == PlanId), passage => passage.SectionId, section => section.Id, (passage, section) => new { passage, section }).Where(x => x.passage.Book == book && x.passage.StartChapter == chapter);
+            await passagewithsection.GroupBy(p => p.section).ForEachAsync(ps =>
               {
                   var newss = new SectionSummary()
                   {

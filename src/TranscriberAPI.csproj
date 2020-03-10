@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Compile Remove="Controllers\HomeController.cs" />
+    <Compile Remove="Controllers\PassagesectionsController.cs" />
     <Compile Remove="Controllers\ProjectusersController.cs" />
     <Compile Remove="Controllers\UserrolesController.cs" />
     <Compile Remove="Data\IRepository.cs" />
@@ -24,6 +25,7 @@
     <Compile Remove="Models\Chapter.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ParatextVerse.cs" />
+    <Compile Remove="Models\PassageSection.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\SFProject.cs" />
     <Compile Remove="Models\TextInfo.cs" />
@@ -61,7 +63,9 @@
     <Compile Remove="Models\XWorkflowprocesstimer.cs" />
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
+    <Compile Remove="Repositories\PassageSectionRepository.cs" />
     <Compile Remove="Services\IUserAccessor.cs" />
+    <Compile Remove="Services\PassageSectionService.cs" />
     <Compile Remove="Services\PlantypeService.cs" />
     <Compile Remove="Services\ProjecttypeService.cs" />
     <Compile Remove="Services\RoleService.cs" />

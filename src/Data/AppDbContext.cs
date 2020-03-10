@@ -1,5 +1,3 @@
-﻿
-
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
@@ -55,7 +53,7 @@ namespace SIL.Transcriber.Data
         }
         private void DefineManyToMany(ModelBuilder modelBuilder)
         {
-
+            var groupEntity = modelBuilder.Entity<Group>();
             var userEntity = modelBuilder.Entity<User>();
             var roleEntity = modelBuilder.Entity<Role>();
             var orgEntity = modelBuilder.Entity<Organization>();
@@ -65,15 +63,10 @@ namespace SIL.Transcriber.Data
             var passageEntity = modelBuilder.Entity<Passage>();
             var sectionEntity = modelBuilder.Entity<Section>();
 
-            passageEntity
-                .HasMany(p => p.PassageSections)
-                .WithOne(ps => ps.Passage)
-                .HasForeignKey(ps => ps.PassageId);
-
-            sectionEntity
-                .HasMany(s => s.PassageSections)
-                .WithOne(ps => ps.Section)
-                .HasForeignKey(ps => ps.SectionId);
+            groupEntity
+                .HasMany(g => g.GroupMemberships)
+                .WithOne(gm => gm.Group)
+                .HasForeignKey(gm => gm.GroupId);
 
             userEntity
                 .HasMany(u => u.OrganizationMemberships)
@@ -91,11 +84,15 @@ namespace SIL.Transcriber.Data
                 .WithOne(om => om.Organization)
                 .HasForeignKey(om => om.OrganizationId);
 
-
             orgEntity
                 .HasMany(o => o.Groups)
                 .WithOne(g => g.Owner)
                 .HasForeignKey(g => g.OwnerId);
+
+            orgEntity
+                .HasMany(o => o.Projects)
+                .WithOne(p => p.Organization)
+                .HasForeignKey(p => p.OrganizationId);
 
             orgEntity
                 .Property(o => o.PublicByDefault)
@@ -144,13 +141,24 @@ namespace SIL.Transcriber.Data
                 {
                     entry.CurrentValues["LastModifiedBy"] = userid;
                 }
+
             }
+
             var origin = HttpContext.GetOrigin() ?? "anonymous";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (var entry in entries)
             {
                 entry.CurrentValues["LastModifiedOrigin"] = origin;
             }
+        }
+        public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            foreach (var entry in entries)
+            {
+                entry.CurrentValues["LastModifiedOrigin"] = "electron";
+            }
+            return await base.SaveChangesAsync(cancellationToken);
         }
         public override int SaveChanges()
         {
@@ -196,7 +204,6 @@ namespace SIL.Transcriber.Data
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<ParatextToken> Paratexttokens { get; set; }
         public DbSet<Passage> Passages { get; set; }
-        public DbSet<PassageSection> Passagesections { get; set; }
         public DbSet<PassageStateChange> Passagestatechanges { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }

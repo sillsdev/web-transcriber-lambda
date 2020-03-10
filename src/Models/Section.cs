@@ -31,13 +31,8 @@ namespace SIL.Transcriber.Models
         [HasOne("reviewer")]
         public virtual User Reviewer { get; set; }
 
-        //causes errors when organization specified
-        //        [NotMapped]
-        //        [HasManyThrough(nameof(PassageSections))]
-        //        public List<Passage> Passages { get; set; }
-
-        [HasMany("passage-sections")]
-        public List<PassageSection> PassageSections { get; set; }
+        [HasMany("passages")]
+        public List<Passage> Passages { get; set; }
         public bool Archived { get; set; }
 
     }

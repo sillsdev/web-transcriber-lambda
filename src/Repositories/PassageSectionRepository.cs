@@ -43,8 +43,6 @@ namespace SIL.Transcriber.Repositories
         {
             if (sections == null)
             {
-                // sections = SectionRepository.GetWithPassageSections();
-                //this is faster...
                 sections = SectionRepository.UsersSections(dbContext.Sections);
             }
             return entities.Join(sections, ps => ps.SectionId, s => s.Id, (ps, s) => ps);
