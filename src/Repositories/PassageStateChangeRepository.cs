@@ -45,6 +45,7 @@ namespace SIL.Transcriber.Repositories
                 sections = SectionRepository.UsersSections(dbContext.Sections);
             }
             return sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(entities, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
+
         }
 
         public override IQueryable<PassageStateChange> Filter(IQueryable<PassageStateChange> entities, FilterQuery filterQuery)

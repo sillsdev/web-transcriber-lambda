@@ -1,5 +1,3 @@
-﻿
-
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
@@ -143,6 +141,7 @@ namespace SIL.Transcriber.Data
                 {
                     entry.CurrentValues["LastModifiedBy"] = userid;
                 }
+
             }
 
             var origin = HttpContext.GetOrigin() ?? "anonymous";

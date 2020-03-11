@@ -118,7 +118,6 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OfflineDataService>();
             services.AddScoped<OrgDataService>();
-
             return services;
         }
 
