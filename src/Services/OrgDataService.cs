@@ -1,10 +1,7 @@
 ﻿using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Serialization;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,8 +15,7 @@ namespace SIL.Transcriber.Services
         protected readonly IJsonApiDeSerializer jsonApiDeSerializer;
         protected readonly OrganizationService organizationService;
         protected readonly GroupMembershipService gmService;
-        protected readonly PlanService PlanService;
-    
+   
 
         public OrgDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, 
             OrganizationService orgService,
@@ -30,7 +26,7 @@ namespace SIL.Transcriber.Services
             jsonApiDeSerializer = jsonDeser;
             organizationService = orgService;
             gmService = grpMemService;
-    }
+        }
 
         public async Task<OrgData> GetAsync()
         {
@@ -44,23 +40,23 @@ namespace SIL.Transcriber.Services
             //groups
             data += "," + jsonApiSerializer.Serialize(dbContext.Groups.Join(orgs, g => g.OwnerId, o => o.Id, (g, o) => g));
             //orgmems
-            var oms = dbContext.Organizationmemberships.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
+            var oms = dbContext.Organizationmemberships.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om).Where(x=>!x.Archived);
             data += "," + jsonApiSerializer.Serialize(oms);
             //users
-            data += "," + jsonApiSerializer.Serialize(dbContext.Users.Join(oms, u => u.Id, om => om.UserId, (u, om) => u));
+            data += "," + jsonApiSerializer.Serialize(dbContext.Users.Join(oms, u => u.Id, om => om.UserId, (u, om) => u).Where(x => !x.Archived));
             //projects
-            var projects = dbContext.Projects.Join(orgs, p => p.OrganizationId, o => o.Id, (p, o) => p);
+            var projects = dbContext.Projects.Join(orgs, p => p.OrganizationId, o => o.Id, (p, o) => p).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(projects);
             //projectintegrations
-            data += "," + jsonApiSerializer.Serialize(dbContext.Projectintegrations.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl));
+            data += "," + jsonApiSerializer.Serialize(dbContext.Projectintegrations.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived));
             //plans
-            var plans = dbContext.Plans.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl);
+            var plans = dbContext.Plans.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(plans);
-            var sections = dbContext.Sections.Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s);
+            var sections = dbContext.Sections.Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(sections);
-            var passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
+            var passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(passages);
-            var mediafiles = dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m);
+            var mediafiles = dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(mediafiles);
             //passagestatechanges
             data += "," + jsonApiSerializer.Serialize(dbContext.Passagestatechanges.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc));

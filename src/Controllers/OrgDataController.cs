@@ -1,10 +1,7 @@
-﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Serialization;
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Controllers;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.Threading.Tasks;
