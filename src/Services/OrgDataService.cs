@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Services
             //invitations
             data += ","+ jsonApiSerializer.Serialize(dbContext.Invitations.Join(orgs, i => i.OrganizationId, o => o.Id, (i, o) => i));
             //groups
-            data += "," + jsonApiSerializer.Serialize(dbContext.Groups.Join(orgs, g => g.OwnerId, o => o.Id, (g, o) => g));
+            data += "," + jsonApiSerializer.Serialize(dbContext.Groups.Join(gms, g => g.Id, gm => gm.GroupId, (g, gm) => g));
             //orgmems
             var oms = dbContext.Organizationmemberships.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om).Where(x=>!x.Archived);
             data += "," + jsonApiSerializer.Serialize(oms);
@@ -53,7 +53,7 @@ namespace SIL.Transcriber.Services
                 data += "," + jsonApiSerializer.Serialize(dbContext.Users.Where(x => x.Id == CurrentUser.Id));
             }
             //projects
-            var projects = dbContext.Projects.Join(orgs, p => p.OrganizationId, o => o.Id, (p, o) => p).Where(x => !x.Archived);
+            var projects = dbContext.Projects.Join(gms, p => p.GroupId,gm => gm.GroupId, (p, gm) => p).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(projects);
             //projectintegrations
             data += "," + jsonApiSerializer.Serialize(dbContext.Projectintegrations.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived));
