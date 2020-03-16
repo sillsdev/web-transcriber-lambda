@@ -659,10 +659,17 @@ namespace SIL.Transcriber.Services
                                 //see if it's already there...
                                 var dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
                                 if (dups.Count() == 0)
-                                {
-                                    psc.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Passagestatechanges.Add(psc);
-                                }
+                                {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
+                                    dbContext.Passagestatechanges.Add(new PassageStateChange
+                                    {
+                                        PassageId = psc.PassageId,
+                                        State = psc.State,
+                                        DateCreated = psc.DateCreated,
+                                        Comments = psc.Comments,
+                                        LastModifiedBy = psc.LastModifiedBy,
+                                        DateUpdated = DateTime.UtcNow,
+                                    });
+                                };
                             };
                             break;
                     }
@@ -679,10 +686,9 @@ namespace SIL.Transcriber.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
                 return new FileResponse()
                 {
-                    Message = ex.Message,
+                    Message = ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""),
                     FileURL = sFile,
                     Status = System.Net.HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,

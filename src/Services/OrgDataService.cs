@@ -2,6 +2,7 @@
 using JsonApiDotNetCore.Serialization;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,15 +16,16 @@ namespace SIL.Transcriber.Services
         protected readonly IJsonApiDeSerializer jsonApiDeSerializer;
         protected readonly OrganizationService organizationService;
         protected readonly GroupMembershipService gmService;
-   
+        protected readonly CurrentUserRepository currentUserRepository;
 
-        public OrgDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, 
+        public OrgDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, CurrentUserRepository currentUserRepo,
             OrganizationService orgService,
             GroupMembershipService grpMemService)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
             jsonApiSerializer = jsonSer;
             jsonApiDeSerializer = jsonDeser;
+            currentUserRepository=  currentUserRepo;
             organizationService = orgService;
             gmService = grpMemService;
         }
@@ -43,7 +45,13 @@ namespace SIL.Transcriber.Services
             var oms = dbContext.Organizationmemberships.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om).Where(x=>!x.Archived);
             data += "," + jsonApiSerializer.Serialize(oms);
             //users
-            data += "," + jsonApiSerializer.Serialize(dbContext.Users.Join(oms, u => u.Id, om => om.UserId, (u, om) => u).Where(x => !x.Archived));
+            if (oms.Count() > 0)
+                data += "," + jsonApiSerializer.Serialize(dbContext.Users.Join(oms, u => u.Id, om => om.UserId, (u, om) => u).Where(x => !x.Archived));
+            else
+            {
+                User CurrentUser = currentUserRepository.GetCurrentUser().Result;
+                data += "," + jsonApiSerializer.Serialize(dbContext.Users.Where(x => x.Id == CurrentUser.Id));
+            }
             //projects
             var projects = dbContext.Projects.Join(orgs, p => p.OrganizationId, o => o.Id, (p, o) => p).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(projects);

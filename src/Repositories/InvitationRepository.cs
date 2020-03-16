@@ -29,10 +29,10 @@ namespace SIL.Transcriber.Repositories
                 //if I'm an admin in the org, give me all invitations in that org
                 //otherwise give me invitations just to me
                 var orgadmins = orgIds.Where(o => CurrentUser.HasOrgRole(RoleName.Admin, o));
+                string currentEmail = CurrentUser.Email.ToLower();
 
                 entities = entities
-                       .Where(i => orgadmins.Contains(i.OrganizationId) || CurrentUser.Email == i.Email);
-
+                       .Where(i => orgadmins.Contains(i.OrganizationId) || currentEmail == i.Email.ToLower());
             }
             return entities;
         }
@@ -46,6 +46,11 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersInvitations(entities);
+            }
+            if (filterQuery.Has("email"))
+            {
+                string currentEmail = CurrentUser.Email.ToLower();
+                return entities.Where(i => currentEmail == i.Email.ToLower());
             }
             return base.Filter(entities, filterQuery);
         }
