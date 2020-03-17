@@ -390,15 +390,15 @@ namespace SIL.Transcriber.Services
         private string SectionChangesReport(Section online, Section imported)
         {
             Dictionary<string, string> changes = new Dictionary<string, string>();
-            if (online.ReviewerId != imported.ReviewerId)
+            if (online.EditorId != imported.EditorId)
             {
-                changes.Add("Previous Reviewer", dbContext.Users.Find(online.ReviewerId).Name) ;
-                changes.Add("Imported Reviewer", dbContext.Users.Find(imported.ReviewerId).Name);
+                changes.Add("Previous Editor", dbContext.Users.Find(online.EditorId).Name) ;
+                changes.Add("Imported Editor", dbContext.Users.Find(imported.EditorId).Name);
             }
             if (online.TranscriberId != imported.TranscriberId)
             {
-                changes.Add("Previous Transcriber", dbContext.Users.Find(online.ReviewerId).Name);
-                changes.Add("Imported Transcriber", dbContext.Users.Find(imported.ReviewerId).Name);
+                changes.Add("Previous Transcriber", dbContext.Users.Find(online.EditorId).Name);
+                changes.Add("Imported Transcriber", dbContext.Users.Find(imported.EditorId).Name);
             }
             if (online.State != imported.State)
             {
@@ -570,7 +570,7 @@ namespace SIL.Transcriber.Services
                                 if (section.DateUpdated > sourceDate)
                                         report += SectionChangesReport(section, s);
 
-                                section.ReviewerId = s.ReviewerId;
+                                section.EditorId = s.EditorId;
                                 section.TranscriberId = s.TranscriberId;
                                 section.State = s.State;
                                 section.LastModifiedBy = s.LastModifiedBy;

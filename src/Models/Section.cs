@@ -25,11 +25,11 @@ namespace SIL.Transcriber.Models
         [HasOne("transcriber")]
         public virtual User Transcriber { get; set; }
 
-        [Attr("reviewer-id")]
-        public int? ReviewerId { get; set; }
+        [Attr("editor-id")]
+        public int? EditorId { get; set; }
 
-        [HasOne("reviewer")]
-        public virtual User Reviewer { get; set; }
+        [HasOne("editor")]
+        public virtual User Editor { get; set; }
 
         [HasMany("passages")]
         public List<Passage> Passages { get; set; }
