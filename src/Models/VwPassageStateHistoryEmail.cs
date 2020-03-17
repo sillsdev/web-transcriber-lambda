@@ -49,12 +49,11 @@ namespace SIL.Transcriber.Models
         public string TranscriberEmail { get; set; }
         [Attr("transcriber")]
         public string Transcriber { get; set; }
-        //[Attr("reviewer-id")]
-        public int? ReviewerId { get; set; }
-        //[Attr("reviewer-email")]
-        public string ReviewerEmail { get; set; }
-        [Attr("reviewer")]
-        public string Reviewer { get; set; }
+        public int? EditorId { get; set; }
+        //[Attr("editor-email")]
+        public string EditorEmail { get; set; }
+        [Attr("editor")]
+        public string Editor { get; set; }
 
 
         //[Attr("passage-id")]

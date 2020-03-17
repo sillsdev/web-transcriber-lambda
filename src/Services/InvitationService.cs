@@ -95,7 +95,7 @@ namespace SIL.Transcriber.Services
             var currentUser = CurrentUserRepository.GetCurrentUser().Result;
             var oldentity = MyRepository.GetAsync(id).Result;
             //verify current user is logged in with invitation email
-            if (oldentity.Email != currentUser.Email)
+            if (oldentity.Email.ToLower() != currentUser.Email.ToLower())
             {
                 throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity.Email + "  Currently logged in as " + currentUser.Email);
             }

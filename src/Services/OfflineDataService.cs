@@ -390,15 +390,17 @@ namespace SIL.Transcriber.Services
         private string SectionChangesReport(Section online, Section imported)
         {
             Dictionary<string, string> changes = new Dictionary<string, string>();
-            if (online.ReviewerId != imported.ReviewerId)
+
+            if (online.EditorId != imported.EditorId)
             {
-                changes.Add("Previous Reviewer", dbContext.Users.Find(online.ReviewerId).Name) ;
-                changes.Add("Imported Reviewer", dbContext.Users.Find(imported.ReviewerId).Name);
+                changes.Add("Previous Editor", dbContext.Users.Find(online.EditorId).Name) ;
+                changes.Add("Imported Editor", dbContext.Users.Find(imported.EditorId).Name);
             }
             if (online.TranscriberId != imported.TranscriberId)
             {
-                changes.Add("Previous Transcriber", dbContext.Users.Find(online.ReviewerId).Name);
-                changes.Add("Imported Transcriber", dbContext.Users.Find(imported.ReviewerId).Name);
+                changes.Add("Previous Transcriber", dbContext.Users.Find(online.EditorId).Name);
+                changes.Add("Imported Transcriber", dbContext.Users.Find(imported.EditorId).Name);
+
             }
             if (online.State != imported.State)
             {
@@ -570,7 +572,7 @@ namespace SIL.Transcriber.Services
                                 if (section.DateUpdated > sourceDate)
                                         report += SectionChangesReport(section, s);
 
-                                section.ReviewerId = s.ReviewerId;
+                                section.EditorId = s.EditorId;
                                 section.TranscriberId = s.TranscriberId;
                                 section.State = s.State;
                                 section.LastModifiedBy = s.LastModifiedBy;
@@ -659,10 +661,18 @@ namespace SIL.Transcriber.Services
                                 //see if it's already there...
                                 var dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
                                 if (dups.Count() == 0)
-                                {
-                                    psc.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Passagestatechanges.Add(psc);
-                                }
+                                {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
+                                    dbContext.Passagestatechanges.Add(new PassageStateChange
+                                    {
+                                        PassageId = psc.PassageId,
+                                        State = psc.State,
+                                        DateCreated = psc.DateCreated,
+                                        Comments = psc.Comments,
+                                        LastModifiedBy = psc.LastModifiedBy,
+                                        DateUpdated = DateTime.UtcNow,
+                                    });
+                                };
+
                             };
                             break;
                     }
@@ -679,10 +689,10 @@ namespace SIL.Transcriber.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
                 return new FileResponse()
                 {
-                    Message = ex.Message,
+                    Message = ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""),
+
                     FileURL = sFile,
                     Status = System.Net.HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,
