@@ -216,5 +216,7 @@ namespace SIL.Transcriber.Data
         public DbSet<User> Users { get; set; }
         public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
 
+        public DbSet<SectionPassage> Sectionpassages { get; set; }
+
     }
 }
