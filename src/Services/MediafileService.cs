@@ -24,15 +24,19 @@ namespace SIL.Transcriber.Services
         private IS3Service _S3service { get; }
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
+        private PassageService PassageService { get; set; }
+
         public MediafileService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Mediafile> basemediafileRepository,
             PlanRepository planRepository,
+            PassageService passageService,
             ILoggerFactory loggerFactory,
             IS3Service service) : base(jsonApiContext, basemediafileRepository, loggerFactory)
         {
             _S3service = service;
             PlanRepository = planRepository;
+            PassageService = passageService;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
         }
 
@@ -96,12 +100,17 @@ namespace SIL.Transcriber.Services
             InitNewMediafile(entity); //set the version number
             var response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
             entity.AudioUrl = response.Message;
+            if (entity.PassageId != null)
+            {
+                await PassageService.UpdateToReadyStateAsync((int)entity.PassageId);
+            }
             return await base.CreateAsync(entity);
         }
+        /*
         public override async Task<Mediafile> UpdateAsync(int id, Mediafile media)
         {
             Mediafile mf = MediafileRepository.Get(id);
-            //if the transcription has changed...update the eafurl  //TODO RENAME TO EAF
+            //if the transcription has changed...update the eaf
             if (JsonApiContext.AttributesToUpdate.Any(kvp=>kvp.Key.PublicAttributeName == "transcription"))
             {
                 mf.Transcription = media.Transcription;
@@ -111,7 +120,7 @@ namespace SIL.Transcriber.Services
             mf = await base.UpdateAsync(id, media);
             return mf;
         }
-
+        */
         public  async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
         {
            InitNewMediafile(entity);

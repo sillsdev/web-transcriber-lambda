@@ -121,7 +121,7 @@ namespace SIL.Transcriber.Services
                     var response = mediaService.GetFile(m.Id).Result;
                     AddStreamEntry(zipArchive, response.FileStream, "media/", m.S3File);
                     m.AudioUrl = "media/" + m.S3File;
-                    AddEafEntry(zipArchive, m.S3File, m.EafUrl);
+                    AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
                 }
             });
         }
