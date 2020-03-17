@@ -19,7 +19,7 @@ namespace SIL.Transcriber.Controllers
         public string Planname { get; set; }
         public string Passage { get; set; }
         public string Transcriber { get; set; }
-        public string Reviewer { get; set; }
+        public string Editor { get; set; }
         public string PassageState { get; set; }
         public string StateModifiedby { get; set; }
         public DateTime StateUpdated { get; set; }
