@@ -390,6 +390,7 @@ namespace SIL.Transcriber.Services
         private string SectionChangesReport(Section online, Section imported)
         {
             Dictionary<string, string> changes = new Dictionary<string, string>();
+
             if (online.EditorId != imported.EditorId)
             {
                 changes.Add("Previous Editor", dbContext.Users.Find(online.EditorId).Name) ;
@@ -399,6 +400,7 @@ namespace SIL.Transcriber.Services
             {
                 changes.Add("Previous Transcriber", dbContext.Users.Find(online.EditorId).Name);
                 changes.Add("Imported Transcriber", dbContext.Users.Find(imported.EditorId).Name);
+
             }
             if (online.State != imported.State)
             {
@@ -670,6 +672,7 @@ namespace SIL.Transcriber.Services
                                         DateUpdated = DateTime.UtcNow,
                                     });
                                 };
+
                             };
                             break;
                     }
@@ -689,6 +692,7 @@ namespace SIL.Transcriber.Services
                 return new FileResponse()
                 {
                     Message = ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""),
+
                     FileURL = sFile,
                     Status = System.Net.HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,

@@ -1,4 +1,5 @@
-﻿using JsonApiDotNetCore.Services;
+
+using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Controllers;

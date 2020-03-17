@@ -30,6 +30,7 @@ namespace SIL.Transcriber.Services
             gmService = grpMemService;
         }
 
+
         public async Task<OrgData> GetAsync()
         {
             var orgs = await organizationService.GetAsync(); //this limits to current user
@@ -65,6 +66,7 @@ namespace SIL.Transcriber.Services
             var passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
             data += "," + jsonApiSerializer.Serialize(passages);
             var mediafiles = dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived);
+
             data += "," + jsonApiSerializer.Serialize(mediafiles);
             //passagestatechanges
             data += "," + jsonApiSerializer.Serialize(dbContext.Passagestatechanges.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc));
