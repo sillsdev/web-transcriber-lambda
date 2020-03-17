@@ -122,8 +122,6 @@ namespace SIL.Transcriber
             services.AddScoped<OfflineDataService>();
             services.AddScoped<OrgDataService>();
             services.AddScoped<SectionPassageService>();
-
-
             return services;
         }
 

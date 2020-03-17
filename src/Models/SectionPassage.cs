@@ -1,6 +1,5 @@
 ﻿using JsonApiDotNetCore.Models;
 using System;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Threading.Tasks;
 
 namespace TranscriberAPI.Controllers
 {
@@ -30,6 +31,5 @@ namespace TranscriberAPI.Controllers
         {
             return Ok(await _service.PostAsync(entity));
         }
-
     }
 }
