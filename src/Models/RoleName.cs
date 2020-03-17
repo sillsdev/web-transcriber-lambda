@@ -7,7 +7,7 @@ namespace SIL.Transcriber.Models
         SuperAdmin = 1,
         Admin = 2,
         Transcriber = 3, // default
-        Reviewer = 4, 
+        Editor = 4, 
         Member = 5
     }
 }
