@@ -34,7 +34,6 @@ namespace SIL.Transcriber
                     builder.AddResource<DataChanges>();
                     builder.AddResource<FileResponse>();
                     builder.AddResource<OrgData>();
-                    //builder.AddResource<SectionPassage>();
                 });
             });
 

@@ -144,7 +144,7 @@ namespace SIL.Transcriber.Data
 
             }
 
-            var origin = HttpContext.GetOrigin() ?? "anonymous";
+            var origin = HttpContext.GetOrigin() ?? "http://localhost:3000";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (var entry in entries)
             {
@@ -212,10 +212,9 @@ namespace SIL.Transcriber.Data
         public DbSet<ProjectType> Projecttypes { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Section> Sections { get; set; }
+        public DbSet<SectionPassage> Sectionpassages { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
-
-        public DbSet<SectionPassage> Sectionpassages { get; set; }
 
     }
 }
