@@ -61,76 +61,114 @@ namespace SIL.Transcriber.Services
             int lastSection = 0;
             Section section;
             Passage passage;
-
-            foreach (var item in data)
+            SectionPassage inprogress = dbContext.Sectionpassages.Where(e => e.uuid == entity.uuid).FirstOrDefault();
+            if (inprogress != null)
             {
-                IRecord rec = (IRecord)item;
-                int id = 0;
-                if (rec.changed)
+                if (inprogress.Complete)
                 {
-                    Debug.WriteLine("here " + rec.id + " " + rec.title + " " + rec.reference);
-                    if (int.TryParse(rec.id, out id))
-                    { //update the record 
-                        if (rec.issection) {
-                            section = dbContext.Sections.Find(id);
-                            section.Name = rec.title;
-                            section.Sequencenum = rec.sequencenum;
-                            dbContext.Sections.Update(section);
-                            dbContext.SaveChanges();
-                        }
-                        else
-                        {
-                            passage = dbContext.Passages.Find(id);
-                            passage.Book = rec.book;
-                            passage.Reference = rec.reference;
-                            passage.Title = rec.title;
-                            passage.Sequencenum = rec.sequencenum;
-                            dbContext.Passages.Update(passage);
-                            dbContext.SaveChanges();
-                        }
-                    } 
-                    else { //insert the record 
-                        if (rec.issection)
-                        {
-                            section = new Section
-                            {
-                                Name = rec.title,
-                                Sequencenum = rec.sequencenum,
-                                PlanId = rec.planid,
-                            };
-                            dbContext.Sections.Add(section);
-                            dbContext.SaveChanges();
-                            rec.id = section.Id.ToString();
-                            item["id"] = rec.id;
-                            lastSection = section.Id;
-                            Debug.WriteLine("new section " + rec.id + " " + item["id"]);
-                        }
-                        else
-                        {
-                            passage = new Passage
-                            {
-                                Book = rec.book,
-                                Reference = rec.reference,
-                                Title = rec.title,
-                                Sequencenum = rec.sequencenum,
-                                State = "noMedia",
-                                SectionId = lastSection,
-                            };
-                            dbContext.Passages.Add(passage);
-                            dbContext.SaveChanges();
-                            rec.id = passage.Id.ToString();
-                            item["id"] = rec.id;
-                            Debug.WriteLine("new passage " + rec.id + " " + item["id"]);
-
-                        }
-                    }
-
-                } else if (rec.issection)
-                    int.TryParse(rec.id, out lastSection);
+                    /* another call completed successfully, so call off future retries */
+                    return entity;
+                }
+                else
+                {
+                    /* another call is in progress...but in case it fails and we need a retry, fail this one */
+                    throw new Exception("orbit is dumb");
+                }
             }
-            entity.Data = JsonConvert.SerializeObject(data);
-            var contextEntity = JsonApiContext.ResourceGraph.GetContextEntity("sectionpassages");
-            JsonApiContext.AttributesToUpdate[contextEntity.Attributes.Where(a => a.PublicAttributeName == "data").First()] = entity.Data;
+            dbContext.Add(entity);
+            dbContext.SaveChanges();
+            using (var transaction = dbContext.Database.BeginTransaction())
+            {
+
+                try
+                {
+                    foreach (var item in data)
+                    {
+                        IRecord rec = (IRecord)item;
+                        int id = 0;
+                        if (rec.changed)
+                        {
+                            Debug.WriteLine("here " + rec.id + " " + rec.title + " " + rec.reference);
+                            if (int.TryParse(rec.id, out id))
+                            { //update the record 
+                                if (rec.issection)
+                                {
+                                    section = dbContext.Sections.Find(id);
+                                    section.Name = rec.title;
+                                    section.Sequencenum = rec.sequencenum;
+                                    dbContext.Sections.Update(section);
+                                    dbContext.SaveChanges();
+                                }
+                                else
+                                {
+                                    passage = dbContext.Passages.Find(id);
+                                    passage.Book = rec.book;
+                                    passage.Reference = rec.reference;
+                                    passage.Title = rec.title;
+                                    passage.Sequencenum = rec.sequencenum;
+                                    dbContext.Passages.Update(passage);
+                                    dbContext.SaveChanges();
+                                }
+                            }
+                            else
+                            { //insert the record 
+                                if (rec.issection)
+                                {
+                                    section = new Section
+                                    {
+                                        Name = rec.title,
+                                        Sequencenum = rec.sequencenum,
+                                        PlanId = rec.planid,
+                                    };
+                                    dbContext.Sections.Add(section);
+                                    dbContext.SaveChanges();
+                                    rec.id = section.Id.ToString();
+                                    item["id"] = rec.id;
+                                    lastSection = section.Id;
+                                    Debug.WriteLine("new section " + rec.id + " " + item["id"]);
+                                }
+                                else
+                                {
+                                    passage = new Passage
+                                    {
+                                        Book = rec.book,
+                                        Reference = rec.reference,
+                                        Title = rec.title,
+                                        Sequencenum = rec.sequencenum,
+                                        State = "noMedia",
+                                        SectionId = lastSection,
+                                    };
+                                    dbContext.Passages.Add(passage);
+                                    dbContext.SaveChanges();
+                                    rec.id = passage.Id.ToString();
+                                    item["id"] = rec.id;
+                                    Debug.WriteLine("new passage " + rec.id + " " + item["id"]);
+
+                                }
+                            }
+
+                        }
+                        else if (rec.issection)
+                            int.TryParse(rec.id, out lastSection);
+                    }
+                    transaction.Commit();
+                    entity.Data = JsonConvert.SerializeObject(data);
+                    entity.Complete = true;
+                    dbContext.Update(entity);
+                    dbContext.SaveChanges();
+                    var contextEntity = JsonApiContext.ResourceGraph.GetContextEntity("sectionpassages");
+                    JsonApiContext.AttributesToUpdate[contextEntity.Attributes.Where(a => a.PublicAttributeName == "data").First()] = entity.Data;
+
+                }
+                catch (Exception ex)
+                {
+                    /* I'm giving up...let the next one try */
+                    transaction.Rollback();
+                    dbContext.Remove(entity);
+                    dbContext.SaveChanges();
+                    throw ex;
+                }
+            }
             return entity;
         }
     }
