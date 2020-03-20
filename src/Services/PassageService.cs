@@ -3,23 +3,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
     public class PassageService : BaseArchiveService<Passage>
     {
-
+        private HttpContext HttpContext;
         public PassageService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Passage> PassageRepository,
-          ILoggerFactory loggerFactory) : base(jsonApiContext, PassageRepository, loggerFactory)
+            IHttpContextAccessor httpContextAccessor,
+        ILoggerFactory loggerFactory) : base(jsonApiContext, PassageRepository, loggerFactory)
         {
+            HttpContext = httpContextAccessor.HttpContext;
         }
 
         public override async Task<IEnumerable<Passage>> GetAsync()
@@ -58,6 +61,18 @@ namespace SIL.Transcriber.Services
             }
             Mediafile mediafile = passage.Mediafiles.OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
             return mediafile != null ? mediafile.Transcription ?? "" : "";
+        }
+        public async Task<Passage> UpdateToReadyStateAsync(int id)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+
+            Passage p = await pr.GetAsync(id);
+            p.State = "transcribeReady";
+            var origin = HttpContext.GetOrigin();
+            HttpContext.SetOrigin("api");
+            await base.UpdateAsync(id, p);
+            HttpContext.SetOrigin(origin);
+            return p;
         }
     }
 }
