@@ -28,7 +28,7 @@ namespace SIL.Transcriber.Repositories
             HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
         }
-        private IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
+        public IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
         {
             if (groups == null)
             {
@@ -51,6 +51,10 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersGroupMemberships(entities);
+            }
+            if (filterQuery.Has(DATA_START_INDEX)) //ignore
+            {
+                return entities;
             }
             return base.Filter(entities, filterQuery);
         }

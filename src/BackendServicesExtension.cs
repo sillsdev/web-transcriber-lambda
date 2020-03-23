@@ -33,7 +33,6 @@ namespace SIL.Transcriber
                 options.BuildResourceGraph((builder) => {
                     builder.AddResource<DataChanges>();
                     builder.AddResource<FileResponse>();
-                    builder.AddResource<OrgData>();
                 });
             });
 
@@ -46,6 +45,7 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             services.AddScoped<IEntityRepository<OrganizationMembership>, OrganizationMembershipRepository>();
+            services.AddScoped<IEntityRepository<OrgData>, OrgDataRepository>();
             services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
             services.AddScoped<IEntityRepository<PassageStateChange>, PassageStateChangeRepository>();
             services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
@@ -88,6 +88,7 @@ namespace SIL.Transcriber
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationRepository>();
+            services.AddScoped<OrgDataRepository>();
             services.AddScoped<PassageRepository>();
             services.AddScoped<PassageStateChangeRepository>();
             services.AddScoped<PlanRepository>();

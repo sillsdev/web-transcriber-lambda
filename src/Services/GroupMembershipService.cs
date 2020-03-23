@@ -26,20 +26,19 @@ namespace SIL.Transcriber.Services
             UserRepository = userRepository;
             ProjectRepository = projectRepository;
             CurrentUserContext = currentUserContext;
-            GroupMembershipRepository = groupMembershipRepository;
+            GroupMembershipRepository = (GroupMembershipRepository) groupMembershipRepository;
         }
 
         public UserRepository UserRepository { get; }
         public ProjectRepository ProjectRepository { get; }
         public ICurrentUserContext CurrentUserContext { get; }
-        public IEntityRepository<GroupMembership> GroupMembershipRepository { get; }
+        public GroupMembershipRepository GroupMembershipRepository { get; }
 
 
         public override async Task<IEnumerable<GroupMembership>> GetAsync()
         {
-            return await GetScopedToCurrentUser(
-                base.GetAsync,
-                JsonApiContext);
+            var gms = await base.GetAsync();
+            return GroupMembershipRepository.UsersGroupMemberships(gms.AsQueryable());
         }
         public override async Task<GroupMembership> CreateAsync(GroupMembership entity)
         {

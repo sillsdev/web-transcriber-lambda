@@ -201,6 +201,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Mediafile> Mediafiles { get; set; }
         public DbSet<Organization> Organizations { get; set; }
+        public DbSet<OrgData> Orgdatas { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
         public DbSet<ParatextToken> Paratexttokens { get; set; }
         public DbSet<Passage> Passages { get; set; }
