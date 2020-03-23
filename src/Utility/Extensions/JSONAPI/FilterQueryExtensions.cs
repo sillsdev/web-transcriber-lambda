@@ -14,6 +14,7 @@ namespace SIL.Transcriber.Utility.Extensions.JSONAPI
         public static string ALLOWED_CURRENTUSER = "currentuser";
         public static string PROJECT_SEARCH_TERM = "search-term";
         public static string PROJECT_UPDATED_DATE = "project-updated-date";
+        public static string DATA_START_INDEX = "start-index";
 
 
         public static bool Has(this FilterQuery filterQuery, string param)

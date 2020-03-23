@@ -48,6 +48,10 @@ namespace SIL.Transcriber.Repositories
             {
                 return UsersOrganizations(entities);
             }
+            if (filterQuery.Has(DATA_START_INDEX)) //ignore
+            {
+                return entities;
+            }
             return base.Filter(entities, filterQuery);
         }
         #endregion

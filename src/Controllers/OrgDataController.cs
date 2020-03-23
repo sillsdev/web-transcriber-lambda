@@ -25,11 +25,5 @@ namespace TranscriberAPI.Controllers
         {
             _service = service;
         }
-
-        [HttpGet]
-        public override async Task<IActionResult> GetAsync()
-        {
-            return Ok(await _service.GetAsync());
-        }
     }
 }
