@@ -5,7 +5,6 @@ using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,7 +46,7 @@ namespace SIL.Transcriber.Repositories
                 string thisdata = jsonApiSerializer.Serialize(entity);
                 if (data.Length + thisdata.Length > (1000000 * 5.5))
                     return false;
-                data += (check > start ?  "," : "") + thisdata;
+                data += (check==start ? "" :  ",") + thisdata;
                 completed++;
             }
             return true;
@@ -61,7 +60,7 @@ namespace SIL.Transcriber.Repositories
                 iStart = 0;
             int iStartNext = iStart;
             //give myself 20 seconds to get as much as I can...
-            DateTime dtBail = DateTime.Now.AddSeconds(10);
+            DateTime dtBail = DateTime.Now.AddSeconds(20);
 
             do
             {

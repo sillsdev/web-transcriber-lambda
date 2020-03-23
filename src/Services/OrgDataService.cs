@@ -1,13 +1,8 @@
 ﻿using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Serialization;
 using SIL.Transcriber.Data;
-using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Threading.Tasks;
+
 
 namespace SIL.Transcriber.Services
 {
