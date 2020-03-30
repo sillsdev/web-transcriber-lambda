@@ -5,8 +5,10 @@ using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+
 namespace SIL.Transcriber.Services
 {
     public class SectionPassagesService
@@ -82,8 +84,28 @@ namespace SIL.Transcriber.Services
 
                 try
                 {
+                    var newsecs = data.Where(d => (string)d["id"] == "" && (bool)d["issection"]);
+                    //add all sections
+                    var newsections = new List<Section>();
+                    foreach (var item in newsecs)
+                    {
+                        int seq = 0;
+                        section = new Section
+                        {
+                            Name = (string)item["title"],
+                            Sequencenum = int.TryParse((string)item["sequencenum"], out seq) ? seq : 0,
+                            PlanId = (int)item["planid"]
+                        };
+                        newsections.Add(section);
+                    }
+                    if (newsections.Count > 0)
+                    {
+                        dbContext.BulkInsert(newsections);
+                    }
+
                     foreach (var item in data)
                     {
+
                         IRecord rec = (IRecord)item;
                         int id = 0;
                         if (rec.changed)
@@ -120,12 +142,15 @@ namespace SIL.Transcriber.Services
                                         Sequencenum = rec.sequencenum,
                                         PlanId = rec.planid,
                                     };
+                                    newsections.Add(section);
+                                    /*
                                     dbContext.Sections.Add(section);
                                     dbContext.SaveChanges();
                                     rec.id = section.Id.ToString();
                                     item["id"] = rec.id;
                                     lastSection = section.Id;
                                     Debug.WriteLine("new section " + rec.id + " " + item["id"]);
+                                    */
                                 }
                                 else
                                 {

@@ -19,7 +19,6 @@ namespace SIL.Transcriber.Repositories
         protected readonly IJsonApiSerializer jsonApiSerializer;
         protected readonly OrganizationService organizationService;
         protected readonly GroupMembershipService gmService;
-        protected readonly CurrentUserRepository currentUserRepository;
 
         public OrgDataRepository(
               ILoggerFactory loggerFactory,
@@ -32,7 +31,6 @@ namespace SIL.Transcriber.Repositories
           ) : base(loggerFactory, jsonApiContext, CurrentUserRepository, contextResolver)
         {
             jsonApiSerializer = jsonSer;
-            currentUserRepository = CurrentUserRepository;
             organizationService = orgService;
             gmService = grpMemService;
         }

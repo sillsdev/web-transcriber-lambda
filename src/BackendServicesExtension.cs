@@ -33,7 +33,6 @@ namespace SIL.Transcriber
                 options.BuildResourceGraph((builder) => {
                     builder.AddResource<DataChanges>();
                     builder.AddResource<FileResponse>();
-                    builder.AddResource<OrgData>();
                 });
             });
 
@@ -53,6 +52,7 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
             services.AddScoped<IEntityRepository<ProjectIntegration>, ProjectIntegrationRepository>();
             services.AddScoped<IEntityRepository<Section>, SectionRepository>();
+            services.AddScoped<IEntityRepository<SectionPassage>, SectionPassageRepository>();
             services.AddScoped<IEntityRepository<User>, UserRepository>();
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
 
@@ -79,7 +79,7 @@ namespace SIL.Transcriber
             services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<OrgDataService, OrgDataService>();
             services.AddScoped<IParatextService, ParatextService>();
-            services.AddScoped<SectionPassagesService, SectionPassagesService>();
+            services.AddScoped<SectionPassageService, SectionPassageService>();
 
             // EventDispatchers
             services.AddScoped<CurrentUserRepository>();
@@ -96,6 +96,7 @@ namespace SIL.Transcriber
             services.AddScoped<ProjectIntegrationRepository>();
             services.AddScoped<ProjectRepository>();
             services.AddScoped<SectionRepository>();
+            services.AddScoped<SectionPassageRepository>();
             services.AddScoped<UserRepository>();
 
             services.AddScoped<ActivitystateService>();
@@ -120,7 +121,7 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OfflineDataService>();
             services.AddScoped<OrgDataService>();
-            services.AddScoped<SectionPassagesService>();
+            services.AddScoped<SectionPassageService>();
 
 
             return services;

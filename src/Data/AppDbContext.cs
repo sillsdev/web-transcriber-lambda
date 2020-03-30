@@ -15,13 +15,16 @@ namespace SIL.Transcriber.Data
     {
         public HttpContext HttpContext { get; }
 
-        protected ICurrentUserContext CurrentUserContext;
+        public ICurrentUserContext CurrentUserContext { get; }
+        public DbContextOptions<AppDbContext> Options { get; }
+        public IHttpContextAccessor HttpContextAccessor { get; }
         public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : base(options)
         {
             HttpContext = httpContextAccessor.HttpContext;
+            HttpContextAccessor = httpContextAccessor;
             CurrentUserContext = currentUserContext;
+            Options = options;
         }
-
         private void LowerCaseDB(ModelBuilder builder)
         {
             foreach (var entity in builder.Model.GetEntityTypes())
