@@ -15,13 +15,16 @@ namespace SIL.Transcriber.Data
     {
         public HttpContext HttpContext { get; }
 
-        protected ICurrentUserContext CurrentUserContext;
+        public ICurrentUserContext CurrentUserContext { get; }
+        public DbContextOptions<AppDbContext> Options { get; }
+        public IHttpContextAccessor HttpContextAccessor { get; }
         public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : base(options)
         {
             HttpContext = httpContextAccessor.HttpContext;
+            HttpContextAccessor = httpContextAccessor;
             CurrentUserContext = currentUserContext;
+            Options = options;
         }
-
         private void LowerCaseDB(ModelBuilder builder)
         {
             foreach (var entity in builder.Model.GetEntityTypes())
@@ -144,7 +147,7 @@ namespace SIL.Transcriber.Data
 
             }
 
-            var origin = HttpContext.GetOrigin() ?? "anonymous";
+            var origin = HttpContext.GetOrigin() ?? "http://localhost:3000";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (var entry in entries)
             {
@@ -213,6 +216,7 @@ namespace SIL.Transcriber.Data
         public DbSet<ProjectType> Projecttypes { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Section> Sections { get; set; }
+        public DbSet<SectionPassage> Sectionpassages { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
 

@@ -19,7 +19,6 @@ namespace SIL.Transcriber.Repositories
         protected readonly IJsonApiSerializer jsonApiSerializer;
         protected readonly OrganizationService organizationService;
         protected readonly GroupMembershipService gmService;
-        protected readonly CurrentUserRepository currentUserRepository;
 
         public OrgDataRepository(
               ILoggerFactory loggerFactory,
@@ -32,19 +31,18 @@ namespace SIL.Transcriber.Repositories
           ) : base(loggerFactory, jsonApiContext, CurrentUserRepository, contextResolver)
         {
             jsonApiSerializer = jsonSer;
-            currentUserRepository = CurrentUserRepository;
             organizationService = orgService;
             gmService = grpMemService;
         }
 
         private bool CheckAdd(int check, object entity, DateTime dtBail,  int start, ref int completed, ref string data)
         {
-            Debug.WriteLine(check.ToString() + ":" + DateTime.Now.ToString() + dtBail.ToString());
+            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail) return false;
             if (start <= check)
             {
                 string thisdata = jsonApiSerializer.Serialize(entity);
-                if (data.Length + thisdata.Length > (1000000 * 5.5))
+                if (data.Length + thisdata.Length > (1000000*4))
                     return false;
                 data += (check==start ? "" :  ",") + thisdata;
                 completed++;
@@ -80,7 +78,7 @@ namespace SIL.Transcriber.Repositories
                 //groups
                 if (!CheckAdd(9, dbContext.Groups.Join(gms, g => g.Id, gm => gm.GroupId, (g, gm) => g),dtBail, iStart, ref iStartNext, ref data)) break;
                 //orgmems
-                var oms = dbContext.Organizationmemberships.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om).Where(x => !x.Archived);
+                IQueryable<OrganizationMembership> oms = dbContext.Organizationmemberships.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om).Where(x => !x.Archived);
                 if (!CheckAdd(10, oms,dtBail, iStart,  ref iStartNext, ref data)) break;
                 //users
                 if (!CheckAdd(11, oms.Count() > 0 ? 
@@ -92,15 +90,15 @@ namespace SIL.Transcriber.Repositories
                 if (!CheckAdd(12, projects,dtBail, iStart, ref iStartNext, ref data)) break;
                 //projectintegrations
                 if (!CheckAdd(13, dbContext.Projectintegrations.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived),dtBail, iStart, ref iStartNext, ref data)) break;
-                if (iStart == 0) break;
                 //plans
                 IEnumerable<Plan> plans = dbContext.Plans.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived);
                 if (!CheckAdd(14, plans,dtBail, iStart, ref iStartNext, ref data)) break;
+                
                 //sections
-                var sections = dbContext.Sections.Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s).Where(x => !x.Archived);
+                IQueryable<Section> sections = dbContext.Sections.Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s).Where(x => !x.Archived);
                 if (!CheckAdd(15, sections,dtBail, iStart, ref iStartNext, ref data)) break;
 
-                var passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
+                IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
                 if (!CheckAdd(16, passages,dtBail, iStart, ref iStartNext, ref data)) break;
                 //mediafiles
                 if (!CheckAdd(17, dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived),dtBail, iStart, ref iStartNext, ref data)) break;
@@ -112,14 +110,15 @@ namespace SIL.Transcriber.Repositories
             if (iStart == iStartNext)
                 throw new System.Exception("Single table is too large to return data");
 
-            var orgData = entities.First();
+            OrgData orgData = entities.FirstOrDefault();
+            Logger.LogCritical($"orgData {orgData}");
             orgData.Json = data + "]}";
             orgData.Startnext = iStartNext;
             return entities;
         }
         public override IQueryable<OrgData> Get()
         {
-            var entities = new List<OrgData>();
+            List<OrgData> entities = new List<OrgData>();
             entities.Add(new OrgData());
             return entities.AsQueryable();
         }

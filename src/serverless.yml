@@ -2,6 +2,7 @@ custom:
     myStage: ${opt:stage, self:provider.stage}  #use the --stage CLI option if it exists, or use provider.stage
     stagedMessage:
         dev: "DEV"
+        devx: "DEV"
         qa: "QA"
         prod: "PROD"
     userName: ${file(./serverless.env.yml):${self:custom.myStage}.MasterUsername}
@@ -13,7 +14,7 @@ provider:
   name: aws
   runtime: dotnetcore2.1
   region: us-east-1
-  stage: qa     #cli build params will override this!!
+  stage: devx     #cli build params will override this!!
   profile: transcriber  #aws credentials file 
   stackName: TranscriberStack${self:custom.myStage}
  # deploymentBucket:
@@ -54,7 +55,10 @@ functions:
 resources:
   Conditions:
     IsProd: {"Fn::Equals" : ["${self:custom.myStage}", "prod"]}
-    CreateResources: !Not [Condition: IsProd]
+    IsDevx: {"Fn::Equals" : ["${self:custom.myStage}", "devx"]}
+    IsDev: {"Fn::Equals" : ["${self:custom.myStage}", "dev"]}
+    CreateResourcesOriginal: !Not [Condition: IsProd]
+    CreateResources:  !Not [Condition: IsDevx]
   Resources:
 ## Create database - needs VPC with two subnets
    transcriberlambdavpc:

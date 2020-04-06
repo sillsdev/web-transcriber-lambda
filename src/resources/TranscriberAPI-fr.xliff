@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file id="1" original="TranscriberAPI.xliff" source-language="en" target-language="fr" datatype="plaintext">
+    <body>
+      <trans-unit id="app">
+        <source>SIL Transcriber</source>
+        <target state="needs-translation">SIL Transcriber</target>
+        <note>Context: Application Name</note>
+      </trans-unit>
+      <trans-unit id="invite">
+        <source>has invited you to join</source>
+        <target state="needs-translation">vous a invité à rejoindre</target>
+        <note>Context: Invitation Email</note>
+      </trans-unit>
+      <trans-unit id="instructions">
+        <source>Please click the following button to accept the invitation.</source>
+        <target state="needs-translation">Please click the following button to accept the invitation.</target>
+        <note>Context: Invitation Email</note>
+      </trans-unit>
+      <trans-unit id="SILorg" translate="no">
+        <source>SIL International</source>
+        <target state="needs-translation">SIL International</target>
+        <note>Context: Invitation Email</note>
+      </trans-unit>
+      <trans-unit id="join">
+        <source>Join</source>
+        <target state="needs-translation">Join</target>
+        <note>Context: Invitation Email</note>
+      </trans-unit>
+      <trans-unit id="questions">
+        <source>Questions? Contact</source>
+        <target state="needs-translation">Questions ? Contacter</target>
+        <note>Context: Invitation Email</note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

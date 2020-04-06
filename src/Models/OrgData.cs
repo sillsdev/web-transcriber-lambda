@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public class OrgData : Identifiable<int>
+    public class OrgData : BaseModel
     {
         public OrgData()
         {
