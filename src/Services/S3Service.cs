@@ -90,9 +90,9 @@ namespace SIL.Transcriber.Services
 
         private string SignedUrl(string key, HttpVerb action, string mimetype)
         {
-            var s3Client = new AmazonS3Client();
+            AmazonS3Client s3Client = new AmazonS3Client();
 
-            var request = new GetPreSignedUrlRequest
+            GetPreSignedUrlRequest request = new GetPreSignedUrlRequest
             {
                 BucketName = USERFILES_BUCKET,
                 Key = key,

@@ -8,6 +8,7 @@ using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Z.EntityFramework.Extensions;
 
 namespace SIL.Transcriber.Repositories
@@ -29,6 +30,13 @@ namespace SIL.Transcriber.Repositories
                 return new AppDbContext(adbc.Options, adbc.CurrentUserContext, adbc.HttpContextAccessor);
             };
             JsonApiContext = jsonApiContext;
+        }
+        public override async Task<SectionPassage> GetAsync(int id)
+        {
+            SectionPassage entity = await base.GetAsync(id); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
+            if (entity != null && entity.Complete)
+                return entity;
+            return null;
         }
         public SectionPassage GetByUUID(Guid uuid)
         {
