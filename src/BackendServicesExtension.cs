@@ -81,6 +81,7 @@ namespace SIL.Transcriber
             services.AddScoped<IParatextService, ParatextService>();
             services.AddScoped<SectionPassageService, SectionPassageService>();
 
+
             // EventDispatchers
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<GroupMembershipRepository>();
