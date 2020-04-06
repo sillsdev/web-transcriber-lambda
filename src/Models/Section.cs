@@ -9,15 +9,15 @@ namespace SIL.Transcriber.Models
     { 
         public Section() : base ()
         { }
-        public Section(JToken item) : base()
+        public Section(JToken item, int planId) : base()
         {
             UpdateFrom(item);
+            PlanId = planId;
         }
         public Section UpdateFrom(JToken item)
         {
             Name = item["title"] != null ? (string)item["title"] : "";
             Sequencenum = int.TryParse((string)item["sequencenum"], out int tryint) ? tryint : 0;
-            PlanId = item["planid"] != null ? (int)item["planid"] : 0;
             return this;
         }
         [Attr("sequencenum")]
