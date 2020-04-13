@@ -65,7 +65,7 @@ namespace SIL.Transcriber.Services
             {
                 if (await AmazonS3Util.DoesS3BucketExistAsync(_client, bucketName) == false)
                 {
-                    var putBucketRequest = new PutBucketRequest
+                    PutBucketRequest putBucketRequest = new PutBucketRequest
                     {
                         BucketName = bucketName,
                         UseClientRegion = true
@@ -154,7 +154,7 @@ namespace SIL.Transcriber.Services
                 }
 
                 PutObjectResponse response = null;
-                var request = new PutObjectRequest
+                PutObjectRequest request = new PutObjectRequest
                 {
                     BucketName = USERFILES_BUCKET,
                     Key = ProperFolder(folder) + fileName,
@@ -189,11 +189,11 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                byte[] fileBytes = new Byte[file.Length];
-                file.OpenReadStream().Read(fileBytes, 0, Int32.Parse(file.Length.ToString()));
+                byte[] fileBytes = new byte[file.Length];
+                file.OpenReadStream().Read(fileBytes, 0, int.Parse(file.Length.ToString()));
 
                 // create unique file name 
-                var fileName = Guid.NewGuid() + "_" + file.FileName;
+                string fileName = Guid.NewGuid() + "_" + file.FileName;
                 //aws versioning on
                 //var fileName = file.FileName;
 
@@ -216,13 +216,13 @@ namespace SIL.Transcriber.Services
             {
                 //check if it exists
                 //check if file with metadata OriginalFileName = fileName exists
-                var request = new DeleteObjectRequest
+                DeleteObjectRequest request = new DeleteObjectRequest
                 {
                     BucketName = USERFILES_BUCKET,
                     Key = ProperFolder(folder) + fileName,
                 };
 
-                var response = await _client.DeleteObjectAsync(request);
+                DeleteObjectResponse response = await _client.DeleteObjectAsync(request);
                 return S3Response(fileName, response.HttpStatusCode);
 
             }
@@ -280,7 +280,7 @@ namespace SIL.Transcriber.Services
                 {
                     Console.WriteLine("Meta", response.Metadata);
                     Console.WriteLine("Headers", response.Headers);
-                    var stream = new MemoryStream();
+                    MemoryStream stream = new MemoryStream();
                     await responseStream.CopyToAsync(stream);
                     stream.Position = 0;
 

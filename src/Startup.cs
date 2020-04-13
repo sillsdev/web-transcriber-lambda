@@ -60,7 +60,7 @@ namespace SIL.Transcriber
                 app.UseExceptionHandler("/Home/Error");
                 app.UseHsts();
             }
-            var config = Configuration.GetAWSLoggingConfigSection();
+            AWSLoggerConfigSection config = Configuration.GetAWSLoggingConfigSection();
             loggerFactory.AddAWSProvider(config);
            
             app.UseAuthentication();

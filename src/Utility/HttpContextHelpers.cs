@@ -11,8 +11,8 @@ namespace SIL.Transcriber.Utility
     {
         public static async Task<string> GetJWT(this HttpContext context)
         {
-            var scheme = JwtBearerDefaults.AuthenticationScheme;
-            var token = await context.GetTokenAsync(scheme, "access_token");
+            string scheme = JwtBearerDefaults.AuthenticationScheme;
+            string token = await context.GetTokenAsync(scheme, "access_token");
 
             return token;
         }
