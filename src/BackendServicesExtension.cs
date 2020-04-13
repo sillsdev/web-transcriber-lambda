@@ -170,7 +170,7 @@ namespace SIL.Transcriber
                     OnTokenValidated = context =>
                     {
                         // Add the access_token as a claim, as we may actually need it
-                        var accessToken = context.SecurityToken as JwtSecurityToken;
+                        JwtSecurityToken accessToken = context.SecurityToken as JwtSecurityToken;
                         ClaimsIdentity identity = context.Principal.Identity as ClaimsIdentity;
                         //SJH 05/01/2019 ours is always false?...
                         //if (!identity.HasClaim("email_verified", "true"))

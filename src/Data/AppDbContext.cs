@@ -8,6 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using SIL.Transcriber.Utility;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace SIL.Transcriber.Data
 {
@@ -27,28 +30,28 @@ namespace SIL.Transcriber.Data
         }
         private void LowerCaseDB(ModelBuilder builder)
         {
-            foreach (var entity in builder.Model.GetEntityTypes())
+            foreach (IMutableEntityType entity in builder.Model.GetEntityTypes())
             {
                 // Replace table names
                 entity.Relational().TableName = entity.Relational().TableName.ToLower();
 
                 // Replace column names            
-                foreach (var property in entity.GetProperties())
+                foreach (IMutableProperty property in entity.GetProperties())
                 {
                     property.Relational().ColumnName = property.Name.ToLower();
                 }
 
-                foreach (var key in entity.GetKeys())
+                foreach (IMutableKey key in entity.GetKeys())
                 {
                     key.Relational().Name = key.Relational().Name.ToLower();
                 }
 
-                foreach (var key in entity.GetForeignKeys())
+                foreach (IMutableForeignKey key in entity.GetForeignKeys())
                 {
                     key.Relational().Name = key.Relational().Name.ToLower();
                 }
 
-                foreach (var index in entity.GetIndexes())
+                foreach (IMutableIndex index in entity.GetIndexes())
                 {
                     index.Relational().Name = index.Relational().Name.ToLower();
                 }
@@ -56,15 +59,15 @@ namespace SIL.Transcriber.Data
         }
         private void DefineManyToMany(ModelBuilder modelBuilder)
         {
-            var groupEntity = modelBuilder.Entity<Group>();
-            var userEntity = modelBuilder.Entity<User>();
-            var roleEntity = modelBuilder.Entity<Role>();
-            var orgEntity = modelBuilder.Entity<Organization>();
-            var orgMemberEntity = modelBuilder.Entity<OrganizationMembership>();
-            var projectEntity = modelBuilder.Entity<Project>();
-            var groupMemberEntity = modelBuilder.Entity<GroupMembership>();
-            var passageEntity = modelBuilder.Entity<Passage>();
-            var sectionEntity = modelBuilder.Entity<Section>();
+            EntityTypeBuilder<Group> groupEntity = modelBuilder.Entity<Group>();
+            EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
+            EntityTypeBuilder<Role> roleEntity = modelBuilder.Entity<Role>();
+            EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
+            EntityTypeBuilder<OrganizationMembership> orgMemberEntity = modelBuilder.Entity<OrganizationMembership>();
+            EntityTypeBuilder<Project> projectEntity = modelBuilder.Entity<Project>();
+            EntityTypeBuilder<GroupMembership> groupMemberEntity = modelBuilder.Entity<GroupMembership>();
+            EntityTypeBuilder<Passage> passageEntity = modelBuilder.Entity<Passage>();
+            EntityTypeBuilder<Section> sectionEntity = modelBuilder.Entity<Section>();
 
             groupEntity
                 .HasMany(g => g.GroupMemberships)
@@ -115,17 +118,17 @@ namespace SIL.Transcriber.Data
             DefineManyToMany(builder);
         }
         private int CurrentUserId()
-        { 
-             var auth0Id = this.CurrentUserContext.Auth0Id; 
-             var userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
-             return userFromResult == null ? -1 : userFromResult.Id;
+        {
+            string auth0Id = this.CurrentUserContext.Auth0Id;
+            User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
+            return userFromResult == null ? -1 : userFromResult.Id;
         }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
         private void AddTimestamps()
         {
-            var entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            System.Collections.Generic.IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
             DateTime now = DateTime.UtcNow;
-            foreach (var entry in entries)
+            foreach (EntityEntry entry in entries)
             {
                 if (entry.Entity is ITrackDate trackDate)
                 {
@@ -136,28 +139,28 @@ namespace SIL.Transcriber.Data
                     trackDate.DateUpdated = now;
                 }
             }
-            var userid = CurrentUserId();
+            int userid = CurrentUserId();
             if (userid > 0) // we allow s3 trigger anonymous access
             {
                 entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
-                foreach (var entry in entries)
+                foreach (EntityEntry entry in entries)
                 {
                     entry.CurrentValues["LastModifiedBy"] = userid;
                 }
 
             }
 
-            var origin = HttpContext.GetOrigin() ?? "http://localhost:3000";
+            string origin = HttpContext.GetOrigin() ?? "http://localhost:3000";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            foreach (var entry in entries)
+            foreach (EntityEntry entry in entries)
             {
                 entry.CurrentValues["LastModifiedOrigin"] = origin;
             }
         }
         public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            var entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            foreach (var entry in entries)
+            System.Collections.Generic.IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            foreach (EntityEntry entry in entries)
             {
                 entry.CurrentValues["LastModifiedOrigin"] = "electron";
             }
@@ -180,7 +183,7 @@ namespace SIL.Transcriber.Data
         //so handle it here too
         private void UpdateSoftDeleteStatuses()
         {
-            foreach (var entry in ChangeTracker.Entries())
+            foreach (EntityEntry entry in ChangeTracker.Entries())
             {
                 if (entry.Entity is IArchive)
                 {

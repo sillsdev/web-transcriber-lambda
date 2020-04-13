@@ -43,7 +43,7 @@ namespace SIL.Transcriber.Repositories
             {
                 if (filterQuery.HasSpecificOrg())
                 {
-                    var groups =dbContext.Groups.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                    IQueryable<Group> groups =dbContext.Groups.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                     return UsersGroupMemberships(entities, groups);
                 }
                 return UsersGroupMemberships(entities);

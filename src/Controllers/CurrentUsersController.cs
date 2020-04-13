@@ -30,7 +30,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet]
         public override async Task<IActionResult> GetAsync()
         {
-            var currentUser = CurrentUser;
+            User currentUser = CurrentUser;
 
             return Ok(currentUser);
         }

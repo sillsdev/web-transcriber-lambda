@@ -85,7 +85,7 @@ namespace SIL.Transcriber.Controllers
 
         private async Task<User> FindOrCreateCurrentUser()
         {
-            var existing = userService.GetCurrentUser();
+            User existing = userService.GetCurrentUser();
 
             if (existing != null) return existing;
 
@@ -95,7 +95,7 @@ namespace SIL.Transcriber.Controllers
                 return null;
             }
 
-            var newUser = new User
+            User newUser = new User
             {
                 ExternalId = currentUserContext.Auth0Id,
                 Email = currentUserContext.Email,
@@ -108,7 +108,7 @@ namespace SIL.Transcriber.Controllers
                 SilUserid = 0 //  currentUserContext.SilUserid
             };
 
-            var newEntity = await userService.CreateAsync(newUser);
+            User newEntity = await userService.CreateAsync(newUser);
             Console.WriteLine("New user created.");
             /* ask the sil auth if this user has any orgs */
             //List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
