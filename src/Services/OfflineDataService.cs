@@ -49,27 +49,27 @@ namespace SIL.Transcriber.Services
         }
         private DateTime AddCheckEntry(ZipArchive zipArchive)
         {
-            var entry = zipArchive.CreateEntry("SILTranscriber", CompressionLevel.Fastest);
-            var dt = DateTime.UtcNow;
+            ZipArchiveEntry entry = zipArchive.CreateEntry("SILTranscriber", CompressionLevel.Fastest);
+            DateTime dt = DateTime.UtcNow;
             WriteEntry(entry, dt.ToString("o"));
             return dt;
         }
         private void AddJsonEntry(ZipArchive zipArchive, string table, IList list, char sort)
         {
-            var entry = zipArchive.CreateEntry("data/" + sort + "_" + table + ".json", CompressionLevel.Fastest);
+            ZipArchiveEntry entry = zipArchive.CreateEntry("data/" + sort + "_" + table + ".json", CompressionLevel.Fastest);
             WriteEntry(entry, jsonApiSerializer.Serialize(list));
         }
         private void AddEafEntry(ZipArchive zipArchive, string name, string eafxml)
         {
-            if (!String.IsNullOrEmpty(eafxml))
+            if (!string.IsNullOrEmpty(eafxml))
             {
-                var entry = zipArchive.CreateEntry("media/" + Path.GetFileNameWithoutExtension(name) + ".eaf", CompressionLevel.Optimal);
+                ZipArchiveEntry entry = zipArchive.CreateEntry("media/" + Path.GetFileNameWithoutExtension(name) + ".eaf", CompressionLevel.Optimal);
                 WriteEntry(entry, eafxml);
             }
         }
         private void AddStreamEntry(ZipArchive zipArchive, Stream fileStream, string dir, string newName)
         {
-            var entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
+            ZipArchiveEntry entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
             using (Stream zipEntryStream = entry.Open())
             {
                 //Copy the attachment stream to the zip entry stream
@@ -84,7 +84,7 @@ namespace SIL.Transcriber.Services
         {
             byte[] imageData = null;
 
-            using (var wc = new System.Net.WebClient())
+            using (WebClient wc = new System.Net.WebClient())
                 imageData = wc.DownloadData(url);
 
             return new MemoryStream(imageData);
@@ -93,7 +93,7 @@ namespace SIL.Transcriber.Services
         {
             orgs.ForEach(o =>
             {
-                if (!String.IsNullOrEmpty(o.LogoUrl))
+                if (!string.IsNullOrEmpty(o.LogoUrl))
                 {
                     AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png");
                     o.LogoUrl = "logos/" + o.Slug + ".png";
@@ -104,7 +104,7 @@ namespace SIL.Transcriber.Services
         {
             users.ForEach(u =>
             {
-                if (!String.IsNullOrEmpty(u.avatarurl))
+                if (!string.IsNullOrEmpty(u.avatarurl))
                 {
                     AddStreamEntry(zipArchive, u.avatarurl, "avatars/", u.Id.ToString() + u.FamilyName + ".png");
                     u.avatarurl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
@@ -116,12 +116,12 @@ namespace SIL.Transcriber.Services
         {
             media.ForEach( m =>
             {
-                if (!String.IsNullOrEmpty(m.S3File))
+                if (!string.IsNullOrEmpty(m.S3File))
                 {
-                    var response = mediaService.GetFile(m.Id).Result;
+                    S3Response response = mediaService.GetFile(m.Id).Result;
                     AddStreamEntry(zipArchive, response.FileStream, "media/", m.S3File);
                     m.AudioUrl = "media/" + m.S3File;
-                    AddEafEntry(zipArchive, m.S3File, m.EafUrl);
+                    AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
                 }
             });
         }
@@ -148,12 +148,12 @@ namespace SIL.Transcriber.Services
 
                     int end = css.IndexOf("')", start);
                     url = css.Substring(start, end - start);
-                    var fontfile = url.Substring(url.LastIndexOf("/") + 1);
+                    string fontfile = url.Substring(url.LastIndexOf("/") + 1);
                     url = bucket + fontfile;
                     AddStreamEntry(zipArchive, url, "fonts/", fontfile);
                     css = css.Substring(0, start + 1) + fontfile + css.Substring(end);
                 }
-                var entry = zipArchive.CreateEntry("fonts/" + cssfile, CompressionLevel.Fastest);
+                ZipArchiveEntry entry = zipArchive.CreateEntry("fonts/" + cssfile, CompressionLevel.Fastest);
                 WriteEntry(entry, css);
             }
             catch (Exception ex)
@@ -193,18 +193,18 @@ namespace SIL.Transcriber.Services
             else
                 projects = dbContext.Projects.Where(p => p.OrganizationId == orgid);
 
-            var ms = new MemoryStream();
-            using (var zipArchive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            MemoryStream ms = new MemoryStream();
+            using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Create, true))
             {
                 Dictionary<string, string> fonts = new Dictionary<string, string>();
                 fonts.Add("Charis SIL", "");
 
-                var exported= AddCheckEntry(zipArchive);
+                DateTime exported = AddCheckEntry(zipArchive);
 
-                var orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
-                
+                IQueryable<OrganizationMembership> orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
+
                 //org
-                var orgList = orgs.ToList();
+                List<Organization> orgList = orgs.ToList();
                 AddOrgLogos(zipArchive, orgList);
                 AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
@@ -212,11 +212,11 @@ namespace SIL.Transcriber.Services
                 AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                 //groups
-               var groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
+                IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
                 AddJsonEntry(zipArchive, "groups", groups.ToList(), 'C');
 
                 //groupmemberships
-                var gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).ToList();
+                List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).ToList();
                 AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
                 foreach( string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
                 {
@@ -224,7 +224,7 @@ namespace SIL.Transcriber.Services
                 }
 
                 //users
-                var userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).ToList();
+                List<User> userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).ToList();
                 AddUserAvatars(zipArchive, userList);
                 AddJsonEntry(zipArchive, "users", userList, 'A');
 
@@ -245,22 +245,22 @@ namespace SIL.Transcriber.Services
                 //projectintegrations
                 AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).ToList(), 'E');
                 //plans
-                var plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl);
+                IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl);
                 AddJsonEntry(zipArchive, "plans", plans.ToList(), 'E');
                 //sections
-                var sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s);
+                IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s);
                 AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
                 //passages
-                var passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p);
+                IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p);
 
                 AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
                 //mediafiles
-                var mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
-                var mediaList = mediafiles.ToList();
+                IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
+                List<Mediafile> mediaList = mediafiles.ToList();
                 AddMedia(zipArchive, mediaList);
                 AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
                 //passagestatechange
-                var passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
+                IQueryable<PassageStateChange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
                 AddJsonEntry(zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H');
 
                 //ALL
@@ -279,7 +279,7 @@ namespace SIL.Transcriber.Services
             const string ContentType = "application/ptf";
             string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Slug) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Slug);
 
-            var s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
+            S3Response s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == System.Net.HttpStatusCode.OK)
             {
                 //get a signedurl for it now
@@ -535,10 +535,10 @@ namespace SIL.Transcriber.Services
                     {
                         case "users":
                             List<User> users = jsonApiDeSerializer.DeserializeList<User>(data);
-                            var myUsers = users.Join(dbContext.Groupmemberships.Where(gm => gm.GroupId == project.GroupId), u => u.Id, grpmem => grpmem.UserId, (u, grpmem) => u);
+                            IEnumerable<User> myUsers = users.Join(dbContext.Groupmemberships.Where(gm => gm.GroupId == project.GroupId), u => u.Id, grpmem => grpmem.UserId, (u, grpmem) => u);
                             foreach(User u in myUsers)
-                            { 
-                                var user = dbContext.Users.Find(u.Id);
+                            {
+                                User user = dbContext.Users.Find(u.Id);
                                 
                                 if (user.DateUpdated > sourceDate)
                                     report += UserChangesReport(user, u);
@@ -565,10 +565,10 @@ namespace SIL.Transcriber.Services
 
                         case "sections":
                             List<Section> sections = jsonApiDeSerializer.DeserializeList<Section>(data);
-                            var mysections = sections.Join(dbContext.Plans.Where(p => p.ProjectId == projectid), s => s.PlanId, pl => pl.Id, (s, pl) => s);
+                            IEnumerable<Section> mysections = sections.Join(dbContext.Plans.Where(p => p.ProjectId == projectid), s => s.PlanId, pl => pl.Id, (s, pl) => s);
                             foreach(Section s in mysections)
                             {
-                                var section = dbContext.Sections.Find(s.Id);
+                                Section section = dbContext.Sections.Find(s.Id);
                                 if (section.DateUpdated > sourceDate)
                                         report += SectionChangesReport(section, s);
 
@@ -584,10 +584,10 @@ namespace SIL.Transcriber.Services
 
                         case "passages":
                             List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
-                            var mypassages = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(passages, s => s.Id, p => p.SectionId, (s, p) => p);
+                            IQueryable<Passage> mypassages = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(passages, s => s.Id, p => p.SectionId, (s, p) => p);
                             foreach (Passage p in mypassages)
                             {
-                                var passage = dbContext.Passages.Find(p.Id);
+                                Passage passage = dbContext.Passages.Find(p.Id);
                                 if (passage.State != p.State)
                                 {
                                     if (passage.DateUpdated > sourceDate)
@@ -610,10 +610,10 @@ namespace SIL.Transcriber.Services
                                 dbContext.Mediafiles.AddRange(newFiles);
                                 // upload the file 
                             } */
-                            var mymediafiles = mediafiles.Join(dbContext.Plans.Where(pl =>pl.ProjectId == projectid), mf => mf.PlanId, p => p.Id, (mf, p) => mf);
+                            IEnumerable<Mediafile> mymediafiles = mediafiles.Join(dbContext.Plans.Where(pl => pl.ProjectId == projectid), mf => mf.PlanId, p => p.Id, (mf, p) => mf);
                             foreach(Mediafile m in mymediafiles)
                             {
-                                var mediafile = dbContext.Mediafiles.Find(m.Id);
+                                Mediafile mediafile = dbContext.Mediafiles.Find(m.Id);
                                 if (mediafile.Transcription != m.Transcription || mediafile.Position != m.Position)
                                 {
                                     if (mediafile.DateUpdated > sourceDate)
@@ -630,10 +630,10 @@ namespace SIL.Transcriber.Services
 
                         case "groupmemberships":
                             List<GroupMembership> grpmems = jsonApiDeSerializer.DeserializeList<GroupMembership>(data);
-                            var mygrpmems = grpmems.Where(gm => gm.GroupId == project.GroupId);
+                            IEnumerable<GroupMembership> mygrpmems = grpmems.Where(gm => gm.GroupId == project.GroupId);
                             foreach(GroupMembership gm in mygrpmems)
-                            { 
-                                var grpmem = dbContext.Groupmemberships.Find(gm.Id);
+                            {
+                                GroupMembership grpmem = dbContext.Groupmemberships.Find(gm.Id);
                                 if (grpmem.FontSize != gm.FontSize)
                                 {
                                     if (grpmem.DateUpdated > sourceDate)
@@ -655,11 +655,11 @@ namespace SIL.Transcriber.Services
 
                         case "passagestatechanges":
                             List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
-                            var mypscs = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(pscs, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
+                            IQueryable<PassageStateChange> mypscs = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(pscs, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
                             foreach(PassageStateChange psc in mypscs)
                             {
                                 //see if it's already there...
-                                var dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
+                                IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
                                 if (dups.Count() == 0)
                                 {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
                                     dbContext.Passagestatechanges.Add(new PassageStateChange
@@ -677,7 +677,7 @@ namespace SIL.Transcriber.Services
                             break;
                     }
                 }
-                var ret = await dbContext.SaveChangesNoTimestampAsync();
+                int ret = await dbContext.SaveChangesNoTimestampAsync();
 
                 return new FileResponse()
                 {

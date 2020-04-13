@@ -24,15 +24,19 @@ namespace SIL.Transcriber.Services
         private IS3Service _S3service { get; }
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
+        private PassageService PassageService { get; set; }
+
         public MediafileService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<Mediafile> basemediafileRepository,
             PlanRepository planRepository,
+            PassageService passageService,
             ILoggerFactory loggerFactory,
             IS3Service service) : base(jsonApiContext, basemediafileRepository, loggerFactory)
         {
             _S3service = service;
             PlanRepository = planRepository;
+            PassageService = passageService;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
         }
 
@@ -66,7 +70,7 @@ namespace SIL.Transcriber.Services
         }
 
         //set the version number
-        private void InitNewMediafile(Mediafile entity)
+        private async Task InitNewMediafileAsync(Mediafile entity)
         {
             //aws versioning on
             //entity.S3File = entity.OriginalFile;
@@ -80,6 +84,10 @@ namespace SIL.Transcriber.Services
                 var last = mfs.Where(mf => mf.Id == mfs.Max(m => m.Id)).First();
                 entity.VersionNumber = last.VersionNumber + 1;
                 entity.PassageId = last.PassageId;
+                if (entity.PassageId != null)
+                {
+                    await PassageService.UpdateToReadyStateAsync((int)entity.PassageId);
+                }
             }
         }
         public async Task<Mediafile> UpdateFileInfo(int id, long filesize, decimal duration)
@@ -93,15 +101,16 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
-            InitNewMediafile(entity); //set the version number
+            await InitNewMediafileAsync(entity); //set the version number
             var response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
             entity.AudioUrl = response.Message;
             return await base.CreateAsync(entity);
         }
+        /*
         public override async Task<Mediafile> UpdateAsync(int id, Mediafile media)
         {
             Mediafile mf = MediafileRepository.Get(id);
-            //if the transcription has changed...update the eafurl  //TODO RENAME TO EAF
+            //if the transcription has changed...update the eaf
             if (JsonApiContext.AttributesToUpdate.Any(kvp=>kvp.Key.PublicAttributeName == "transcription"))
             {
                 mf.Transcription = media.Transcription;
@@ -111,11 +120,10 @@ namespace SIL.Transcriber.Services
             mf = await base.UpdateAsync(id, media);
             return mf;
         }
-
+        */
         public  async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
         {
-           InitNewMediafile(entity);
-
+            await InitNewMediafileAsync(entity);
             S3Response response = await _S3service.UploadFileAsync(FileToUpload, DirectoryName(entity));
             entity.S3File = response.Message;
             entity.Filesize = FileToUpload.Length/1024;

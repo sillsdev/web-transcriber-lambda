@@ -1,11 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using JsonApiDotNetCore.Models;
+using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Models
 {
     public class Passage : BaseModel, IArchive
     {
+        public Passage() : base()
+        {  
+        }
+        public Passage(JToken item, int sectionId) : base()
+        {
+            UpdateFrom(item);
+            SectionId = sectionId;
+            State = "noMedia";
+        }
+        public Passage UpdateFrom(JToken item)
+        {
+            Book = item["book"] != null ? (string)item["book"] : "";
+            Reference = item["reference"] != null ? (string)item["reference"] : "";
+            Title = item["title"] != null ? (string)item["title"] : "";
+            Sequencenum = int.TryParse((string)item["sequencenum"], out int tryint) ? tryint : 0;
+            return this;
+        }
         [Attr("sequencenum")]
         public int Sequencenum { get; set; }
         [Attr("book")]
@@ -15,7 +33,7 @@ namespace SIL.Transcriber.Models
         [Attr("state")]
         public string State { get; set; }
         [Attr("hold")]
-        public Boolean Hold { get; set; }
+        public bool Hold { get; set; }
         [Attr("title")]
         public string Title { get; set; }
         [Attr("last-comment")]

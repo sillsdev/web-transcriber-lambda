@@ -33,7 +33,6 @@ namespace SIL.Transcriber
                 options.BuildResourceGraph((builder) => {
                     builder.AddResource<DataChanges>();
                     builder.AddResource<FileResponse>();
-                    builder.AddResource<OrgData>();
                 });
             });
 
@@ -46,12 +45,14 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             services.AddScoped<IEntityRepository<OrganizationMembership>, OrganizationMembershipRepository>();
+            services.AddScoped<IEntityRepository<OrgData>, OrgDataRepository>();
             services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
             services.AddScoped<IEntityRepository<PassageStateChange>, PassageStateChangeRepository>();
             services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
             services.AddScoped<IEntityRepository<ProjectIntegration>, ProjectIntegrationRepository>();
             services.AddScoped<IEntityRepository<Section>, SectionRepository>();
+            services.AddScoped<IEntityRepository<SectionPassage>, SectionPassageRepository>();
             services.AddScoped<IEntityRepository<User>, UserRepository>();
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
 
@@ -78,6 +79,7 @@ namespace SIL.Transcriber
             services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<OrgDataService, OrgDataService>();
             services.AddScoped<IParatextService, ParatextService>();
+            services.AddScoped<SectionPassageService, SectionPassageService>();
 
 
             // EventDispatchers
@@ -88,12 +90,14 @@ namespace SIL.Transcriber
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationRepository>();
+            services.AddScoped<OrgDataRepository>();
             services.AddScoped<PassageRepository>();
             services.AddScoped<PassageStateChangeRepository>();
             services.AddScoped<PlanRepository>();
             services.AddScoped<ProjectIntegrationRepository>();
             services.AddScoped<ProjectRepository>();
             services.AddScoped<SectionRepository>();
+            services.AddScoped<SectionPassageRepository>();
             services.AddScoped<UserRepository>();
 
             services.AddScoped<ActivitystateService>();
@@ -118,6 +122,7 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OfflineDataService>();
             services.AddScoped<OrgDataService>();
+            services.AddScoped<SectionPassageService>();
             return services;
         }
 
@@ -165,7 +170,7 @@ namespace SIL.Transcriber
                     OnTokenValidated = context =>
                     {
                         // Add the access_token as a claim, as we may actually need it
-                        var accessToken = context.SecurityToken as JwtSecurityToken;
+                        JwtSecurityToken accessToken = context.SecurityToken as JwtSecurityToken;
                         ClaimsIdentity identity = context.Principal.Identity as ClaimsIdentity;
                         //SJH 05/01/2019 ours is always false?...
                         //if (!identity.HasClaim("email_verified", "true"))

@@ -3,15 +3,17 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public class OrgData : Identifiable<int>
+    public class OrgData : BaseModel
     {
-        public OrgData(string data)
+        public OrgData()
         {
-            Json = data;
             Id = 1;
         }
         [NotMapped]
         [Attr("json")]
         public string Json { get; set; }
+        [NotMapped]
+        [Attr("startnext")]
+        public int Startnext { get; set; }
     }
 }

@@ -1,11 +1,25 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using JsonApiDotNetCore.Models;
+using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Models
 {
     public class Section : BaseModel, IArchive
-    {
+    { 
+        public Section() : base ()
+        { }
+        public Section(JToken item, int planId) : base()
+        {
+            UpdateFrom(item);
+            PlanId = planId;
+        }
+        public Section UpdateFrom(JToken item)
+        {
+            Name = item["title"] != null ? (string)item["title"] : "";
+            Sequencenum = int.TryParse((string)item["sequencenum"], out int tryint) ? tryint : 0;
+            return this;
+        }
         [Attr("sequencenum")]
         public int Sequencenum { get; set; }
         [Attr("name")]
