@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
@@ -60,7 +61,11 @@ namespace SIL.Transcriber.Services
                 passage = pr.Get().Where(p => p.Id == passage.Id).Include(p => p.Mediafiles).FirstOrDefault();
             }
             Mediafile mediafile = passage.Mediafiles.OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
-            return mediafile != null ? mediafile.Transcription ?? "" : "";
+            string trans = mediafile != null ? mediafile.Transcription ?? "" : "";
+            //remove timestamp
+            string pattern = @"\([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?\)";
+            return Regex.Replace(trans,pattern, "");
+           
         }
         public async Task<Passage> UpdateToReadyStateAsync(int id)
         {
