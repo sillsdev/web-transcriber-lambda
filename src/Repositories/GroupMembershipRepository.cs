@@ -62,6 +62,8 @@ namespace SIL.Transcriber.Repositories
 
         public GroupMembership JoinGroup(int UserId, int groupId, RoleName groupRole)
         {
+            Group group = dbContext.Groups.Find(groupId);
+            if (group.Archived) return null;
             GroupMembership groupmembership = Get().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
             if (groupmembership == null)
             {
