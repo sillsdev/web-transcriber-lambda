@@ -100,7 +100,7 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
-            if (entity.PassageId == 0) { //eh..hacky way to tell if we're uploading a new one, or copying one because it's being reopened
+            if (entity.PassageId == 0 || entity.PassageId is null) { //eh..hacky way to tell if we're uploading a new one, or copying one because it's being reopened
                 await InitNewMediafileAsync(entity); //set the version number
                 S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
                 entity.AudioUrl = response.Message;
