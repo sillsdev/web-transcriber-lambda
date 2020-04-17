@@ -101,9 +101,17 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
-            await InitNewMediafileAsync(entity); //set the version number
-            var response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
-            entity.AudioUrl = response.Message;
+            if (entity.PassageId == 0) { //eh..hacky way to tell if we're uploading a new one, or copying one because it's being reopened
+                await InitNewMediafileAsync(entity); //set the version number
+                S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
+                entity.AudioUrl = response.Message;
+            }
+            else
+            {
+                //find the latest and copy the s3file from it
+                Mediafile mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
+                entity.S3File = mfs.S3File;
+            }
             return await base.CreateAsync(entity);
         }
         /*
