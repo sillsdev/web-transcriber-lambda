@@ -1,4 +1,5 @@
 using JsonApiDotNetCore.Data;
+using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
@@ -6,6 +7,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using System.Linq;
+using System.Threading.Tasks;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 
 namespace SIL.Transcriber.Repositories
@@ -41,7 +43,7 @@ namespace SIL.Transcriber.Repositories
                 if (filterQuery.HasSpecificOrg())
                 {
                     int specifiedOrgId;
-                    var hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
+                    bool hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
                     return UsersOrganizationMemberships(entities).Where(om => om.Id == specifiedOrgId) ;
                 }
                 return UsersOrganizationMemberships(entities);
