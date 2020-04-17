@@ -48,13 +48,13 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<Mediafile> GetAsync(int id)
         {
-            var files = await GetAsync();
+            IEnumerable<Mediafile> files = await GetAsync();
 
             return files.SingleOrDefault(g => g.Id == id);
         }
         public async Task<Mediafile> GetFromFile(string s3File )
         {
-            var files = await base.GetAsync();
+            IEnumerable<Mediafile> files = await base.GetAsync();
             return files.SingleOrDefault(p => p.S3File == s3File);
         }
 
@@ -65,7 +65,7 @@ namespace SIL.Transcriber.Services
 
         private string DirectoryName(Mediafile entity)
         {
-            var plan = PlanRepository.GetWithProject(entity.PlanId);
+            Plan plan = PlanRepository.GetWithProject(entity.PlanId);
             return DirectoryName(plan);
         }
 
@@ -74,14 +74,13 @@ namespace SIL.Transcriber.Services
         {
             //aws versioning on
             //entity.S3File = entity.OriginalFile;
-            entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile)  + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
-
-            var mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
+            entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
+            IQueryable<Mediafile> mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
             if (mfs.Count() == 0)
                 entity.VersionNumber = 1;
             else
             {
-                var last = mfs.Where(mf => mf.Id == mfs.Max(m => m.Id)).First();
+                Mediafile last = mfs.Where(mf => mf.Id == mfs.Max(m => m.Id)).First();
                 entity.VersionNumber = last.VersionNumber + 1;
                 entity.PassageId = last.PassageId;
                 if (entity.PassageId != null)
@@ -151,7 +150,7 @@ namespace SIL.Transcriber.Services
         public async Task<S3Response> GetFile(int id)
         {
             Mediafile mf = MediafileRepository.Get(id);
-            var plan = PlanRepository.GetWithProject(mf.PlanId);
+            Plan plan = PlanRepository.GetWithProject(mf.PlanId);
             if (mf.S3File.Length == 0 || !(await _S3service.FileExistsAsync(mf.S3File, DirectoryName(plan))))
                 return new S3Response
                 {
@@ -167,7 +166,7 @@ namespace SIL.Transcriber.Services
         {
             //delete the s3 file 
             Mediafile mf = MediafileRepository.Get(id);
-            var plan = PlanRepository.GetWithProject(mf.PlanId);
+            Plan plan = PlanRepository.GetWithProject(mf.PlanId);
             S3Response response = await _S3service.RemoveFile(mf.S3File, DirectoryName(plan));
             return response;
         }
@@ -181,12 +180,12 @@ namespace SIL.Transcriber.Services
             if (!string.IsNullOrEmpty(mf.Transcription))
             {
                 //get the project language
-                var plan = PlanRepository.GetWithProject(mf.PlanId);
-                var lang = !string.IsNullOrEmpty(plan.Project.Language) ? plan.Project.Language : "en";
+                Plan plan = PlanRepository.GetWithProject(mf.PlanId);
+                string lang = !string.IsNullOrEmpty(plan.Project.Language) ? plan.Project.Language : "en";
                 string pattern = "([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?)";
 
                 eaf = LoadResource("EafTemplate.xml");
-                var eafContent = XElement.Parse(eaf);
+                XElement eafContent = XElement.Parse(eaf);
                 //var sDebug = TraverseNodes(eafContent, 1);
                 XElement elem;
                 eafContent.Attribute("DATE").Value = DateTime.Now.ToString();

@@ -45,8 +45,8 @@ namespace SIL.Transcriber.Services
             PassageRepository pr = (PassageRepository)MyRepository;
             return pr.Get()
                     .Include(p => p.Section)
-                    .Include(p=> p.Mediafiles);
-            
+                    .Include(p=> p.Mediafiles)
+                    .Where(p => p.SectionId == SectionId);
         }
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {

@@ -32,7 +32,7 @@ namespace SIL.Transcriber.Repositories
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Project> projects)
         {
             //this gets just the passages I have access to in these projects
-            var plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
+            IQueryable<Plan> plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
             return UsersMediafiles(entities, plans);
         }
 
@@ -47,7 +47,7 @@ namespace SIL.Transcriber.Repositories
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                var projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                IQueryable<Project> projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
 				return UsersMediafiles(entities, projects);
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
