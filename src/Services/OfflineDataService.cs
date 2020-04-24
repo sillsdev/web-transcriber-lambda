@@ -191,7 +191,7 @@ namespace SIL.Transcriber.Services
             if (projectid != 0)
                 projects = dbContext.Projects.Where(p => p.Id == projectid);
             else
-                projects = dbContext.Projects.Where(p => p.OrganizationId == orgid);
+                projects = dbContext.Projects.Where(p => p.OrganizationId == orgid && !p.Archived);
 
             MemoryStream ms = new MemoryStream();
             using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Create, true))
@@ -201,7 +201,7 @@ namespace SIL.Transcriber.Services
 
                 DateTime exported = AddCheckEntry(zipArchive);
 
-                IQueryable<OrganizationMembership> orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
+                IQueryable<OrganizationMembership> orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid && !om.Archived);
 
                 //org
                 List<Organization> orgList = orgs.ToList();
@@ -213,10 +213,10 @@ namespace SIL.Transcriber.Services
 
                 //groups
                 IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
-                AddJsonEntry(zipArchive, "groups", groups.ToList(), 'C');
+                AddJsonEntry(zipArchive, "groups", groups.Where(g =>!g.Archived).ToList(), 'C');
 
                 //groupmemberships
-                List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).ToList();
+                List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
                 AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
                 foreach( string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
                 {
@@ -224,7 +224,7 @@ namespace SIL.Transcriber.Services
                 }
 
                 //users
-                List<User> userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).ToList();
+                List<User> userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived).ToList();
                 AddUserAvatars(zipArchive, userList);
                 AddJsonEntry(zipArchive, "users", userList, 'A');
 
@@ -243,19 +243,19 @@ namespace SIL.Transcriber.Services
                 AddFonts(zipArchive, fonts.Keys);
 
                 //projectintegrations
-                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).ToList(), 'E');
+                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).Where(x => !x.Archived).ToList(), 'E');
                 //plans
-                IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl);
+                IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl).Where(x => !x.Archived);
                 AddJsonEntry(zipArchive, "plans", plans.ToList(), 'E');
                 //sections
-                IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s);
+                IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Where(x => !x.Archived);
                 AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
                 //passages
-                IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p);
+                IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(x => !x.Archived);
 
                 AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
                 //mediafiles
-                IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
+                IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m).Where(x => !x.Archived);
                 List<Mediafile> mediaList = mediafiles.ToList();
                 AddMedia(zipArchive, mediaList);
                 AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
