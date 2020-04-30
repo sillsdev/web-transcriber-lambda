@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Services
 {
@@ -31,14 +32,16 @@ namespace SIL.Transcriber.Services
         private IS3Service _S3service;
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
+        protected ILogger<OfflineDataService> Logger { get; set; }
 
-        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, MediafileService MediaService, IS3Service service)
+        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, MediafileService MediaService, IS3Service service, ILoggerFactory loggerFactory)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
             jsonApiSerializer = jsonSer;
             jsonApiDeSerializer = jsonDeser;
             mediaService = MediaService;
             _S3service = service;
+            this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
         private void WriteEntry(ZipArchiveEntry entry, string contents)
         {
@@ -201,15 +204,11 @@ namespace SIL.Transcriber.Services
 
                 DateTime exported = AddCheckEntry(zipArchive);
 
-                IQueryable<OrganizationMembership> orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid && !om.Archived);
-
                 //org
                 List<Organization> orgList = orgs.ToList();
                 AddOrgLogos(zipArchive, orgList);
                 AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
-                //organizationmemberships
-                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                 //groups
                 IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
@@ -224,10 +223,14 @@ namespace SIL.Transcriber.Services
                 }
 
                 //users
-                List<User> userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived).ToList();
+                IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
+                List<User> userList = users.ToList();
                 AddUserAvatars(zipArchive, userList);
                 AddJsonEntry(zipArchive, "users", userList, 'A');
 
+                //organizationmemberships
+                IEnumerable<OrganizationMembership> orgmems = users.Join(dbContext.Organizationmemberships, u => u.Id, om => om.UserId, (u, om) => om).Where(om => om.OrganizationId == orgid && !om.Archived);
+                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                 //projects
 
@@ -499,7 +502,8 @@ namespace SIL.Transcriber.Services
                         Status = System.Net.HttpStatusCode.UnprocessableEntity,
                         ContentType = ContentType,
                     };
-                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>("{data: " + new StreamReader(projectsEntry.Open()).ReadToEnd() + "}");
+
+                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
                 project = projects.Find(p => p.Id == projectid);
                 if (project==null)
                     return new FileResponse()
@@ -529,7 +533,6 @@ namespace SIL.Transcriber.Services
                     if (!entry.FullName.StartsWith("data"))
                         continue;
                     string data = new StreamReader(entry.Open()).ReadToEnd();
-                    data = "{data: " + data + "}";
                     string name = Path.GetFileNameWithoutExtension(entry.Name.Substring(2));
                     switch (name)
                     {
