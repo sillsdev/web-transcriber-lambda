@@ -258,8 +258,10 @@ namespace SIL.Transcriber.Services
 
                 AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
                 //mediafiles
-                IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m).Where(x => !x.Archived);
-                List<Mediafile> mediaList = mediafiles.ToList();
+                IQueryable<Mediafile> mediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                //pick just the highest version media per passage
+                mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                List < Mediafile > mediaList = mediafiles.ToList();
                 AddMedia(zipArchive, mediaList);
                 AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
                 //passagestatechange
