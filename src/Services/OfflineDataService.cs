@@ -301,7 +301,7 @@ namespace SIL.Transcriber.Services
             }
             ms.Position = 0;
             const string ContentType = "application/ptf";
-            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", CoerceValidFileName(projects.First().Name)) : string.Format("TranscriberOrg_{0}.ptf", CoerceValidFileName(orgs.First().Name));
+            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Id.ToString() + "_" + CoerceValidFileName(projects.First().Name)) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Id + "_" + CoerceValidFileName(orgs.First().Name));
 
             S3Response s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == System.Net.HttpStatusCode.OK)
