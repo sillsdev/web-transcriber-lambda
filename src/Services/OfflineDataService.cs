@@ -6,19 +6,12 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Linq;
-using SIL.Transcriber.Repositories;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Collections;
 using System;
 using JsonApiDotNetCore.Serialization;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Mvc;
 
-using Newtonsoft.Json.Linq;
 using System.Net;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Services
@@ -176,7 +169,33 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
+        /// <summary>
+        /// Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
+        /// </summary>
+        /// <remarks>
+        /// http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
+        /// </remarks>
+        public static string CoerceValidFileName(string filename)
+        {
+            string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+            string invalidReStr = string.Format(@"[{0}]+", invalidChars);
 
+            string[] reservedWords = new[]
+            {
+        "CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4",
+        "COM5", "COM6", "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4",
+        "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+
+            string sanitisedNamePart = System.Text.RegularExpressions.Regex.Replace(filename, invalidReStr, "_");
+            foreach (string reservedWord in reservedWords)
+            {
+                string reservedWordPattern = string.Format("^{0}(\\.|$)", reservedWord);
+                sanitisedNamePart = System.Text.RegularExpressions.Regex.Replace(sanitisedNamePart, reservedWordPattern, "_reservedWord_$1", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+
+            return sanitisedNamePart;
+        }
         private FileResponse Export(int orgid, int projectid = 0)
         {
             //export this organization
@@ -282,7 +301,7 @@ namespace SIL.Transcriber.Services
             }
             ms.Position = 0;
             const string ContentType = "application/ptf";
-            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Slug) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Slug);
+            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", CoerceValidFileName(projects.First().Name)) : string.Format("TranscriberOrg_{0}.ptf", CoerceValidFileName(orgs.First().Name));
 
             S3Response s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == System.Net.HttpStatusCode.OK)
