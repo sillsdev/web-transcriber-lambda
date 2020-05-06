@@ -6,19 +6,13 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Linq;
-using SIL.Transcriber.Repositories;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Collections;
 using System;
 using JsonApiDotNetCore.Serialization;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Mvc;
 
-using Newtonsoft.Json.Linq;
 using System.Net;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Services
 {
@@ -31,14 +25,16 @@ namespace SIL.Transcriber.Services
         private IS3Service _S3service;
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
+        protected ILogger<OfflineDataService> Logger { get; set; }
 
-        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, MediafileService MediaService, IS3Service service)
+        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, MediafileService MediaService, IS3Service service, ILoggerFactory loggerFactory)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
             jsonApiSerializer = jsonSer;
             jsonApiDeSerializer = jsonDeser;
             mediaService = MediaService;
             _S3service = service;
+            this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
         private void WriteEntry(ZipArchiveEntry entry, string contents)
         {
@@ -173,7 +169,33 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
+        /// <summary>
+        /// Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
+        /// </summary>
+        /// <remarks>
+        /// http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
+        /// </remarks>
+        public static string CoerceValidFileName(string filename)
+        {
+            string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+            string invalidReStr = string.Format(@"[{0}]+", invalidChars);
 
+            string[] reservedWords = new[]
+            {
+        "CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4",
+        "COM5", "COM6", "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4",
+        "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+
+            string sanitisedNamePart = System.Text.RegularExpressions.Regex.Replace(filename, invalidReStr, "_");
+            foreach (string reservedWord in reservedWords)
+            {
+                string reservedWordPattern = string.Format("^{0}(\\.|$)", reservedWord);
+                sanitisedNamePart = System.Text.RegularExpressions.Regex.Replace(sanitisedNamePart, reservedWordPattern, "_reservedWord_$1", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+
+            return sanitisedNamePart;
+        }
         private FileResponse Export(int orgid, int projectid = 0)
         {
             //export this organization
@@ -191,7 +213,7 @@ namespace SIL.Transcriber.Services
             if (projectid != 0)
                 projects = dbContext.Projects.Where(p => p.Id == projectid);
             else
-                projects = dbContext.Projects.Where(p => p.OrganizationId == orgid);
+                projects = dbContext.Projects.Where(p => p.OrganizationId == orgid && !p.Archived);
 
             MemoryStream ms = new MemoryStream();
             using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Create, true))
@@ -201,22 +223,17 @@ namespace SIL.Transcriber.Services
 
                 DateTime exported = AddCheckEntry(zipArchive);
 
-                IQueryable<OrganizationMembership> orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
-
                 //org
                 List<Organization> orgList = orgs.ToList();
                 AddOrgLogos(zipArchive, orgList);
                 AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
-                //organizationmemberships
-                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
-
                 //groups
                 IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
-                AddJsonEntry(zipArchive, "groups", groups.ToList(), 'C');
+                AddJsonEntry(zipArchive, "groups", groups.Where(g =>!g.Archived).ToList(), 'C');
 
                 //groupmemberships
-                List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).ToList();
+                List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
                 AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
                 foreach( string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
                 {
@@ -224,10 +241,15 @@ namespace SIL.Transcriber.Services
                 }
 
                 //users
-                List<User> userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).ToList();
+                IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
+                List<User> userList = users.ToList();
+
                 AddUserAvatars(zipArchive, userList);
                 AddJsonEntry(zipArchive, "users", userList, 'A');
 
+                //organizationmemberships
+                IEnumerable<OrganizationMembership> orgmems = users.Join(dbContext.Organizationmemberships, u => u.Id, om => om.UserId, (u, om) => om).Where(om => om.OrganizationId == orgid && !om.Archived);
+                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                 //projects
 
@@ -243,20 +265,23 @@ namespace SIL.Transcriber.Services
                 AddFonts(zipArchive, fonts.Keys);
 
                 //projectintegrations
-                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).ToList(), 'E');
+                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).Where(x => !x.Archived).ToList(), 'E');
                 //plans
-                IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl);
+                IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl).Where(x => !x.Archived);
                 AddJsonEntry(zipArchive, "plans", plans.ToList(), 'E');
                 //sections
-                IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s);
+                IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Where(x => !x.Archived);
                 AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
                 //passages
-                IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p);
+                IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(x => !x.Archived);
 
                 AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
                 //mediafiles
-                IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
-                List<Mediafile> mediaList = mediafiles.ToList();
+                IQueryable<Mediafile> mediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                //pick just the highest version media per passage
+                mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                List < Mediafile > mediaList = mediafiles.ToList();
+
                 AddMedia(zipArchive, mediaList);
                 AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
                 //passagestatechange
@@ -277,7 +302,7 @@ namespace SIL.Transcriber.Services
             }
             ms.Position = 0;
             const string ContentType = "application/ptf";
-            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Slug) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Slug);
+            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Id.ToString() + "_" + CoerceValidFileName(projects.First().Name)) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Id + "_" + CoerceValidFileName(orgs.First().Name));
 
             S3Response s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == System.Net.HttpStatusCode.OK)
@@ -499,7 +524,8 @@ namespace SIL.Transcriber.Services
                         Status = System.Net.HttpStatusCode.UnprocessableEntity,
                         ContentType = ContentType,
                     };
-                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>("{data: " + new StreamReader(projectsEntry.Open()).ReadToEnd() + "}");
+
+                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
                 project = projects.Find(p => p.Id == projectid);
                 if (project==null)
                     return new FileResponse()
@@ -529,7 +555,6 @@ namespace SIL.Transcriber.Services
                     if (!entry.FullName.StartsWith("data"))
                         continue;
                     string data = new StreamReader(entry.Open()).ReadToEnd();
-                    data = "{data: " + data + "}";
                     string name = Path.GetFileNameWithoutExtension(entry.Name.Substring(2));
                     switch (name)
                     {

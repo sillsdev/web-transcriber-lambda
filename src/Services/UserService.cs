@@ -44,15 +44,15 @@ namespace SIL.Transcriber.Services
             {
                 return await base.GetAsync(id);
             }
-            
-            var users = await GetAsync();
+
+            IEnumerable<User> users = await GetAsync();
 
             return users.SingleOrDefault(u => u.Id == id);
         }
 
         public override async Task<User> UpdateAsync(int id, User resource)
         {
-            var user = await GetAsync(id);
+            User user = await GetAsync(id);
             if (user == null)
             {
                 throw new JsonApiException(404, $"User Id '{id}' not found."); ;

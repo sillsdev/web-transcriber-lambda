@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Security;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

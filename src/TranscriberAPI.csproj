@@ -108,7 +108,8 @@
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="3.0.3" />
     <PackageReference Include="RestSharp" Version="106.6.9" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
-    <PackageReference Include="Z.EntityFramework.Plus.EFCore" Version="2.0.45" />
+    <PackageReference Include="Z.EntityFramework.Extensions.EFCore" Version="2.7.68" />
+    <PackageReference Include="Z.EntityFramework.Plus.EFCore" Version="2.0.46" />
 	</ItemGroup>
  
 

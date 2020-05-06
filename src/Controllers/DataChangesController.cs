@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -129,7 +125,7 @@ namespace SIL.Transcriber.Controllers
             BuildList(UserService.GetChanges(currentUser, origin, dtSince), "user", changes);
             BuildList(UserService.GetDeletedSince(currentUser, origin, dtSince), "user", deleted);
 
-            var ret = new DataChanges() { Id = 1,  Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
+            DataChanges ret = new DataChanges() { Id = 1,  Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
             return Ok(ret);
         }
     }
