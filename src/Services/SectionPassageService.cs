@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Internal;
 using SIL.Transcriber.Repositories;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace SIL.Transcriber.Services
 {
@@ -58,42 +59,30 @@ namespace SIL.Transcriber.Services
                 if (ex.InnerException != null && ex.InnerException.Message.Contains("23505"))
                     return null;
             }
-            using (Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction = MyRepository.BeginTransaction())
+            using (IDbContextTransaction transaction = MyRepository.BeginTransaction())
             {
                 try
                 {
-                    IEnumerable<JToken> newsecs = data.Where(d => d["id"] == null && (bool)d["issection"] && (bool)d["changed"]);
-                    IEnumerable<JToken> updsecs = data.Where(d => d["id"] != null && (bool)d["issection"] && (bool)d["changed"]);
+                    IEnumerable<JToken> updsecs = data.Where(d =>(bool)d["issection"] && (bool)d["changed"]);
                     //add all sections
-                    List<Section> newsections = new List<Section>();
                     List<Section> updsections = new List<Section>();
-                    foreach (JToken item in newsecs)
-                    {
-                        newsections.Add(new Section(item, entity.PlanId));
-                    }
+
                     foreach (JToken item in updsecs)
                     {
-                        updsections.Add(MyRepository.GetSection((int)item["id"]).UpdateFrom(item));
-                    }
-                    if (newsections.Count > 0)
-                    {
-                        Logger.LogInformation($"newsections {newsections.Count} {newsections}");
-                        MyRepository.BulkInsertSections(newsections);
-                        int ix = 0;
-                        foreach (JToken item in newsecs)
-                        {
-                            item["id"] = newsections[ix].Id;
-                            ix++;
-                        }
+                        updsections.Add(item["id"] != null ? MyRepository.GetSection((int)item["id"]).UpdateFrom(item) : new Section(item, entity.PlanId));
                     }
                     if (updsections.Count > 0)
                     {
-                        Logger.LogInformation($"updsections {updsections.Count} {updsections}");
                         MyRepository.BulkUpdateSections(updsections);
+                        int ix = 0;
+                        foreach (JToken item in updsecs)
+                        {
+                            item["id"] = updsections[ix].Id;
+                            ix++;
+                        }
                     }
-                    int lastSectionId=0;
+                    int lastSectionId = 0;
                     /* process all the passages now */
-                    List<Passage> newpassages = new List<Passage>();
                     List<Passage> updpassages = new List<Passage>();
                     foreach (JToken item in data)
                     {
@@ -103,32 +92,15 @@ namespace SIL.Transcriber.Services
                         }
                         else if ((bool)item["changed"])
                         {
-                            if (item["id"] == null)
-                            newpassages.Add(new Passage(item, lastSectionId));
-                            else
-                                updpassages.Add(MyRepository.GetPassage((int)item["id"]).UpdateFrom(item));
+                           updpassages.Add(item["id"] != null ? MyRepository.GetPassage((int)item["id"]).UpdateFrom(item): new Passage(item, lastSectionId));
                         }
                     }
-                    if (newpassages.Count > 0)
+                     if (updpassages.Count > 0)
                     {
-                        IEnumerable<JToken> newpsgs = data.Where(d => d["id"] == null && !(bool)d["issection"]);
-
-                        Logger.LogInformation($"newpassages {newpassages.Count} {newpassages}");
-                        MyRepository.BulkInsertPassages(newpassages);
-                        int ix = 0;
-                        foreach (JToken item in newpsgs)
-                        {
-                            item["id"] = newpassages[ix].Id;
-                            ix++;
-                        }
-                    }
-                    if (updpassages.Count > 0)
-                    {
-                        Logger.LogInformation($"updpassages {updpassages.Count} {updpassages}");
+                        //Logger.LogInformation($"updpassages {updpassages.Count} {updpassages}");
                         MyRepository.BulkUpdatePassages(updpassages);
                     }
-                    Logger.LogInformation($"Success! committing...{data}");
-
+                    
                     transaction.Commit();
                     entity.Data = JsonConvert.SerializeObject(data);
                     entity.Complete = true;
@@ -143,7 +115,7 @@ namespace SIL.Transcriber.Services
                     /* I'm giving up...let the next one try */
                     transaction.Rollback();
                     await MyRepository.DeleteAsync(entity.Id);
-                    throw new JsonApiException(new Error(502,ex.Message));
+                    throw new JsonApiException(new Error(502, ex.Message));
                 }
             }
         }

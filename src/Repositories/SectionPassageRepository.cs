@@ -2,14 +2,12 @@
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Z.EntityFramework.Extensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -24,11 +22,6 @@ namespace SIL.Transcriber.Repositories
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
-            EntityFrameworkManager.ContextFactory = context =>
-            {
-                AppDbContext adbc = (AppDbContext)context;
-                return new AppDbContext(adbc.Options, adbc.CurrentUserContext, adbc.HttpContextAccessor);
-            };
             JsonApiContext = jsonApiContext;
         }
         public override async Task<SectionPassage> GetAsync(int id)
@@ -69,30 +62,18 @@ namespace SIL.Transcriber.Repositories
             foreach (Passage p in passages)
                 SetModifiedValues(p, user, now, origin, setCreated);
         }
-        public List<Section> BulkInsertSections(List<Section> sections)
-        {
-            SetModifiedValues(sections, true);
-            Logger.LogInformation($"Insert Sections {sections.Count} {sections[0].PlanId}");
-            dbContext.BulkInsert(sections);
-            return sections;
-        }
+
         public List<Section> BulkUpdateSections(List<Section> sections)
         {
-            SetModifiedValues(sections, false);
-            dbContext.BulkUpdate(sections);
+            dbContext.UpdateRange(sections);
+            dbContext.SaveChanges();
             return sections;
         }
-        public List<Passage> BulkInsertPassages(List<Passage> passages)
-        {
-            SetModifiedValues(passages, true);
-            Logger.LogInformation($"Insert Passages {passages.Count} {passages[0]}");
-            dbContext.BulkInsert(passages);
-            return passages;
-        }
+
         public List<Passage> BulkUpdatePassages(List<Passage> passages)
         {
-            SetModifiedValues(passages, false);
-            dbContext.BulkUpdate(passages);
+            dbContext.UpdateRange(passages);
+            dbContext.SaveChanges();
             return passages;
         }
 
