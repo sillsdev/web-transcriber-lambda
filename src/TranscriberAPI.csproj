@@ -106,7 +106,6 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.1.3" /> 
     <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0" />
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="3.0.3" />
-    <PackageReference Include="PostgreSQLCopyHelper" Version="2.6.3" />
     <PackageReference Include="RestSharp" Version="106.6.9" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
 	</ItemGroup>
