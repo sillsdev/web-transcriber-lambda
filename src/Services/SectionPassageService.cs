@@ -9,6 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Internal;
 using SIL.Transcriber.Repositories;
+using Npgsql;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace SIL.Transcriber.Services
 {
@@ -58,40 +61,51 @@ namespace SIL.Transcriber.Services
                 if (ex.InnerException != null && ex.InnerException.Message.Contains("23505"))
                     return null;
             }
-            using (Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction = MyRepository.BeginTransaction())
+            var connection = new NpgsqlConnection(GetVarOrDefault("SIL_TR_CONNECTIONSTRING", ""));
+            connection.Open();
+
+           // using (var transaction = connection.BeginTransaction()) 
+            using (IDbContextTransaction transaction = MyRepository.BeginTransaction())
             {
                 try
                 {
-                    IEnumerable<JToken> newsecs = data.Where(d => d["id"] == null && (bool)d["issection"] && (bool)d["changed"]);
-                    IEnumerable<JToken> updsecs = data.Where(d => d["id"] != null && (bool)d["issection"] && (bool)d["changed"]);
+                    //IEnumerable<JToken> newsecs = data.Where(d => d["id"] == null && (bool)d["issection"] && (bool)d["changed"]);
+                    //IEnumerable<JToken> updsecs = data.Where(d => d["id"] != null && (bool)d["issection"] && (bool)d["changed"]);
+                    IEnumerable<JToken> updsecs = data.Where(d =>(bool)d["issection"] && (bool)d["changed"]);
                     //add all sections
-                    List<Section> newsections = new List<Section>();
+                    //List<Section> newsections = new List<Section>();
                     List<Section> updsections = new List<Section>();
-                    foreach (JToken item in newsecs)
-                    {
-                        newsections.Add(new Section(item, entity.PlanId));
-                    }
+                    //foreach (JToken item in newsecs)
+                    //{
+                        //newsections.Add(new Section(item, entity.PlanId));
+                    //}
                     foreach (JToken item in updsecs)
                     {
-                        updsections.Add(MyRepository.GetSection((int)item["id"]).UpdateFrom(item));
-                    }
+                        updsections.Add(item["id"] != null ? MyRepository.GetSection((int)item["id"]).UpdateFrom(item) : new Section(item, entity.PlanId));
+                    }/*
                     if (newsections.Count > 0)
                     {
                         Logger.LogInformation($"newsections {newsections.Count} {newsections}");
-                        MyRepository.BulkInsertSections(newsections);
+                        MyRepository.BulkInsertSections(connection, newsections);
                         int ix = 0;
                         foreach (JToken item in newsecs)
                         {
                             item["id"] = newsections[ix].Id;
                             ix++;
                         }
-                    }
+                    } */
                     if (updsections.Count > 0)
                     {
                         Logger.LogInformation($"updsections {updsections.Count} {updsections}");
                         MyRepository.BulkUpdateSections(updsections);
+                        int ix = 0;
+                        foreach (JToken item in updsecs)
+                        {
+                            item["id"] = updsections[ix].Id;
+                            ix++;
+                        }
                     }
-                    int lastSectionId=0;
+                    int lastSectionId = 0;
                     /* process all the passages now */
                     List<Passage> newpassages = new List<Passage>();
                     List<Passage> updpassages = new List<Passage>();
@@ -104,7 +118,7 @@ namespace SIL.Transcriber.Services
                         else if ((bool)item["changed"])
                         {
                             if (item["id"] == null)
-                            newpassages.Add(new Passage(item, lastSectionId));
+                                updpassages.Add(new Passage(item, lastSectionId));
                             else
                                 updpassages.Add(MyRepository.GetPassage((int)item["id"]).UpdateFrom(item));
                         }
@@ -143,7 +157,7 @@ namespace SIL.Transcriber.Services
                     /* I'm giving up...let the next one try */
                     transaction.Rollback();
                     await MyRepository.DeleteAsync(entity.Id);
-                    throw new JsonApiException(new Error(502,ex.Message));
+                    throw new JsonApiException(new Error(502, ex.Message));
                 }
             }
         }

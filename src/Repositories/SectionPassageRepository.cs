@@ -1,7 +1,10 @@
 ﻿
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using PostgreSQLCopyHelper;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
@@ -9,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Z.EntityFramework.Extensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -24,11 +26,6 @@ namespace SIL.Transcriber.Repositories
             IDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
-            EntityFrameworkManager.ContextFactory = context =>
-            {
-                AppDbContext adbc = (AppDbContext)context;
-                return new AppDbContext(adbc.Options, adbc.CurrentUserContext, adbc.HttpContextAccessor);
-            };
             JsonApiContext = jsonApiContext;
         }
         public override async Task<SectionPassage> GetAsync(int id)
@@ -69,30 +66,102 @@ namespace SIL.Transcriber.Repositories
             foreach (Passage p in passages)
                 SetModifiedValues(p, user, now, origin, setCreated);
         }
-        public List<Section> BulkInsertSections(List<Section> sections)
+        private void SetIds(NpgsqlConnection con, List<Section> sections)
         {
+            string sql = "SELECT nextval('section_id_seq')";
+            using (NpgsqlCommand cmd = new NpgsqlCommand(sql, con))
+            {
+                foreach (Section s in sections)
+                {
+                    s.Id = (int)(long)cmd.ExecuteScalar();
+                }
+            }
+        }
+        private void SetIds(NpgsqlConnection con, List<Passage> passages)
+        {
+            string sql = "SELECT nextval('passages_id_seq')";
+            using (NpgsqlCommand cmd = new NpgsqlCommand(sql, con))
+            {
+                foreach (Passage p in passages)
+                {
+                     p.Id = (int)(long)cmd.ExecuteScalar();
+                }
+            }
+        }
+        public List<Section> BulkInsertSections(NpgsqlConnection connection, List<Section> sections)
+        {
+            SetIds(connection, sections);
             SetModifiedValues(sections, true);
+            PostgreSQLCopyHelper<Section> copyHelper = new PostgreSQLCopyHelper<Section>("public", "sections")
+                .MapInteger("id", x => x.Id)
+                .MapText("name", x => x.Name)
+                .MapInteger("planid", x => x.PlanId)
+                .MapInteger("sequencenum", x => x.Sequencenum)
+                .MapText("state", x => x.State)
+                .MapTimeStamp("datecreated", x => x.DateCreated)
+                .MapTimeStamp("dateupdated", x => x.DateUpdated)
+                .MapBoolean("archived", x => x.Archived)
+                .MapInteger("lastmodifiedby", x => x.LastModifiedBy)
+                .MapText("lastmodifiedorigin", x => x.LastModifiedOrigin)
+                .MapInteger("editorid", x => x.EditorId)
+                .MapInteger("transcriberid", x => x.TranscriberId);
+
             Logger.LogInformation($"Insert Sections {sections.Count} {sections[0].PlanId}");
-            dbContext.BulkInsert(sections);
+            //dbContext.BulkInsert(sections);
+            copyHelper.SaveAll(connection, sections);
             return sections;
         }
         public List<Section> BulkUpdateSections(List<Section> sections)
         {
-            SetModifiedValues(sections, false);
-            dbContext.BulkUpdate(sections);
+            dbContext.UpdateRange(sections);
+            dbContext.SaveChanges();
             return sections;
+            //SetModifiedValues(sections, false);
+            //dbContext.BulkUpdate(sections);
+            //return sections;
+        }
+        private static void DisplayStates(IEnumerable<EntityEntry> entries)
+        {
+            foreach (var entry in entries)
+            {
+                Console.WriteLine($"Entity: {entry.Entity.GetType().Name}, State: { entry.State.ToString()} ");
+            }
         }
         public List<Passage> BulkInsertPassages(List<Passage> passages)
         {
+            dbContext.UpdateRange(passages);
+            DisplayStates(dbContext.ChangeTracker.Entries());
+            dbContext.SaveChanges();
+            return passages;
+        }
+        public List<Passage> BulkInsertPassages(NpgsqlConnection connection, List<Passage> passages)
+        {
+            SetIds(connection, passages);
             SetModifiedValues(passages, true);
+            PostgreSQLCopyHelper<Passage> copyHelper = new PostgreSQLCopyHelper<Passage>("public", "sections")
+               .MapInteger("id", x => x.Id)
+               .MapText("title", x => x.Title)
+               .MapText("book", x => x.Book)
+               .MapText("reference", x => x.Reference)
+               .MapInteger("sequencenum", x => x.Sequencenum)
+               .MapText("state", x => x.State)
+               .MapTimeStamp("datecreated", x => x.DateCreated)
+               .MapTimeStamp("dateupdated", x => x.DateUpdated)
+               .MapBoolean("archived", x => x.Archived)
+               .MapInteger("lastmodifiedby", x => x.LastModifiedBy)
+               .MapText("lastmodifiedorigin", x => x.LastModifiedOrigin);
+
             Logger.LogInformation($"Insert Passages {passages.Count} {passages[0]}");
-            dbContext.BulkInsert(passages);
+            //dbContext.BulkInsert(passages);
+            copyHelper.SaveAll(connection, passages);
             return passages;
         }
         public List<Passage> BulkUpdatePassages(List<Passage> passages)
         {
-            SetModifiedValues(passages, false);
-            dbContext.BulkUpdate(passages);
+            //SetModifiedValues(passages, false);
+            //dbContext.BulkUpdate(passages);
+            dbContext.UpdateRange(passages);
+            dbContext.SaveChanges();
             return passages;
         }
 
