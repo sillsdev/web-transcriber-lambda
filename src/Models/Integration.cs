@@ -16,7 +16,7 @@ namespace SIL.Transcriber.Models
         [Attr("url")]
         public string Url { get; set; }
 
-        [HasMany("project-integrations")]
+        [HasMany("project-integrations", Link.None)]
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
 
         //public ICollection<ProjectIntegration> Projectintegrations { get; set; }

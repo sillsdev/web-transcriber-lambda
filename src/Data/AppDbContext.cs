@@ -214,6 +214,7 @@ namespace SIL.Transcriber.Data
         public DbSet<PassageStateChange> Passagestatechanges { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
+        public DbSet<ProjData> Projdatas { get; set; }
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectType> Projecttypes { get; set; }

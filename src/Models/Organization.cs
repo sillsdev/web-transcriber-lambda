@@ -35,22 +35,22 @@ namespace SIL.Transcriber.Models
         [Attr("all-users-name")]
         public string AllUsersName { get; set; }
 
-        [HasOne("owner")]
+        [HasOne("owner", Link.None)]
         public virtual User Owner { get; set; }
         public int OwnerId { get; set; }
 
         
         [NotMapped]
-        [HasManyThrough(nameof(OrganizationMemberships))]
+        [HasManyThrough(nameof(OrganizationMemberships), Link.None)]
         public List<User> Users { get; set; } 
        
-        [HasMany("organization-memberships")]
+        [HasMany("organization-memberships", Link.None)]
         public List<OrganizationMembership> OrganizationMemberships { get; set; }
 
-        [HasMany("groups")]
+        [HasMany("groups", Link.None)]
         public List<Group> Groups { get; set; }
 
-        [HasMany("projects")]
+        [HasMany("projects", Link.None)]
         public List<Project> Projects { get; set; }
 
         /*
@@ -58,10 +58,10 @@ namespace SIL.Transcriber.Models
         public virtual List<OrganizationMembership> OrganizationMemberships { get; set; }
 
         [NotMapped]
-        [HasMany("userids")]
+        [HasMany("userids", Link.None)]
         public IEnumerable<int> UserIds => OrganizationMemberships?.Select(om => om.UserId);
         [NotMapped]
-        [HasMany("users")]
+        [HasMany("users", Link.None)]
         public IEnumerable<User> Users => OrganizationMemberships?.Select(om => om.User);
         */
         public bool Archived { get; set; }

@@ -7,12 +7,12 @@ namespace SIL.Transcriber.Models
     {
         [Attr("passage-id")]
         public int? PassageId { get; set; }
-        [HasOne("passage")]
+        [HasOne("passage", Link.None)]
         public virtual Passage Passage { get; set; }
 
         [Attr("plan-id")]
         public int PlanId { get; set; }
-        [HasOne("plan")]
+        [HasOne("plan", Link.None)]
         public virtual Plan Plan { get; set; }
 
 

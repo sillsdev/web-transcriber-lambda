@@ -52,6 +52,10 @@ namespace SIL.Transcriber.Repositories
             {
                 return entities;
             }
+            if (filterQuery.Has(PROJECT_SEARCH_TERM)) //ignore
+            {
+                return entities;
+            }
             return base.Filter(entities, filterQuery);
         }
         #endregion
