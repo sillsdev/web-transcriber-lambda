@@ -228,7 +228,6 @@ namespace SIL.Transcriber.Services
                 AddOrgLogos(zipArchive, orgList);
                 AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
-
                 //groups
                 IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
                 AddJsonEntry(zipArchive, "groups", groups.Where(g =>!g.Archived).ToList(), 'C');
@@ -244,6 +243,7 @@ namespace SIL.Transcriber.Services
                 //users
                 IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
                 List<User> userList = users.ToList();
+
                 AddUserAvatars(zipArchive, userList);
                 AddJsonEntry(zipArchive, "users", userList, 'A');
 
@@ -281,6 +281,7 @@ namespace SIL.Transcriber.Services
                 //pick just the highest version media per passage
                 mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
                 List < Mediafile > mediaList = mediafiles.ToList();
+
                 AddMedia(zipArchive, mediaList);
                 AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
                 //passagestatechange
