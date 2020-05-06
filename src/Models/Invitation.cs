@@ -24,7 +24,7 @@ namespace SIL.Transcriber.Models
         public string Strings { get; set; }
 
 
-        [HasOne("organization")]
+        [HasOne("organization", Link.None)]
         public virtual Organization Organization { get; set; }
         public int OrganizationId { get; set; }
 

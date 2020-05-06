@@ -9,13 +9,13 @@ namespace SIL.Transcriber.Models
         [Attr("email")]  //user's email?
         public string Email { get; set; }
 
-        [HasOne("user")]
+        [HasOne("user", Link.None)]
         public virtual User User { get; set; }
 
         [Attr("user-id")]
         public int UserId { get; set; }
 
-        [HasOne("organization")]
+        [HasOne("organization", Link.None)]
         public virtual Organization Organization { get; set; }
 
         [Attr("organization-id")]

@@ -10,9 +10,9 @@ namespace SIL.Transcriber.Models
         [Attr("integration-id")]
         public int IntegrationId { get; set; }
 
-        [HasOne("integration")]
+        [HasOne("integration", Link.None)]
         public virtual Integration Integration { get; set; }
-        [HasOne("project")]
+        [HasOne("project", Link.None)]
         public virtual Project Project { get; set; }
 
         [Attr("settings")]

@@ -1,5 +1,4 @@
-
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Controllers;
@@ -10,19 +9,17 @@ namespace TranscriberAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrgdatasController : BaseController<OrgData>
+    public class ProjdatasController : BaseController<ProjData>
     {
-        private readonly OrgDataService _service;
-        public OrgdatasController(
+        public ProjdatasController(
              ILoggerFactory loggerFactory,
              IJsonApiContext jsonApiContext,
-             IResourceService<OrgData> resourceService,
+             IResourceService<ProjData> resourceService,
              ICurrentUserContext currentUserContext,
              OrganizationService organizationService,
-             UserService userService, OrgDataService service)
+             UserService userService)
             : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         {
-            _service = service;
         }
     }
 }

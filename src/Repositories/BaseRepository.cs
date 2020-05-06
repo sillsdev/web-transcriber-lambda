@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Models;
+using JsonApiDotNetCore.Serialization;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -51,14 +52,6 @@ namespace SIL.Transcriber.Repositories
                 return currentUserRepository.GetCurrentUser().Result;
             }
         }
-        /*
-        public override async Task<TEntity> UpdateAsync(TId id, TEntity entity)
-        {
-            var retval = await base.UpdateAsync(id, entity);
-            statusUpdateService.DidUpdate(retval);
-            return retval;
-        }
-        */
         public override async Task<TEntity> CreateAsync(TEntity entity)
         {
             try
@@ -73,17 +66,21 @@ namespace SIL.Transcriber.Repositories
                 throw ex;  //does this go back to my controller?  Nope...eaten by JsonApiExceptionFilter.  TODO: Figure out a way to capture it and return a 400 instead
             }
         }
-      /*
-        public override async Task<bool> DeleteAsync(TId id)
+        #region MultipleData
+        protected bool CheckAdd(int check, object entity, DateTime dtBail, IJsonApiSerializer jsonApiSerializer, int start, ref int completed, ref string data)
         {
-            var entity = await GetAsync(id);
-            var retval = await base.DeleteAsync(id);
-            if (retval)
+            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail) return false;
+            if (start <= check)
             {
-                statusUpdateService.DidDelete(entity);
+                string thisdata = jsonApiSerializer.Serialize(entity);
+                if (data.Length + thisdata.Length > (1000000 * 4))
+                    return false;
+                data += (check == start ? "" : ",") + thisdata;
+                completed++;
             }
-            return retval;
+            return true;
         }
-        */
+        #endregion
     }
 }
