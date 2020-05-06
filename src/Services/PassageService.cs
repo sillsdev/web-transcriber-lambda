@@ -79,17 +79,5 @@ namespace SIL.Transcriber.Services
             HttpContext.SetOrigin(origin);
             return p;
         }
-        public async Task<Passage> UpdateToReadyStateAsync(int id)
-        {
-            PassageRepository pr = (PassageRepository)MyRepository;
-
-            Passage p = await pr.GetAsync(id);
-            p.State = "transcribeReady";
-            var origin = HttpContext.GetOrigin();
-            HttpContext.SetOrigin("api");
-            await base.UpdateAsync(id, p);
-            HttpContext.SetOrigin(origin);
-            return p;
-        }
     }
 }
