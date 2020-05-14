@@ -28,6 +28,12 @@ namespace SIL.Transcriber.Repositories
             PlanRepository = planRepository;
         }
 
+        public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, int project)
+        {
+            //this gets just the passages I have access to in these projects
+            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == project);
+            return UsersMediafiles(entities, projects);
+        }
         //get my Mediafiles in these projects
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Project> projects)
         {
@@ -35,6 +41,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
             return UsersMediafiles(entities, plans);
         }
+
 
         private IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Plan> plans = null)
         {
@@ -53,6 +60,13 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersMediafiles(entities);
+            }
+            if (filterQuery.Has(PROJECT_SEARCH_TERM))
+            {
+                int projectid;
+                if (!int.TryParse(filterQuery.Value, out projectid))
+                    return entities;
+                return UsersMediafiles(entities, projectid);
             }
             return base.Filter(entities, filterQuery);
         }

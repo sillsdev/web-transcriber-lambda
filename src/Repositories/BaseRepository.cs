@@ -66,18 +66,26 @@ namespace SIL.Transcriber.Repositories
                 throw ex;  //does this go back to my controller?  Nope...eaten by JsonApiExceptionFilter.  TODO: Figure out a way to capture it and return a 400 instead
             }
         }
-        #region MultipleData
-        protected bool CheckAdd(int check, object entity, DateTime dtBail, IJsonApiSerializer jsonApiSerializer, int start, ref int completed, ref string data)
+        #region MultipleData //orgdata, projdata
+        protected string InitData()
         {
-            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            return "{\"data\":[";
+        }
+        protected string FinishData()
+        {
+            return "]}";
+        }
+        protected bool CheckAdd(int check, object entity, DateTime dtBail, IJsonApiSerializer jsonApiSerializer, ref int start, ref string data)
+        {
+            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail) return false;
             if (start <= check)
             {
                 string thisdata = jsonApiSerializer.Serialize(entity);
                 if (data.Length + thisdata.Length > (1000000 * 4))
                     return false;
-                data += (check == start ? "" : ",") + thisdata;
-                completed++;
+                data += (data.Length > 0 ? "," : InitData()) + thisdata;
+                start++;
             }
             return true;
         }

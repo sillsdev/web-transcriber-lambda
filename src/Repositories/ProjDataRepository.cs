@@ -52,7 +52,7 @@ namespace SIL.Transcriber.Repositories
 
         private IQueryable<ProjData> GetData(IQueryable<ProjData> entities, string project, string start)
         {
-            string data = "{\"data\":[";
+            string data = "";
             int iStart;
             if (!int.TryParse(start, out iStart))
                 iStart = 0;
@@ -67,26 +67,26 @@ namespace SIL.Transcriber.Repositories
             {
                 //plans
                 IEnumerable<Plan> plans = dbContext.Plans.Where(pl => pl.ProjectId == projectid && !pl.Archived);
-                if (!CheckAdd(0, plans, dtBail, jsonApiSerializer, iStart, ref iStartNext, ref data)) break;
+                if (!CheckAdd(0, plans, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
 
                 //sections
                 IQueryable<Section> sections = dbContext.Sections.Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s).Where(x => !x.Archived);
-                if (!CheckAdd(1, sections, dtBail, jsonApiSerializer, iStart, ref iStartNext, ref data)) break;
+                if (!CheckAdd(1, sections, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
 
                 IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
-                if (!CheckAdd(2, passages, dtBail, jsonApiSerializer, iStart, ref iStartNext, ref data)) break;
+                if (!CheckAdd(2, passages, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 //mediafiles
-                if (!CheckAdd(3, dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived), dtBail, jsonApiSerializer, iStart, ref iStartNext, ref data)) break;
+                if (!CheckAdd(3, dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
 
                 //passagestatechanges
-                if (!CheckAdd(4, dbContext.Passagestatechanges.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc), dtBail, jsonApiSerializer, iStart, ref iStartNext, ref data)) break;
+                if (!CheckAdd(4, dbContext.Passagestatechanges.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 iStartNext = -1; //Done!
             } while (false); //do it once
             if (iStart == iStartNext)
                 throw new System.Exception("Single table is too large to return data");
 
             ProjData ProjData = entities.FirstOrDefault();
-            ProjData.Json = data + "]}";
+            ProjData.Json = data + FinishData();
             ProjData.Startnext = iStartNext;
             return entities;
         }
