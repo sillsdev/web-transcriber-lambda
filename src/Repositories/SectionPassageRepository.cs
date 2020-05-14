@@ -39,29 +39,6 @@ namespace SIL.Transcriber.Repositories
         {
             return dbContext.Database.BeginTransaction();
         }     
-        private void SetModifiedValues(BaseModel m, int user, DateTime now, string origin, bool setCreated)
-        {
-            m.LastModifiedBy = user;
-            if (setCreated) m.DateCreated = now;
-            m.DateUpdated = now;
-            m.LastModifiedOrigin = origin;
-        }
-        private void SetModifiedValues(List<Section> sections, bool setCreated)
-        {
-            int user = CurrentUser.Id;
-            DateTime now = DateTime.UtcNow;
-            string origin = dbContext.HttpContext.GetOrigin() ?? "http://localhost:3000";
-            foreach (Section s in sections)
-                SetModifiedValues(s, user, now, origin, setCreated);
-        }
-        private void SetModifiedValues(List<Passage> passages, bool setCreated)
-        {
-            int user = CurrentUser.Id;
-            DateTime now = DateTime.UtcNow;
-            string origin = dbContext.HttpContext.GetOrigin() ?? "http://localhost:3000";
-            foreach (Passage p in passages)
-                SetModifiedValues(p, user, now, origin, setCreated);
-        }
 
         public List<Section> BulkUpdateSections(List<Section> sections)
         {

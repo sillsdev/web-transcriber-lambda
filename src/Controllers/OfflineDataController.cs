@@ -29,13 +29,12 @@ namespace SIL.Transcriber.Controllers
             _service = service;
         }
 
-        [HttpGet("project/{id}")]
-        public ActionResult<FileResponse> Export([FromRoute] int id)
+        [HttpGet("project/export/{id}/{start}")]
+        public ActionResult<FileResponse> Export([FromRoute] int id, int start)
         {
-            FileResponse response = _service.ExportProject(id);
-            return response;
+            FileResponse response = _service.ExportProject(id, start);
+            return Ok(response);
         }
-
         [HttpGet("project/import/{filename}")]
         public ActionResult<FileResponse> ImportFileUpload([FromRoute] string filename)
         {

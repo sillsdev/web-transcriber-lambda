@@ -37,6 +37,7 @@ namespace SIL.Transcriber.Models
 
         [Attr("original-file")]
         public string OriginalFile { get; set; }
+        [Attr("s3file")]
         public string S3File { get; set; }
         [Attr("filesize")]
         public long Filesize { get; set; }

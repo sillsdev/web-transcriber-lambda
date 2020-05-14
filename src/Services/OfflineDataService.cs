@@ -13,29 +13,43 @@ using JsonApiDotNetCore.Serialization;
 
 using System.Net;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class OfflineDataService: IOfflineDataService
+    public class OfflineDataService : IOfflineDataService
     {
         protected readonly AppDbContext dbContext;
         protected readonly IJsonApiSerializer jsonApiSerializer;
         protected readonly IJsonApiDeSerializer jsonApiDeSerializer;
         protected readonly MediafileService mediaService;
+        protected CurrentUserRepository CurrentUserRepository { get; }
+
         private IS3Service _S3service;
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
+        const string ContentType = "application/ptf";
         protected ILogger<OfflineDataService> Logger { get; set; }
 
-        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, MediafileService MediaService, IS3Service service, ILoggerFactory loggerFactory)
+        public OfflineDataService(IDbContextResolver contextResolver,
+                IJsonApiSerializer jsonSer,
+                IJsonApiDeSerializer jsonDeser,
+                MediafileService MediaService,
+                CurrentUserRepository currentUserRepository,
+                IS3Service service,
+                ILoggerFactory loggerFactory)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
             jsonApiSerializer = jsonSer;
             jsonApiDeSerializer = jsonDeser;
             mediaService = MediaService;
+            CurrentUserRepository = currentUserRepository;
             _S3service = service;
             this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
+
+        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
+
         private void WriteEntry(ZipArchiveEntry entry, string contents)
         {
             using (StreamWriter sw = new StreamWriter(entry.Open()))
@@ -107,20 +121,39 @@ namespace SIL.Transcriber.Services
                 }
             });
         }
-   
-        private void AddMedia(ZipArchive zipArchive, List<Mediafile> media)
+        private bool AddMediaEaf(int check, DateTime dtBail, ref int completed, ZipArchive zipArchive, List<Mediafile> media)
         {
-            media.ForEach( m =>
+            if (DateTime.Now > dtBail) return false;
+            if (completed <= check)
             {
-                if (!string.IsNullOrEmpty(m.S3File))
-                {
-                    S3Response response = mediaService.GetFile(m.Id).Result;
-                    AddStreamEntry(zipArchive, response.FileStream, "media/", m.S3File);
-                    m.AudioUrl = "media/" + m.S3File;
-                    AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
-                }
-            });
+                foreach (Mediafile m in media)
+                   AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
+                completed++;
+            }
+            return true;
         }
+        /*
+        private bool AddMedia(int check, DateTime dtBail, ref int completed, ZipArchive zipArchive, List<Mediafile> media)
+        {
+            foreach (Mediafile m in media)
+            {
+                Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+                if (DateTime.Now > dtBail) return false;
+                if (completed <= check)
+                {
+                    if (!string.IsNullOrEmpty(m.S3File)) {
+                        S3Response response = mediaService.GetFile(m.Id).Result;
+                        AddStreamEntry(zipArchive, response.FileStream, "media/", m.S3File);
+                        m.AudioUrl = "media/" + m.S3File;
+                        AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
+                    }
+                    completed++;
+                }
+                check++;
+            };
+            return true;
+        }
+        */
         private void AddFont(ZipArchive zipArchive, WebClient client, string cssfile)
         {
             string bucket = "https://s3.amazonaws.com/fonts.siltranscriber.org/";
@@ -178,7 +211,7 @@ namespace SIL.Transcriber.Services
         public static string CoerceValidFileName(string filename)
         {
             string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(Path.GetInvalidFileNameChars()));
-            string invalidReStr = string.Format(@"[{0}]+", invalidChars);
+            string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);
 
             string[] reservedWords = new[]
             {
@@ -187,150 +220,218 @@ namespace SIL.Transcriber.Services
         "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
     };
 
-            string sanitisedNamePart = System.Text.RegularExpressions.Regex.Replace(filename, invalidReStr, "_");
+            string sanitisedName = System.Text.RegularExpressions.Regex.Replace(filename, invalidReStr, "_");
+            while (sanitisedName.IndexOf("__") > -1)
+                sanitisedName = sanitisedName.Replace("__", "_");
+
             foreach (string reservedWord in reservedWords)
             {
                 string reservedWordPattern = string.Format("^{0}(\\.|$)", reservedWord);
-                sanitisedNamePart = System.Text.RegularExpressions.Regex.Replace(sanitisedNamePart, reservedWordPattern, "_reservedWord_$1", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                sanitisedName = System.Text.RegularExpressions.Regex.Replace(sanitisedName, reservedWordPattern, "_reservedWord_$1", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             }
 
-            return sanitisedNamePart;
+            return sanitisedName;
         }
-        private FileResponse Export(int orgid, int projectid = 0)
+        private bool CheckAdd(int check, DateTime dtBail, ref int completed, ZipArchive zipArchive, string table, IList list, char sort)
         {
-            //export this organization
-            IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == orgid);
-            IQueryable<Project> projects;
-            if (orgs.Count() == 0)
+            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail) return false;
+            if (completed <= check)
             {
-                return new FileResponse()
-                {
-                    Status = System.Net.HttpStatusCode.NotFound,
-                    Message = "Organization does not exist. " + orgid.ToString()
-                };
+                AddJsonEntry(zipArchive, table, list, sort);
+                completed++;
             }
-
-            if (projectid != 0)
-                projects = dbContext.Projects.Where(p => p.Id == projectid);
-            else
-                projects = dbContext.Projects.Where(p => p.OrganizationId == orgid && !p.Archived);
-
-            MemoryStream ms = new MemoryStream();
-            using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            return true;
+        }
+        private FileResponse CheckProgress(int projectid, string fileName)
+        {
+            int startNext =0;
+            try
             {
-                Dictionary<string, string> fonts = new Dictionary<string, string>();
-                fonts.Add("Charis SIL", "");
-
-                DateTime exported = AddCheckEntry(zipArchive);
-
-                //org
-                List<Organization> orgList = orgs.ToList();
-                AddOrgLogos(zipArchive, orgList);
-                AddJsonEntry(zipArchive, "organizations", orgList, 'B');
-
-                //groups
-                IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
-                AddJsonEntry(zipArchive, "groups", groups.Where(g =>!g.Archived).ToList(), 'C');
-
-                //groupmemberships
-                List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
-                AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
-                foreach( string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
+                Stream ms = OpenFile(fileName + ".sss");
+                StreamReader reader = new StreamReader(ms);
+                string data = reader.ReadToEnd();
+                int.TryParse(data, out startNext);
+            }
+            catch
+            {
+                //it's not there yet...
+                Logger.LogInformation("status file not available");
+                startNext = 9;
+            }
+            if (startNext == -1)
+            {
+                try
                 {
-                    fonts[font] = ""; //add it if it's not there
+                    S3Response resp = _S3service.RemoveFile(fileName + ".sss", ExportFolder).Result;
+                    resp = _S3service.RemoveFile(fileName + ".tmp", ExportFolder).Result;
                 }
+                catch { };
+            }
+            else
+                startNext = Math.Max(startNext, 9);
 
-                //users
-                IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
-                List<User> userList = users.ToList();
+            return new FileResponse()
+            {
+                Message = fileName+".ptf",
+                //get a signedurl for it if we're done
+                FileURL = startNext == -1 ? _S3service.SignedUrlForGet(fileName + ".ptf", ExportFolder, ContentType).Message : "",
+                Status = startNext == -1 ? System.Net.HttpStatusCode.OK : System.Net.HttpStatusCode.PartialContent,
+                ContentType = ContentType,
+                Id = startNext,
+            };
+        }
+        private Stream OpenFile(string fileName)
+        {
+            S3Response s3response  = _S3service.ReadObjectDataAsync(fileName, ExportFolder).Result;
+            if (s3response.FileStream == null)
+                throw (new Exception("Export in progress " + fileName + "not found."));
+            return s3response.FileStream;
+        }
 
-                AddUserAvatars(zipArchive, userList);
-                AddJsonEntry(zipArchive, "users", userList, 'A');
+        public FileResponse ExportProject(int projectid, int start)
+        {
+            int startNext = start;
+            Logger.LogInformation($"{DateTime.Now}");
+            //give myself 15 seconds to get as much as I can...
+            DateTime dtBail = DateTime.Now.AddSeconds(15);
 
-                //organizationmemberships
-                IEnumerable<OrganizationMembership> orgmems = users.Join(dbContext.Organizationmemberships, u => u.Id, om => om.UserId, (u, om) => om).Where(om => om.OrganizationId == orgid && !om.Archived);
-                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
+            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
+            Project project = projects.First();
+            string fileName = string.Format("Transcriber{0}_{1}_{2}" , CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser().Id) ;
 
-                //projects
+            S3Response s3response;
+            Stream ms;
+            if (start > 7)
+                return CheckProgress(projectid, fileName);
 
-                projects.ToList().ForEach(p => {
-                    p.DateExported = exported;
-                    dbContext.Projects.Update(p);
-                });
-                AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
-                foreach (string font in projects.Where(p => p.DefaultFont != null).Select(p => p.DefaultFont))
+            if (start == 0)
+            {
+                ms = new MemoryStream();
+                try
                 {
-                    fonts[font] = ""; //add it if it's not there
+                    S3Response resp = _S3service.RemoveFile(fileName + ".sss", ExportFolder).Result;
                 }
-                AddFonts(zipArchive, fonts.Keys);
+                catch { };
+            }
+            else
+            {
+                ms = OpenFile(fileName + ".ptf");
+            }
+            using (ZipArchive zipArchive = new ZipArchive(ms,  ZipArchiveMode.Update, true))
+            {
+                if (start == 0)
+                {
+                    Dictionary<string, string> fonts = new Dictionary<string, string>();
+                    fonts.Add("Charis SIL", "");
+                    DateTime exported = AddCheckEntry(zipArchive);
+                    //org
+                    IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
+                    List<Organization> orgList = orgs.ToList();
 
-                //projectintegrations
-                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).Where(x => !x.Archived).ToList(), 'E');
-                //plans
-                IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl).Where(x => !x.Archived);
-                AddJsonEntry(zipArchive, "plans", plans.ToList(), 'E');
-                //sections
-                IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Where(x => !x.Archived);
-                AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
-                //passages
-                IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(x => !x.Archived);
+                    AddJsonEntry(zipArchive, "organizations", orgList, 'B');
+                    AddOrgLogos(zipArchive, orgList);
 
-                AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
-                //mediafiles
-                IQueryable<Mediafile> mediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
-                //pick just the highest version media per passage
-                mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                List < Mediafile > mediaList = mediafiles.ToList();
+                    //groups
+                    IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
+                    List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
+                    IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
 
-                AddMedia(zipArchive, mediaList);
-                AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
-                //passagestatechange
-                IQueryable<PassageStateChange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
-                AddJsonEntry(zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H');
+                    foreach (string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
+                    {
+                        fonts[font] = ""; //add it if it's not there
+                    }
+                    foreach (string font in projects.Where(p => p.DefaultFont != null).Select(p => p.DefaultFont))
+                    {
+                        fonts[font] = ""; //add it if it's not there
+                    }
+                    AddFonts(zipArchive, fonts.Keys);
+                    //users
+                    List<User> userList = users.ToList();
+                    AddUserAvatars(zipArchive, userList);
 
-                //ALL
-                //activitystates
-                AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
-                //integrations
-                AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
-                //projecttypes
-                AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
-                //plantypes
-                AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
-                //roles
-                AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "groups", groups.Where(g => !g.Archived).ToList(), 'C');
+                    //groupmemberships
+                    AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
+                    AddJsonEntry(zipArchive, "users", userList, 'A');
+
+                    //organizationmemberships
+                    IEnumerable<OrganizationMembership> orgmems = users.Join(dbContext.Organizationmemberships, u => u.Id, om => om.UserId, (u, om) => om).Where(om => om.OrganizationId == project.OrganizationId && !om.Archived);
+                    AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
+
+                    //projects
+                    projects.ToList().ForEach(p =>
+                    {
+                        p.DateExported = exported;
+                        dbContext.Projects.Update(p);
+                    });
+                    AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
+                    startNext=1;
+                }
+                do //give me something to break out of
+                {
+                    if (!CheckAdd(1, dtBail, ref startNext,  zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).Where(x => !x.Archived).ToList(), 'E')) break;
+                    //plans
+                    IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl).Where(x => !x.Archived);
+                    if (!CheckAdd(2, dtBail, ref startNext, zipArchive, "plans", plans.ToList(), 'E')) break;
+                    //sections
+                    IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Where(x => !x.Archived);
+                    if (!CheckAdd(3, dtBail, ref startNext, zipArchive, "sections", sections.ToList(), 'F')) break;
+                    //passages
+                    IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(x => !x.Archived);
+                    if (!CheckAdd(4, dtBail,  ref startNext, zipArchive, "passages", passages.ToList(), 'G')) break;
+                    //passagestatechange
+                    IQueryable<PassageStateChange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
+                    if (!CheckAdd(5, dtBail, ref startNext, zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H')) break;
+                    //mediafiles
+                    IQueryable<Mediafile> mediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                    //pick just the highest version media per passage
+                    mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    List<Mediafile> mediaList = mediafiles.OrderBy(m => m.Id).ToList();
+                    if (!AddMediaEaf(6, dtBail, ref startNext, zipArchive, mediaList)) break;
+
+                    const string prefix = "aws.com/";
+                    mediaList.ForEach(m =>
+                    {
+                        //S3File has just the filename
+                        //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
+                        //change the audioUrl to have the offline path + filename
+                        //change the s3File to have the onlinepath + filename
+                        string tmp = m.AudioUrl;
+                        m.AudioUrl = "media/" + m.S3File;
+                        //extract the path
+                        if (tmp.IndexOf("?") > 0)
+                            tmp = tmp.Substring(0, tmp.IndexOf("?"));
+                        if (tmp.IndexOf(prefix) > 0)
+                            tmp = tmp.Substring(tmp.IndexOf(prefix) + prefix.Length);
+                        //this looks like 475_Org11/438_NewPla/02%20Tyrannosaurus%20Funk__a7e1f4c0-96d3-466b-952c-5c82c077dacc.mp3
+                        m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
+                    });
+                    if (!CheckAdd(7, dtBail,  ref startNext, zipArchive, "mediafiles", mediaList, 'H')) break;
+                    //if (!AddMedia(7, dtBail,  ref startNext, zipArchive, mediaList)) break;
+                    //startNext = -1; //Done!
+                } while (false);
             }
             ms.Position = 0;
-            const string ContentType = "application/ptf";
-            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Id.ToString() + "_" + CoerceValidFileName(projects.First().Name)) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Id + "_" + CoerceValidFileName(orgs.First().Name));
-
-            S3Response s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
-            if (s3response.Status == System.Net.HttpStatusCode.OK)
+            fileName = fileName + (startNext == 8 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
+            s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
+            if (s3response.Status == HttpStatusCode.OK)
             {
-                //get a signedurl for it now
+                Logger.LogInformation($"{DateTime.Now}, {startNext}");
                 return new FileResponse()
                 {
                     Message = fileName,
-                    FileURL = _S3service.SignedUrlForGet(fileName, ExportFolder, ContentType).Message,
-                    Status = System.Net.HttpStatusCode.OK,
+                    FileURL = "",
+                    Status = HttpStatusCode.PartialContent,
                     ContentType = ContentType,
+                    Id = startNext,
                 };
             }
             else
             {
-                return s3response;
+                throw new Exception(s3response.Message);
             }
         }
-        public FileResponse ExportOrganization(int orgid)
-        {
-            return Export(orgid);
-        }
-        public FileResponse ExportProject(int id)
-        {
-            Project project = dbContext.Projects.Where(p => p.Id == id).First();
-            return Export(project.OrganizationId, id);          
-        }
-
         public FileResponse ImportFileURL(string sFile)
         {
             const string ContentType = "application/itf";
@@ -507,7 +608,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = "Invalid ITF File - SILTranscriber not present",
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                    Status = HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,
                 };
             }
@@ -521,7 +622,7 @@ namespace SIL.Transcriber.Services
                     {
                         Message = "Invalid ITF File - projects data not present",
                         FileURL = sFile,
-                        Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                        Status = HttpStatusCode.UnprocessableEntity,
                         ContentType = ContentType,
                     };
 
@@ -543,7 +644,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = "Invalid ITF File - projects file not present",
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                    Status = HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,
                 };
             }
@@ -708,7 +809,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = report,
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.OK,
+                    Status =HttpStatusCode.OK,
                     ContentType = ContentType,
                 };
             }
@@ -719,7 +820,7 @@ namespace SIL.Transcriber.Services
                     Message = ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""),
 
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                    Status = HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,
                 };
             }

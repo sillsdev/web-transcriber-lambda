@@ -134,9 +134,14 @@ namespace SIL.Transcriber.Data
                 {
                     if (entry.State == EntityState.Added)
                     {
-                        trackDate.DateCreated = now;
+                        if (trackDate.DateCreated == null) //if the front end set it, leave it.  We're using this to catch duplicates
+                        {
+                            trackDate.DateCreated = now;
+                            trackDate.DateUpdated = now;
+                        }
                     }
-                    trackDate.DateUpdated = now;
+                    else
+                        trackDate.DateUpdated = now;
                 }
             }
             int userid = CurrentUserId();
