@@ -246,11 +246,19 @@ namespace SIL.Transcriber.Services
         private FileResponse CheckProgress(int projectid, string fileName)
         {
             int startNext =0;
-            Stream ms = OpenFile(fileName+".sss");
-            StreamReader reader = new StreamReader(ms);
-            string data = reader.ReadToEnd();
-            int.TryParse(data, out startNext);
-     
+            try
+            {
+                Stream ms = OpenFile(fileName + ".sss");
+                StreamReader reader = new StreamReader(ms);
+                string data = reader.ReadToEnd();
+                int.TryParse(data, out startNext);
+            }
+            catch
+            {
+                //it's not there yet...
+                Logger.LogInformation("status file not available");
+                startNext = 9;
+            }
             if (startNext == -1)
             {
                 try
@@ -260,6 +268,9 @@ namespace SIL.Transcriber.Services
                 }
                 catch { };
             }
+            else
+                startNext = Math.Max(startNext, 9);
+
             return new FileResponse()
             {
                 Message = fileName+".ptf",
