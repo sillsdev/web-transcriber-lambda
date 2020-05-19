@@ -73,10 +73,10 @@ namespace SIL.Transcriber.Services
 
             Passage p = await pr.GetAsync(id);
             p.State = "transcribeReady";
-            var origin = HttpContext.GetOrigin();
-            HttpContext.SetOrigin("api");
+            string fp = HttpContext.GetFP();
+            HttpContext.SetFP("api");  //even the guy who sent this needs these changes
             await base.UpdateAsync(id, p);
-            HttpContext.SetOrigin(origin);
+            HttpContext.SetFP(fp);
             return p;
         }
     }

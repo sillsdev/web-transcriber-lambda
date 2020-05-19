@@ -155,7 +155,7 @@ namespace SIL.Transcriber.Data
 
             }
 
-            string origin = HttpContext.GetOrigin() ?? "http://localhost:3000";
+            string origin = HttpContext.GetFP() ?? "noFP";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (EntityEntry entry in entries)
             {
