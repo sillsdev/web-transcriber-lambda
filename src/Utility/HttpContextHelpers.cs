@@ -21,9 +21,13 @@ namespace SIL.Transcriber.Utility
             return context.Request.Headers.FirstOrDefault(h => h.Key.ToLower() == "origin").Value;
         }
 
-        public static void SetOrigin(this HttpContext context, string value)
+        public static string GetFP(this HttpContext context)
         {
-            context.Request.Headers["origin"]  = value;
+            return context.Request.Headers.FirstOrDefault(h => h.Key.ToLower() == "x-fp").Value;
+        }
+        public static void SetFP(this HttpContext context, string value)
+        {
+            context.Request.Headers["x-fp"]  = value;
         }
 
         // NOTE: User Claims of Interest:

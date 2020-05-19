@@ -67,7 +67,7 @@ namespace SIL.Transcriber.Repositories
             GroupMembership groupmembership = Get().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
             if (groupmembership == null)
             {
-                HttpContext.SetOrigin("api");
+                HttpContext.SetFP("api");
                 groupmembership = new GroupMembership
                 {
                     GroupId = groupId,
