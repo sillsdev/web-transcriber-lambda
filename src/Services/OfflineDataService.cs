@@ -636,7 +636,7 @@ namespace SIL.Transcriber.Services
                         Status = (HttpStatusCode)450,
                         ContentType = ContentType,
                     };
-                
+             
             }
             catch
             {
@@ -661,8 +661,7 @@ namespace SIL.Transcriber.Services
                     {
                         case "users":
                             List<User> users = jsonApiDeSerializer.DeserializeList<User>(data);
-                            IEnumerable<User> myUsers = users.Join(dbContext.Groupmemberships.Where(gm => gm.GroupId == project.GroupId), u => u.Id, grpmem => grpmem.UserId, (u, grpmem) => u);
-                            foreach(User u in myUsers)
+                            foreach(User u in users)
                             {
                                 User user = dbContext.Users.Find(u.Id);
                                 
@@ -691,8 +690,7 @@ namespace SIL.Transcriber.Services
 
                         case "sections":
                             List<Section> sections = jsonApiDeSerializer.DeserializeList<Section>(data);
-                            IEnumerable<Section> mysections = sections.Join(dbContext.Plans.Where(p => p.ProjectId == projectid), s => s.PlanId, pl => pl.Id, (s, pl) => s);
-                            foreach(Section s in mysections)
+                            foreach(Section s in sections)
                             {
                                 Section section = dbContext.Sections.Find(s.Id);
                                 if (section.DateUpdated > sourceDate)
@@ -710,8 +708,7 @@ namespace SIL.Transcriber.Services
 
                         case "passages":
                             List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
-                            IQueryable<Passage> mypassages = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(passages, s => s.Id, p => p.SectionId, (s, p) => p);
-                            foreach (Passage p in mypassages)
+                            foreach (Passage p in passages)
                             {
                                 Passage passage = dbContext.Passages.Find(p.Id);
                                 if (passage.State != p.State)
@@ -736,8 +733,7 @@ namespace SIL.Transcriber.Services
                                 dbContext.Mediafiles.AddRange(newFiles);
                                 // upload the file 
                             } */
-                            IEnumerable<Mediafile> mymediafiles = mediafiles.Join(dbContext.Plans.Where(pl => pl.ProjectId == projectid), mf => mf.PlanId, p => p.Id, (mf, p) => mf);
-                            foreach(Mediafile m in mymediafiles)
+                            foreach(Mediafile m in mediafiles)
                             {
                                 Mediafile mediafile = dbContext.Mediafiles.Find(m.Id);
                                 if (mediafile.Transcription != m.Transcription || mediafile.Position != m.Position)
@@ -756,8 +752,7 @@ namespace SIL.Transcriber.Services
 
                         case "groupmemberships":
                             List<GroupMembership> grpmems = jsonApiDeSerializer.DeserializeList<GroupMembership>(data);
-                            IEnumerable<GroupMembership> mygrpmems = grpmems.Where(gm => gm.GroupId == project.GroupId);
-                            foreach(GroupMembership gm in mygrpmems)
+                            foreach(GroupMembership gm in grpmems)
                             {
                                 GroupMembership grpmem = dbContext.Groupmemberships.Find(gm.Id);
                                 if (grpmem.FontSize != gm.FontSize)
@@ -781,8 +776,7 @@ namespace SIL.Transcriber.Services
 
                         case "passagestatechanges":
                             List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
-                            IQueryable<PassageStateChange> mypscs = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(pscs, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
-                            foreach(PassageStateChange psc in mypscs)
+                            foreach(PassageStateChange psc in pscs)
                             {
                                 //see if it's already there...
                                 IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
