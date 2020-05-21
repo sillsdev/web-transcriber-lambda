@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
+using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Models;
 using JsonApiDotNetCore.Serialization;
 using JsonApiDotNetCore.Services;
@@ -9,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 
 
 namespace SIL.Transcriber.Repositories
@@ -90,5 +92,15 @@ namespace SIL.Transcriber.Repositories
             return true;
         }
         #endregion
+
+        public override IQueryable<TEntity> Filter(IQueryable<TEntity> entities, FilterQuery filterQuery)
+        {
+            if (filterQuery.Has(IDLIST))
+            {
+                string[] idList = filterQuery.Value.Split("|");
+                return entities.Where(e => idList.Any(i => i == e.Id.ToString()));
+            }
+            return base.Filter(entities, filterQuery);
+        }
     }
 }
