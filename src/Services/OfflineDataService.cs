@@ -446,107 +446,32 @@ namespace SIL.Transcriber.Services
                 ContentType = ContentType,
             };
         }
+        private string ChangesReport(string type, string online, string imported)
+        {
+            return "{\"type\":\"" + type + "\", \"online\": " + online + ", \"imported\": " + imported + "}";
+        }
         private string UserChangesReport(User online, User imported)
         {
-            Dictionary<string, string> changes = new Dictionary<string, string>();
-            if (online.Name != imported.Name)
-            {
-                changes.Add("Previous Name", online.Name);
-                changes.Add("Imported Name", imported.Name);
-            }
-            if (online.FamilyName != imported.FamilyName)
-            {
-                changes.Add("Previous FamilyName", online.FamilyName);
-                changes.Add("Imported FamilyName", imported.FamilyName);
-            }
-            if (online.GivenName != imported.GivenName)
-            {
-                changes.Add("Previous GivenName", online.GivenName);
-                changes.Add("Imported GivenName", imported.GivenName);
-            }
-            if (online.Phone != imported.Phone)
-            {
-                changes.Add("Previous Phone", online.Phone);
-                changes.Add("Imported Phone", imported.Phone);
-            }
-            if (online.playbackspeed != imported.playbackspeed)
-            {
-                changes.Add("Previous playbackspeed", online.playbackspeed.ToString());
-                changes.Add("Imported playbackspeed", imported.playbackspeed.ToString());
-            }
-            if (online.progressbartypeid != imported.progressbartypeid)
-            {
-                changes.Add("Previous progressbartypeid", online.progressbartypeid.ToString());
-                changes.Add("Imported progressbartypeid", imported.progressbartypeid.ToString());
-            }
-            if (online.timercountup != imported.timercountup)
-            {
-                changes.Add("Previous timercountup", online.timercountup.ToString());
-                changes.Add("Imported timercountup", imported.timercountup.ToString());
-            }
-            if (online.Timezone != imported.Timezone)
-            {
-                changes.Add("Previous Timezone", online.Timezone.ToString());
-                changes.Add("Imported Timezone", imported.Timezone.ToString());
-            }
-            if (online.Locale != imported.Locale)
-            {
-                changes.Add("Previous Locale", online.Locale.ToString());
-                changes.Add("Imported Locale", imported.Locale.ToString());
-            }
-            if (online.uilanguagebcp47 != imported.uilanguagebcp47)
-            {
-                changes.Add("Previous uilanguagebcp47", online.uilanguagebcp47.ToString());
-                changes.Add("Imported uilanguagebcp47", imported.uilanguagebcp47.ToString());
-            }
-            if (online.NewsPreference != imported.NewsPreference)
-            {
-                changes.Add("Previous NewsPreference", online.NewsPreference.ToString());
-                changes.Add("Imported NewsPreference", imported.NewsPreference.ToString());
-            }
-            if (online.DigestPreference != imported.DigestPreference)
-            {
-                changes.Add("Previous DigestPreference", online.DigestPreference.ToString());
-                changes.Add("Imported DigestPreference", imported.DigestPreference.ToString());
-            }
-            if (changes.Count > 0)
-                return "User: " + online.Email + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
-            return "";
+            return ChangesReport("user",  jsonApiSerializer.Serialize(online),  jsonApiSerializer.Serialize(imported));
         }
         private string SectionChangesReport(Section online, Section imported)
         {
             Dictionary<string, string> changes = new Dictionary<string, string>();
 
-            if (online.EditorId != imported.EditorId)
+            if ((online.EditorId != imported.EditorId && online.EditorId != null) || 
+                (online.TranscriberId != imported.TranscriberId && online.TranscriberId != null) || 
+                online.State != imported.State )
             {
-                changes.Add("Previous Editor", dbContext.Users.Find(online.EditorId).Name) ;
-                changes.Add("Imported Editor", dbContext.Users.Find(imported.EditorId).Name);
+                return ChangesReport( "section",  jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
             }
-            if (online.TranscriberId != imported.TranscriberId)
-            {
-                changes.Add("Previous Transcriber", dbContext.Users.Find(online.EditorId).Name);
-                changes.Add("Imported Transcriber", dbContext.Users.Find(imported.EditorId).Name);
-
-            }
-            if (online.State != imported.State)
-            {
-                changes.Add("Previous State", online.State);  //TODO fix the state display
-                changes.Add("Imported State", imported.State);
-            }
-            if (changes.Count > 0)
-                return "Section: " + dbContext.Plans.Find(online.PlanId).Name + ":" + online.Sequencenum + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
             return "";
        }
         private string PassageChangesReport(Passage online, Passage imported)
         {
-            Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.State != imported.State)
             {
-                changes.Add("Previous State", online.State);  //TODO fix the state display
-                changes.Add("Imported State", imported.State);
+                return ChangesReport("passage",  jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
             }
-            if (changes.Count > 0)
-                return "Passage: " + online.Sequencenum + " " + online.Book + " " + online.Reference + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
             return "";
         }
         private string MediafileChangesReport(Mediafile online, Mediafile imported)
@@ -554,24 +479,17 @@ namespace SIL.Transcriber.Services
             Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.Transcription != imported.Transcription && online.Transcription != null)
             {
-                changes.Add("Previous Transcription", online.Transcription);
-                changes.Add("Imported Transcription", imported.Transcription);
-            }
-            if (changes.Count > 0)
-                return "Transcription:" + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
+                online.AudioUrl = "";
+                return ChangesReport("mediafile", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+            }            
             return "";
         }
         private string GrpMemChangesReport(GroupMembership online, GroupMembership imported)
         {
-            Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.FontSize != imported.FontSize)
             {
-                changes.Add("Previous FontSize", online.FontSize);
-                changes.Add("Imported FontSize", imported.FontSize);
+                return ChangesReport("groupmembership", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
             }
-            /* simplify the object to report on */
-            if (changes.Count > 0)
-                return "Preferences:" + dbContext.Groups.Find(online.GroupId).Name + "/" + dbContext.Users.Find(online.UserId).Name + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
             return "";
         }
         public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
@@ -581,7 +499,7 @@ namespace SIL.Transcriber.Services
 
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
             ZipArchive archive = new ZipArchive(response.FileStream);
-            string report = "";
+            List<string>report =new List<string>();
             try
             {
                 ZipArchiveEntry checkEntry = archive.GetEntry("SILTranscriberOffline");
@@ -666,7 +584,7 @@ namespace SIL.Transcriber.Services
                                 User user = dbContext.Users.Find(u.Id);
                                 
                                 if (user.DateUpdated > sourceDate)
-                                    report += UserChangesReport(user, u);
+                                    report.Add(UserChangesReport(user, u));
 
                                 user.DigestPreference = u.DigestPreference;
                                 user.FamilyName = u.FamilyName;
@@ -694,7 +612,7 @@ namespace SIL.Transcriber.Services
                             {
                                 Section section = dbContext.Sections.Find(s.Id);
                                 if (section.DateUpdated > sourceDate)
-                                        report += SectionChangesReport(section, s);
+                                    report.Add( SectionChangesReport(section, s));
 
                                 section.EditorId = s.EditorId;
                                 section.TranscriberId = s.TranscriberId;
@@ -714,7 +632,7 @@ namespace SIL.Transcriber.Services
                                 if (passage.State != p.State)
                                 {
                                     if (passage.DateUpdated > sourceDate)
-                                        report += PassageChangesReport(passage, p);
+                                        report.Add( PassageChangesReport(passage, p));
                                     passage.State = p.State;
                                     passage.LastModifiedBy = p.LastModifiedBy;
                                     passage.LastModifiedOrigin = "electron";
@@ -736,10 +654,10 @@ namespace SIL.Transcriber.Services
                             foreach(Mediafile m in mediafiles)
                             {
                                 Mediafile mediafile = dbContext.Mediafiles.Find(m.Id);
-                                if (mediafile.Transcription != m.Transcription || mediafile.Position != m.Position)
+                                if (mediafile.Transcription != m.Transcription)
                                 {
                                     if (mediafile.DateUpdated > sourceDate)
-                                        report += MediafileChangesReport(mediafile, m);
+                                        report.Add(MediafileChangesReport(mediafile, m));
                                     mediafile.Position = m.Position;
                                     mediafile.Transcription = m.Transcription;
                                     mediafile.LastModifiedBy = m.LastModifiedBy;
@@ -758,7 +676,7 @@ namespace SIL.Transcriber.Services
                                 if (grpmem.FontSize != gm.FontSize)
                                 {
                                     if (grpmem.DateUpdated > sourceDate)
-                                        report += GrpMemChangesReport(grpmem, gm);
+                                        report.Add(GrpMemChangesReport(grpmem, gm));
                                     grpmem.FontSize = gm.FontSize;
                                     grpmem.LastModifiedBy = gm.LastModifiedBy;
                                     grpmem.LastModifiedOrigin = "electron";
@@ -801,7 +719,7 @@ namespace SIL.Transcriber.Services
 
                 return new FileResponse()
                 {
-                    Message = report,
+                    Message = "[" + string.Join(",", report) + "]",
                     FileURL = sFile,
                     Status =HttpStatusCode.OK,
                     ContentType = ContentType,
