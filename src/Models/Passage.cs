@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using JsonApiDotNetCore.Models;
 using Newtonsoft.Json.Linq;
 
@@ -42,10 +43,10 @@ namespace SIL.Transcriber.Models
         [Attr("section-id")]
         public int SectionId { get; set; }
 
-        [HasOne("section")]
+        [HasOne("section", Link.None)]
         public virtual Section Section { get; set; }
         
-        [HasMany("mediafiles")]
+        [HasMany("mediafiles", Link.None)]
         public virtual List<Mediafile> Mediafiles { get; set; }
 
         public bool Archived { get; set; }

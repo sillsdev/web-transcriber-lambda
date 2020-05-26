@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Models
         [Attr("slug")]
         public string Slug { get; set; }
 
-        [HasOne("projecttype")]
+        [HasOne("projecttype", Link.None)]
         public virtual ProjectType Projecttype { get; set; }
         [Attr("projecttype-id")]
         public int ProjecttypeId { get; set; }
@@ -21,17 +21,17 @@ namespace SIL.Transcriber.Models
         [Attr("description")]
         public string Description { get; set; }
 
-        [HasOne("owner")]
+        [HasOne("owner", Link.None)]
         public virtual User Owner { get; set; }
         [Attr("owner-id")]
         public int OwnerId { get; set; }
 
-        [HasOne("organization")]
+        [HasOne("organization", Link.None)]
         public virtual Organization Organization { get; set; }
         [Attr("organization-id")]
         public int OrganizationId { get; set; }
 
-        [HasOne("group")]
+        [HasOne("group", Link.None)]
         public virtual Group Group { get; set; }
         [Attr("group-id")]
         public int GroupId { get; set; }
@@ -70,12 +70,12 @@ namespace SIL.Transcriber.Models
         [Attr("date-imported")]
         public DateTime? DateImported { get; set; }
 
-        [HasMany("project-integrations")]
+        [HasMany("project-integrations", Link.None)]
         public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
         //[HasManyThrough(nameof(ProjectIntegrations))]
         //public virtual List<Integration> Integrations { get; set; }
 
-        [HasMany("plans")]
+        [HasMany("plans", Link.None)]
         public virtual List<Plan> Plans { get; set; }
         //[HasManyThrough("tasks")]
         //public virtual List<Task> Tasks { get; set; }

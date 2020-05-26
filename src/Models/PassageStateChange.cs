@@ -6,7 +6,7 @@ namespace SIL.Transcriber.Models
     {
         [Attr("passage-id")]
         public int PassageId { get; set; }
-        [HasOne("passage")]
+        [HasOne("passage", Link.None)]
         public virtual Passage Passage { get; set; }
 
         [Attr("state")]

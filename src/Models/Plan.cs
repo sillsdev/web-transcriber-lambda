@@ -14,25 +14,25 @@ namespace SIL.Transcriber.Models
         [Attr("slug")]
         public string Slug { get; set; }
 
-        [HasOne("project")]
+        [HasOne("project", Link.None)]
         public Project Project { get; set; }
         [Attr("project-id")]
         public int ProjectId { get; set; }
 
-        [HasOne("owner")]
+        [HasOne("owner", Link.None)]
         public virtual User Owner { get; set; }
         [Attr("owner-id")]
         public int OwnerId { get; set; }
 
 
-        [HasOne("plantype")]
+        [HasOne("plantype", Link.None)]
         public PlanType Plantype { get; set; }
         [Attr("plantype-id")]
         public int PlantypeId { get; set; }
-        [HasMany("sections")]
+        [HasMany("sections", Link.None)]
         public virtual List<Section> Sections { get; set; }
 
-        [HasMany("mediafiles")]
+        [HasMany("mediafiles", Link.None)]
         public virtual List<Mediafile> Mediafiles { get; set; }
         public bool Archived { get; set; }
 

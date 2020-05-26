@@ -6,6 +6,7 @@ namespace SIL.Transcriber.Models
 { /* This is an Identifiable only so that we can pass it back without JsonApiDotNetCore puking on it */
     public class FileResponse : Identifiable<int>
     {
+        [Attr("status")]
         public HttpStatusCode Status { get; set; }
         [Attr("message")]
         public string Message { get; set; }

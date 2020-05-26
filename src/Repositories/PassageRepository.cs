@@ -44,7 +44,14 @@ namespace SIL.Transcriber.Repositories
             }
             return entities.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
         }
+        public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, int planid)
+        {
+            IQueryable<Plan> plans = dbContext.Plans.Where(p => p.Id == planid);
 
+            IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, plans);
+
+            return UsersPassages(entities, sections);
+        }
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {
             IQueryable<Section> sections = dbContext.Sections.Where(s => s.PlanId == PlanId);
@@ -62,6 +69,11 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersPassages(entities);
+            }
+            if (filterQuery.Has(PLANID))
+            {
+                if (int.TryParse(filterQuery.Value, out int plan))
+                    return UsersPassages(entities, plan);
             }
             return base.Filter(entities, filterQuery); 
         }

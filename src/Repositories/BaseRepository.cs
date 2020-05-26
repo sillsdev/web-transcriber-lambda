@@ -2,12 +2,15 @@
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
+using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Models;
+using JsonApiDotNetCore.Serialization;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 
 
 namespace SIL.Transcriber.Repositories
@@ -51,14 +54,6 @@ namespace SIL.Transcriber.Repositories
                 return currentUserRepository.GetCurrentUser().Result;
             }
         }
-        /*
-        public override async Task<TEntity> UpdateAsync(TId id, TEntity entity)
-        {
-            var retval = await base.UpdateAsync(id, entity);
-            statusUpdateService.DidUpdate(retval);
-            return retval;
-        }
-        */
         public override async Task<TEntity> CreateAsync(TEntity entity)
         {
             try
@@ -73,17 +68,39 @@ namespace SIL.Transcriber.Repositories
                 throw ex;  //does this go back to my controller?  Nope...eaten by JsonApiExceptionFilter.  TODO: Figure out a way to capture it and return a 400 instead
             }
         }
-      /*
-        public override async Task<bool> DeleteAsync(TId id)
+        #region MultipleData //orgdata, projdata
+        protected string InitData()
         {
-            var entity = await GetAsync(id);
-            var retval = await base.DeleteAsync(id);
-            if (retval)
-            {
-                statusUpdateService.DidDelete(entity);
-            }
-            return retval;
+            return "{\"data\":[";
         }
-        */
+        protected string FinishData()
+        {
+            return "]}";
+        }
+        protected bool CheckAdd(int check, object entity, DateTime dtBail, IJsonApiSerializer jsonApiSerializer, ref int start, ref string data)
+        {
+            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail) return false;
+            if (start <= check)
+            {
+                string thisdata = jsonApiSerializer.Serialize(entity);
+                if (data.Length + thisdata.Length > (1000000 * 4))
+                    return false;
+                data += (data.Length > 0 ? "," : InitData()) + thisdata;
+                start++;
+            }
+            return true;
+        }
+        #endregion
+
+        public override IQueryable<TEntity> Filter(IQueryable<TEntity> entities, FilterQuery filterQuery)
+        {
+            if (filterQuery.Has(IDLIST))
+            {
+                string[] idList = filterQuery.Value.Split("|");
+                return entities.Where(e => idList.Any(i => i == e.Id.ToString()));
+            }
+            return base.Filter(entities, filterQuery);
+        }
     }
 }

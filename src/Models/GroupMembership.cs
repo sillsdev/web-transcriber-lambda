@@ -5,11 +5,11 @@ namespace SIL.Transcriber.Models
 {
     public partial class GroupMembership : BaseModel, IArchive
     {
-        [HasOne("user")]
+        [HasOne("user", Link.None)]
         public virtual User User { get; set; }
         public int UserId { get; set; }
 
-        [HasOne("group")]
+        [HasOne("group", Link.None)]
         public virtual Group Group { get; set; }
         public int GroupId { get; set; }
 

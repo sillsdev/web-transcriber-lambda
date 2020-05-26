@@ -22,6 +22,7 @@ namespace SIL.Transcriber.Controllers
         OrganizationMembershipService OrgMemService;
         OrganizationService OrganizationService;
         PassageService PassageService;
+        PassageStateChangeService PassageStateChangeService;
         PlanService PlanService;
         ProjectIntegrationService ProjIntService;
         ProjectService ProjectService;
@@ -43,6 +44,7 @@ namespace SIL.Transcriber.Controllers
             OrganizationMembershipService omService,
             OrganizationService organizationService,
             PassageService passageService,
+            PassageStateChangeService passageStateChangeService,
             PlanService planService,
             ProjectIntegrationService piService,
             ProjectService projectService,
@@ -60,6 +62,7 @@ namespace SIL.Transcriber.Controllers
             OrgMemService = omService;
             OrganizationService = organizationService;
             PassageService = passageService;
+            PassageStateChangeService = passageStateChangeService;
             PlanService = planService;
             ProjIntService = piService;
             ProjectService = projectService;
@@ -109,6 +112,8 @@ namespace SIL.Transcriber.Controllers
 
             BuildList(PassageService.GetChanges(currentUser, origin, dtSince), "passage", changes);
             BuildList(PassageService.GetDeletedSince(currentUser, origin, dtSince), "passage", deleted);
+            
+            BuildList(PassageStateChangeService.GetChanges(currentUser, origin, dtSince), "passagestatechange", changes);
 
             BuildList(PlanService.GetChanges(currentUser, origin, dtSince), "plan", changes);
             BuildList(PlanService.GetDeletedSince(currentUser, origin, dtSince), "plan", deleted);
@@ -124,7 +129,7 @@ namespace SIL.Transcriber.Controllers
 
             BuildList(UserService.GetChanges(currentUser, origin, dtSince), "user", changes);
             BuildList(UserService.GetDeletedSince(currentUser, origin, dtSince), "user", deleted);
-
+ 
             DataChanges ret = new DataChanges() { Id = 1,  Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
             return Ok(ret);
         }

@@ -30,22 +30,22 @@ namespace SIL.Transcriber.Models
         [Attr("plan-id")]
         public int PlanId { get; set; }
 
-        [HasOne("plan")]
+        [HasOne("plan", Link.None)]
         public virtual Plan Plan { get; set; }
 
         [Attr("transcriber-id")]
         public int? TranscriberId { get; set; }
 
-        [HasOne("transcriber")]
+        [HasOne("transcriber", Link.None)]
         public virtual User Transcriber { get; set; }
 
         [Attr("editor-id")]
         public int? EditorId { get; set; }
 
-        [HasOne("editor")]
+        [HasOne("editor", Link.None)]
         public virtual User Editor { get; set; }
 
-        [HasMany("passages")]
+        [HasMany("passages", Link.None)]
         public List<Passage> Passages { get; set; }
         public bool Archived { get; set; }
 

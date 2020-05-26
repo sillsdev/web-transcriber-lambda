@@ -48,8 +48,16 @@ functions:
        - http:
             path: /api/{proxy+}
             method: ANY
-            cors: true  #this doesn't actually work with proxy above but leave it in here as a note that we want cors
- 
+            cors:
+             origin: '*'
+             headers:
+              - X-Fp
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
 
 # Create our resources with separate CloudFormation templates
 resources:
@@ -167,6 +175,11 @@ resources:
        RestApiId:
          Ref: 'ApiGatewayRestApi'
 
+##If the X-Fp header is not working (totally guessed on the cors stuff above)
+##go to aws console, API Gateway, choose api
+##Resources -> /{proxy} -> Actions Enable Cors
+## Add X-Fp, to Access-Control-Allow-Headers
+## Push "Enable cors and replace existing cors headers" button
 ##This doesn't work...so go create this s3 bucket manually
 # Further instructions in file AWSConfig.txt
 

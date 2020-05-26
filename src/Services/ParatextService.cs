@@ -451,11 +451,11 @@ namespace SIL.Transcriber.Services
                 chapter.NewUSX = ParatextHelpers.AddParatextChapter(chapter.NewUSX, chapter.Book, chapter.Chapter);
                 IEnumerable<SectionSummary> ss = SectionService.GetSectionSummary(planId, chapter.Book, chapter.Chapter);
                 chapter.NewUSX = ParatextHelpers.AddSectionHeaders(chapter.NewUSX, ss);
-                HttpContext.SetOrigin("paratext");
+                HttpContext.SetFP("paratext");
                 foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                 {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);
-                    HttpContext.SetOrigin("paratext");
+                    HttpContext.SetFP("paratext");
                     passage.State = "synced";
                     await PassageService.UpdateAsync(passage.Id, passage);
                 }

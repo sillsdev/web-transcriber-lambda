@@ -134,9 +134,14 @@ namespace SIL.Transcriber.Data
                 {
                     if (entry.State == EntityState.Added)
                     {
-                        trackDate.DateCreated = now;
+                        if (trackDate.DateCreated == null) //if the front end set it, leave it.  We're using this to catch duplicates
+                        {
+                            trackDate.DateCreated = now;
+                            trackDate.DateUpdated = now;
+                        }
                     }
-                    trackDate.DateUpdated = now;
+                    else
+                        trackDate.DateUpdated = now;
                 }
             }
             int userid = CurrentUserId();
@@ -150,7 +155,7 @@ namespace SIL.Transcriber.Data
 
             }
 
-            string origin = HttpContext.GetOrigin() ?? "http://localhost:3000";
+            string origin = HttpContext.GetFP() ?? "noFP";
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (EntityEntry entry in entries)
             {
@@ -214,6 +219,7 @@ namespace SIL.Transcriber.Data
         public DbSet<PassageStateChange> Passagestatechanges { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<PlanType> Plantypes { get; set; }
+        public DbSet<ProjData> Projdatas { get; set; }
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectType> Projecttypes { get; set; }

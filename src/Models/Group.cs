@@ -17,12 +17,12 @@ namespace SIL.Transcriber.Models
         [Attr("all-users")]
         public bool AllUsers { get; set; }
 
-        [HasOne("owner")]
+        [HasOne("owner", Link.None)]
         public virtual Organization Owner { get; set; }
         [Attr("owner-id")]
         public int OwnerId { get; set; }
         
-        [HasMany("projects")]
+        [HasMany("projects", Link.None)]
         public virtual List<Project> Projects { get; set; }
 
         [HasMany("group-memberships", Link.None)]
