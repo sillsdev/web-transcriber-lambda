@@ -36,6 +36,7 @@ namespace SIL.Transcriber.Services
         private readonly HttpClient _registryClient;
 
         private PassageService PassageService;
+        private PassageStateChangeService PassageStateChangeService;
         private SectionService SectionService;
         private ProjectService ProjectService;
         private PlanService PlanService;
@@ -51,6 +52,7 @@ namespace SIL.Transcriber.Services
             IHttpContextAccessor httpContextAccessor,
             ICurrentUserContext currentUserContext,
             PassageService passageService,
+            PassageStateChangeService passageStateChangeService,
             SectionService sectionService,
             PlanService planService,
             ProjectService projectService,
@@ -63,6 +65,7 @@ namespace SIL.Transcriber.Services
             HttpContext = httpContextAccessor.HttpContext;
             _userSecretRepository = userSecrets;
             PassageService = passageService;
+            PassageStateChangeService = passageStateChangeService;
             SectionService = sectionService;
             ProjectService = projectService;
             PlanService = planService;
@@ -456,14 +459,16 @@ namespace SIL.Transcriber.Services
                 {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);
                     HttpContext.SetFP("paratext");
-                    passage.State = "synced";
+                    passage.State = "done";
                     await PassageService.UpdateAsync(passage.Id, passage);
+                    passage.LastComment = "Paratext";
+                    await PassageStateChangeService.CreateAsync(passage);
                 }
             }
             foreach (ParatextChapter c in chapterList)
             {
                 string bookText = await UpdateChapterTextAsync(userSecret, paratextId, c.Book, c.Chapter, c.Revision, c.NewUSX.ToString());
-                var bookTextElem = XElement.Parse(bookText);
+                XElement bookTextElem = XElement.Parse(bookText);
                 c.NewValue = bookTextElem.Value;
                 c.NewUSX = bookTextElem.Element("usx");
             }
