@@ -30,7 +30,7 @@ namespace SIL.Transcriber.Repositories
     public class BaseRepository<TEntity, TId> : DefaultEntityRepository<TEntity, TId>
         where TEntity : BaseModel, IIdentifiable<TId>
     {
-        protected readonly DbSet<TEntity> dbSet;
+        //protected readonly DbSet<TEntity> dbSet;
         protected readonly CurrentUserRepository currentUserRepository;
         //protected readonly EntityHooksService<TEntity, TId> statusUpdateService;
         protected readonly AppDbContext dbContext;
@@ -44,7 +44,7 @@ namespace SIL.Transcriber.Repositories
             ) : base(loggerFactory, jsonApiContext, contextResolver)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
-            this.dbSet = contextResolver.GetDbSet<TEntity>();
+            //this.dbSet = contextResolver.GetDbSet<TEntity>();
             this.currentUserRepository = currentUserRepository;
             this.Logger = loggerFactory.CreateLogger<TEntity>();
         }

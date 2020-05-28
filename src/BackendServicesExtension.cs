@@ -30,6 +30,7 @@ namespace SIL.Transcriber
                 options.AllowCustomQueryParameters = true;
                 //options.EnableOperations = true;
                 options.BuildResourceGraph((builder) => {
+                    //builder.AddResource<Dashboard>();
                     builder.AddResource<DataChanges>();
                     builder.AddResource<FileResponse>();
                 });
@@ -83,6 +84,7 @@ namespace SIL.Transcriber
 
 
             // EventDispatchers
+            services.AddScoped<DashboardRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();

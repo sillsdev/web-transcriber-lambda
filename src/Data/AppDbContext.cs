@@ -206,6 +206,7 @@ namespace SIL.Transcriber.Data
             }
         }
         public DbSet<Activitystate> Activitystates { get; set; }
+        public DbSet<Dashboard> Dashboards { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
