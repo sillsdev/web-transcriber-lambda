@@ -24,12 +24,12 @@ namespace SIL.Transcriber.Services
                 base.GetAsync,
                 JsonApiContext);
         }
-        public Task<PassageStateChange> CreateAsync(Passage passage)
+        public Task<PassageStateChange> CreateAsync(Passage passage, string comment)
         {
             return base.CreateAsync(new PassageStateChange { 
                 PassageId = passage.Id, 
                 State = passage.State,
-                Comments = passage.LastComment});
+                Comments = comment});
         }
     }
     
