@@ -246,11 +246,17 @@ namespace SIL.Transcriber.Services
         private FileResponse CheckProgress(int projectid, string fileName)
         {
             int startNext =0;
+            string err = "";
             try
             {
                 Stream ms = OpenFile(fileName + ".sss");
                 StreamReader reader = new StreamReader(ms);
                 string data = reader.ReadToEnd();
+                if (data.IndexOf("|") > 0)
+                {
+                    err = data.Substring(data.IndexOf("|") + 1);
+                    data = data.Substring(0, data.IndexOf("|"));
+                }
                 int.TryParse(data, out startNext);
             }
             catch
@@ -259,7 +265,7 @@ namespace SIL.Transcriber.Services
                 Logger.LogInformation("status file not available");
                 startNext = 9;
             }
-            if (startNext == -1)
+            if (startNext < 0)
             {
                 try
                 {
@@ -273,10 +279,10 @@ namespace SIL.Transcriber.Services
 
             return new FileResponse()
             {
-                Message = fileName+".ptf",
+                Message = startNext == -2 ? err : fileName +".ptf",
                 //get a signedurl for it if we're done
                 FileURL = startNext == -1 ? _S3service.SignedUrlForGet(fileName + ".ptf", ExportFolder, ContentType).Message : "",
-                Status = startNext == -1 ? System.Net.HttpStatusCode.OK : System.Net.HttpStatusCode.PartialContent,
+                Status = startNext == -1 ? System.Net.HttpStatusCode.OK : startNext == -2 ? System.Net.HttpStatusCode.RequestEntityTooLarge : System.Net.HttpStatusCode.PartialContent,
                 ContentType = ContentType,
                 Id = startNext,
             };
