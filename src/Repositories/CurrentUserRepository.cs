@@ -1,14 +1,13 @@
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -36,7 +35,7 @@ namespace SIL.Transcriber.Repositories
         // this should be ok.
         public async Task<User> GetCurrentUser()
         {
-            var auth0Id = this.CurrentUserContext.Auth0Id; 
+            var auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
 
             var userFromResult = this.DBContext
                 .Users.Local
