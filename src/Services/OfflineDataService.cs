@@ -722,6 +722,7 @@ namespace SIL.Transcriber.Services
                     }
                 }
                 int ret = await dbContext.SaveChangesNoTimestampAsync();
+                report.RemoveAll(s => s.Length == 0);
 
                 return new FileResponse()
                 {
