@@ -331,6 +331,12 @@ namespace SIL.Transcriber.Services
                     Dictionary<string, string> fonts = new Dictionary<string, string>();
                     fonts.Add("Charis SIL", "");
                     DateTime exported = AddCheckEntry(zipArchive);
+                    AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+
                     //org
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
                     List<Organization> orgList = orgs.ToList();
