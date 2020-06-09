@@ -140,10 +140,11 @@ namespace SIL.Transcriber.Services
             return entity;
         }
 
-        public Mediafile GetFileSignedUrl(int id)
+        public async Task<Mediafile> GetFileSignedUrlAsync(int id)
         {
             Mediafile mf = MediafileRepository.Get(id);
             mf.AudioUrl = _S3service.SignedUrlForGet(mf.S3File, DirectoryName(mf), mf.ContentType).Message;
+            await MediafileRepository.UpdateAsync(id, mf);
             return mf;
         }
 

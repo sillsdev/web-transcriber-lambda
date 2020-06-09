@@ -53,17 +53,6 @@ namespace SIL.Transcriber.Models
         [HasMany("projects", Link.None)]
         public List<Project> Projects { get; set; }
 
-        /*
-        [HasMany("organization-memberships", Link.None)]
-        public virtual List<OrganizationMembership> OrganizationMemberships { get; set; }
-
-        [NotMapped]
-        [HasMany("userids", Link.None)]
-        public IEnumerable<int> UserIds => OrganizationMemberships?.Select(om => om.UserId);
-        [NotMapped]
-        [HasMany("users", Link.None)]
-        public IEnumerable<User> Users => OrganizationMemberships?.Select(om => om.User);
-        */
         public bool Archived { get; set; }
     }
 }

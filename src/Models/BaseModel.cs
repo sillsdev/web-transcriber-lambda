@@ -14,5 +14,11 @@ namespace SIL.Transcriber.Models
         public int? LastModifiedBy { get; set; }
         [Attr("last-modified-origin")]
         public string LastModifiedOrigin { get; set; }
+        public object ShallowCopy()
+        {
+            return this.MemberwiseClone();
+        }
     }
+
+
 }

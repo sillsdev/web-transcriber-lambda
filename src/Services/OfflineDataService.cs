@@ -417,7 +417,8 @@ namespace SIL.Transcriber.Services
                         if (tmp.IndexOf(prefix) > 0)
                             tmp = tmp.Substring(tmp.IndexOf(prefix) + prefix.Length);
                         //this looks like 475_Org11/438_NewPla/02%20Tyrannosaurus%20Funk__a7e1f4c0-96d3-466b-952c-5c82c077dacc.mp3
-                        m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
+                        if (tmp.LastIndexOf("/") > 0)
+                            m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
                     });
                     if (!CheckAdd(7, dtBail,  ref startNext, zipArchive, "mediafiles", mediaList, 'H')) break;
                     //if (!AddMedia(7, dtBail,  ref startNext, zipArchive, mediaList)) break;
@@ -491,8 +492,9 @@ namespace SIL.Transcriber.Services
             Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.Transcription != imported.Transcription && online.Transcription != null)
             {
-                online.AudioUrl = "";
-                return ChangesReport("mediafile", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+                Mediafile copy = (Mediafile) online.ShallowCopy();
+                copy.AudioUrl = "";
+                return ChangesReport("mediafile", jsonApiSerializer.Serialize(copy), jsonApiSerializer.Serialize(imported));
             }            
             return "";
         }
