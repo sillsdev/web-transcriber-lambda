@@ -45,13 +45,16 @@ namespace SIL.Transcriber.Repositories
                 return await System.Threading.Tasks.Task.FromResult(userFromResult);
             }
 
-            var currentUser = await Get()
+            User currentUser = await Get()
                 .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
                 .Include(user => user.OrganizationMemberships)
                 .Include(user => user.GroupMemberships)
                 .FirstOrDefaultAsync();
+            User copy = (User)currentUser.ShallowCopy();
+            copy.OrganizationMemberships = currentUser.OrganizationMemberships.Where(om => !om.Archived).ToList();
+            copy.GroupMemberships = currentUser.GroupMemberships.Where(gm => !gm.Archived).ToList();
 
-            return currentUser;
+            return copy;
         }
         public bool IsSuperAdmin(User currentuser)
         {

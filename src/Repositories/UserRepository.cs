@@ -72,7 +72,7 @@ namespace SIL.Transcriber.Repositories
             // organizations that the current user is a member
 
             return query
-                .Where(u => u.OrganizationMemberships
+                .Where(u => u.OrganizationMemberships.Where(om => !om.Archived)
                             .Select(o => o.OrganizationId)
                             .Intersect(orgIds)
                             .Any());
@@ -87,7 +87,7 @@ namespace SIL.Transcriber.Repositories
         {
             return query.Where(
                       u => u.OrganizationMemberships
-                     .Any(om => om.OrganizationId.ToString() == value));
+                     .Any(om => !om.Archived && om.OrganizationId.ToString() == value));
         }
 
         public async Task<User> GetByAuth0Id(string auth0Id)

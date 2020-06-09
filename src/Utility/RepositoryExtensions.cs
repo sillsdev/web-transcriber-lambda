@@ -35,28 +35,6 @@ namespace SIL.Transcriber.Utility
             return exitFilter(query, filterQuery);
         }
 
-        public static IQueryable<T> GetWithFilter<T>(IQueryable<T> query,
-           string value,
-           UserRepository userRepository,
-           ICurrentUserContext currentUserContext,
-           Func<IQueryable<T>, IEnumerable<int>, IQueryable<T>> getAllQuery,
-           Func<IQueryable<T>, IEnumerable<int>, IQueryable<T>> getFilteredQuery)
-        {
-            var currentUser = userRepository.GetByAuth0Id(currentUserContext.Auth0Id).Result;
-            if (currentUser == null) 
-                    return Enumerable.Empty<T>().AsQueryable(); ;
-
-            var orgIds = currentUser.OrganizationIds.OrEmpty();
-
-            if (string.IsNullOrEmpty(value))
-            {
-
-                return getAllQuery(query, orgIds);
-            }
-            return getFilteredQuery(query, orgIds);
-        }
-
-
         public static IQueryable<T> GetAllInOrganizationIds<T>(this IQueryable<T> query, IEnumerable<int> orgIds) where T : IBelongsToOrganization, new()
         {
             return query.Where(p => orgIds.Contains(p.OrganizationId));
