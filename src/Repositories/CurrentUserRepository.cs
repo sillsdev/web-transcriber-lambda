@@ -50,11 +50,16 @@ namespace SIL.Transcriber.Repositories
                 .Include(user => user.OrganizationMemberships)
                 .Include(user => user.GroupMemberships)
                 .FirstOrDefaultAsync();
-            User copy = (User)currentUser.ShallowCopy();
-            copy.OrganizationMemberships = currentUser.OrganizationMemberships.Where(om => !om.Archived).ToList();
-            copy.GroupMemberships = currentUser.GroupMemberships.Where(gm => !gm.Archived).ToList();
 
-            return copy;
+            if (currentUser != null)
+            {
+                User copy = (User)currentUser.ShallowCopy();
+                copy.OrganizationMemberships = currentUser.OrganizationMemberships.Where(om => !om.Archived).ToList();
+                copy.GroupMemberships = currentUser.GroupMemberships.Where(gm => !gm.Archived).ToList();
+
+                return copy;
+            }
+            return null;
         }
         public bool IsSuperAdmin(User currentuser)
         {
