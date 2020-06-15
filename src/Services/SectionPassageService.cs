@@ -63,44 +63,56 @@ namespace SIL.Transcriber.Services
             {
                 try
                 {
-                    IEnumerable<JToken> updsecs = data.Where(d =>(bool)d["issection"] && (bool)d["changed"]);
+                    IEnumerable<JToken> updsecs = data.Where(d => (bool)d[0]["issection"] && (bool)d[0]["changed"]);
                     //add all sections
                     List<Section> updsections = new List<Section>();
 
-                    foreach (JToken item in updsecs)
+                    foreach (JArray item in updsecs)
                     {
-                        updsections.Add(item["id"] != null ? MyRepository.GetSection((int)item["id"]).UpdateFrom(item) : new Section(item, entity.PlanId));
+                        updsections.Add(item[0]["id"] != null ? MyRepository.GetSection((int)item[0]["id"]).UpdateFrom(item[0]) : new Section(item[0], entity.PlanId));
                     }
                     if (updsections.Count > 0)
                     {
                         MyRepository.BulkUpdateSections(updsections);
                         int ix = 0;
-                        foreach (JToken item in updsecs)
+                        foreach (JArray item in updsecs)
                         {
-                            item["id"] = updsections[ix].Id;
+                            item[0]["id"] = updsections[ix].Id;
                             ix++;
                         }
                     }
                     int lastSectionId = 0;
                     /* process all the passages now */
+                    List<JToken> updpass = new List<JToken>();
                     List<Passage> updpassages = new List<Passage>();
-                    foreach (JToken item in data)
+                    foreach (JArray item in data)
                     {
-                        if ((bool)item["issection"])
+                        if ((bool)item[0]["issection"])
                         {
-                            lastSectionId = (int)item["id"];
+                            lastSectionId = (int)item[0]["id"];
+                            if (item.Count > 1 && (bool)item[1]["changed"])
+                            {
+                                updpass.Add(item);
+                                updpassages.Add(item[1]["id"] != null ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
+                            }
                         }
-                        else if ((bool)item["changed"])
+                        else if ((bool)item[0]["changed"])
                         {
-                           updpassages.Add(item["id"] != null ? MyRepository.GetPassage((int)item["id"]).UpdateFrom(item): new Passage(item, lastSectionId));
+                            updpass.Add(item);
+                            updpassages.Add(item[0]["id"] != null ? MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]): new Passage(item[0], lastSectionId));
                         }
                     }
                      if (updpassages.Count > 0)
                     {
                         //Logger.LogInformation($"updpassages {updpassages.Count} {updpassages}");
                         MyRepository.BulkUpdatePassages(updpassages);
+                        int ix = 0;
+                        foreach (JArray item in updpass)
+                        {
+                            item[item.Count-1]["id"] = updpassages[ix].Id;
+                            ix++;
+                        }
                     }
-                    
                     transaction.Commit();
                     entity.Data = JsonConvert.SerializeObject(data);
                     entity.Complete = true;

@@ -640,6 +640,7 @@ namespace SIL.Transcriber.Services
 
                         case "passages":
                             List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
+                            int currentuser = CurrentUser().Id;
                             foreach (Passage p in passages)
                             {
                                 Passage passage = dbContext.Passages.Find(p.Id);
@@ -649,9 +650,18 @@ namespace SIL.Transcriber.Services
                                         report.Add( PassageChangesReport(passage, p));
                                     passage.State = p.State;
                                     passage.LastModifiedBy = p.LastModifiedBy;
-                                    passage.LastModifiedOrigin = "electron";
+                                    passage.LastModifiedOrigin = "import";
                                     passage.DateUpdated = DateTime.UtcNow;
                                     dbContext.Passages.Update(passage);
+                                    PassageStateChange psc = new PassageStateChange();
+                                    psc.Comments = "Imported";  //TODO Localize
+                                    psc.DateCreated = passage.DateUpdated;
+                                    psc.DateUpdated = passage.DateUpdated;
+                                    psc.LastModifiedBy = currentuser;
+                                    psc.LastModifiedOrigin = "import";
+                                    psc.PassageId = passage.Id;
+                                    psc.State = passage.State;
+                                    dbContext.Passagestatechanges.Add(psc);
                                 }
                             };
                             break;

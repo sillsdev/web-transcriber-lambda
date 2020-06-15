@@ -35,9 +35,9 @@ namespace SIL.Transcriber.Repositories
         // this should be ok.
         public async Task<User> GetCurrentUser()
         {
-            var auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
+            string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
 
-            var userFromResult = this.DBContext
+            User userFromResult = this.DBContext
                 .Users.Local
                 .FirstOrDefault(u => !u.Archived && u.ExternalId.Equals(auth0Id));
 
