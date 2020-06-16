@@ -613,7 +613,6 @@ namespace SIL.Transcriber.Services
                                 user.Timezone = u.Timezone;
                                 user.uilanguagebcp47 = u.uilanguagebcp47;
                                 user.LastModifiedBy = u.LastModifiedBy;
-                                user.LastModifiedOrigin = "electron";
                                 user.DateUpdated = DateTime.UtcNow; 
                                 /* TODO: figure out if the avatar needs uploading */
                                 dbContext.Users.Update(user);
@@ -632,7 +631,6 @@ namespace SIL.Transcriber.Services
                                 section.TranscriberId = s.TranscriberId;
                                 section.State = s.State;
                                 section.LastModifiedBy = s.LastModifiedBy;
-                                section.LastModifiedOrigin = "electron";
                                 section.DateUpdated = DateTime.UtcNow; 
                                 dbContext.Sections.Update(section);
                             };
@@ -650,7 +648,6 @@ namespace SIL.Transcriber.Services
                                         report.Add( PassageChangesReport(passage, p));
                                     passage.State = p.State;
                                     passage.LastModifiedBy = p.LastModifiedBy;
-                                    passage.LastModifiedOrigin = "import";
                                     passage.DateUpdated = DateTime.UtcNow;
                                     dbContext.Passages.Update(passage);
                                     PassageStateChange psc = new PassageStateChange();
@@ -658,7 +655,6 @@ namespace SIL.Transcriber.Services
                                     psc.DateCreated = passage.DateUpdated;
                                     psc.DateUpdated = passage.DateUpdated;
                                     psc.LastModifiedBy = currentuser;
-                                    psc.LastModifiedOrigin = "import";
                                     psc.PassageId = passage.Id;
                                     psc.State = passage.State;
                                     dbContext.Passagestatechanges.Add(psc);
@@ -677,17 +673,34 @@ namespace SIL.Transcriber.Services
                             } */
                             foreach(Mediafile m in mediafiles)
                             {
-                                Mediafile mediafile = dbContext.Mediafiles.Find(m.Id);
-                                if (mediafile.Transcription != m.Transcription)
+                                Mediafile mediafile;
+                                if (m.Id > 0)
                                 {
-                                    if (mediafile.DateUpdated > sourceDate)
-                                        report.Add(MediafileChangesReport(mediafile, m));
-                                    mediafile.Position = m.Position;
-                                    mediafile.Transcription = m.Transcription;
-                                    mediafile.LastModifiedBy = m.LastModifiedBy;
-                                    mediafile.LastModifiedOrigin = "electron";
-                                    mediafile.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Mediafiles.Update(mediafile);
+                                    mediafile = dbContext.Mediafiles.Find(m.Id);
+                                    if (mediafile.Transcription != m.Transcription)
+                                    {
+                                        if (mediafile.DateUpdated > sourceDate)
+                                            report.Add(MediafileChangesReport(mediafile, m));
+                                        mediafile.Position = m.Position;
+                                        mediafile.Transcription = m.Transcription;
+                                        mediafile.LastModifiedBy = m.LastModifiedBy;
+                                        mediafile.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Mediafiles.Update(mediafile);
+                                    }
+                                }
+                                else
+                                {
+                                    /* the only way this happens now is on a reopen.  If we start allowing them to actually replace the mediafile,
+                                     * we'll have to upload it from the zip file and create a new s3 file */
+                                    mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                    Mediafile newmf = (Mediafile)mediafile.ShallowCopy();
+                                    newmf.Transcription = m.Transcription;
+                                    newmf.Id = 0;
+                                    newmf.LastModifiedBy = m.LastModifiedBy;
+                                    newmf.DateCreated = m.DateCreated;
+                                    newmf.VersionNumber = m.VersionNumber;
+                                    newmf.DateUpdated = DateTime.UtcNow;
+                                    dbContext.Mediafiles.Add(newmf);
                                 }
                             };
                             break;
@@ -703,7 +716,6 @@ namespace SIL.Transcriber.Services
                                         report.Add(GrpMemChangesReport(grpmem, gm));
                                     grpmem.FontSize = gm.FontSize;
                                     grpmem.LastModifiedBy = gm.LastModifiedBy;
-                                    grpmem.LastModifiedOrigin = "electron";
                                     grpmem.DateUpdated = DateTime.UtcNow;
                                     dbContext.Groupmemberships.Update(grpmem);
                                 }
