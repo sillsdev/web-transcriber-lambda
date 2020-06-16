@@ -341,8 +341,8 @@ namespace SIL.Transcriber.Services
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
                     List<Organization> orgList = orgs.ToList();
 
-                    AddJsonEntry(zipArchive, "organizations", orgList, 'B');
                     AddOrgLogos(zipArchive, orgList);
+                    AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
                     //groups
                     IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
