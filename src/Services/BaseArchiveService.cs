@@ -20,23 +20,17 @@ namespace SIL.Transcriber.Services
             ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
         {
         }
-        public async Task<IEnumerable<TResource>> GetDeleted()
+
+        public override IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since)
         {
-            //return archived
-            IEnumerable<TResource> entities = await base.GetAsync();
-            if (typeof(IArchive).IsAssignableFrom(typeof(TResource)))
-            {
-                entities = entities.Where(t => t.Archived);
-            }
-            return entities;
+            IEnumerable<TResource> entities = base.GetChanges(currentuser, origin, since);
+            return entities.Where(t => !t.Archived);;
         }
-        public IEnumerable<TResource> GetChanges(IEnumerable<TResource> entities, int currentuser, string origin, DateTime since)
-        {
-            return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
-        }
+
         public IEnumerable<TResource> GetDeletedSince(int currentuser, string origin, DateTime since)
         {
-            return GetChanges(GetDeleted().Result, currentuser, origin, since);
+            IEnumerable<TResource> entities = base.GetAsync().Result; //avoid the current user thing...
+            return base.GetChanges(entities, currentuser, origin, since).Where(t => t.Archived); ;
         }
         public override async Task<IEnumerable<TResource>> GetAsync()
         {

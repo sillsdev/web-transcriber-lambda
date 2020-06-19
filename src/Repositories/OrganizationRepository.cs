@@ -27,7 +27,7 @@ namespace SIL.Transcriber.Repositories
         {
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                return entities.Join(dbContext.Organizationmemberships.Where(om => om.UserId == CurrentUser.Id), o => o.Id, om => om.OrganizationId, (o, om) => o).GroupBy(o => o.Id).Select(g => g.First());
+                return entities.Join(dbContext.Organizationmemberships.Where(om => om.UserId == CurrentUser.Id && !om.Archived), o => o.Id, om => om.OrganizationId, (o, om) => o).GroupBy(o => o.Id).Select(g => g.First());
             }
             return entities;
         }

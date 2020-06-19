@@ -45,7 +45,7 @@ namespace SIL.Transcriber.Models
         [Attr("uilanguagebcp47")]
         public string uilanguagebcp47 { get; set; }
         [Attr("timercount-up")]
-        public Boolean? timercountup { get; set;}
+        public Boolean? timercountup { get; set; }
         [Attr("playback-speed")]
         public int? playbackspeed { get; set; }
         [Attr("progressbar-typeid")]
@@ -72,16 +72,16 @@ namespace SIL.Transcriber.Models
         public virtual List<GroupMembership> GroupMemberships { get; set; }
         
         [NotMapped]
-        public IEnumerable<int> OrganizationIds => OrganizationMemberships?.Select(o => o.OrganizationId);
+        public IEnumerable<int> OrganizationIds => OrganizationMemberships?.Where(om => !om.Archived).Select(o => o.OrganizationId);
 
         [NotMapped]
-        public IEnumerable<Organization> Organizations => OrganizationMemberships?.Select(o => o.Organization);
+        public IEnumerable<Organization> Organizations => OrganizationMemberships?.Where(om => !om.Archived).Select(o => o.Organization);
 
         [NotMapped]
-        public IEnumerable<int> GroupIds => GroupMemberships?.Select(g => g.GroupId);
+        public IEnumerable<int> GroupIds => GroupMemberships?.Where(gm => !gm.Archived).Select(g => g.GroupId);
 
         [NotMapped]
-        public IEnumerable<Group> Groups => GroupMemberships?.Select(g => g.Group);
+        public IEnumerable<Group> Groups => GroupMemberships?.Where(gm => !gm.Archived).Select(g => g.Group);
 
         //[NotMapped]
         //public IEnumerable<Group> ProjectIds => GroupMemberships?.Select(g => g.Group);
@@ -97,7 +97,7 @@ namespace SIL.Transcriber.Models
             if (omSuper != null)
                 return true; //they have all the roles
 
-            return this.OrganizationMemberships.Where(r => r.OrganizationId == orgId && r.RoleName == role).FirstOrDefault() != null;
+            return this.OrganizationMemberships.Where(r => r.OrganizationId == orgId && r.RoleName == role && !r.Archived).FirstOrDefault() != null;
         }
         public bool HasGroupRole(RoleName role, int groupid)
         {
@@ -110,7 +110,7 @@ namespace SIL.Transcriber.Models
             if (omSuper != null)
                 return true; //they have all the roles
 
-            return this.GroupMemberships.Where(r => r.GroupId == groupid && r.RoleName == role).FirstOrDefault() != null;
+            return this.GroupMemberships.Where(r => r.GroupId == groupid && r.RoleName == role && !r.Archived).FirstOrDefault() != null;
 
         }
         /*

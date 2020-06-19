@@ -1,14 +1,13 @@
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -36,9 +35,9 @@ namespace SIL.Transcriber.Repositories
         // this should be ok.
         public async Task<User> GetCurrentUser()
         {
-            var auth0Id = this.CurrentUserContext.Auth0Id; 
+            string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
 
-            var userFromResult = this.DBContext
+            User userFromResult = this.DBContext
                 .Users.Local
                 .FirstOrDefault(u => !u.Archived && u.ExternalId.Equals(auth0Id));
 
@@ -46,13 +45,21 @@ namespace SIL.Transcriber.Repositories
                 return await System.Threading.Tasks.Task.FromResult(userFromResult);
             }
 
-            var currentUser = await Get()
+            User currentUser = await Get()
                 .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
                 .Include(user => user.OrganizationMemberships)
                 .Include(user => user.GroupMemberships)
                 .FirstOrDefaultAsync();
 
-            return currentUser;
+            if (currentUser != null)
+            {
+                User copy = (User)currentUser.ShallowCopy();
+                copy.OrganizationMemberships = currentUser.OrganizationMemberships.Where(om => !om.Archived).ToList();
+                copy.GroupMemberships = currentUser.GroupMemberships.Where(gm => !gm.Archived).ToList();
+
+                return copy;
+            }
+            return null;
         }
         public bool IsSuperAdmin(User currentuser)
         {

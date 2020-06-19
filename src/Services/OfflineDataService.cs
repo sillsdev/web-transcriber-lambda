@@ -246,11 +246,17 @@ namespace SIL.Transcriber.Services
         private FileResponse CheckProgress(int projectid, string fileName)
         {
             int startNext =0;
+            string err = "";
             try
             {
                 Stream ms = OpenFile(fileName + ".sss");
                 StreamReader reader = new StreamReader(ms);
                 string data = reader.ReadToEnd();
+                if (data.IndexOf("|") > 0)
+                {
+                    err = data.Substring(data.IndexOf("|") + 1);
+                    data = data.Substring(0, data.IndexOf("|"));
+                }
                 int.TryParse(data, out startNext);
             }
             catch
@@ -259,7 +265,7 @@ namespace SIL.Transcriber.Services
                 Logger.LogInformation("status file not available");
                 startNext = 9;
             }
-            if (startNext == -1)
+            if (startNext < 0)
             {
                 try
                 {
@@ -273,10 +279,10 @@ namespace SIL.Transcriber.Services
 
             return new FileResponse()
             {
-                Message = fileName+".ptf",
+                Message = startNext == -2 ? err : fileName +".ptf",
                 //get a signedurl for it if we're done
                 FileURL = startNext == -1 ? _S3service.SignedUrlForGet(fileName + ".ptf", ExportFolder, ContentType).Message : "",
-                Status = startNext == -1 ? System.Net.HttpStatusCode.OK : System.Net.HttpStatusCode.PartialContent,
+                Status = startNext == -1 ? System.Net.HttpStatusCode.OK : startNext == -2 ? System.Net.HttpStatusCode.RequestEntityTooLarge : System.Net.HttpStatusCode.PartialContent,
                 ContentType = ContentType,
                 Id = startNext,
             };
@@ -325,12 +331,18 @@ namespace SIL.Transcriber.Services
                     Dictionary<string, string> fonts = new Dictionary<string, string>();
                     fonts.Add("Charis SIL", "");
                     DateTime exported = AddCheckEntry(zipArchive);
+                    AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+
                     //org
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
                     List<Organization> orgList = orgs.ToList();
 
-                    AddJsonEntry(zipArchive, "organizations", orgList, 'B');
                     AddOrgLogos(zipArchive, orgList);
+                    AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
                     //groups
                     IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
@@ -405,7 +417,8 @@ namespace SIL.Transcriber.Services
                         if (tmp.IndexOf(prefix) > 0)
                             tmp = tmp.Substring(tmp.IndexOf(prefix) + prefix.Length);
                         //this looks like 475_Org11/438_NewPla/02%20Tyrannosaurus%20Funk__a7e1f4c0-96d3-466b-952c-5c82c077dacc.mp3
-                        m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
+                        if (tmp.LastIndexOf("/") > 0)
+                            m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
                     });
                     if (!CheckAdd(7, dtBail,  ref startNext, zipArchive, "mediafiles", mediaList, 'H')) break;
                     //if (!AddMedia(7, dtBail,  ref startNext, zipArchive, mediaList)) break;
@@ -479,8 +492,9 @@ namespace SIL.Transcriber.Services
             Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.Transcription != imported.Transcription && online.Transcription != null)
             {
-                online.AudioUrl = "";
-                return ChangesReport("mediafile", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+                Mediafile copy = (Mediafile) online.ShallowCopy();
+                copy.AudioUrl = "";
+                return ChangesReport("mediafile", jsonApiSerializer.Serialize(copy), jsonApiSerializer.Serialize(imported));
             }            
             return "";
         }
@@ -599,7 +613,6 @@ namespace SIL.Transcriber.Services
                                 user.Timezone = u.Timezone;
                                 user.uilanguagebcp47 = u.uilanguagebcp47;
                                 user.LastModifiedBy = u.LastModifiedBy;
-                                user.LastModifiedOrigin = "electron";
                                 user.DateUpdated = DateTime.UtcNow; 
                                 /* TODO: figure out if the avatar needs uploading */
                                 dbContext.Users.Update(user);
@@ -618,7 +631,6 @@ namespace SIL.Transcriber.Services
                                 section.TranscriberId = s.TranscriberId;
                                 section.State = s.State;
                                 section.LastModifiedBy = s.LastModifiedBy;
-                                section.LastModifiedOrigin = "electron";
                                 section.DateUpdated = DateTime.UtcNow; 
                                 dbContext.Sections.Update(section);
                             };
@@ -626,6 +638,7 @@ namespace SIL.Transcriber.Services
 
                         case "passages":
                             List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
+                            int currentuser = CurrentUser().Id;
                             foreach (Passage p in passages)
                             {
                                 Passage passage = dbContext.Passages.Find(p.Id);
@@ -635,9 +648,16 @@ namespace SIL.Transcriber.Services
                                         report.Add( PassageChangesReport(passage, p));
                                     passage.State = p.State;
                                     passage.LastModifiedBy = p.LastModifiedBy;
-                                    passage.LastModifiedOrigin = "electron";
                                     passage.DateUpdated = DateTime.UtcNow;
                                     dbContext.Passages.Update(passage);
+                                    PassageStateChange psc = new PassageStateChange();
+                                    psc.Comments = "Imported";  //TODO Localize
+                                    psc.DateCreated = passage.DateUpdated;
+                                    psc.DateUpdated = passage.DateUpdated;
+                                    psc.LastModifiedBy = currentuser;
+                                    psc.PassageId = passage.Id;
+                                    psc.State = passage.State;
+                                    dbContext.Passagestatechanges.Add(psc);
                                 }
                             };
                             break;
@@ -653,17 +673,34 @@ namespace SIL.Transcriber.Services
                             } */
                             foreach(Mediafile m in mediafiles)
                             {
-                                Mediafile mediafile = dbContext.Mediafiles.Find(m.Id);
-                                if (mediafile.Transcription != m.Transcription)
+                                Mediafile mediafile;
+                                if (m.Id > 0)
                                 {
-                                    if (mediafile.DateUpdated > sourceDate)
-                                        report.Add(MediafileChangesReport(mediafile, m));
-                                    mediafile.Position = m.Position;
-                                    mediafile.Transcription = m.Transcription;
-                                    mediafile.LastModifiedBy = m.LastModifiedBy;
-                                    mediafile.LastModifiedOrigin = "electron";
-                                    mediafile.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Mediafiles.Update(mediafile);
+                                    mediafile = dbContext.Mediafiles.Find(m.Id);
+                                    if (mediafile.Transcription != m.Transcription)
+                                    {
+                                        if (mediafile.DateUpdated > sourceDate)
+                                            report.Add(MediafileChangesReport(mediafile, m));
+                                        mediafile.Position = m.Position;
+                                        mediafile.Transcription = m.Transcription;
+                                        mediafile.LastModifiedBy = m.LastModifiedBy;
+                                        mediafile.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Mediafiles.Update(mediafile);
+                                    }
+                                }
+                                else
+                                {
+                                    /* the only way this happens now is on a reopen.  If we start allowing them to actually replace the mediafile,
+                                     * we'll have to upload it from the zip file and create a new s3 file */
+                                    mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                    Mediafile newmf = (Mediafile)mediafile.ShallowCopy();
+                                    newmf.Transcription = m.Transcription;
+                                    newmf.Id = 0;
+                                    newmf.LastModifiedBy = m.LastModifiedBy;
+                                    newmf.DateCreated = m.DateCreated;
+                                    newmf.VersionNumber = m.VersionNumber;
+                                    newmf.DateUpdated = DateTime.UtcNow;
+                                    dbContext.Mediafiles.Add(newmf);
                                 }
                             };
                             break;
@@ -679,7 +716,6 @@ namespace SIL.Transcriber.Services
                                         report.Add(GrpMemChangesReport(grpmem, gm));
                                     grpmem.FontSize = gm.FontSize;
                                     grpmem.LastModifiedBy = gm.LastModifiedBy;
-                                    grpmem.LastModifiedOrigin = "electron";
                                     grpmem.DateUpdated = DateTime.UtcNow;
                                     dbContext.Groupmemberships.Update(grpmem);
                                 }
@@ -716,6 +752,7 @@ namespace SIL.Transcriber.Services
                     }
                 }
                 int ret = await dbContext.SaveChangesNoTimestampAsync();
+                report.RemoveAll(s => s.Length == 0);
 
                 return new FileResponse()
                 {
