@@ -194,8 +194,10 @@ namespace SIL.Transcriber.Services
                 {
                     AccessToken = (string)ptIdentity.AccessToken,
                     RefreshToken = (string)ptIdentity.RefreshToken,
+                    OriginalRefreshToken = (string)ptIdentity.RefreshToken,
                     UserId = userId
                 };
+                Logger.LogInformation("Http ParatextRefreshToken: {0} ", newPTTokens.RefreshToken);
                 return new UserSecret
                 {
                     ParatextTokens = newPTTokens

@@ -106,7 +106,9 @@ namespace SIL.Transcriber.Services
             if (tokens != null && tokens.Count() > 0)
             {
                 ParatextToken token = tokens.First();
-                if (newPTToken.ParatextTokens.IssuedAt > token.IssuedAt)
+                Logger.LogInformation("Logged in ParatextRefreshToken {0} {1}", newPTToken.ParatextTokens.IssuedAt, newPTToken.ParatextTokens.RefreshToken);
+                Logger.LogInformation("Stored ParatextRefreshToken {0} {1}" , token.IssuedAt, token.RefreshToken);
+                if (newPTToken.ParatextTokens.IssuedAt > token.IssuedAt && newPTToken.ParatextTokens.RefreshToken != null)
                 {
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
@@ -220,6 +222,7 @@ namespace SIL.Transcriber.Services
                 throw new SecurityException("Paratext credentials not provided.");
             if (userSecret.ParatextTokens.AccessToken is null || userSecret.ParatextTokens.AccessToken.Length == 0)
                 throw new SecurityException("Current user is not logged in to Paratext.");
+            Logger.LogInformation("Current ParatextRefreshToken: {0}", userSecret.ParatextTokens.RefreshToken);
             return true;
         }
         public string GetParatextUsername(UserSecret userSecret)
@@ -279,7 +282,7 @@ namespace SIL.Transcriber.Services
 
         private async Task RefreshAccessTokenAsync(UserSecret userSecret)
         {
-            Logger.LogInformation("Refresh Paratext Token");
+            Logger.LogInformation("Refresh ParatextRefreshToken {0}", userSecret.ParatextTokens.RefreshToken);
             VerifyUserSecret(userSecret);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
             JObject requestObj = new JObject(
@@ -289,13 +292,26 @@ namespace SIL.Transcriber.Services
                 new JProperty("refresh_token", userSecret.ParatextTokens.RefreshToken));
             request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
             HttpResponseMessage response = await _registryClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.Log(LogLevel.Error, "Paratext Refresh with latest refresh token " + response.IsSuccessStatusCode.ToString() + response.ReasonPhrase);
+
+                request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
+                requestObj = new JObject(
+                    new JProperty("grant_type", "refresh_token"),
+                    new JProperty("client_id", GetVarOrDefault("SIL_TR_PARATEXT_CLIENT_ID", "")),
+                    new JProperty("client_secret", GetVarOrDefault("SIL_TR_PARATEXT_CLIENT_SECRET", "")),
+                    new JProperty("refresh_token", userSecret.ParatextTokens.OriginalRefreshToken));
+                request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
+                response = await _registryClient.SendAsync(request);
+            }
             Logger.Log(response.IsSuccessStatusCode ? LogLevel.Information : LogLevel.Error, "Paratext Refresh" + response.IsSuccessStatusCode.ToString() + response.ReasonPhrase);
             response.EnsureSuccessStatusCode();
-
             string responseJson = await response.Content.ReadAsStringAsync();
             JObject responseObj = JObject.Parse(responseJson);
             userSecret.ParatextTokens.AccessToken = (string)responseObj["access_token"];
             userSecret.ParatextTokens.RefreshToken = (string)responseObj["refresh_token"];
+            Logger.LogInformation("new ParatextRefreshToken {0}", userSecret.ParatextTokens.RefreshToken);
             await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
         }
 
@@ -435,7 +451,7 @@ namespace SIL.Transcriber.Services
             return total;
         }
 
-        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId)
+        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, bool addNumbers = true)
         {
             Plan plan = PlanService.Get(planId);
             IQueryable<Passage> passages = PassageService.ReadyToSync(planId);
@@ -453,15 +469,16 @@ namespace SIL.Transcriber.Services
                 //make sure we have the chapter number
                 chapter.NewUSX = ParatextHelpers.AddParatextChapter(chapter.NewUSX, chapter.Book, chapter.Chapter);
                 IEnumerable<SectionSummary> ss = SectionService.GetSectionSummary(planId, chapter.Book, chapter.Chapter);
-                chapter.NewUSX = ParatextHelpers.AddSectionHeaders(chapter.NewUSX, ss);
+                chapter.NewUSX = ParatextHelpers.RemoveSectionHeaders(chapter.NewUSX);
                 HttpContext.SetFP("paratext");
                 foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                 {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss);
                     passage.State = "done";
                     await PassageService.UpdateAsync(passage.Id, passage);
-                    await PassageStateChangeService.CreateAsync(passage, "Paratext");
+                    await PassageStateChangeService.CreateAsync(passage, "Paratext"); 
                 }
+                chapter.NewUSX = ParatextHelpers.AddSectionHeaders(chapter.NewUSX, ss, addNumbers);
             }
             foreach (ParatextChapter c in chapterList)
             {
