@@ -451,12 +451,14 @@ namespace SIL.Transcriber.Services
             return total;
         }
 
-        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, bool addNumbers = true)
+        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId)
         {
             Plan plan = PlanService.Get(planId);
             IQueryable<Passage> passages = PassageService.ReadyToSync(planId);
             //assume startChapter=endChapter for all passages
             IEnumerable<BookChapter> book_chapters = BookChapters(passages);
+
+            bool addNumbers = true; //this would be an option in the plan? or the project? 
 
             string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
             List<ParatextChapter> chapterList = await GetPassageChaptersAsync(userSecret, paratextId, book_chapters);
