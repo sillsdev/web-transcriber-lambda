@@ -42,5 +42,15 @@ namespace SIL.Transcriber.Services
             }
             return entities;
         }
+        public override async Task<TResource> UpdateAsync(int id, TResource entity)
+        {
+            //return unarchived
+            TResource existing = await base.GetAsync(id);
+            if (existing.Archived)
+            {
+                throw new Exception("Entity has been deleted. Unable to update.");
+            }
+            return await base.UpdateAsync(id, entity);
+        }
     }
 }

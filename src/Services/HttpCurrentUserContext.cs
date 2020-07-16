@@ -4,34 +4,31 @@ using Auth0.ManagementApi.Models;
 using Microsoft.AspNetCore.Http;
 using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using SIL.Auth.Models;
 using SIL.Paratext.Models;
-using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
-using System.IdentityModel.Tokens.Jwt;
+using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Services
 {
     public class HttpCurrentUserContext : ICurrentUserContext
     {
-        private const string EMAIL_PATTERN = "^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9.-]+[.]+[a-zA-Z]{2,}$";
         public HttpContext HttpContext { get; set; }
-        public Auth0ManagementApiTokenService TokenService { get; set; }
+        public IAuthService AuthService { get; set; }
 
         private string auth0Id;
         private string authType;
-        private ManagementApiClient managementApiClient;
+
         private User auth0User;
         protected ILogger<ICurrentUserContext> Logger { get; set; }
 
         public HttpCurrentUserContext(
              ILoggerFactory loggerFactory,
              IHttpContextAccessor httpContextAccessor,
-             Auth0ManagementApiTokenService tokenService)
+             IAuthService authService)
         {
             HttpContext = httpContextAccessor.HttpContext;
-            TokenService = tokenService;
+            AuthService = authService;
             Logger = loggerFactory.CreateLogger<ICurrentUserContext>();
         }
 
@@ -47,20 +44,6 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        private ManagementApiClient ManagementApiClient
-        {
-            get
-            {
-                if (managementApiClient == null)
-                {
-                    var token = TokenService.Token;
-                    var domainUri = new Uri(GetVarOrThrow("SIL_TR_AUTH0_DOMAIN"));
-                    managementApiClient = new ManagementApiClient(token, domainUri.Host);
-                }
-                return managementApiClient;
-            }
-        }
-
         private User Auth0User
         {
             get
@@ -71,7 +54,7 @@ namespace SIL.Transcriber.Services
                     {
                         //auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
 
-                        auth0User = ManagementApiClient.Users.GetAsync(Auth0Id).Result;
+                        auth0User = AuthService.GetUserAsync(Auth0Id).Result;
 
                     }
                     catch (Exception ex)
@@ -172,7 +155,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                return Auth0User.EmailVerified ?? false;  //HttpContext.GetAuth0Name();
+                return Auth0User.EmailVerified ?? false; 
             }
         }
         /*
@@ -184,13 +167,31 @@ namespace SIL.Transcriber.Services
             }
         }
         */
-        public UserSecret ParatextLogin(string connection, int userId)
+        public UserSecret ParatextToken(JToken ptIdentity, int userId)
         {
-            var identities = Auth0User.Identities;
-            var ptIdentity = identities.FirstOrDefault(i => i.Connection == connection); //i.e. "Paratext-Transcriber"
             if (ptIdentity != null)
             {
-                var newPTTokens = new ParatextToken
+                ParatextToken newPTTokens = new ParatextToken
+                {
+                    AccessToken = (string)ptIdentity["AccessToken"],
+                    RefreshToken = (string)ptIdentity["RefreshToken"],
+                    OriginalRefreshToken = (string)ptIdentity["RefreshToken"],
+                    UserId = userId
+                };
+                Logger.LogInformation("Http ParatextRefreshToken: {0} ", newPTTokens.RefreshToken);
+                return new UserSecret
+                {
+                    ParatextTokens = newPTTokens
+                };
+            }
+            Logger.LogInformation("Paratext Login - no connection");
+            return null;
+        }
+        public UserSecret ParatextToken(Identity ptIdentity, int userId)
+        {
+            if (ptIdentity != null)
+            {
+                ParatextToken newPTTokens = new ParatextToken
                 {
                     AccessToken = (string)ptIdentity.AccessToken,
                     RefreshToken = (string)ptIdentity.RefreshToken,
@@ -205,6 +206,12 @@ namespace SIL.Transcriber.Services
             }
             Logger.LogInformation("Paratext Login - no connection");
             return null;
+        }
+        public UserSecret ParatextLogin(string connection, int userId)
+        {
+            var identities = Auth0User.Identities;
+            Identity ptIdentity = identities.FirstOrDefault(i => i.Connection == connection); //i.e. "Paratext-Transcriber"
+            return ParatextToken(ptIdentity, userId);
         }
     }
 }

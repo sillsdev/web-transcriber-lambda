@@ -7,3 +7,6 @@ test/TranscriberAPITest/bin
 test/TranscriberAPITest/obj
 
 test/serverless.env.yml
+
+auth0Rules/*
+authUserPull/*

@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using Auth0.ManagementApi.Models;
+using Newtonsoft.Json.Linq;
 using SIL.Auth.Models;
 using SIL.Paratext.Models;
 
@@ -16,5 +18,7 @@ namespace SIL.Transcriber.Services
         //List<SILAuth_Organization> SILOrganizations { get; }
         //int SilUserid { get; }
         UserSecret ParatextLogin(string connection, int userId);
+        UserSecret ParatextToken(Identity ptIdentity, int userId);
+        UserSecret ParatextToken(JToken ptIdentity, int id);
     }
 }

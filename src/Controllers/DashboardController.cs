@@ -2,15 +2,12 @@
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using SIL.Transcriber.Services;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace TranscriberAPI.Controllers
+namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

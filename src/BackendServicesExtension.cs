@@ -1,11 +1,15 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using idunno.Authentication.Basic;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Extensions;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SIL.Paratext.Models;
@@ -120,8 +124,8 @@ namespace SIL.Transcriber
             services.AddScoped<SectionService>();
             services.AddScoped<UserService>();
             services.AddScoped<VwPassageStateHistoryEmailService>();
-
-            services.AddScoped<Auth0ManagementApiTokenService>();
+            
+            services.AddSingleton<IAuthService, AuthService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OfflineDataService>();
             services.AddScoped<OrgDataService>();
@@ -156,30 +160,21 @@ namespace SIL.Transcriber
                 options.RequireHttpsMetadata = false;
                 options.SaveToken = true;
                 options.Events = new JwtBearerEvents
-                {/*
-                    OnMessageReceived = context =>
-                    {
-                        var accessToken = context.Request.Query["access_token"];
-
-                        // If the request is for our hub...
-                        var path = context.HttpContext.Request.Path;
-                        if (!string.IsNullOrEmpty(accessToken) ) && (path.StartsWithSegments("/hubs")))
-                        {
-                            // Read the token out of the query string
-                            context.Token = accessToken;
-                        }
-                        return System.Threading.Tasks.Task.CompletedTask;
-                    }, */
+                {
                     OnTokenValidated = context =>
                     {
+                        string TYPE_NAME_IDENTIFIER = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
+                        string TYPE_NAME_EMAILVERIFIED = "https://sil.org/email_verified";
                         // Add the access_token as a claim, as we may actually need it
                         JwtSecurityToken accessToken = context.SecurityToken as JwtSecurityToken;
                         ClaimsIdentity identity = context.Principal.Identity as ClaimsIdentity;
-                        //SJH 05/01/2019 ours is always false?...
-                        //if (!identity.HasClaim("email_verified", "true"))
-                        //{
-                        //    context.Fail("Email address is not validated");
-                        //}
+                        if (!identity.HasClaim(TYPE_NAME_EMAILVERIFIED, "true") && context.HttpContext.Request.Path.Value.IndexOf("auth/resend") < 0)
+                        {
+                            Exception ex = new Exception("Email address is not validated."); //this message gets lost
+                            ex.Data.Add(402, "Email address is not validated."); //this also gets lost
+                            context.Fail(ex);
+                            //return System.Threading.Tasks.Task.FromException(ex); //this causes bad things
+                        }
                         if (accessToken != null)
                         {
                             if (identity != null)
@@ -187,7 +182,6 @@ namespace SIL.Transcriber
                                 identity.AddClaim(new Claim("access_token", accessToken.RawData));
                             }
                         }
-
                         return System.Threading.Tasks.Task.CompletedTask;
                     }
                 };
@@ -196,6 +190,32 @@ namespace SIL.Transcriber
             .AddCookie(options => {
                 options.ExpireTimeSpan = TimeSpan.FromDays(365);
                 options.LoginPath = "/Account/Login/";
+            })
+            //This is used for calling from auth0 rules (and possibly other outside entities)  We'll use this if we push user changes from auth0
+            .AddBasic(options =>
+            {
+                options.Events = new BasicAuthenticationEvents
+                {
+                    OnValidateCredentials = context =>
+                    {
+                        IAuthService authService = context.HttpContext.RequestServices.GetService<IAuthService>();
+                        if (authService.ValidateWebhookCredentials(context.Username, context.Password))
+                        {
+                            Claim[] claims = new[]
+                            {
+                                    new Claim(ClaimTypes.NameIdentifier, context.Username, ClaimValueTypes.String,
+                                        context.Options.ClaimsIssuer),
+                                    new Claim(ClaimTypes.Name, context.Username, ClaimValueTypes.String,
+                                        context.Options.ClaimsIssuer)
+                                };
+
+                            context.Principal = new ClaimsPrincipal(new ClaimsIdentity(claims,
+                                context.Scheme.Name));
+                            context.Success();
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
             services.AddAuthorization(options =>

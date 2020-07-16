@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using SIL.ObjectModel;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -26,7 +27,7 @@ using static SIL.Transcriber.Utility.EnvironmentHelpers;
 namespace SIL.Transcriber.Services
 {
     /// <summary>Exchanges data with PT projects in the cloud.</summary>
-    public class ParatextService : IParatextService //  DisposableBase, IParatextService
+    public class ParatextService :  DisposableBase, IParatextService
     {
         //private readonly IOptions<ParatextOptions> _options;
         protected ICurrentUserContext CurrentUserContext;
@@ -59,8 +60,7 @@ namespace SIL.Transcriber.Services
             ParatextTokenService ptService,
             IEntityRepository<ParatextToken> userSecrets,
              CurrentUserRepository currentUserRepository,
-           ILoggerFactory loggerFactory) //,IOptions<ParatextOptions> options,
-                                           //IRepository<UserSecret> userSecret)// , IRealtimeService realtimeService)
+           ILoggerFactory loggerFactory)
         {
             HttpContext = httpContextAccessor.HttpContext;
             _userSecretRepository = userSecrets;
@@ -503,8 +503,7 @@ namespace SIL.Transcriber.Services
 
         }
 
-        protected /* override  DisposableBase */
-            void DisposeManagedResources()
+        protected override void DisposeManagedResources()
         {
             _dataAccessClient.Dispose();
             _registryClient.Dispose();

@@ -33,7 +33,8 @@ provider:
     SIL_TR_PARATEXT_AUTH0_CONNECTION:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_AUTH0_CONNECTION}
     SIL_TR_EMAIL_FROM:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_FROM}
     SIL_TR_EMAIL_HOST:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_HOST}
-
+    SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}
+    SIL_TR_WEBHOOK_PASSWORD:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_PASSWORD}
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
 
 deploymentPrefix: AWSTranscriberAPI/
