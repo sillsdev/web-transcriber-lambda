@@ -79,7 +79,7 @@ namespace TranscriberAPI.Utility.Extensions
         public static string Scripture(this XElement value)
         {
             Debug.Assert(value.Name.LocalName == "verse");
-            if (value.NextNode.NodeType != System.Xml.XmlNodeType.Text)
+            if (value.NextNode == null || value.NextNode.NodeType != System.Xml.XmlNodeType.Text)
                 return "";
             return ((XText)value.NextNode).Value;
         }

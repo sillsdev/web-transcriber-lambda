@@ -30,11 +30,15 @@ namespace SIL.Transcriber.Services
             JsonApiContext = jsonApiContext;
             this.Logger = loggerFactory.CreateLogger<TResource>();
         }
-        public IEnumerable<BaseModel>GetChanges(int currentuser, string origin, DateTime since)
+        public virtual IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since)
         {
-            return GetAsync().Result.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
+            return GetChanges(GetAsync().Result, currentuser, origin, since);
         }
-
+        public IEnumerable<TResource> GetChanges(IEnumerable<TResource> entities, int currentuser, string origin, DateTime since)
+        {
+            if (entities == null) return null;
+            return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
+        }
     }
 }
 

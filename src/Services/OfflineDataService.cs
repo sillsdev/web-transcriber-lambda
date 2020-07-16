@@ -6,40 +6,50 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Linq;
-using SIL.Transcriber.Repositories;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Collections;
 using System;
 using JsonApiDotNetCore.Serialization;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Mvc;
 
-using Newtonsoft.Json.Linq;
 using System.Net;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class OfflineDataService: IOfflineDataService
+    public class OfflineDataService : IOfflineDataService
     {
         protected readonly AppDbContext dbContext;
         protected readonly IJsonApiSerializer jsonApiSerializer;
         protected readonly IJsonApiDeSerializer jsonApiDeSerializer;
         protected readonly MediafileService mediaService;
+        protected CurrentUserRepository CurrentUserRepository { get; }
+
         private IS3Service _S3service;
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
+        const string ContentType = "application/ptf";
+        protected ILogger<OfflineDataService> Logger { get; set; }
 
-        public OfflineDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, MediafileService MediaService, IS3Service service)
+        public OfflineDataService(IDbContextResolver contextResolver,
+                IJsonApiSerializer jsonSer,
+                IJsonApiDeSerializer jsonDeser,
+                MediafileService MediaService,
+                CurrentUserRepository currentUserRepository,
+                IS3Service service,
+                ILoggerFactory loggerFactory)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
             jsonApiSerializer = jsonSer;
             jsonApiDeSerializer = jsonDeser;
             mediaService = MediaService;
+            CurrentUserRepository = currentUserRepository;
             _S3service = service;
+            this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
+
+        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
+
         private void WriteEntry(ZipArchiveEntry entry, string contents)
         {
             using (StreamWriter sw = new StreamWriter(entry.Open()))
@@ -49,27 +59,27 @@ namespace SIL.Transcriber.Services
         }
         private DateTime AddCheckEntry(ZipArchive zipArchive)
         {
-            var entry = zipArchive.CreateEntry("SILTranscriber", CompressionLevel.Fastest);
-            var dt = DateTime.UtcNow;
+            ZipArchiveEntry entry = zipArchive.CreateEntry("SILTranscriber", CompressionLevel.Fastest);
+            DateTime dt = DateTime.UtcNow;
             WriteEntry(entry, dt.ToString("o"));
             return dt;
         }
         private void AddJsonEntry(ZipArchive zipArchive, string table, IList list, char sort)
         {
-            var entry = zipArchive.CreateEntry("data/" + sort + "_" + table + ".json", CompressionLevel.Fastest);
+            ZipArchiveEntry entry = zipArchive.CreateEntry("data/" + sort + "_" + table + ".json", CompressionLevel.Fastest);
             WriteEntry(entry, jsonApiSerializer.Serialize(list));
         }
         private void AddEafEntry(ZipArchive zipArchive, string name, string eafxml)
         {
-            if (!String.IsNullOrEmpty(eafxml))
+            if (!string.IsNullOrEmpty(eafxml))
             {
-                var entry = zipArchive.CreateEntry("media/" + Path.GetFileNameWithoutExtension(name) + ".eaf", CompressionLevel.Optimal);
+                ZipArchiveEntry entry = zipArchive.CreateEntry("media/" + Path.GetFileNameWithoutExtension(name) + ".eaf", CompressionLevel.Optimal);
                 WriteEntry(entry, eafxml);
             }
         }
         private void AddStreamEntry(ZipArchive zipArchive, Stream fileStream, string dir, string newName)
         {
-            var entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
+            ZipArchiveEntry entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
             using (Stream zipEntryStream = entry.Open())
             {
                 //Copy the attachment stream to the zip entry stream
@@ -84,7 +94,7 @@ namespace SIL.Transcriber.Services
         {
             byte[] imageData = null;
 
-            using (var wc = new System.Net.WebClient())
+            using (WebClient wc = new System.Net.WebClient())
                 imageData = wc.DownloadData(url);
 
             return new MemoryStream(imageData);
@@ -93,7 +103,7 @@ namespace SIL.Transcriber.Services
         {
             orgs.ForEach(o =>
             {
-                if (!String.IsNullOrEmpty(o.LogoUrl))
+                if (!string.IsNullOrEmpty(o.LogoUrl))
                 {
                     AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png");
                     o.LogoUrl = "logos/" + o.Slug + ".png";
@@ -104,27 +114,47 @@ namespace SIL.Transcriber.Services
         {
             users.ForEach(u =>
             {
-                if (!String.IsNullOrEmpty(u.avatarurl))
+                if (!string.IsNullOrEmpty(u.avatarurl))
                 {
                     AddStreamEntry(zipArchive, u.avatarurl, "avatars/", u.Id.ToString() + u.FamilyName + ".png");
                     u.avatarurl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
                 }
             });
         }
-   
-        private void AddMedia(ZipArchive zipArchive, List<Mediafile> media)
+        private bool AddMediaEaf(int check, DateTime dtBail, ref int completed, ZipArchive zipArchive, List<Mediafile> media)
         {
-            media.ForEach( m =>
+            if (DateTime.Now > dtBail) return false;
+            if (completed <= check)
             {
-                if (!String.IsNullOrEmpty(m.S3File))
-                {
-                    var response = mediaService.GetFile(m.Id).Result;
-                    AddStreamEntry(zipArchive, response.FileStream, "media/", m.S3File);
-                    m.AudioUrl = "media/" + m.S3File;
-                    AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
-                }
-            });
+                foreach (Mediafile m in media)
+                   AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
+                completed++;
+            }
+            return true;
         }
+        /*
+        private bool AddMedia(int check, DateTime dtBail, ref int completed, ZipArchive zipArchive, List<Mediafile> media)
+        {
+            foreach (Mediafile m in media)
+            {
+                Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+                if (DateTime.Now > dtBail) return false;
+                if (completed <= check)
+                {
+
+                    if (!string.IsNullOrEmpty(m.S3File)) {
+                        S3Response response = mediaService.GetFile(m.Id).Result;
+                        AddStreamEntry(zipArchive, response.FileStream, "media/", m.S3File);
+                        m.AudioUrl = "media/" + m.S3File;
+                        AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
+                    }
+                    completed++;
+                }
+                check++;
+            };
+            return true;
+        }
+        */
         private void AddFont(ZipArchive zipArchive, WebClient client, string cssfile)
         {
             string bucket = "https://s3.amazonaws.com/fonts.siltranscriber.org/";
@@ -148,12 +178,12 @@ namespace SIL.Transcriber.Services
 
                     int end = css.IndexOf("')", start);
                     url = css.Substring(start, end - start);
-                    var fontfile = url.Substring(url.LastIndexOf("/") + 1);
+                    string fontfile = url.Substring(url.LastIndexOf("/") + 1);
                     url = bucket + fontfile;
                     AddStreamEntry(zipArchive, url, "fonts/", fontfile);
                     css = css.Substring(0, start + 1) + fontfile + css.Substring(end);
                 }
-                var entry = zipArchive.CreateEntry("fonts/" + cssfile, CompressionLevel.Fastest);
+                ZipArchiveEntry entry = zipArchive.CreateEntry("fonts/" + cssfile, CompressionLevel.Fastest);
                 WriteEntry(entry, css);
             }
             catch (Exception ex)
@@ -173,139 +203,249 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
-
-        private FileResponse Export(int orgid, int projectid = 0)
+        /// <summary>
+        /// Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
+        /// </summary>
+        /// <remarks>
+        /// http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
+        /// </remarks>
+        public static string CoerceValidFileName(string filename)
         {
-            //export this organization
-            IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == orgid);
-            IQueryable<Project> projects;
-            if (orgs.Count() == 0)
+            string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+            string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);
+
+            string[] reservedWords = new[]
             {
-                return new FileResponse()
-                {
-                    Status = System.Net.HttpStatusCode.NotFound,
-                    Message = "Organization does not exist. " + orgid.ToString()
-                };
+        "CON", "PRN", "AUX", "CLOCK$", "NUL", "COM0", "COM1", "COM2", "COM3", "COM4",
+        "COM5", "COM6", "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2", "LPT3", "LPT4",
+        "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    };
+
+            string sanitisedName = System.Text.RegularExpressions.Regex.Replace(filename, invalidReStr, "_");
+            while (sanitisedName.IndexOf("__") > -1)
+                sanitisedName = sanitisedName.Replace("__", "_");
+
+            foreach (string reservedWord in reservedWords)
+            {
+                string reservedWordPattern = string.Format("^{0}(\\.|$)", reservedWord);
+                sanitisedName = System.Text.RegularExpressions.Regex.Replace(sanitisedName, reservedWordPattern, "_reservedWord_$1", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             }
 
-            if (projectid != 0)
-                projects = dbContext.Projects.Where(p => p.Id == projectid);
-            else
-                projects = dbContext.Projects.Where(p => p.OrganizationId == orgid);
-
-            var ms = new MemoryStream();
-            using (var zipArchive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            return sanitisedName;
+        }
+        private bool CheckAdd(int check, DateTime dtBail, ref int completed, ZipArchive zipArchive, string table, IList list, char sort)
+        {
+            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail) return false;
+            if (completed <= check)
             {
-                Dictionary<string, string> fonts = new Dictionary<string, string>();
-                fonts.Add("Charis SIL", "");
-
-                var exported= AddCheckEntry(zipArchive);
-
-                var orgmems = dbContext.Organizationmemberships.Where(om => om.OrganizationId == orgid);
-                
-                //org
-                var orgList = orgs.ToList();
-                AddOrgLogos(zipArchive, orgList);
-                AddJsonEntry(zipArchive, "organizations", orgList, 'B');
-
-                //organizationmemberships
-                AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
-
-                //groups
-               var groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
-                AddJsonEntry(zipArchive, "groups", groups.ToList(), 'C');
-
-                //groupmemberships
-                var gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).ToList();
-                AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
-                foreach( string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
+                AddJsonEntry(zipArchive, table, list, sort);
+                completed++;
+            }
+            return true;
+        }
+        private FileResponse CheckProgress(int projectid, string fileName)
+        {
+            int startNext =0;
+            string err = "";
+            try
+            {
+                Stream ms = OpenFile(fileName + ".sss");
+                StreamReader reader = new StreamReader(ms);
+                string data = reader.ReadToEnd();
+                if (data.IndexOf("|") > 0)
                 {
-                    fonts[font] = ""; //add it if it's not there
+                    err = data.Substring(data.IndexOf("|") + 1);
+                    data = data.Substring(0, data.IndexOf("|"));
                 }
-
-                //users
-                var userList = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).ToList();
-                AddUserAvatars(zipArchive, userList);
-                AddJsonEntry(zipArchive, "users", userList, 'A');
-
-
-                //projects
-
-                projects.ToList().ForEach(p => {
-                    p.DateExported = exported;
-                    dbContext.Projects.Update(p);
-                });
-                AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
-                foreach (string font in projects.Where(p => p.DefaultFont != null).Select(p => p.DefaultFont))
+                int.TryParse(data, out startNext);
+            }
+            catch
+            {
+                //it's not there yet...
+                Logger.LogInformation("status file not available");
+                startNext = 9;
+            }
+            if (startNext < 0)
+            {
+                try
                 {
-                    fonts[font] = ""; //add it if it's not there
+                    S3Response resp = _S3service.RemoveFile(fileName + ".sss", ExportFolder).Result;
+                    resp = _S3service.RemoveFile(fileName + ".tmp", ExportFolder).Result;
                 }
-                AddFonts(zipArchive, fonts.Keys);
+                catch { };
+            }
+            else
+                startNext = Math.Max(startNext, 9);
 
-                //projectintegrations
-                AddJsonEntry(zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).ToList(), 'E');
-                //plans
-                var plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl);
-                AddJsonEntry(zipArchive, "plans", plans.ToList(), 'E');
-                //sections
-                var sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s);
-                AddJsonEntry(zipArchive, "sections", sections.ToList(), 'F');
-                //passages
-                var passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p);
+            return new FileResponse()
+            {
+                Message = startNext == -2 ? err : fileName +".ptf",
+                //get a signedurl for it if we're done
+                FileURL = startNext == -1 ? _S3service.SignedUrlForGet(fileName + ".ptf", ExportFolder, ContentType).Message : "",
+                Status = startNext == -1 ? System.Net.HttpStatusCode.OK : startNext == -2 ? System.Net.HttpStatusCode.RequestEntityTooLarge : System.Net.HttpStatusCode.PartialContent,
+                ContentType = ContentType,
+                Id = startNext,
+            };
+        }
+        private Stream OpenFile(string fileName)
+        {
+            S3Response s3response  = _S3service.ReadObjectDataAsync(fileName, ExportFolder).Result;
+            if (s3response.FileStream == null)
+                throw (new Exception("Export in progress " + fileName + "not found."));
+            return s3response.FileStream;
+        }
 
-                AddJsonEntry(zipArchive, "passages", passages.ToList(), 'G');
-                //mediafiles
-                var mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m);
-                var mediaList = mediafiles.ToList();
-                AddMedia(zipArchive, mediaList);
-                AddJsonEntry(zipArchive, "mediafiles", mediaList, 'H');
-                //passagestatechange
-                var passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
-                AddJsonEntry(zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H');
+        public FileResponse ExportProject(int projectid, int start)
+        {
+            int startNext = start;
+            Logger.LogInformation($"{DateTime.Now}");
+            //give myself 15 seconds to get as much as I can...
+            DateTime dtBail = DateTime.Now.AddSeconds(15);
 
-                //ALL
-                //activitystates
-                AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
-                //integrations
-                AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
-                //projecttypes
-                AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
-                //plantypes
-                AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
-                //roles
-                AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
+            Project project = projects.First();
+            string fileName = string.Format("Transcriber{0}_{1}_{2}" , CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser().Id) ;
+
+            S3Response s3response;
+            Stream ms;
+            if (start > 7)
+                return CheckProgress(projectid, fileName);
+
+            if (start == 0)
+            {
+                ms = new MemoryStream();
+                try
+                {
+                    S3Response resp = _S3service.RemoveFile(fileName + ".sss", ExportFolder).Result;
+                }
+                catch { };
+            }
+            else
+            {
+                ms = OpenFile(fileName + ".ptf");
+            }
+            using (ZipArchive zipArchive = new ZipArchive(ms,  ZipArchiveMode.Update, true))
+            {
+                if (start == 0)
+                {
+                    Dictionary<string, string> fonts = new Dictionary<string, string>();
+                    fonts.Add("Charis SIL", "");
+                    DateTime exported = AddCheckEntry(zipArchive);
+                    AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+
+                    //org
+                    IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
+                    List<Organization> orgList = orgs.ToList();
+
+                    AddOrgLogos(zipArchive, orgList);
+                    AddJsonEntry(zipArchive, "organizations", orgList, 'B');
+
+                    //groups
+                    IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
+                    List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
+                    IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
+
+                    foreach (string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
+                    {
+                        fonts[font] = ""; //add it if it's not there
+                    }
+                    foreach (string font in projects.Where(p => p.DefaultFont != null).Select(p => p.DefaultFont))
+                    {
+                        fonts[font] = ""; //add it if it's not there
+                    }
+                    AddFonts(zipArchive, fonts.Keys);
+                    //users
+                    List<User> userList = users.ToList();
+                    AddUserAvatars(zipArchive, userList);
+
+                    AddJsonEntry(zipArchive, "groups", groups.Where(g => !g.Archived).ToList(), 'C');
+                    //groupmemberships
+                    AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
+                    AddJsonEntry(zipArchive, "users", userList, 'A');
+
+                    //organizationmemberships
+                    IEnumerable<OrganizationMembership> orgmems = users.Join(dbContext.Organizationmemberships, u => u.Id, om => om.UserId, (u, om) => om).Where(om => om.OrganizationId == project.OrganizationId && !om.Archived);
+                    AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
+
+                    //projects
+                    projects.ToList().ForEach(p =>
+                    {
+                        p.DateExported = exported;
+                        dbContext.Projects.Update(p);
+                    });
+                    AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
+                    startNext=1;
+                }
+                do //give me something to break out of
+                {
+                    if (!CheckAdd(1, dtBail, ref startNext,  zipArchive, "projectintegrations", projects.Join(dbContext.Projectintegrations, p => p.Id, pi => pi.ProjectId, (p, pi) => pi).Where(x => !x.Archived).ToList(), 'E')) break;
+                    //plans
+                    IQueryable<Plan> plans = projects.Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl).Where(x => !x.Archived);
+                    if (!CheckAdd(2, dtBail, ref startNext, zipArchive, "plans", plans.ToList(), 'E')) break;
+                    //sections
+                    IQueryable<Section> sections = plans.Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Where(x => !x.Archived);
+                    if (!CheckAdd(3, dtBail, ref startNext, zipArchive, "sections", sections.ToList(), 'F')) break;
+                    //passages
+                    IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(x => !x.Archived);
+                    if (!CheckAdd(4, dtBail,  ref startNext, zipArchive, "passages", passages.ToList(), 'G')) break;
+                    //passagestatechange
+                    IQueryable<PassageStateChange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
+                    if (!CheckAdd(5, dtBail, ref startNext, zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H')) break;
+                    //mediafiles
+                    IQueryable<Mediafile> mediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                    //pick just the highest version media per passage
+                    mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    List<Mediafile> mediaList = mediafiles.OrderBy(m => m.Id).ToList();
+                    if (!AddMediaEaf(6, dtBail, ref startNext, zipArchive, mediaList)) break;
+
+                    const string prefix = "aws.com/";
+                    mediaList.ForEach(m =>
+                    {
+                        //S3File has just the filename
+                        //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
+                        //change the audioUrl to have the offline path + filename
+                        //change the s3File to have the onlinepath + filename
+                        string tmp = m.AudioUrl;
+                        m.AudioUrl = "media/" + m.S3File;
+                        //extract the path
+                        if (tmp.IndexOf("?") > 0)
+                            tmp = tmp.Substring(0, tmp.IndexOf("?"));
+                        if (tmp.IndexOf(prefix) > 0)
+                            tmp = tmp.Substring(tmp.IndexOf(prefix) + prefix.Length);
+                        //this looks like 475_Org11/438_NewPla/02%20Tyrannosaurus%20Funk__a7e1f4c0-96d3-466b-952c-5c82c077dacc.mp3
+                        if (tmp.LastIndexOf("/") > 0)
+                            m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
+                    });
+                    if (!CheckAdd(7, dtBail,  ref startNext, zipArchive, "mediafiles", mediaList, 'H')) break;
+                    //if (!AddMedia(7, dtBail,  ref startNext, zipArchive, mediaList)) break;
+                    //startNext = -1; //Done!
+                } while (false);
             }
             ms.Position = 0;
-            const string ContentType = "application/ptf";
-            string fileName = projectid != 0 ? string.Format("Transcriber_{0}.ptf", projects.First().Slug) : string.Format("TranscriberOrg_{0}.ptf", orgs.First().Slug);
-
-            var s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
-            if (s3response.Status == System.Net.HttpStatusCode.OK)
+            fileName = fileName + (startNext == 8 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
+            s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
+            if (s3response.Status == HttpStatusCode.OK)
             {
-                //get a signedurl for it now
+                Logger.LogInformation($"{DateTime.Now}, {startNext}");
                 return new FileResponse()
                 {
                     Message = fileName,
-                    FileURL = _S3service.SignedUrlForGet(fileName, ExportFolder, ContentType).Message,
-                    Status = System.Net.HttpStatusCode.OK,
+                    FileURL = "",
+                    Status = HttpStatusCode.PartialContent,
                     ContentType = ContentType,
+                    Id = startNext,
                 };
             }
             else
             {
-                return s3response;
+                throw new Exception(s3response.Message);
             }
         }
-        public FileResponse ExportOrganization(int orgid)
-        {
-            return Export(orgid);
-        }
-        public FileResponse ExportProject(int id)
-        {
-            Project project = dbContext.Projects.Where(p => p.Id == id).First();
-            return Export(project.OrganizationId, id);          
-        }
-
         public FileResponse ImportFileURL(string sFile)
         {
             const string ContentType = "application/itf";
@@ -320,107 +460,32 @@ namespace SIL.Transcriber.Services
                 ContentType = ContentType,
             };
         }
+        private string ChangesReport(string type, string online, string imported)
+        {
+            return "{\"type\":\"" + type + "\", \"online\": " + online + ", \"imported\": " + imported + "}";
+        }
         private string UserChangesReport(User online, User imported)
         {
-            Dictionary<string, string> changes = new Dictionary<string, string>();
-            if (online.Name != imported.Name)
-            {
-                changes.Add("Previous Name", online.Name);
-                changes.Add("Imported Name", imported.Name);
-            }
-            if (online.FamilyName != imported.FamilyName)
-            {
-                changes.Add("Previous FamilyName", online.FamilyName);
-                changes.Add("Imported FamilyName", imported.FamilyName);
-            }
-            if (online.GivenName != imported.GivenName)
-            {
-                changes.Add("Previous GivenName", online.GivenName);
-                changes.Add("Imported GivenName", imported.GivenName);
-            }
-            if (online.Phone != imported.Phone)
-            {
-                changes.Add("Previous Phone", online.Phone);
-                changes.Add("Imported Phone", imported.Phone);
-            }
-            if (online.playbackspeed != imported.playbackspeed)
-            {
-                changes.Add("Previous playbackspeed", online.playbackspeed.ToString());
-                changes.Add("Imported playbackspeed", imported.playbackspeed.ToString());
-            }
-            if (online.progressbartypeid != imported.progressbartypeid)
-            {
-                changes.Add("Previous progressbartypeid", online.progressbartypeid.ToString());
-                changes.Add("Imported progressbartypeid", imported.progressbartypeid.ToString());
-            }
-            if (online.timercountup != imported.timercountup)
-            {
-                changes.Add("Previous timercountup", online.timercountup.ToString());
-                changes.Add("Imported timercountup", imported.timercountup.ToString());
-            }
-            if (online.Timezone != imported.Timezone)
-            {
-                changes.Add("Previous Timezone", online.Timezone.ToString());
-                changes.Add("Imported Timezone", imported.Timezone.ToString());
-            }
-            if (online.Locale != imported.Locale)
-            {
-                changes.Add("Previous Locale", online.Locale.ToString());
-                changes.Add("Imported Locale", imported.Locale.ToString());
-            }
-            if (online.uilanguagebcp47 != imported.uilanguagebcp47)
-            {
-                changes.Add("Previous uilanguagebcp47", online.uilanguagebcp47.ToString());
-                changes.Add("Imported uilanguagebcp47", imported.uilanguagebcp47.ToString());
-            }
-            if (online.NewsPreference != imported.NewsPreference)
-            {
-                changes.Add("Previous NewsPreference", online.NewsPreference.ToString());
-                changes.Add("Imported NewsPreference", imported.NewsPreference.ToString());
-            }
-            if (online.DigestPreference != imported.DigestPreference)
-            {
-                changes.Add("Previous DigestPreference", online.DigestPreference.ToString());
-                changes.Add("Imported DigestPreference", imported.DigestPreference.ToString());
-            }
-            if (changes.Count > 0)
-                return "User: " + online.Email + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
-            return "";
+            return ChangesReport("user",  jsonApiSerializer.Serialize(online),  jsonApiSerializer.Serialize(imported));
         }
         private string SectionChangesReport(Section online, Section imported)
         {
             Dictionary<string, string> changes = new Dictionary<string, string>();
 
-            if (online.EditorId != imported.EditorId)
+            if ((online.EditorId != imported.EditorId && online.EditorId != null) || 
+                (online.TranscriberId != imported.TranscriberId && online.TranscriberId != null) || 
+                online.State != imported.State )
             {
-                changes.Add("Previous Editor", dbContext.Users.Find(online.EditorId).Name) ;
-                changes.Add("Imported Editor", dbContext.Users.Find(imported.EditorId).Name);
+                return ChangesReport( "section",  jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
             }
-            if (online.TranscriberId != imported.TranscriberId)
-            {
-                changes.Add("Previous Transcriber", dbContext.Users.Find(online.EditorId).Name);
-                changes.Add("Imported Transcriber", dbContext.Users.Find(imported.EditorId).Name);
-
-            }
-            if (online.State != imported.State)
-            {
-                changes.Add("Previous State", online.State);  //TODO fix the state display
-                changes.Add("Imported State", imported.State);
-            }
-            if (changes.Count > 0)
-                return "Section: " + dbContext.Plans.Find(online.PlanId).Name + ":" + online.Sequencenum + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
             return "";
        }
         private string PassageChangesReport(Passage online, Passage imported)
         {
-            Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.State != imported.State)
             {
-                changes.Add("Previous State", online.State);  //TODO fix the state display
-                changes.Add("Imported State", imported.State);
+                return ChangesReport("passage",  jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
             }
-            if (changes.Count > 0)
-                return "Passage: " + online.Sequencenum + " " + online.Book + " " + online.Reference + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
             return "";
         }
         private string MediafileChangesReport(Mediafile online, Mediafile imported)
@@ -428,24 +493,18 @@ namespace SIL.Transcriber.Services
             Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.Transcription != imported.Transcription && online.Transcription != null)
             {
-                changes.Add("Previous Transcription", online.Transcription);
-                changes.Add("Imported Transcription", imported.Transcription);
-            }
-            if (changes.Count > 0)
-                return "Transcription:" + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
+                Mediafile copy = (Mediafile) online.ShallowCopy();
+                copy.AudioUrl = "";
+                return ChangesReport("mediafile", jsonApiSerializer.Serialize(copy), jsonApiSerializer.Serialize(imported));
+            }            
             return "";
         }
         private string GrpMemChangesReport(GroupMembership online, GroupMembership imported)
         {
-            Dictionary<string, string> changes = new Dictionary<string, string>();
             if (online.FontSize != imported.FontSize)
             {
-                changes.Add("Previous FontSize", online.FontSize);
-                changes.Add("Imported FontSize", imported.FontSize);
+                return ChangesReport("groupmembership", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
             }
-            /* simplify the object to report on */
-            if (changes.Count > 0)
-                return "Preferences:" + dbContext.Groups.Find(online.GroupId).Name + "/" + dbContext.Users.Find(online.UserId).Name + Environment.NewLine + JsonConvert.SerializeObject(changes, Formatting.Indented) + Environment.NewLine;
             return "";
         }
         public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
@@ -455,7 +514,7 @@ namespace SIL.Transcriber.Services
 
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
             ZipArchive archive = new ZipArchive(response.FileStream);
-            string report = "";
+            List<string>report =new List<string>();
             try
             {
                 ZipArchiveEntry checkEntry = archive.GetEntry("SILTranscriberOffline");
@@ -482,7 +541,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = "Invalid ITF File - SILTranscriber not present",
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                    Status = HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,
                 };
             }
@@ -496,10 +555,11 @@ namespace SIL.Transcriber.Services
                     {
                         Message = "Invalid ITF File - projects data not present",
                         FileURL = sFile,
-                        Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                        Status = HttpStatusCode.UnprocessableEntity,
                         ContentType = ContentType,
                     };
-                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>("{data: " + new StreamReader(projectsEntry.Open()).ReadToEnd() + "}");
+
+                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
                 project = projects.Find(p => p.Id == projectid);
                 if (project==null)
                     return new FileResponse()
@@ -509,7 +569,7 @@ namespace SIL.Transcriber.Services
                         Status = (HttpStatusCode)450,
                         ContentType = ContentType,
                     };
-                
+             
             }
             catch
             {
@@ -517,7 +577,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = "Invalid ITF File - projects file not present",
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                    Status = HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,
                 };
             }
@@ -529,19 +589,17 @@ namespace SIL.Transcriber.Services
                     if (!entry.FullName.StartsWith("data"))
                         continue;
                     string data = new StreamReader(entry.Open()).ReadToEnd();
-                    data = "{data: " + data + "}";
                     string name = Path.GetFileNameWithoutExtension(entry.Name.Substring(2));
                     switch (name)
                     {
                         case "users":
                             List<User> users = jsonApiDeSerializer.DeserializeList<User>(data);
-                            var myUsers = users.Join(dbContext.Groupmemberships.Where(gm => gm.GroupId == project.GroupId), u => u.Id, grpmem => grpmem.UserId, (u, grpmem) => u);
-                            foreach(User u in myUsers)
-                            { 
-                                var user = dbContext.Users.Find(u.Id);
+                            foreach(User u in users)
+                            {
+                                User user = dbContext.Users.Find(u.Id);
                                 
                                 if (user.DateUpdated > sourceDate)
-                                    report += UserChangesReport(user, u);
+                                    report.Add(UserChangesReport(user, u));
 
                                 user.DigestPreference = u.DigestPreference;
                                 user.FamilyName = u.FamilyName;
@@ -556,7 +614,6 @@ namespace SIL.Transcriber.Services
                                 user.Timezone = u.Timezone;
                                 user.uilanguagebcp47 = u.uilanguagebcp47;
                                 user.LastModifiedBy = u.LastModifiedBy;
-                                user.LastModifiedOrigin = "electron";
                                 user.DateUpdated = DateTime.UtcNow; 
                                 /* TODO: figure out if the avatar needs uploading */
                                 dbContext.Users.Update(user);
@@ -565,18 +622,16 @@ namespace SIL.Transcriber.Services
 
                         case "sections":
                             List<Section> sections = jsonApiDeSerializer.DeserializeList<Section>(data);
-                            var mysections = sections.Join(dbContext.Plans.Where(p => p.ProjectId == projectid), s => s.PlanId, pl => pl.Id, (s, pl) => s);
-                            foreach(Section s in mysections)
+                            foreach(Section s in sections)
                             {
-                                var section = dbContext.Sections.Find(s.Id);
+                                Section section = dbContext.Sections.Find(s.Id);
                                 if (section.DateUpdated > sourceDate)
-                                        report += SectionChangesReport(section, s);
+                                    report.Add( SectionChangesReport(section, s));
 
                                 section.EditorId = s.EditorId;
                                 section.TranscriberId = s.TranscriberId;
                                 section.State = s.State;
                                 section.LastModifiedBy = s.LastModifiedBy;
-                                section.LastModifiedOrigin = "electron";
                                 section.DateUpdated = DateTime.UtcNow; 
                                 dbContext.Sections.Update(section);
                             };
@@ -584,19 +639,26 @@ namespace SIL.Transcriber.Services
 
                         case "passages":
                             List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
-                            var mypassages = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(passages, s => s.Id, p => p.SectionId, (s, p) => p);
-                            foreach (Passage p in mypassages)
+                            int currentuser = CurrentUser().Id;
+                            foreach (Passage p in passages)
                             {
-                                var passage = dbContext.Passages.Find(p.Id);
+                                Passage passage = dbContext.Passages.Find(p.Id);
                                 if (passage.State != p.State)
                                 {
                                     if (passage.DateUpdated > sourceDate)
-                                        report += PassageChangesReport(passage, p);
+                                        report.Add( PassageChangesReport(passage, p));
                                     passage.State = p.State;
                                     passage.LastModifiedBy = p.LastModifiedBy;
-                                    passage.LastModifiedOrigin = "electron";
                                     passage.DateUpdated = DateTime.UtcNow;
                                     dbContext.Passages.Update(passage);
+                                    PassageStateChange psc = new PassageStateChange();
+                                    psc.Comments = "Imported";  //TODO Localize
+                                    psc.DateCreated = passage.DateUpdated;
+                                    psc.DateUpdated = passage.DateUpdated;
+                                    psc.LastModifiedBy = currentuser;
+                                    psc.PassageId = passage.Id;
+                                    psc.State = passage.State;
+                                    dbContext.Passagestatechanges.Add(psc);
                                 }
                             };
                             break;
@@ -610,37 +672,51 @@ namespace SIL.Transcriber.Services
                                 dbContext.Mediafiles.AddRange(newFiles);
                                 // upload the file 
                             } */
-                            var mymediafiles = mediafiles.Join(dbContext.Plans.Where(pl =>pl.ProjectId == projectid), mf => mf.PlanId, p => p.Id, (mf, p) => mf);
-                            foreach(Mediafile m in mymediafiles)
+                            foreach(Mediafile m in mediafiles)
                             {
-                                var mediafile = dbContext.Mediafiles.Find(m.Id);
-                                if (mediafile.Transcription != m.Transcription || mediafile.Position != m.Position)
+                                Mediafile mediafile;
+                                if (m.Id > 0)
                                 {
-                                    if (mediafile.DateUpdated > sourceDate)
-                                        report += MediafileChangesReport(mediafile, m);
-                                    mediafile.Position = m.Position;
-                                    mediafile.Transcription = m.Transcription;
-                                    mediafile.LastModifiedBy = m.LastModifiedBy;
-                                    mediafile.LastModifiedOrigin = "electron";
-                                    mediafile.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Mediafiles.Update(mediafile);
+                                    mediafile = dbContext.Mediafiles.Find(m.Id);
+                                    if (mediafile.Transcription != m.Transcription)
+                                    {
+                                        if (mediafile.DateUpdated > sourceDate)
+                                            report.Add(MediafileChangesReport(mediafile, m));
+                                        mediafile.Position = m.Position;
+                                        mediafile.Transcription = m.Transcription;
+                                        mediafile.LastModifiedBy = m.LastModifiedBy;
+                                        mediafile.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Mediafiles.Update(mediafile);
+                                    }
+                                }
+                                else
+                                {
+                                    /* the only way this happens now is on a reopen.  If we start allowing them to actually replace the mediafile,
+                                     * we'll have to upload it from the zip file and create a new s3 file */
+                                    mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                    Mediafile newmf = (Mediafile)mediafile.ShallowCopy();
+                                    newmf.Transcription = m.Transcription;
+                                    newmf.Id = 0;
+                                    newmf.LastModifiedBy = m.LastModifiedBy;
+                                    newmf.DateCreated = m.DateCreated;
+                                    newmf.VersionNumber = m.VersionNumber;
+                                    newmf.DateUpdated = DateTime.UtcNow;
+                                    dbContext.Mediafiles.Add(newmf);
                                 }
                             };
                             break;
 
                         case "groupmemberships":
                             List<GroupMembership> grpmems = jsonApiDeSerializer.DeserializeList<GroupMembership>(data);
-                            var mygrpmems = grpmems.Where(gm => gm.GroupId == project.GroupId);
-                            foreach(GroupMembership gm in mygrpmems)
-                            { 
-                                var grpmem = dbContext.Groupmemberships.Find(gm.Id);
+                            foreach(GroupMembership gm in grpmems)
+                            {
+                                GroupMembership grpmem = dbContext.Groupmemberships.Find(gm.Id);
                                 if (grpmem.FontSize != gm.FontSize)
                                 {
                                     if (grpmem.DateUpdated > sourceDate)
-                                        report += GrpMemChangesReport(grpmem, gm);
+                                        report.Add(GrpMemChangesReport(grpmem, gm));
                                     grpmem.FontSize = gm.FontSize;
                                     grpmem.LastModifiedBy = gm.LastModifiedBy;
-                                    grpmem.LastModifiedOrigin = "electron";
                                     grpmem.DateUpdated = DateTime.UtcNow;
                                     dbContext.Groupmemberships.Update(grpmem);
                                 }
@@ -655,11 +731,10 @@ namespace SIL.Transcriber.Services
 
                         case "passagestatechanges":
                             List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
-                            var mypscs = dbContext.Plans.Where(pl => pl.ProjectId == projectid).Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(pscs, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
-                            foreach(PassageStateChange psc in mypscs)
+                            foreach(PassageStateChange psc in pscs)
                             {
                                 //see if it's already there...
-                                var dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
+                                IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
                                 if (dups.Count() == 0)
                                 {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
                                     dbContext.Passagestatechanges.Add(new PassageStateChange
@@ -677,13 +752,14 @@ namespace SIL.Transcriber.Services
                             break;
                     }
                 }
-                var ret = await dbContext.SaveChangesNoTimestampAsync();
+                int ret = await dbContext.SaveChangesNoTimestampAsync();
+                report.RemoveAll(s => s.Length == 0);
 
                 return new FileResponse()
                 {
-                    Message = report,
+                    Message = "[" + string.Join(",", report) + "]",
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.OK,
+                    Status =HttpStatusCode.OK,
                     ContentType = ContentType,
                 };
             }
@@ -694,7 +770,7 @@ namespace SIL.Transcriber.Services
                     Message = ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""),
 
                     FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                    Status = HttpStatusCode.UnprocessableEntity,
                     ContentType = ContentType,
                 };
             }

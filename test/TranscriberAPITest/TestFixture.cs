@@ -27,7 +27,7 @@ namespace TranscriberAPI.Tests
 
         public TestFixture()
         {
-            var builder = new WebHostBuilder()
+            IWebHostBuilder builder = new WebHostBuilder()
                 .UseStartup<TStartup>();
 
             _server = new TestServer(builder);
@@ -36,7 +36,7 @@ namespace TranscriberAPI.Tests
             WebClient = new HttpClient();
             //this doesn't get changes made since process started
             //var token = Environment.GetEnvironmentVariable("BEARER_TOKEN");
-            var token = Registry.GetValue(@"HKEY_CURRENT_USER\Environment", "BEARER_TOKEN", "DefaultSomething").ToString();
+            string token = Registry.GetValue(@"HKEY_CURRENT_USER\Environment", "BEARER_TOKEN", "DefaultSomething").ToString();
             Client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token); 
             WebClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
             Context = GetService<IDbContextResolver>().GetContext() as AppDbContext;
@@ -55,22 +55,22 @@ namespace TranscriberAPI.Tests
         public IJsonApiContext JsonApiContext { get; private set; }
         public T GetService<T>() => (T)_services.GetService(typeof(T));
         public User CurrentUser { get; private set; }
-        public Boolean DeleteTestData;
+        public bool DeleteTestData;
 
         //wrap async call in non async
         private User getCurrentUser()
         {
-            var task1 = CurrentUserAsync();
+            Task<User> task1 = CurrentUserAsync();
             Task.WaitAll(task1);
             return task1.Result;
         }
         private async Task<User> CurrentUserAsync()
         {
-            var route = $"/api/currentusers?include=organization-memberships,group-memberships";
-            var response = await Client.GetAsync(route);
+            string route = $"/api/currentusers?include=organization-memberships,group-memberships";
+            HttpResponseMessage response = await Client.GetAsync(route);
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
-                var body = await response.Content.ReadAsStringAsync();
+                string body = await response.Content.ReadAsStringAsync();
                 return DeSerializer.Deserialize<User>(body);
             }
             throw new Exception("Unable to get Current User " + response.StatusCode);
@@ -88,9 +88,9 @@ namespace TranscriberAPI.Tests
 
         public async Task<HttpResponseMessage> SendAsync(string method, string route, object data)
         {
-            var httpMethod = new HttpMethod(method);
-            var json = JsonConvert.SerializeObject(data);
-            var request = new HttpRequestMessage(httpMethod, route)
+            HttpMethod httpMethod = new HttpMethod(method);
+            string json = JsonConvert.SerializeObject(data);
+            HttpRequestMessage request = new HttpRequestMessage(httpMethod, route)
             {
                 Content = new StringContent(json,
                      Encoding.UTF8,
@@ -102,8 +102,8 @@ namespace TranscriberAPI.Tests
         }
         public async Task<(HttpResponseMessage response, T data)> SendAsync<T>(string method, string route, object data)
         {
-            var response = await SendAsync(method, route, data);
-            var json = await response.Content.ReadAsStringAsync();
+            HttpResponseMessage response = await SendAsync(method, route, data);
+            string json = await response.Content.ReadAsStringAsync();
             T obj = (T)DeSerializer.Deserialize(json);
             return (response, obj);
         }

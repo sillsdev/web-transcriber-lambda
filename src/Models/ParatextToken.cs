@@ -12,6 +12,8 @@ namespace SIL.Paratext.Models
         public string AccessToken { get; set; }
         public string RefreshToken { get; set; }
         public int UserId { get; set; }
+        [NotMapped]
+        public string OriginalRefreshToken { get; set; }
 
         [NotMapped]
         public DateTime IssuedAt

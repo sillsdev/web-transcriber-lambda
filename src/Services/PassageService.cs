@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
@@ -44,8 +45,8 @@ namespace SIL.Transcriber.Services
             PassageRepository pr = (PassageRepository)MyRepository;
             return pr.Get()
                     .Include(p => p.Section)
-                    .Include(p=> p.Mediafiles);
-            
+                    .Include(p=> p.Mediafiles)
+                    .Where(p => p.SectionId == SectionId);
         }
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {
@@ -60,7 +61,23 @@ namespace SIL.Transcriber.Services
                 passage = pr.Get().Where(p => p.Id == passage.Id).Include(p => p.Mediafiles).FirstOrDefault();
             }
             Mediafile mediafile = passage.Mediafiles.OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
-            return mediafile != null ? mediafile.Transcription ?? "" : "";
+            string trans = mediafile != null ? mediafile.Transcription ?? "" : "";
+            //remove timestamp
+            string pattern = @"\([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?\)";
+            return Regex.Replace(trans,pattern, "");
+           
+        }
+        public async Task<Passage> UpdateToReadyStateAsync(int id)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+
+            Passage p = await pr.GetAsync(id);
+            p.State = "transcribeReady";
+            string fp = HttpContext.GetFP();
+            HttpContext.SetFP("api");  //even the guy who sent this needs these changes
+            await base.UpdateAsync(id, p);
+            HttpContext.SetFP(fp);
+            return p;
         }
         public async Task<Passage> UpdateToReadyStateAsync(int id)
         {

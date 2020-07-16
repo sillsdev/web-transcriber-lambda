@@ -11,7 +11,7 @@ namespace SIL.Transcriber.Models
         [Attr("description")]
         public string Description { get; set; }
 
-        [HasMany("Plans")]
+        [HasMany("Plans", Link.None)]
         public virtual List<Plan> Plans { get; set; }
 
     }

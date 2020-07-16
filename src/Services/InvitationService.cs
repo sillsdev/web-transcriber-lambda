@@ -68,7 +68,7 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation> CreateAsync(Invitation entity)
         {
             //call the Identity api and receive an invitation id
-            var org = await OrganizationService.GetAsync(entity.OrganizationId);
+            Organization org = await OrganizationService.GetAsync(entity.OrganizationId);
             entity.Organization = org;
             //entity.SilId = SendInvitation(entity);
             entity = await base.CreateAsync(entity);
@@ -78,7 +78,7 @@ namespace SIL.Transcriber.Services
             {
                 dynamic strings = JObject.Parse(entity.Strings);
                 string subject = strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
-                await Email.SendEmailAsync(entity.Email, subject, BuildEmailBody(strings, entity));
+                await TranscriberAPI.Utility.Email.SendEmailAsync(entity.Email, subject, BuildEmailBody(strings, entity));
                 return entity;
             }
             catch (Exception ex)
@@ -92,8 +92,8 @@ namespace SIL.Transcriber.Services
 
         public override async Task<Invitation> UpdateAsync(int id, Invitation entity)
         {
-            var currentUser = CurrentUserRepository.GetCurrentUser().Result;
-            var oldentity = MyRepository.GetAsync(id).Result;
+            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            Invitation oldentity = MyRepository.GetAsync(id).Result;
             //verify current user is logged in with invitation email
             if (oldentity.Email.ToLower() != currentUser.Email.ToLower())
             {
@@ -102,7 +102,7 @@ namespace SIL.Transcriber.Services
             if (entity.Accepted && !oldentity.Accepted)
             {
                 //add the user to the org
-                var org = await OrganizationService.GetAsync(oldentity.OrganizationId);
+                Organization org = await OrganizationService.GetAsync(oldentity.OrganizationId);
                 OrganizationService.JoinOrg(org, currentUser, (RoleName)oldentity.RoleId, (RoleName)oldentity.AllUsersRoleId);
                 if (oldentity.GroupId != null)
                 {

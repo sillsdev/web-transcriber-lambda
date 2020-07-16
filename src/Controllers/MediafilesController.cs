@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{id}/fileurl")]
         public IActionResult GetFile([FromRoute] int id)
         {
-            var response = _service.GetFileSignedUrl(id);
+            Mediafile response = _service.GetFileSignedUrlAsync(id).Result;
             return Ok(response);
         }
 
@@ -48,7 +48,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{id}/file")]
         public async Task<IActionResult> GetFileDirect([FromRoute] int id)
         {
-            var response = await _service.GetFile(id);
+            S3Response response = await _service.GetFile(id);
 
             if (response.Status == HttpStatusCode.OK)
             {
@@ -68,7 +68,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{id}/eaf")]
         public IActionResult GetEaf([FromRoute] int id)
         {
-            var response = _service.EAF(_service.GetAsync(id).Result);
+            string response = _service.EAF(_service.GetAsync(id).Result);
 
            return Ok(response);
         }
@@ -97,7 +97,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("fromfile/{s3File}")]
         public async Task<IActionResult> GetFromFile([FromRoute] string s3File)
         {
-            var response = await _service.GetFromFile(s3File);
+            Mediafile response = await _service.GetFromFile(s3File);
             if (response == null)
                 return NotFound();
             return Ok(response);

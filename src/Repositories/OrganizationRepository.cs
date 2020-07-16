@@ -27,7 +27,7 @@ namespace SIL.Transcriber.Repositories
         {
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                return entities.Join(dbContext.Organizationmemberships.Where(om => om.UserId == CurrentUser.Id), o => o.Id, om => om.OrganizationId, (o, om) => o).GroupBy(o => o.Id).Select(g => g.First());
+                return entities.Join(dbContext.Organizationmemberships.Where(om => om.UserId == CurrentUser.Id && !om.Archived), o => o.Id, om => om.OrganizationId, (o, om) => o).GroupBy(o => o.Id).Select(g => g.First());
             }
             return entities;
         }
@@ -47,6 +47,14 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersOrganizations(entities);
+            }
+            if (filterQuery.Has(DATA_START_INDEX)) //ignore
+            {
+                return entities;
+            }
+            if (filterQuery.Has(PROJECT_SEARCH_TERM)) //ignore
+            {
+                return entities;
             }
             return base.Filter(entities, filterQuery);
         }

@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.Threading.Tasks;
 
 namespace TranscriberAPI.Controllers
 {
@@ -24,12 +23,6 @@ namespace TranscriberAPI.Controllers
             : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
         {
             _service = service;
-        }
-
-        [HttpGet]
-        public override async Task<IActionResult> GetAsync()
-        {
-            return Ok(await _service.GetAsync());
         }
     }
 }

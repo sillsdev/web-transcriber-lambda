@@ -8,6 +8,7 @@ using SIL.Transcriber.Models;
 using System.Threading.Tasks;
 using System;
 using Microsoft.Extensions.Logging;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -85,17 +86,17 @@ namespace SIL.Transcriber.Controllers
 
         private async Task<User> FindOrCreateCurrentUser()
         {
-            var existing = userService.GetCurrentUser();
+            User existing = userService.GetCurrentUser();
 
             if (existing != null) return existing;
 
-            if (currentUserContext.Auth0Id == null)
+            if (currentUserContext.Auth0Id == null || currentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", ""))
             {
                 Console.WriteLine("No Auth0 user.");
                 return null;
             }
 
-            var newUser = new User
+            User newUser = new User
             {
                 ExternalId = currentUserContext.Auth0Id,
                 Email = currentUserContext.Email,
@@ -108,7 +109,7 @@ namespace SIL.Transcriber.Controllers
                 SilUserid = 0 //  currentUserContext.SilUserid
             };
 
-            var newEntity = await userService.CreateAsync(newUser);
+            User newEntity = await userService.CreateAsync(newUser);
             Console.WriteLine("New user created.");
             /* ask the sil auth if this user has any orgs */
             //List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;

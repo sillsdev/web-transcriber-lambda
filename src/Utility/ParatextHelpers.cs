@@ -42,6 +42,9 @@ namespace SIL.Transcriber.Utility
             {
                 try
                 {
+                    myLevel += "{newline}";
+                    for (int ix = level; ix > 1; ix--)
+                        myLevel += "{newtab}";
                     myLevel += "{Level " + level.ToString() + " Type:" + n.NodeType + " ";
                     switch (n.NodeType)
                     {
@@ -74,22 +77,40 @@ namespace SIL.Transcriber.Utility
         {
             return ParatextPara("s", new XText(text));
         }
-        private static XElement ParatextVerse(string verses, string text)
+        private static XElement AddParatextVerse(XNode parent, string verses, string text, bool before = false)
         {
-            return ParatextPara("p", new XElement("verse", new XAttribute("number", verses), new XAttribute("style", "v"), new XText(text)));
+            string[] lines = text.Split('\n');
+            XText newverse = new XText(lines[0]);
+            XElement first = ParatextPara("p", new XElement("verse", new XAttribute("number", verses), new XAttribute("style", "v"), newverse));
+            if (before)
+                parent.AddBeforeSelf(first);
+            else
+                parent.AddAfterSelf(first);
+            XNode last = first;
+            for (int ix = 1; ix < lines.Length; ix++)
+            {
+                last.AddAfterSelf(ParatextPara("p", new XText(lines[ix])));
+                last = last.NextNode;
+            }
+            return first;
         }
 
         private static XNode MoveToPara(XElement verse)
         {
-            var prev = verse.PreviousNode;
-            if (!verse.Parent.IsPara())
-            {
-                var text = verse.Scripture();
-                verse.RemoveVerse();  //remove the verse and it's text
-                prev.AddAfterSelf(ParatextVerse(verse.FirstAttribute.Value, text));
-                return prev.NextNode; //return the para
+            string text = verse.Scripture();
+            if (verse.Parent.IsPara()) {
+                if (verse.PreviousNode != null)
+                {
+                    XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute.Value, text);
+                    verse.RemoveVerse();  //remove the verse and its text
+                    return newVerse;
+                }
+                return verse.Parent;
             }
-            return verse.Parent;
+            XNode prev = verse.PreviousNode;
+            AddParatextVerse(prev, verse.FirstAttribute.Value, text);
+            verse.RemoveVerse();  //remove the verse and its text
+            return prev.NextNode; //return the para
         }
 
         public static XElement GetParatextBook(XElement chapterContent, string code, bool addIt = false)
@@ -128,67 +149,84 @@ namespace SIL.Transcriber.Utility
         {
             return GetElement(chapterContent, "chapter");
         }
-
-        public static XElement AddSectionHeaders(XElement chapterContent, IEnumerable<SectionSummary> sectionSummaryList)
+        public static XElement RemoveSectionHeaders(XElement chapterContent)
         {
-            IEnumerable<XElement> verses = GetElements(chapterContent, "verse");
-            IEnumerable<XElement> existingsections = GetElementsWithAttribute(chapterContent, "para", "s");
-            IEnumerable<string> sectionList = sectionSummaryList.Select(s => s.SectionHeader());
-            //remove any that don't match
-            IEnumerable<XElement> changedSections = existingsections.Where(s => sectionList.FirstOrDefault(h => h == s.SectionText()) == null).ToList();
-            foreach (XElement s in changedSections)
-                    s.Remove();
-
-            foreach (SectionSummary sectionInfo in sectionSummaryList)
-            {
-                //find it
-                XElement section = existingsections.Where(s => s.SectionText() == sectionInfo.SectionHeader()).FirstOrDefault();
-                XElement verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(sectionInfo.startVerse)).FirstOrDefault();
-                //is it in the right place?
-                if (section != null)
-                {
-                    if (verse == null || MoveToPara(verse).PreviousNode != section)
-                    {
-                        section.Remove();  // remove it...we'll readd it rather than trying to move it.
-                        section = null;
-                    }
-                }
-                if (section == null) 
-                {
-                    //find the next verse to add it before if (verse == null)
-                    int lastinChapter = 0;
-                    if (verses.LastOrDefault() != null)
-                    {
-                        lastinChapter = verses.Last().EndVerse();
-                    }
-                    for (int ix = sectionInfo.startVerse; verse == null && ix <= lastinChapter; ix++)
-                    {
-                        verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
-                    }
-                    if (verse == null)
-                    {
-                        chapterContent.LastNode.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader()));
-                        chapterContent.LastNode.AddAfterSelf(ParatextVerse(sectionInfo.startVerse.ToString(), ""));
-                    }
-                    else
-                    {
-                        verse = (XElement)MoveToPara(verse);
-                        var prev = verse.PreviousNode;
-                        prev.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader()));
-                    }
-                }
- 
-            }
+            IEnumerable<XElement> existingsections = GetElementsWithAttribute(chapterContent, "para", "s").ToList();
+            foreach (XElement s in existingsections)
+                s.Remove();
             return chapterContent;
         }
 
+        public static XElement AddSectionHeaders(XElement chapterContent, IEnumerable<SectionSummary> sectionSummaryList, bool addNumbers = true)
+        {
+            RemoveSectionHeaders(chapterContent);
+            IEnumerable<XElement> verses = GetElements(chapterContent, "verse");
+            IEnumerable<string> sectionList = sectionSummaryList.Select(s => s.SectionHeader(addNumbers));
+            int lastinChapter = 0;
+            if (verses.LastOrDefault() != null)
+            {
+                lastinChapter = verses.Last().EndVerse();
+            }
+
+            foreach (SectionSummary sectionInfo in sectionSummaryList)
+            {
+                XElement verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(sectionInfo.startVerse)).FirstOrDefault();
+                //find the next verse to add it before if (verse == null)
+                for (int ix = sectionInfo.startVerse; verse == null && ix <= lastinChapter; ix++)
+                {
+                    verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
+                }
+                if (verse == null)
+                {
+                    chapterContent.LastNode.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader(addNumbers)));
+                    AddParatextVerse(chapterContent.LastNode, sectionInfo.startVerse.ToString(), "");
+                }
+                else
+                {
+                    verse = (XElement)MoveToPara(verse);
+                    verse.AddBeforeSelf(ParatextSection(sectionInfo.SectionHeader(addNumbers)));
+                }
+             }
+            return chapterContent;
+        }
+        //assumes sections have been removed
+        private static XNode FindNodeAfterVerse(int verse, IEnumerable<XElement> verses)
+        {
+            int lastinChapter = verses.LastOrDefault() != null ? int.Parse(verses.Last().FirstAttribute.Value) : 0;
+            //find where to put it
+            XElement nextVerse = null;
+            int ix = verse + 1;
+            while (nextVerse == null && ix <= lastinChapter)
+            {
+                nextVerse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
+                ix++;
+            }
+            if (nextVerse != null)
+            {
+                return MoveToPara(nextVerse);
+            }
+            return nextVerse;
+        }
+        private static bool FindNodes(XNode thisNode, XNode nextVerse, List<XNode> list)
+        {
+            bool stop = false;
+            while (thisNode != null && !stop)
+                if (thisNode == nextVerse)
+                    stop = true;
+                else
+                {
+                    if (thisNode.NodeType == System.Xml.XmlNodeType.Element)
+                        stop = FindNodes(((XElement)thisNode).FirstNode, nextVerse, list);
+                    list.Add(thisNode);
+                    thisNode = thisNode.NextNode;
+                }
+            return stop;
+        }
         public static XElement GenerateParatextData(XElement chapterContent, Passage currentPassage, string transcription, IEnumerable<SectionSummary> sectionSummaryList)
         {
-            string sDebug = TraverseNodes(chapterContent, 1);
-
             IEnumerable<XElement> verses = GetElements(chapterContent, "verse");
-            IEnumerable<XElement> sections = GetElementsWithAttribute(chapterContent, "para", "s");
 
+            // string sDebug = TraverseNodes(chapterContent, 1);
             //find the verses that contain verses in my range
             SortedList<int, XElement> existing = new SortedList<int, XElement>();
             for (int ix = currentPassage.StartVerse; ix <= currentPassage.EndVerse; ix++)
@@ -197,65 +235,48 @@ namespace SIL.Transcriber.Utility
                 if (verse != null && !existing.ContainsKey(verse.StartVerse()))
                     existing.Add(verse.StartVerse(), verse);
             }
-            if (existing.Count == 0)
+            int last = 0;
+
+            XNode nextVerse = FindNodeAfterVerse(existing.Count > 0 ? existing.Values[existing.Count - 1].EndVerse(): currentPassage.EndVerse, verses);
+            if (nextVerse == null)
+                last = -1;                
+
+            if (existing.Count != 0)
             {
-                int lastinChapter = verses.LastOrDefault() != null ? int.Parse(verses.Last().FirstAttribute.Value) : 0;
-                //find where to put it
-                XElement nextVerse = null;
-                int ix = currentPassage.EndVerse + 1;
-                while (nextVerse == null && ix <= lastinChapter)
-                {
-                    nextVerse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
-                    ix++;
-                }
-                if (nextVerse == null)
-                {   //add it at the end
-                    chapterContent.LastNode.AddAfterSelf(ParatextVerse(currentPassage.Verses, transcription));
-                }
-                else
-                {
-                     //see if the verse we're adding before is in a section
-                    var checkSection = sectionSummaryList.FirstOrDefault(s => nextVerse.StartVerse() >= s.startVerse && nextVerse.StartVerse() <= s.endVerse);
-                    if (checkSection != null)
-                    {
-                        //do I have a section header?
-                        var sectionSummary = sectionSummaryList.FirstOrDefault(s => currentPassage.StartVerse >= s.startVerse && currentPassage.StartVerse <= s.endVerse);
-                        if (sectionSummary != checkSection)
-                        {
-                            //put it before the section header
-                            nextVerse = sections.FirstOrDefault(s => s.SectionText() == checkSection.SectionHeader());
-                        }
-                    }
-                    if (nextVerse.Parent.IsPara())
-                        nextVerse = nextVerse.Parent;
-                    nextVerse.AddBeforeSelf(ParatextVerse(currentPassage.Verses, transcription));
-                }
-            }
-            else
-            {
-                //we'll take over the first node we found...but see if we need to replace any verses
+                last = existing.Values[existing.Count - 1].EndVerse();
                 XElement thisVerse = existing.Values[0];
+                XNode thisNode = MoveToPara(thisVerse);
+
                 //add a node for each verse before our passage starts
                 for (int ix = thisVerse.StartVerse(); ix < currentPassage.StartVerse; ix++)
                 {
-                    thisVerse.AddBeforeSelf(ParatextVerse(ix.ToString(), ""));
+                    AddParatextVerse(thisNode, ix.ToString(), "", true);
                 }
-                int last = existing.Values[existing.Count - 1].EndVerse();
-                thisVerse.SetReference(currentPassage.Verses);
-                thisVerse.SetScripture(transcription);
-                //delete any other nodes - remembering last verse deleted
-                for (int ix = existing.Count - 1; ix > 0; ix--)
-                {
-                    existing.Values[ix].RemoveVerse();
-                }
-                //add a node for each verse after our passage ends
-                for (int ix = last;  ix > currentPassage.EndVerse; ix--)
-                {
-                    thisVerse.NextNode.AddAfterSelf(ParatextVerse(ix.ToString(), ""));
-                }
-                MoveToPara(thisVerse);
+                List<XNode> deleteList = new List<XNode>();
+                FindNodes(thisNode, nextVerse, deleteList);
+                deleteList.ForEach(d => d.Remove());
             }
-           // sDebug = TraverseNodes(chapterContent, 1);
+            if (nextVerse == null)
+            {   //add it at the end
+                AddParatextVerse(chapterContent.LastNode, currentPassage.Verses, transcription);
+            }
+            else
+            {
+                AddParatextVerse(nextVerse, currentPassage.Verses, transcription, true);
+            }
+                //add a node for each verse after our passage ends
+            for (int ix = currentPassage.EndVerse+1;  ix <= last; ix++)
+            {
+                if (nextVerse == null)
+                {   //add it at the end
+                    AddParatextVerse(chapterContent.LastNode, ix.ToString(), "");
+                }
+                else
+                {
+                    AddParatextVerse(nextVerse, ix.ToString(), "", true);
+                }
+            }
+            //sDebug = TraverseNodes(chapterContent, 1);
             return chapterContent;
         }
      }

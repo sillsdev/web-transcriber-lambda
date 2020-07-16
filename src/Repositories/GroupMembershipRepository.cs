@@ -28,7 +28,7 @@ namespace SIL.Transcriber.Repositories
             HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
         }
-        private IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
+        public IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
         {
             if (groups == null)
             {
@@ -43,7 +43,7 @@ namespace SIL.Transcriber.Repositories
             {
                 if (filterQuery.HasSpecificOrg())
                 {
-                    var groups =dbContext.Groups.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                    IQueryable<Group> groups =dbContext.Groups.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                     return UsersGroupMemberships(entities, groups);
                 }
                 return UsersGroupMemberships(entities);
@@ -52,16 +52,22 @@ namespace SIL.Transcriber.Repositories
             {
                 return UsersGroupMemberships(entities);
             }
+            if (filterQuery.Has(DATA_START_INDEX)) //ignore
+            {
+                return entities;
+            }
             return base.Filter(entities, filterQuery);
         }
         #endregion
 
         public GroupMembership JoinGroup(int UserId, int groupId, RoleName groupRole)
         {
+            Group group = dbContext.Groups.Find(groupId);
+            if (group.Archived) return null;
             GroupMembership groupmembership = Get().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
             if (groupmembership == null)
             {
-                HttpContext.SetOrigin("api");
+                HttpContext.SetFP("api");
                 groupmembership = new GroupMembership
                 {
                     GroupId = groupId,

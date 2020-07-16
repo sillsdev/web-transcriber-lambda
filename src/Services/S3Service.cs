@@ -1,4 +1,5 @@
 ﻿using Amazon.S3;
+using Amazon.S3.Transfer;
 using Amazon.S3.Model;
 using Amazon.S3.Util;
 using System;
@@ -65,7 +66,7 @@ namespace SIL.Transcriber.Services
             {
                 if (await AmazonS3Util.DoesS3BucketExistAsync(_client, bucketName) == false)
                 {
-                    var putBucketRequest = new PutBucketRequest
+                    PutBucketRequest putBucketRequest = new PutBucketRequest
                     {
                         BucketName = bucketName,
                         UseClientRegion = true
@@ -90,9 +91,9 @@ namespace SIL.Transcriber.Services
 
         private string SignedUrl(string key, HttpVerb action, string mimetype)
         {
-            var s3Client = new AmazonS3Client();
+            AmazonS3Client s3Client = new AmazonS3Client();
 
-            var request = new GetPreSignedUrlRequest
+            GetPreSignedUrlRequest request = new GetPreSignedUrlRequest
             {
                 BucketName = USERFILES_BUCKET,
                 Key = key,
@@ -152,9 +153,8 @@ namespace SIL.Transcriber.Services
                 {
                     await RemoveFile(fileName, folder);
                 }
-
-                PutObjectResponse response = null;
-                var request = new PutObjectRequest
+                TransferUtility fileTransferUtility =  new TransferUtility(_client);
+                TransferUtilityUploadRequest fileTransferUtilityRequest = new TransferUtilityUploadRequest
                 {
                     BucketName = USERFILES_BUCKET,
                     Key = ProperFolder(folder) + fileName,
@@ -163,17 +163,27 @@ namespace SIL.Transcriber.Services
                     StorageClass = S3StorageClass.Standard,
                     CannedACL = S3CannedACL.NoACL
                 };
-                /*
-                request.Metadata.Add("Book", "Genesis");
-                request.Metadata.Add("Reference", "1:1-5");
-                request.Metadata.Add("Plan", "Creation");
-                */
-                response = await _client.PutObjectAsync(request);
+                await fileTransferUtility.UploadAsync(fileTransferUtilityRequest);
 
+                /*                PutObjectResponse response = null;
+                                PutObjectRequest request = new PutObjectRequest
+                                {
+                                    BucketName = USERFILES_BUCKET,
+                                    Key = ProperFolder(folder) + fileName,
+                                    InputStream = stream,
+                                    ContentType = ContentType,
+                                    StorageClass = S3StorageClass.Standard,
+                                    CannedACL = S3CannedACL.NoACL
+                                };
+                                //request.Metadata.Add("Book", "Genesis");
+                                //request.Metadata.Add("Reference", "1:1-5");
+                                //request.Metadata.Add("Plan", "Creation");
+                                response = await _client.PutObjectAsync(request);
+                */
                 return new S3Response
                 {
                     Message = fileName,
-                    Status = response.HttpStatusCode
+                    Status = HttpStatusCode.OK,
                 };
             }
             catch (AmazonS3Exception e)
@@ -189,11 +199,11 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                byte[] fileBytes = new Byte[file.Length];
-                file.OpenReadStream().Read(fileBytes, 0, Int32.Parse(file.Length.ToString()));
+                byte[] fileBytes = new byte[file.Length];
+                file.OpenReadStream().Read(fileBytes, 0, int.Parse(file.Length.ToString()));
 
                 // create unique file name 
-                var fileName = Guid.NewGuid() + "_" + file.FileName;
+                string fileName = Guid.NewGuid() + "_" + file.FileName;
                 //aws versioning on
                 //var fileName = file.FileName;
 
@@ -216,14 +226,41 @@ namespace SIL.Transcriber.Services
             {
                 //check if it exists
                 //check if file with metadata OriginalFileName = fileName exists
-                var request = new DeleteObjectRequest
+                DeleteObjectRequest request = new DeleteObjectRequest
                 {
                     BucketName = USERFILES_BUCKET,
                     Key = ProperFolder(folder) + fileName,
                 };
 
-                var response = await _client.DeleteObjectAsync(request);
+                DeleteObjectResponse response = await _client.DeleteObjectAsync(request);
                 return S3Response(fileName, response.HttpStatusCode);
+
+            }
+            catch (AmazonS3Exception e)
+            {
+                return S3Response(e.Message, e.StatusCode);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+
+        }
+        public async Task<S3Response> RenameFile(string fileName, string newFileName, string folder = "")
+        {
+            try
+            {
+                //save it as the newName
+                S3Response s3response = ReadObjectDataAsync(fileName, folder).Result;
+                if (s3response.FileStream == null) {
+                    return s3response;
+                }
+
+
+                s3response = await UploadFileAsync(s3response.FileStream, true, s3response.ContentType, newFileName, folder);
+                if (s3response.Status == HttpStatusCode.OK)
+                    _ = RemoveFile(fileName, folder);
+               return S3Response(newFileName, s3response.Status);
 
             }
             catch (AmazonS3Exception e)
@@ -264,6 +301,7 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
+
         public async Task<S3Response> ReadObjectDataAsync(string fileName, string folder = "")
         {
             try
@@ -274,13 +312,11 @@ namespace SIL.Transcriber.Services
                     Key = ProperFolder(folder) + fileName,
 
                 };
-
+                
                 using (GetObjectResponse response = await _client.GetObjectAsync(request))
                 using (Stream responseStream = response.ResponseStream)
                 {
-                    Console.WriteLine("Meta", response.Metadata);
-                    Console.WriteLine("Headers", response.Headers);
-                    var stream = new MemoryStream();
+                    MemoryStream stream = new MemoryStream();
                     await responseStream.CopyToAsync(stream);
                     stream.Position = 0;
 

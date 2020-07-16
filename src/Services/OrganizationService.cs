@@ -62,7 +62,7 @@ namespace SIL.Transcriber.Services
         {
             var newEntity = await base.CreateAsync(entity);
 
-            HttpContext.SetOrigin("api");
+            HttpContext.SetFP("api");
             //create an "all org group" and add the current user
             var group = new Group
             {
@@ -83,7 +83,7 @@ namespace SIL.Transcriber.Services
             if (user.OrganizationMemberships == null || user.GroupMemberships == null)
                 user = CurrentUserRepository.Get().Include(o => o.OrganizationMemberships).Include(o => o.GroupMemberships).Where(e => e.Id == user.Id).SingleOrDefault();
 
-            HttpContext.SetOrigin("api");
+            HttpContext.SetFP("api");
             OrganizationMembership membership = user.OrganizationMemberships.Where(om => om.OrganizationId == entity.Id).ToList().FirstOrDefault();
             if (membership == null)
             {
@@ -95,7 +95,7 @@ namespace SIL.Transcriber.Services
                     OrganizationId = entity.Id,
                     RoleId = (int)orgRole
                 };
-                var om = OrganizationMembershipRepository.CreateAsync(membership).Result;
+                OrganizationMembership om = OrganizationMembershipRepository.CreateAsync(membership).Result;
             }
             else
             {
@@ -103,7 +103,7 @@ namespace SIL.Transcriber.Services
                 {
                     membership.RoleId = (int)orgRole;
                     membership.Archived = false;
-                    var om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
+                    OrganizationMembership om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
                 }
             }
             if (allGroup != null)

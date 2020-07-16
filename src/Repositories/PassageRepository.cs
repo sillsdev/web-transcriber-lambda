@@ -31,7 +31,7 @@ namespace SIL.Transcriber.Repositories
        
         public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, IQueryable<Project> projects)
         {
-            var sections = SectionRepository.UsersSections(dbContext.Sections, projects);
+            IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, projects);
 
             return UsersPassages(entities, sections);
         }
@@ -44,11 +44,18 @@ namespace SIL.Transcriber.Repositories
             }
             return entities.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
         }
+        public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, int planid)
+        {
+            IQueryable<Plan> plans = dbContext.Plans.Where(p => p.Id == planid);
 
+            IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, plans);
+
+            return UsersPassages(entities, sections);
+        }
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {
-            var sections = dbContext.Sections.Where(s => s.PlanId == PlanId);
-            var passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(p => p.ReadyToSync);
+            IQueryable<Section> sections = dbContext.Sections.Where(s => s.PlanId == PlanId);
+            IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(p => p.ReadyToSync);
 
             return passages;
         }
@@ -56,12 +63,17 @@ namespace SIL.Transcriber.Repositories
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                var projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                IQueryable<Project> projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                 return UsersPassages(entities, projects);
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersPassages(entities);
+            }
+            if (filterQuery.Has(PLANID))
+            {
+                if (int.TryParse(filterQuery.Value, out int plan))
+                    return UsersPassages(entities, plan);
             }
             return base.Filter(entities, filterQuery); 
         }
