@@ -75,6 +75,8 @@ namespace SIL.Transcriber.Repositories
                 if (!CheckAdd(12, projects,dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 //projectintegrations
                 if (!CheckAdd(13, dbContext.Projectintegrations.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived),dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                //plans
+                if (!CheckAdd(14, dbContext.Plans.Join(projects, pl => pl.ProjectId, p => p.Id, (pl,p) => pl).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 iStartNext = -1; //Done!
             } while (false); //do it once
             if (iStart == iStartNext)
