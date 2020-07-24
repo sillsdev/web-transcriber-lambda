@@ -16,6 +16,7 @@ using static SIL.Transcriber.Utility.ResourceHelpers;
 using static SIL.Transcriber.Utility.ParatextHelpers;
 using System.Xml.Linq;
 using System.Web;
+using TranscriberAPI.Utility.Extensions;
 
 namespace SIL.Transcriber.Services
 {
@@ -190,14 +191,14 @@ namespace SIL.Transcriber.Services
                 //var sDebug = TraverseNodes(eafContent, 1);
                 XElement elem;
                 eafContent.Attribute("DATE").Value = DateTime.Now.ToString();
-                GetElement(eafContent, "TIER").Attribute("DEFAULT_LOCALE").Value = lang;
-                GetElement(eafContent, "LOCALE").Attribute("LANGUAGE_CODE").Value = lang;
-                GetElement(eafContent, "HEADER").Attribute("MEDIA_FILE").Value = mf.S3File;
-                GetElement(eafContent, "MEDIA_DESCRIPTOR").Attribute("MEDIA_URL").Value = mf.S3File;
-                GetElement(eafContent, "MEDIA_DESCRIPTOR").Attribute("MIME_TYPE").Value = mf.ContentType;
-                elem = GetElementsWithAttribute(eafContent, "TIME_SLOT", "ts2").First();
+                eafContent.GetElement("TIER").Attribute("DEFAULT_LOCALE").Value = lang;
+                eafContent.GetElement("LOCALE").Attribute("LANGUAGE_CODE").Value = lang;
+                eafContent.GetElement("HEADER").Attribute("MEDIA_FILE").Value = mf.S3File;
+                eafContent.GetElement("MEDIA_DESCRIPTOR").Attribute("MEDIA_URL").Value = mf.S3File;
+                eafContent.GetElement("MEDIA_DESCRIPTOR").Attribute("MIME_TYPE").Value = mf.ContentType;
+                elem = eafContent.GetElementsWithAttribute( "TIME_SLOT", "ts2").First();
                 elem.Attribute("TIME_VALUE").Value = (mf.Duration * 1000).ToString();
-                GetElement(eafContent, "ANNOTATION_VALUE").Value = Regex.Replace(HttpUtility.HtmlEncode(mf.Transcription), pattern, ""); //TEST THE REGEX
+                eafContent.GetElement("ANNOTATION_VALUE").Value = Regex.Replace(HttpUtility.HtmlEncode(mf.Transcription), pattern, ""); //TEST THE REGEX
                 eaf = eafContent.ToString();
             }
 
