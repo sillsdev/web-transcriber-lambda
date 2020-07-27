@@ -158,6 +158,7 @@ namespace SIL.Transcriber.Utility
         {
             return chapterContent.GetElement("chapter");
         }
+        /*
         public static XElement RemoveSectionHeaders(XElement chapterContent)
         {
             IEnumerable<XElement> existingsections = chapterContent.GetElementsWithAttribute("para", "s").ToList();
@@ -197,8 +198,7 @@ namespace SIL.Transcriber.Utility
                 }
              }
             return chapterContent;
-        }
-        //assumes sections have been removed
+        } */
         private static XNode FindNodeAfterVerse(int startverse, int endverse, IEnumerable<XElement> verses)
         {
             //find where to put it
@@ -215,7 +215,11 @@ namespace SIL.Transcriber.Utility
             });
             if (nextVerse != null)
             {
-                return MoveToPara(nextVerse);
+                nextVerse= (XElement)MoveToPara(nextVerse);
+                //skip section if there
+                if (nextVerse.PreviousNode != null && nextVerse.PreviousNode.PreviousNode != null && nextVerse.PreviousNode.PreviousNode.IsSection())
+                    return nextVerse.PreviousNode.PreviousNode;
+                return nextVerse;
             }
             return nextVerse;
         }
