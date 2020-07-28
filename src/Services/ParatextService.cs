@@ -471,7 +471,6 @@ namespace SIL.Transcriber.Services
                 //make sure we have the chapter number
                 chapter.NewUSX = ParatextHelpers.AddParatextChapter(chapter.NewUSX, chapter.Book, chapter.Chapter);
                 IEnumerable<SectionSummary> ss = SectionService.GetSectionSummary(planId, chapter.Book, chapter.Chapter);
-                //chapter.NewUSX = ParatextHelpers.RemoveSectionHeaders(chapter.NewUSX);
                 HttpContext.SetFP("paratext");
                 foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                 {
@@ -480,7 +479,6 @@ namespace SIL.Transcriber.Services
                     //await PassageService.UpdateAsync(passage.Id, passage);
                     //await PassageStateChangeService.CreateAsync(passage, "Paratext"); 
                 }
-                //chapter.NewUSX = ParatextHelpers.AddSectionHeaders(chapter.NewUSX, ss, addNumbers);
             }
             foreach (ParatextChapter c in chapterList)
             {

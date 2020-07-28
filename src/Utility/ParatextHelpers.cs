@@ -89,9 +89,14 @@ namespace SIL.Transcriber.Utility
             if (verse.Parent.IsPara()) {
                 if (verse.PreviousNode != null)
                 {
+                    var asxml = verse.Parent.ToString();
+
                     XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute.Value, text);
                     XNode nextVerse = verse.NextNode;
                     XNode endverse = newVerse;
+                    
+                    asxml = verse.Parent.ToString();
+
                     while (nextVerse != null)
                     {
                         endverse.AddAfterSelf(nextVerse); //unlike javascript, this doesn't MOVE it, it copies it
@@ -108,9 +113,9 @@ namespace SIL.Transcriber.Utility
                             }
                         }
                         rem.Remove();
-                        var sDebug = TraverseNodes(verse, 1);
                         endverse = endverse.NextNode;
                     }
+                    asxml = verse.Parent.ToString();
                     verse.RemoveVerse();  //remove the verse and its text
                     return newVerse;
                 }
@@ -158,47 +163,6 @@ namespace SIL.Transcriber.Utility
         {
             return chapterContent.GetElement("chapter");
         }
-        /*
-        public static XElement RemoveSectionHeaders(XElement chapterContent)
-        {
-            IEnumerable<XElement> existingsections = chapterContent.GetElementsWithAttribute("para", "s").ToList();
-            foreach (XElement s in existingsections)
-                s.Remove();
-            return chapterContent;
-        }
-
-        public static XElement AddSectionHeaders(XElement chapterContent, IEnumerable<SectionSummary> sectionSummaryList, bool addNumbers = true)
-        {
-            RemoveSectionHeaders(chapterContent);
-            IEnumerable<XElement> verses = chapterContent.GetElements("verse");
-            IEnumerable<string> sectionList = sectionSummaryList.Select(s => s.SectionHeader(addNumbers));
-            int lastinChapter = 0;
-            if (verses.LastOrDefault() != null)
-            {
-                lastinChapter = verses.Last().EndVerse();
-            }
-
-            foreach (SectionSummary sectionInfo in sectionSummaryList)
-            {
-                XElement verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(sectionInfo.startVerse)).FirstOrDefault();
-                //find the next verse to add it before if (verse == null)
-                for (int ix = sectionInfo.startVerse; verse == null && ix <= lastinChapter; ix++)
-                {
-                    verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
-                }
-                if (verse == null)
-                {
-                    chapterContent.LastNode.AddAfterSelf(ParatextSection(sectionInfo.SectionHeader(addNumbers)));
-                    AddParatextVerse(chapterContent.LastNode, sectionInfo.startVerse.ToString(), "");
-                }
-                else
-                {
-                    verse = (XElement)MoveToPara(verse);
-                    verse.AddBeforeSelf(ParatextSection(sectionInfo.SectionHeader(addNumbers)));
-                }
-             }
-            return chapterContent;
-        } */
         private static XNode FindNodeAfterVerse(int startverse, int endverse, IEnumerable<XElement> verses)
         {
             //find where to put it
