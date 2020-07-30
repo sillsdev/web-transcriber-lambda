@@ -89,14 +89,10 @@ namespace SIL.Transcriber.Utility
             if (verse.Parent.IsPara()) {
                 if (verse.PreviousNode != null)
                 {
-                    var asxml = verse.Parent.ToString();
-
                     XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute.Value, text);
                     XNode nextVerse = verse.NextNode;
                     XNode endverse = newVerse;
                     
-                    asxml = verse.Parent.ToString();
-
                     while (nextVerse != null)
                     {
                         endverse.AddAfterSelf(nextVerse); //unlike javascript, this doesn't MOVE it, it copies it
@@ -115,7 +111,6 @@ namespace SIL.Transcriber.Utility
                         rem.Remove();
                         endverse = endverse.NextNode;
                     }
-                    asxml = verse.Parent.ToString();
                     verse.RemoveVerse();  //remove the verse and its text
                     return newVerse;
                 }
@@ -181,8 +176,8 @@ namespace SIL.Transcriber.Utility
             {
                 nextVerse= (XElement)MoveToPara(nextVerse);
                 //skip section if there
-                if (nextVerse.PreviousNode != null && nextVerse.PreviousNode.PreviousNode != null && nextVerse.PreviousNode.PreviousNode.IsSection())
-                    return nextVerse.PreviousNode.PreviousNode;
+                if (nextVerse.PreviousNode != null && nextVerse.PreviousNode.IsSection())
+                    return nextVerse.PreviousNode;
                 return nextVerse;
             }
             return nextVerse;
@@ -207,17 +202,28 @@ namespace SIL.Transcriber.Utility
         {
             IEnumerable<XElement> verses = chapterContent.GetElements("verse");
 
-            string sDebug = TraverseNodes(chapterContent, 1);
-
             //find the verses that contain verses in my range
             SortedList<string, XElement> existing = new SortedList<string, XElement>();
             for (int ix = currentPassage.StartVerse; ix <= currentPassage.EndVerse; ix++)
             {
-                XElement verse = (XElement)verses.Where(n => ((XElement)n).IncludesVerse(ix)).FirstOrDefault();
-                if (verse != null && !existing.ContainsKey(verse.Verses()) && (verse.Verses() == currentPassage.Verses || verse.Scripture() == ""))            
-                    existing.Add(verse.Verses(), verse);
+                IEnumerable<XElement> myverses = verses.Where(n => ((XElement)n).IncludesVerse(ix));
+                myverses.ForEach(verse =>
+                {
+                    if (!existing.ContainsKey(verse.Verses()) && (verse.Verses() == currentPassage.Verses || verse.Scripture() == ""))
+                    {
+                        existing.Add(verse.Verses(), verse);
+                        //if our section is there...add it to the remove list
+                        if (currentPassage.Sequencenum == 1 && verse.Parent.IsPara() && verse.Parent.PreviousNode != null && verse.Parent.PreviousNode.IsSection())
+                            existing.Add("S" + verse.Verses(), (XElement)verse.Parent.PreviousNode);
+                    }
+                });
             }
-            existing.Values.ForEach(v => v.RemoveVerse());
+            existing.Values.ForEach(v => { 
+                if (v.IsVerse()) 
+                    v.RemoveVerse(); 
+                else 
+                    v.RemoveSection(); 
+            });
 
             verses = chapterContent.GetElements("verse");
             XNode nextVerse = FindNodeAfterVerse(currentPassage.StartVerse, currentPassage.EndVerse, verses);
@@ -230,7 +236,7 @@ namespace SIL.Transcriber.Utility
             {   //add before
                 thisVerse = AddParatextVerse(nextVerse, currentPassage.Verses, transcription, true);
             }
-            if (currentPassage.StartVerse == 1)
+            if (currentPassage.Sequencenum == 1)
             {
                 SectionSummary sectionInfo = sectionSummaryList.First(s => s.startChapter == currentPassage.StartChapter && s.startVerse == currentPassage.StartVerse);
                 //add/update the section header
@@ -243,7 +249,6 @@ namespace SIL.Transcriber.Utility
                     thisVerse.AddBeforeSelf(ParatextSection(sectionInfo.SectionHeader(addNumbers)));
                 }
             }
-            sDebug = TraverseNodes(chapterContent, 1);
             return chapterContent;
         }
      }

@@ -475,9 +475,9 @@ namespace SIL.Transcriber.Services
                 foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                 {
                     chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss, addNumbers);
-                    //passage.State = "done";
-                    //await PassageService.UpdateAsync(passage.Id, passage);
-                    //await PassageStateChangeService.CreateAsync(passage, "Paratext"); 
+                    passage.State = "done";
+                    await PassageService.UpdateAsync(passage.Id, passage);
+                    await PassageStateChangeService.CreateAsync(passage, "Paratext"); 
                 }
             }
             foreach (ParatextChapter c in chapterList)

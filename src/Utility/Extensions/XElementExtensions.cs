@@ -104,8 +104,11 @@ namespace TranscriberAPI.Utility.Extensions
                     text += '\n' + ((XText)next).Value;
                     next = next.NextNode;
                 }
-                if (next != null && !IsSection(next) && !IsVerse(((XElement)next).FirstNode))
-                    next = next.NextNode;
+                if (next != null)
+                    if (IsSection(next) || IsVerse(next) || IsVerse(((XElement)next).FirstNode))
+                        next = null;
+                    else //skip notes etc
+                        next = next.NextNode;
                 else
                     next = null;
             }
@@ -119,15 +122,25 @@ namespace TranscriberAPI.Utility.Extensions
             ((XText)value.NextNode).Value = scripture;
         }
 
+        public static void RemoveSection(this XElement value)
+        {
+            Debug.Assert(IsSection(value));
+            value.Remove();
+        }
         public static void RemoveVerse(this XElement value)
         {
             Debug.Assert(IsVerse(value));
-            var removeParent = IsPara(value.Parent) && value.Parent.GetElements("verse").Count() == 1 ? value.Parent : null;
+            XElement removeParent = IsPara(value.Parent) && value.Parent.GetElements("verse").Count() == 1 ? value.Parent : null;
             XNode next = value.NextNode;
             while (next != null)
             {
-                if (next.NodeType == System.Xml.XmlNodeType.Text ||
-                   (IsPara(next) && !IsSection(next) && !IsVerse(((XElement)next).FirstNode)))
+                if (next.NodeType == System.Xml.XmlNodeType.Text)
+                {
+                    XNode rem = next;
+                    next = removeParent != null ? removeParent.NextNode : null;
+                    rem.Remove();
+                }
+                else if (IsPara(next) && !IsSection(next) && !IsVerse(((XElement)next).FirstNode))
                 {
                     XNode rem = next;
                     next = next.NextNode;
