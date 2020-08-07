@@ -7,12 +7,21 @@ namespace SIL.Transcriber.Models
 {
     public partial class Plan : BaseModel, IArchive
     {
-
         [Attr("name")]
         public string Name { get; set; }
 
         [Attr("slug")]
         public string Slug { get; set; }
+
+        [Attr("organized-by")]
+        public string OrganizedBy { get; set; }
+
+        [Attr("tags")]
+        [Column(TypeName = "jsonb")]
+        public string Tags { get; set; }
+
+        [Attr("flat")]
+        public bool Flat { get; set; }
 
         [HasOne("project", Link.None)]
         public Project Project { get; set; }
@@ -23,7 +32,6 @@ namespace SIL.Transcriber.Models
         public virtual User Owner { get; set; }
         [Attr("owner-id")]
         public int OwnerId { get; set; }
-
 
         [HasOne("plantype", Link.None)]
         public PlanType Plantype { get; set; }
