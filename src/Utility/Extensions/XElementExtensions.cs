@@ -58,6 +58,11 @@ namespace TranscriberAPI.Utility.Extensions
             }
             return OK;
         }
+        public static bool IsText(this XNode value)
+        {
+            if (value is null) return false;
+            return value.NodeType == System.Xml.XmlNodeType.Text;
+        }
         public static bool IsPara(this XNode value)
         {
             if (value==null || value.NodeType != System.Xml.XmlNodeType.Element)
@@ -76,7 +81,7 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static string SectionText(this XElement section)
         {
-            if (section.FirstNode.NodeType != System.Xml.XmlNodeType.Text)
+            if (!IsText(section.FirstNode))
                 return "";
             return ((XText)section.FirstNode).Value;
         }
@@ -89,7 +94,7 @@ namespace TranscriberAPI.Utility.Extensions
             ParseReference(value.Verses(), out startVerse, out endVerse);
             return number >= startVerse && number <= endVerse;
         }
-        public static string Scripture(this XElement value)
+        public static string VerseText(this XElement value)
         {
             Debug.Assert(IsVerse(value));
             if (value.NextNode == null)
@@ -99,25 +104,28 @@ namespace TranscriberAPI.Utility.Extensions
             XNode next = value.NextNode;
             while (next != null)
             {
-                if (next.NodeType == System.Xml.XmlNodeType.Text)
+                if (next.IsText())
                 {
-                    text += '\n' + ((XText)next).Value;
-                    next = next.NextNode;
+                    text += ((XText)next).Value + '\n';
+                    next = next.Parent.NextNode;
                 }
-                if (next != null)
-                    if (IsSection(next) || IsVerse(next) || IsVerse(((XElement)next).FirstNode))
-                        next = null;
-                    else //skip notes etc
-                        next = next.NextNode;
-                else
+                else if (next.IsPara())
+                {
+                    if (((XElement)next).FirstNode != null && ((XElement)next).FirstNode.IsText())
+                        next = ((XElement)next).FirstNode;
+                    else next = null;
+                }
+                else if (next.IsVerse())
                     next = null;
+                else //skip notes etc
+                     next = next.NextNode;
             }
             return text;
         }
         public static void SetScripture(this XElement value, string scripture)
         {
             Debug.Assert(IsVerse(value));
-            if (value.NextNode == null || value.NextNode.NodeType != System.Xml.XmlNodeType.Text)
+            if (!IsText(value.NextNode))
                 value.AddAfterSelf(new XText(""));
             ((XText)value.NextNode).Value = scripture;
         }
@@ -130,17 +138,17 @@ namespace TranscriberAPI.Utility.Extensions
         public static void RemoveVerse(this XElement value)
         {
             Debug.Assert(IsVerse(value));
-            XElement removeParent = IsPara(value.Parent) && value.Parent.GetElements("verse").Count() == 1 ? value.Parent : null;
+            XElement removeParent = value.Parent.IsPara() && value.Parent.GetElements("verse").Count() == 1 ? value.Parent : null;
             XNode next = value.NextNode;
             while (next != null)
             {
-                if (next.NodeType == System.Xml.XmlNodeType.Text)
+                if (next.IsText())
                 {
                     XNode rem = next;
                     next = removeParent != null ? removeParent.NextNode : null;
                     rem.Remove();
                 }
-                else if (IsPara(next) && !IsSection(next) && !IsVerse(((XElement)next).FirstNode))
+                else if (next.IsPara() && !next.IsSection() && !IsVerse(((XElement)next).FirstNode))
                 {
                     XNode rem = next;
                     next = next.NextNode;
@@ -154,6 +162,7 @@ namespace TranscriberAPI.Utility.Extensions
                 removeParent.Remove();
         }
 
+ 
         public static IEnumerable<XElement> GetElements(this XElement root, string name)
         {
             return root.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == name);
