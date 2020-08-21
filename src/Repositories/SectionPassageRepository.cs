@@ -53,7 +53,13 @@ namespace SIL.Transcriber.Repositories
             dbContext.SaveChanges();
             return passages;
         }
-
+        public Plan UpdatePlanModified(int planId)
+        {
+            Plan plan = dbContext.Plans.Find(planId);
+            dbContext.Plans.Update(plan);
+            dbContext.SaveChanges();
+            return plan;
+        }
         public Passage GetPassage(int id)
         {
             return dbContext.Passages.First(p => p.Id == id);

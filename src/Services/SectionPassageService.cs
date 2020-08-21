@@ -113,6 +113,7 @@ namespace SIL.Transcriber.Services
                             ix++;
                         }
                     }
+                    MyRepository.UpdatePlanModified(entity.PlanId);
                     transaction.Commit();
                     entity.Data = JsonConvert.SerializeObject(data);
                     entity.Complete = true;
