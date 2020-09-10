@@ -78,7 +78,7 @@ namespace SIL.Transcriber.Services
             {
                 dynamic strings = JObject.Parse(entity.Strings);
                 string subject = strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
-                await Email.SendEmailAsync(entity.Email, subject, BuildEmailBody(strings, entity));
+                await TranscriberAPI.Utility.Email.SendEmailAsync(entity.Email, subject, BuildEmailBody(strings, entity));
                 return entity;
             }
             catch (Exception ex)
