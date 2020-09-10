@@ -35,10 +35,7 @@ namespace SIL.Transcriber.Repositories
         {
             return dbContext.Sectionpassages.Where(e => e.uuid == uuid).FirstOrDefault();
         }
-        public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
-        {
-            return dbContext.Database.BeginTransaction();
-        }     
+ 
 
         public List<Section> BulkUpdateSections(List<Section> sections)
         {
