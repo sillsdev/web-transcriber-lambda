@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Security;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Services;
 
@@ -15,12 +17,13 @@ namespace SIL.Transcriber.Controllers
     public class ParatextController : ControllerBase
     {
         private readonly IParatextService _paratextService;
+        protected ILogger<ParatextController> Logger { get; set; }
 
-        public ParatextController(IParatextService paratextService)
+        public ParatextController(IParatextService paratextService, ILoggerFactory loggerFactory)
         {
             _paratextService = paratextService;
+            this.Logger = loggerFactory.CreateLogger<ParatextController>();
         }
-
 
         [HttpGet("projects")]
         public async Task<ActionResult<IEnumerable<ParatextProject>>> GetAsync()
@@ -45,9 +48,11 @@ namespace SIL.Transcriber.Controllers
                 IReadOnlyList<ParatextProject> projects = await _paratextService.GetProjectsAsync(userSecret, languageTag);
                 return Ok(projects);
             }
-            catch (SecurityException)
+            catch (Exception ex)
             {
-                return NoContent();
+                Logger.LogError("Paratext Error projects get {0} {1} {2}", ex.Message, languageTag, userSecret.ParatextTokens.IssuedAt.ToString());
+                throw ex;
+                //return NoContent();
             }
         }
 

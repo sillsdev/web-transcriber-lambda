@@ -31,6 +31,8 @@ provider:
     SIL_TR_PARATEXT_CLIENT_ID:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_ID}
     SIL_TR_PARATEXT_CLIENT_SECRET:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_SECRET}
     SIL_TR_PARATEXT_AUTH0_CONNECTION:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_AUTH0_CONNECTION}
+    SIL_TR_PARATEXT_DATA:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_DATA}
+    SIL_TR_PARATEXT_REGISTRY:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_REGISTRY}
     SIL_TR_EMAIL_FROM:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_FROM}
     SIL_TR_EMAIL_HOST:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_HOST}
     SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}

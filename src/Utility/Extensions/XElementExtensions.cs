@@ -65,7 +65,7 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static bool IsPara(this XNode value)
         {
-            if (value==null || value.NodeType != System.Xml.XmlNodeType.Element)
+            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
                 return false;
             return ((XElement)value).Name == "para";
         }
@@ -75,7 +75,7 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static bool IsVerse(this XNode value)
         {
-            if (value==null || value.NodeType != System.Xml.XmlNodeType.Element)
+            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
                 return false;
             return ((XElement)value).Name.LocalName == "verse";
         }
@@ -118,7 +118,7 @@ namespace TranscriberAPI.Utility.Extensions
                 else if (next.IsVerse())
                     next = null;
                 else //skip notes etc
-                     next = next.NextNode;
+                    next = next.NextNode;
             }
             return text;
         }
@@ -162,7 +162,6 @@ namespace TranscriberAPI.Utility.Extensions
                 removeParent.Remove();
         }
 
- 
         public static IEnumerable<XElement> GetElements(this XElement root, string name)
         {
             return root.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == name);

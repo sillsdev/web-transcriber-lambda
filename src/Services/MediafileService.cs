@@ -53,7 +53,7 @@ namespace SIL.Transcriber.Services
 
             return files.SingleOrDefault(g => g.Id == id);
         }
-        public async Task<Mediafile> GetFromFile(string s3File )
+        public async Task<Mediafile> GetFromFile(string s3File)
         {
             IEnumerable<Mediafile> files = await base.GetAsync();
             return files.SingleOrDefault(p => p.S3File == s3File);
@@ -76,7 +76,7 @@ namespace SIL.Transcriber.Services
             //aws versioning on
             //entity.S3File = entity.OriginalFile;
             entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
-            IQueryable<Mediafile> mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived );
+            IQueryable<Mediafile> mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived);
             if (mfs.Count() == 0)
                 entity.VersionNumber = 1;
             else
@@ -95,13 +95,14 @@ namespace SIL.Transcriber.Services
             Mediafile mf = MediafileRepository.Get(id);
 
             mf.Filesize = filesize / 1024;
-            mf.Duration = (int)duration;  
+            mf.Duration = (int)duration;
             await base.UpdateAsync(id, mf);
             return mf;
         }
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
-            if (entity.PassageId == 0 || entity.PassageId is null) { //eh..hacky way to tell if we're uploading a new one, or copying one because it's being reopened
+            if (entity.PassageId == 0 || entity.PassageId is null)
+            { //eh..hacky way to tell if we're uploading a new one, or copying one because it's being reopened
                 await InitNewMediafileAsync(entity); //set the version number
                 S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
                 entity.AudioUrl = response.Message;
@@ -129,12 +130,12 @@ namespace SIL.Transcriber.Services
             return mf;
         }
         */
-        public  async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
+        public async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
         {
             await InitNewMediafileAsync(entity);
             S3Response response = await _S3service.UploadFileAsync(FileToUpload, DirectoryName(entity));
             entity.S3File = response.Message;
-            entity.Filesize = FileToUpload.Length/1024;
+            entity.Filesize = FileToUpload.Length / 1024;
             entity.OriginalFile = FileToUpload.FileName;
             entity.ContentType = FileToUpload.ContentType;
             entity = await base.CreateAsync(entity);
@@ -159,7 +160,7 @@ namespace SIL.Transcriber.Services
                     Message = mf.S3File.Length > 0 ? mf.S3File : "",
                     Status = HttpStatusCode.NotFound
                 };
-            
+
             S3Response response = await _S3service.ReadObjectDataAsync(mf.S3File, DirectoryName(plan));
             response.Message = mf.OriginalFile;
             return response;
@@ -196,7 +197,7 @@ namespace SIL.Transcriber.Services
                 eafContent.GetElement("HEADER").Attribute("MEDIA_FILE").Value = mf.S3File;
                 eafContent.GetElement("MEDIA_DESCRIPTOR").Attribute("MEDIA_URL").Value = mf.S3File;
                 eafContent.GetElement("MEDIA_DESCRIPTOR").Attribute("MIME_TYPE").Value = mf.ContentType;
-                elem = eafContent.GetElementsWithAttribute( "TIME_SLOT", "ts2").First();
+                elem = eafContent.GetElementsWithAttribute("TIME_SLOT", "ts2").First();
                 elem.Attribute("TIME_VALUE").Value = (mf.Duration * 1000).ToString();
                 eafContent.GetElement("ANNOTATION_VALUE").Value = Regex.Replace(HttpUtility.HtmlEncode(mf.Transcription), pattern, ""); //TEST THE REGEX
                 eaf = eafContent.ToString();

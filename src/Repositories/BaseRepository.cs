@@ -48,7 +48,10 @@ namespace SIL.Transcriber.Repositories
             this.currentUserRepository = currentUserRepository;
             this.Logger = loggerFactory.CreateLogger<TEntity>();
         }
-
+        public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
+        {
+            return dbContext.Database.BeginTransaction();
+        }
         public User CurrentUser {
             get {
                 return currentUserRepository.GetCurrentUser().Result;

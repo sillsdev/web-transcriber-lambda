@@ -54,7 +54,6 @@ namespace SIL.Transcriber.Utility
                 }
             }
             return myLevel;
-      
         }
         public static void ReplaceText(XElement para, string transcription)
         {
@@ -124,7 +123,8 @@ namespace SIL.Transcriber.Utility
         private static XElement MoveToPara(XElement verse)
         {
             string text = verse.VerseText();
-            if (verse.Parent.IsPara()) {
+            if (verse.Parent.IsPara()) 
+            {
                 if (verse.PreviousNode != null)
                 {
                     XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute.Value, text);
@@ -212,7 +212,7 @@ namespace SIL.Transcriber.Utility
             });
             if (nextVerse != null)
             {
-                nextVerse= MoveToPara(nextVerse);
+                nextVerse = MoveToPara(nextVerse);
                 //skip section if there
                 if (nextVerse.PreviousNode != null && nextVerse.PreviousNode.IsSection())
                     return nextVerse.PreviousNode;
@@ -236,7 +236,7 @@ namespace SIL.Transcriber.Utility
             return stop;
         }
 
-        public static XElement GenerateParatextData(XElement chapterContent, Passage currentPassage, string transcription, IEnumerable<SectionSummary> sectionSummaryList,bool addNumbers)
+        public static XElement GenerateParatextData(XElement chapterContent, Passage currentPassage, string transcription, IEnumerable<SectionSummary> sectionSummaryList, bool addNumbers)
         {
             IEnumerable<XElement> verses = chapterContent.GetElements("verse");
             XElement thisVerse = null;
@@ -263,11 +263,11 @@ namespace SIL.Transcriber.Utility
                     }
                 });
             }
-            existing.Values.ForEach(v => { 
-                if (v.IsVerse()) 
-                    v.RemoveVerse(); 
-                else 
-                    v.RemoveSection(); 
+            existing.Values.ForEach(v => {
+                if (v.IsVerse())
+                    v.RemoveVerse();
+                else
+                    v.RemoveSection();
             });
 
             if (thisVerse != null)
@@ -303,5 +303,5 @@ namespace SIL.Transcriber.Utility
             }
             return chapterContent;
         }
-     }
+    }
 }

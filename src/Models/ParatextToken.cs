@@ -26,6 +26,15 @@ namespace SIL.Paratext.Models
                 return DateTime.MinValue;
             }
         }
+        [NotMapped]
+        public DateTime ValidTo
+        {
+            get
+            {
+                var accessToken = new JwtSecurityToken(AccessToken);
+                return accessToken.ValidTo;
+            }
+        }
 
         public bool ValidateLifetime()
         {
