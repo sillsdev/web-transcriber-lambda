@@ -23,6 +23,9 @@ namespace SIL.Transcriber.Models
         [Attr("flat")]
         public bool Flat { get; set; }
 
+        [Attr("section-count")]
+        public int SectionCount { get; set; }
+
         [HasOne("project", Link.None)]
         public Project Project { get; set; }
         [Attr("project-id")]

@@ -50,9 +50,17 @@ namespace SIL.Transcriber.Repositories
             dbContext.SaveChanges();
             return passages;
         }
+        public Section UpdateSectionModified(int sectionId)
+        {
+            Section section = dbContext.Sections.Find(sectionId);
+            dbContext.Sections.Update(section);
+            dbContext.SaveChanges();
+            return section;
+        }
         public Plan UpdatePlanModified(int planId)
         {
             Plan plan = dbContext.Plans.Find(planId);
+            plan.SectionCount = dbContext.Sections.Where(s => s.PlanId == planId).Count();
             dbContext.Plans.Update(plan);
             dbContext.SaveChanges();
             return plan;
