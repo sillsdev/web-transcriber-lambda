@@ -110,6 +110,7 @@ namespace SIL.Transcriber.Services
                         foreach (JArray item in updpass)
                         {
                             item[item.Count-1]["id"] = updpassages[ix].Id;
+                            MyRepository.UpdateSectionModified(updpassages[ix].SectionId);
                             ix++;
                         }
                     }

@@ -128,7 +128,9 @@ namespace SIL.Transcriber.Services
         }
         private Claim GetClaim(string AccessToken, string claimtype)
         {
+            System.Console.WriteLine("XXX GetClaim {0}", claimtype);
             JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
+            System.Console.WriteLine("XXX GetClaim {0}", accessToken.Claims.FirstOrDefault(c => c.Type == claimtype));
             return accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
         }
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
@@ -231,9 +233,19 @@ namespace SIL.Transcriber.Services
         }
         public string GetParatextUsername(UserSecret userSecret)
         {
+            System.Console.WriteLine("XXX GetParatextUsername");
+
             VerifyUserSecret(userSecret);
-            Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
-            return usernameClaim?.Value;
+            try
+            {
+                Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
+                return usernameClaim?.Value;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine(ex.GetType());
+                throw (ex);
+            }
         }
 
         public async Task<IReadOnlyList<string>> GetBooksAsync(UserSecret userSecret, string projectId)
@@ -284,8 +296,9 @@ namespace SIL.Transcriber.Services
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Post, $"notes/{projectId}", notesText);
         }
 
-        private async Task RefreshAccessTokenAsync(UserSecret userSecret)
+        private async Task<UserSecret> RefreshAccessTokenAsync(UserSecret userSecret)
         {
+            Console.WriteLine("RefreshParatextToken");
             Logger.LogInformation("Refresh ParatextRefreshToken {0}", userSecret.ParatextTokens.RefreshToken);
             VerifyUserSecret(userSecret);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
@@ -296,19 +309,6 @@ namespace SIL.Transcriber.Services
                 new JProperty("refresh_token", userSecret.ParatextTokens.RefreshToken));
             request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
             HttpResponseMessage response = await _registryClient.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                Logger.Log(LogLevel.Error, "Paratext Refresh with latest refresh token " + response.IsSuccessStatusCode.ToString() + response.ReasonPhrase);
-
-                request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
-                requestObj = new JObject(
-                    new JProperty("grant_type", "refresh_token"),
-                    new JProperty("client_id", GetVarOrDefault("SIL_TR_PARATEXT_CLIENT_ID", "")),
-                    new JProperty("client_secret", GetVarOrDefault("SIL_TR_PARATEXT_CLIENT_SECRET", ""))
-                   );
-                request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
-                response = await _registryClient.SendAsync(request);
-            }
             Logger.Log(response.IsSuccessStatusCode ? LogLevel.Information : LogLevel.Error, "Paratext Refresh" + response.IsSuccessStatusCode.ToString() + response.ReasonPhrase);
             response.EnsureSuccessStatusCode();
             string responseJson = await response.Content.ReadAsStringAsync();
@@ -317,6 +317,7 @@ namespace SIL.Transcriber.Services
             userSecret.ParatextTokens.RefreshToken = (string)responseObj["refresh_token"];
             Logger.LogInformation("new ParatextRefreshToken {0}", userSecret.ParatextTokens.RefreshToken);
             await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
+            return userSecret;
         }
 
         private async Task<string> CallApiAsync(HttpClient client, UserSecret userSecret, HttpMethod method,
@@ -330,7 +331,7 @@ namespace SIL.Transcriber.Services
             {
                 if (expired)
                 {
-                    await RefreshAccessTokenAsync(userSecret);
+                    userSecret = await RefreshAccessTokenAsync(userSecret);
                     refreshed = true;
                 }
 
