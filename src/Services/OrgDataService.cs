@@ -15,7 +15,7 @@ namespace SIL.Transcriber.Services
         protected readonly GroupMembershipService gmService;
         protected readonly CurrentUserRepository currentUserRepository;
 
-        public OrgDataService(IDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, CurrentUserRepository currentUserRepo,
+        public OrgDataService(AppDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, CurrentUserRepository currentUserRepo,
             OrganizationService orgService,
             GroupMembershipService grpMemService)
         {

@@ -16,7 +16,7 @@ namespace SIL.Transcriber.Models
         [Attr("week")]
         public int Week { get; set; }
     }
-    public partial class Dashboard : Identifiable<int> //GRRR forced to put this here by JSONAPI
+    public partial class Dashboard : IIdentifiable<int> //GRRR forced to put this here by JSONAPI
     {
         [NotMapped]
         [Attr("projects")]
@@ -39,6 +39,7 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         [Attr("paratext")]
         public DashboardDetail Paratext { get; set; }
-
+        public int Id { get; set; }
+        public string StringId { get; set; }
     }
 }

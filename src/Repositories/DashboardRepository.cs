@@ -16,15 +16,16 @@ using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class DashboardRepository : DefaultEntityRepository<Dashboard, int>
+    public class DashboardRepository : AppDbContextRepository<Dashboard>
     {
         protected readonly AppDbContext dbContext;
 
         public DashboardRepository(
               ILoggerFactory loggerFactory,
               IJsonApiContext jsonApiContext,
-              IDbContextResolver contextResolver
-          ) : base(loggerFactory, jsonApiContext, contextResolver)
+              CurrentUserRepository currentUserRepository,
+              AppDbContextResolver contextResolver
+            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
         }

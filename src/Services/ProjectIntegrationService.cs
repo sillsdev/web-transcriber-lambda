@@ -19,7 +19,7 @@ namespace SIL.Transcriber.Services
     {
         public ProjectIntegrationService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<ProjectIntegration> myRepository,
+            ProjectIntegrationRepository myRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
         {
         }

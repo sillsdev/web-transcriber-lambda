@@ -17,7 +17,7 @@ namespace SIL.Transcriber.Repositories
         public CurrentUserRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
-            IDbContextResolver contextResolver,
+            AppDbContextResolver contextResolver,
             ICurrentUserContext currentUserContext
        ) : base(loggerFactory, jsonApiContext, contextResolver)
         {

@@ -31,7 +31,7 @@ namespace SIL.Transcriber.Services
         const string ContentType = "application/ptf";
         protected ILogger<OfflineDataService> Logger { get; set; }
 
-        public OfflineDataService(IDbContextResolver contextResolver,
+        public OfflineDataService(AppDbContextResolver contextResolver,
                 IJsonApiSerializer jsonSer,
                 IJsonApiDeSerializer jsonDeser,
                 MediafileService MediaService,

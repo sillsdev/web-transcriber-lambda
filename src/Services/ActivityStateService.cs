@@ -4,6 +4,7 @@ using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Services
 {
@@ -12,7 +13,7 @@ namespace SIL.Transcriber.Services
 
             public ActivitystateService(
                 IJsonApiContext jsonApiContext,
-                IEntityRepository<Activitystate> myRepository,
+                AppDbContextRepository<Activitystate> myRepository,
                 ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
             {
             }   

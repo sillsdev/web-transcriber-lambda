@@ -41,6 +41,7 @@ namespace SIL.Transcriber
             services.AddCors();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1).AddJsonOptions(x => x.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
             services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
+            services.AddDbContext<LoggingDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
             services.AddApiServices();
             services.AddAuthenticationServices(Configuration);
             services.AddContextServices();

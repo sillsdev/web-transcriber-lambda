@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using JsonApiDotNetCore.Data;
+using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Services
     {
         public VwPassageStateHistoryEmailService(
             IJsonApiContext jsonApiContext,
-           IEntityRepository<VwPassageStateHistoryEmail> Repository,
+           AppDbContextRepository<VwPassageStateHistoryEmail> Repository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, Repository, loggerFactory)
         {
         }

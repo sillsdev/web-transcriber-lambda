@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -24,7 +25,7 @@ namespace SIL.Transcriber.Repositories
               ILoggerFactory loggerFactory,
               IJsonApiContext jsonApiContext,
               CurrentUserRepository CurrentUserRepository,
-              IDbContextResolver contextResolver,
+              AppDbContextResolver contextResolver,
               IJsonApiSerializer jsonSer,
               OrganizationService orgService,
               GroupMembershipService grpMemService
