@@ -6,6 +6,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
 using System.Linq;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using SIL.Transcriber.Data;
 
 
 namespace SIL.Transcriber.Repositories

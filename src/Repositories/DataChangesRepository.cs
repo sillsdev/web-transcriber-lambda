@@ -1,5 +1,6 @@
 ﻿using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
