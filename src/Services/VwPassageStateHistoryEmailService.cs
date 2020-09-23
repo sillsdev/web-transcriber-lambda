@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Services
     {
         public VwPassageStateHistoryEmailService(
             IJsonApiContext jsonApiContext,
-           IEntityRepository<VwPassageStateHistoryEmail> Repository,
+           AppDbContextRepository<VwPassageStateHistoryEmail> Repository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, Repository, loggerFactory)
         {
         }

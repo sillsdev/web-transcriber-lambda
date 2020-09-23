@@ -15,7 +15,7 @@ namespace SIL.Transcriber.Services
     {
         public SectionService(
             IJsonApiContext jsonApiContext,
-           IEntityRepository<Section> sectionRepository,
+           SectionRepository sectionRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, sectionRepository, loggerFactory)
         {
          }

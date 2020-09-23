@@ -26,7 +26,7 @@ namespace SIL.Transcriber.Repositories
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
             SectionRepository sectionRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             SectionRepository = sectionRepository;

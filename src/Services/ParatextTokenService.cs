@@ -12,11 +12,11 @@ namespace SIL.Transcriber.Services
     public class ParatextTokenService : EntityResourceService<ParatextToken>
     {
         public CurrentUserRepository CurrentUserRepository { get; }
-        IEntityRepository<ParatextToken> TokenRepository;
+        ParatextTokenRepository TokenRepository;
 
         public ParatextTokenService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<ParatextToken> tokenRepository,
+            ParatextTokenRepository tokenRepository,
             CurrentUserRepository currentUserRepository,
         ILoggerFactory loggerFactory)
     : base(jsonApiContext, tokenRepository, loggerFactory)

@@ -3,6 +3,7 @@ using System.Linq;
 using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
@@ -23,7 +24,7 @@ namespace SIL.Transcriber.Repositories
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
             SectionRepository sectionRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             SectionRepository = sectionRepository;
@@ -55,8 +56,7 @@ namespace SIL.Transcriber.Repositories
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {
             IQueryable<Section> sections = dbContext.Sections.Where(s => s.PlanId == PlanId);
-            IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(p => p.ReadyToSync);
-
+            IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(p => p.ReadyToSync).Include(p => p.Section);
             return passages;
         }
         public override IQueryable<Passage> Filter(IQueryable<Passage> entities, FilterQuery filterQuery)

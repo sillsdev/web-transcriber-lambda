@@ -17,7 +17,7 @@ namespace SIL.Transcriber.Repositories
           IJsonApiContext jsonApiContext,
           CurrentUserRepository currentUserRepository,
           //EntityHooksService<Project> statusUpdateService,
-          IDbContextResolver contextResolver
+          AppDbContextResolver contextResolver
       ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
         }

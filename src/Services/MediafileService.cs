@@ -29,7 +29,7 @@ namespace SIL.Transcriber.Services
 
         public MediafileService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<Mediafile> basemediafileRepository,
+            MediafileRepository basemediafileRepository,
             PlanRepository planRepository,
             PassageService passageService,
             ILoggerFactory loggerFactory,

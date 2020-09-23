@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using SIL.Linq;
+using SIL.Logging.Models;
+using SIL.Logging.Repositories;
 using SIL.ObjectModel;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Data;
@@ -44,14 +47,17 @@ namespace SIL.Transcriber.Services
         private ProjectService ProjectService;
         private PlanService PlanService;
         private ParatextTokenService ParatextTokenService;
-        private readonly IEntityRepository<ParatextToken> _userSecretRepository;
+        private readonly ParatextTokenRepository _userSecretRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
 
         private HttpContext HttpContext;
         protected ILogger<ParatextService> Logger { get; set; }
+        ParatextSyncRepository ParatextSyncRepository;
+        ParatextSyncPassageRepository ParatextSyncPassageRepository;
+        ParatextTokenHistoryRepository TokenHistoryRepo;
 
 
-        public ParatextService(IDbContextResolver contextResolver, 
+        public ParatextService(AppDbContextResolver contextResolver,
             IHostingEnvironment env,
             IHttpContextAccessor httpContextAccessor,
             ICurrentUserContext currentUserContext,
@@ -61,8 +67,11 @@ namespace SIL.Transcriber.Services
             PlanService planService,
             ProjectService projectService,
             ParatextTokenService ptService,
-            IEntityRepository<ParatextToken> userSecrets,
-             CurrentUserRepository currentUserRepository,
+            ParatextTokenRepository userSecrets,
+            ParatextSyncRepository paratextSyncRepository,
+            ParatextSyncPassageRepository paratextSyncPassageRepository,
+            CurrentUserRepository currentUserRepository,
+            ParatextTokenHistoryRepository tokenHistoryRepo,
            ILoggerFactory loggerFactory)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
@@ -76,6 +85,10 @@ namespace SIL.Transcriber.Services
             ParatextTokenService = ptService;
             CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;
+            ParatextSyncRepository = paratextSyncRepository;
+            ParatextSyncPassageRepository =paratextSyncPassageRepository;
+            TokenHistoryRepo = tokenHistoryRepo;
+
             this.Logger = loggerFactory.CreateLogger<ParatextService>();
 
             _httpClientHandler = new HttpClientHandler();
@@ -101,28 +114,26 @@ namespace SIL.Transcriber.Services
             }
             //get existing
             IEnumerable<ParatextToken> tokens = ParatextTokenService.GetAsync().Result;
-            Console.WriteLine("console.writeline stored paratext token count " + tokens.Count().ToString());
-            Logger.LogInformation("logger.loginformation stored paratext token count " + tokens.Count().ToString());
             if (tokens != null && tokens.Count() > 0)
             {
                 ParatextToken token = tokens.First();
-                Logger.LogInformation("Logged in ParatextRefreshToken {0} {1}", newPTToken.ParatextTokens.IssuedAt, newPTToken.ParatextTokens.RefreshToken);
-                Logger.LogInformation("Stored ParatextRefreshToken {0} {1}", token.IssuedAt, token.RefreshToken);
                 if (newPTToken.ParatextTokens.IssuedAt > token.IssuedAt && newPTToken.ParatextTokens.RefreshToken != null)
                 {
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
-                    Console.WriteLine("Update to token" + token.ToString());
                     _userSecretRepository.UpdateAsync(token.Id, token);
+                    TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
                 }
                 else
                 {
                     newPTToken.ParatextTokens = token;
+                    TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From DB"));
                 }
             }
             else
             {
                 newPTToken.ParatextTokens = _userSecretRepository.CreateAsync(newPTToken.ParatextTokens).Result;
+                TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, newPTToken.ParatextTokens.AccessToken, newPTToken.ParatextTokens.RefreshToken, "From First Login"));
             }
             return newPTToken;
         }
@@ -130,8 +141,9 @@ namespace SIL.Transcriber.Services
         {
             System.Console.WriteLine("XXX GetClaim {0}", claimtype);
             JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
-            System.Console.WriteLine("XXX GetClaim {0}", accessToken.Claims.FirstOrDefault(c => c.Type == claimtype));
-            return accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
+            Claim claim = accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
+            System.Console.WriteLine("XXX GetClaim {0}", claim.ToString());
+            return claim;
         }
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
@@ -224,11 +236,6 @@ namespace SIL.Transcriber.Services
                 throw new SecurityException("Paratext credentials not provided.");
             if (userSecret.ParatextTokens.AccessToken is null || userSecret.ParatextTokens.AccessToken.Length == 0)
                 throw new SecurityException("Current user is not logged in to Paratext.");
-            Logger.LogInformation("Current ParatextToken: Issued:{0} Now: {1} ValidTo: {2} refreshToken {3}",
-                userSecret.ParatextTokens.IssuedAt,
-                DateTime.UtcNow, 
-                userSecret.ParatextTokens.ValidTo, 
-                userSecret.ParatextTokens.RefreshToken);
             return true;
         }
         public string GetParatextUsername(UserSecret userSecret)
@@ -298,9 +305,11 @@ namespace SIL.Transcriber.Services
 
         private async Task<UserSecret> RefreshAccessTokenAsync(UserSecret userSecret)
         {
-            Console.WriteLine("RefreshParatextToken");
-            Logger.LogInformation("Refresh ParatextRefreshToken {0}", userSecret.ParatextTokens.RefreshToken);
             VerifyUserSecret(userSecret);
+            if (userSecret.ParatextTokens.RefreshToken == null)
+            {
+                throw new Exception("401 RefreshTokenNull");
+            }
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "api8/token");
             JObject requestObj = new JObject(
                 new JProperty("grant_type", "refresh_token"),
@@ -309,14 +318,22 @@ namespace SIL.Transcriber.Services
                 new JProperty("refresh_token", userSecret.ParatextTokens.RefreshToken));
             request.Content = new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json");
             HttpResponseMessage response = await _registryClient.SendAsync(request);
-            Logger.Log(response.IsSuccessStatusCode ? LogLevel.Information : LogLevel.Error, "Paratext Refresh" + response.IsSuccessStatusCode.ToString() + response.ReasonPhrase);
-            response.EnsureSuccessStatusCode();
             string responseJson = await response.Content.ReadAsStringAsync();
             JObject responseObj = JObject.Parse(responseJson);
+
+            //log it
+            requestObj["client_secret"] = "XXX";
+            await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, (string)responseObj["access_token"], (string)responseObj["refresh_token"], requestObj.ToString(), response.ReasonPhrase + responseObj));
+            
+            response.EnsureSuccessStatusCode();
+            
             userSecret.ParatextTokens.AccessToken = (string)responseObj["access_token"];
             userSecret.ParatextTokens.RefreshToken = (string)responseObj["refresh_token"];
-            Logger.LogInformation("new ParatextRefreshToken {0}", userSecret.ParatextTokens.RefreshToken);
             await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
+
+            //log it
+            await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
+            
             return userSecret;
         }
 
@@ -375,16 +392,7 @@ namespace SIL.Transcriber.Services
             chapter.OriginalUSX = bookTextElem.Element("usx");
             return chapter;
         }
-        private async Task<List<ParatextChapter>> GetPassageChaptersAsync(UserSecret userSecret, string paratextId, IList<string> chapters)
-        {
-            List<ParatextChapter> chapterList = new List<ParatextChapter>();
 
-            foreach (string c in chapters)
-            {
-                chapterList.Add(await GetParatextChapterAsync(userSecret, paratextId, c.Substring(0, c.Length - 3), int.Parse(c.Substring(c.Length - 3))));
-            }
-            return chapterList;
-        }
         private class BookChapter : IEquatable<BookChapter>
         {
             public string Book { get; }
@@ -417,6 +425,10 @@ namespace SIL.Transcriber.Services
 
                 //Calculate the hash code for the product. 
                 return hashBook ^ hashChapter;
+            }
+            public override string ToString()
+            {
+                return Book + ' ' + Chapter;
             }
         }
         private async Task<List<ParatextChapter>> GetPassageChaptersAsync(UserSecret userSecret, string paratextId, IEnumerable<BookChapter> book_chapters)
@@ -455,17 +467,39 @@ namespace SIL.Transcriber.Services
             }
             return total;
         }
+        public string VerifyReferences(UserSecret userSecret, IQueryable<Passage> passages, string paratextId)
+        {
+            IReadOnlyList<string> books = GetBooksAsync(userSecret, paratextId).Result;
+            string err = "";
+            passages.ForEach(p =>
+            {
+                if (p.Book == "")
+                    err += string.Format("||Empty Book|{0}|{1}", p.Section.Sequencenum, p.Sequencenum);
+                else if (!books.Contains(p.Book))
+                    err += string.Format("||Missing Book|{0}|{1}|{2}", p.Section.Sequencenum, p.Sequencenum, p.Book);
+                if (p.StartChapter != p.EndChapter)
+                    err += string.Format("||Chapter|{0}|{1}|{2}", p.Section.Sequencenum, p.Sequencenum, p.Reference);
+                if (p.StartVerse == 0)
+                    err += string.Format("||Reference|{0}|{1}|{2}", p.Section.Sequencenum, p.Sequencenum, p.Reference);
+            });
+            if (err.Length>0) return "ReferenceError:" + err;
+            return err;
+        }
 
         public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId)
         {
+            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
             Plan plan = PlanService.Get(planId);
+            string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
             IQueryable<Passage> passages = PassageService.ReadyToSync(planId);
+            string err = VerifyReferences(userSecret, passages, paratextId);
+            if (err.Length > 0) throw new Exception(err);
+
             //assume startChapter=endChapter for all passages
             IEnumerable<BookChapter> book_chapters = BookChapters(passages);
 
             bool addNumbers = true; //this would be an option in the plan? or the project? 
 
-            string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
             List<ParatextChapter> chapterList = await GetPassageChaptersAsync(userSecret, paratextId, book_chapters);
             chapterList.ForEach(c => c.NewUSX = c.OriginalUSX);
             ParatextChapter chapter;
@@ -474,26 +508,40 @@ namespace SIL.Transcriber.Services
 
                 foreach (BookChapter bookchapter in book_chapters)
                 {
-                    Logger.LogInformation("{0} {1}", bookchapter.Book, bookchapter.Chapter);
                     chapter = chapterList.Where(c => c.Book == bookchapter.Book &&  c.Chapter == bookchapter.Chapter).First();
+                    //log it
+                    ParatextSync history = await ParatextSyncRepository.CreateAsync(new ParatextSync(currentUser.Id, planId, paratextId, bookchapter.ToString(), chapter.OriginalUSX.ToString()));
                     //make sure we have the chapter number
-                    Logger.LogInformation("Add Chapter");
                     try
                     {
                         chapter.NewUSX = ParatextHelpers.AddParatextChapter(chapter.NewUSX, chapter.Book, chapter.Chapter);
-                        IEnumerable<SectionSummary> ss = SectionService.GetSectionSummary(planId, chapter.Book, chapter.Chapter);
                         HttpContext.SetFP("paratext");
                         foreach (Passage passage in passages.Where(p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter))
                         {
-                            chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, PassageService.GetTranscription(passage) ?? "", ss, addNumbers);
-                            passage.State = "done";
-                            await PassageService.UpdateAsync(passage.Id, passage);
-                            await PassageStateChangeService.CreateAsync(passage, "Paratext");
+                            try
+                            {
+                                string transcription = PassageService.GetTranscription(passage) ?? "";
+                                chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, transcription, addNumbers);
+                                //log it
+                                await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, transcription, chapter.NewUSX.ToString()));
+                                
+                                passage.State = "done";
+                                await PassageService.UpdateAsync(passage.Id, passage);
+                                await PassageStateChangeService.CreateAsync(passage, "Paratext");
+                            } catch (Exception ex)
+                            {
+                                //log it
+                                await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, ex.Message));
+                                throw ex;
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         transaction.Rollback();
+                        history.Err = ex.Message;
+                        //log it
+                        await ParatextSyncRepository.UpdateAsync(history.Id, history);
                         Logger.LogError("Paratext Error generating Chapter text {0} {1} {2}: {3}", ex.Message, chapter.Book, chapter.Chapter,chapter.OriginalUSX.ToString());
                         throw ex;
                     }
@@ -510,6 +558,8 @@ namespace SIL.Transcriber.Services
                     catch (Exception ex)
                     {
                         transaction.Rollback();
+                        //log it
+                        ParatextSync history = await ParatextSyncRepository.CreateAsync(new ParatextSync(currentUser.Id, planId, paratextId, c.Book+c.Chapter, c.NewUSX.ToString(), ex.Message));
                         Logger.LogError("Paratext Error updating Chapter text {0} {1} {2}: {3} {4}", ex.Message, c.Book, c.Chapter, c.OriginalUSX.ToString(), c.NewUSX.ToString());
                         throw ex;
                     }

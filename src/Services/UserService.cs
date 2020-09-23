@@ -21,8 +21,7 @@ namespace SIL.Transcriber.Services
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             CurrentUserRepository currentUserRepository,
-            IEntityRepository<User> entityRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, entityRepository, loggerFactory)
+            ILoggerFactory loggerFactory) : base(jsonApiContext, userRepository, loggerFactory)
         {
             CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;

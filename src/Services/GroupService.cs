@@ -22,7 +22,7 @@ namespace SIL.Transcriber.Services
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
-            IEntityRepository<Group> groupRepository,
+            GroupRepository groupRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, groupRepository,  loggerFactory)
         {
             CurrentUserContext = currentUserContext;

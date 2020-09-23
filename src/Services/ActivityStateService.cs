@@ -12,7 +12,7 @@ namespace SIL.Transcriber.Services
 
             public ActivitystateService(
                 IJsonApiContext jsonApiContext,
-                IEntityRepository<Activitystate> myRepository,
+                AppDbContextRepository<Activitystate> myRepository,
                 ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
             {
             }   

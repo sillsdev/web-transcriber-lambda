@@ -236,7 +236,7 @@ namespace SIL.Transcriber.Utility
             return stop;
         }
 
-        public static XElement GenerateParatextData(XElement chapterContent, Passage currentPassage, string transcription, IEnumerable<SectionSummary> sectionSummaryList, bool addNumbers)
+        public static XElement GenerateParatextData(XElement chapterContent, Passage currentPassage, string transcription, bool addNumbers)
         {
             IEnumerable<XElement> verses = chapterContent.GetElements("verse");
             XElement thisVerse = null;
@@ -290,15 +290,14 @@ namespace SIL.Transcriber.Utility
             }
             if (currentPassage.Sequencenum == 1)
             {
-                SectionSummary sectionInfo = sectionSummaryList.First(s => s.startChapter == currentPassage.StartChapter && s.startVerse == currentPassage.StartVerse);
                 //add/update the section header
                 if (thisVerse.PreviousNode.IsSection())
                 {
-                    ((XText)((XElement)thisVerse.PreviousNode).FirstNode).Value = sectionInfo.SectionHeader(addNumbers);
+                    ((XText)((XElement)thisVerse.PreviousNode).FirstNode).Value = currentPassage.Section.SectionHeader(addNumbers);
                 }
                 else
                 {
-                    thisVerse.AddBeforeSelf(ParatextSection(sectionInfo.SectionHeader(addNumbers)));
+                    thisVerse.AddBeforeSelf(ParatextSection(currentPassage.Section.SectionHeader(addNumbers)));
                 }
             }
             return chapterContent;

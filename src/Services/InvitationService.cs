@@ -22,7 +22,7 @@ namespace SIL.Transcriber.Services
 
         public InvitationService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<Invitation> invitationRepository,
+            InvitationRepository invitationRepository,
             OrganizationService organizationService,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,

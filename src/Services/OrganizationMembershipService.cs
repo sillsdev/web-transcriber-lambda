@@ -18,8 +18,8 @@ namespace SIL.Transcriber.Services
             IJsonApiContext jsonApiContext,
             UserRepository userRepository,
             ICurrentUserContext currentUserContext,
-            IEntityRepository<OrganizationMembership> organizationMembershipRepository,
-            IEntityRepository<Role> roleRepository,
+            OrganizationMembershipRepository organizationMembershipRepository,
+            RoleRepository roleRepository,
             ILoggerFactory loggerFactory
         ) : base(jsonApiContext, organizationMembershipRepository, loggerFactory)
         {
@@ -29,8 +29,8 @@ namespace SIL.Transcriber.Services
 
         }
         private UserRepository UserRepository { get; set; }
-        private IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; set; }
-        private IEntityRepository<Role> RoleRepository { get; }
+        private OrganizationMembershipRepository OrganizationMembershipRepository { get; set; }
+        private RoleRepository RoleRepository { get; }
 
         public override async Task<IEnumerable<OrganizationMembership>> GetAsync()
         {

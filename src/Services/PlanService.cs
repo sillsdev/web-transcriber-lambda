@@ -16,7 +16,7 @@ namespace SIL.Transcriber.Services
 
         public PlanService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<Plan> planRepository,
+            PlanRepository planRepository,
            ILoggerFactory loggerFactory) : base(jsonApiContext, planRepository, loggerFactory)
         {
         }

@@ -24,7 +24,7 @@ namespace SIL.Transcriber.Repositories
               ILoggerFactory loggerFactory,
               IJsonApiContext jsonApiContext,
               CurrentUserRepository CurrentUserRepository,
-              IDbContextResolver contextResolver,
+              AppDbContextResolver contextResolver,
               IJsonApiSerializer jsonSer,
               OrganizationService orgService,
               GroupMembershipService grpMemService

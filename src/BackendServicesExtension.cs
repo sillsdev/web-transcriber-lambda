@@ -1,6 +1,5 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using idunno.Authentication.Basic;
@@ -12,6 +11,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SIL.Logging.Models;
+using SIL.Logging.Repositories;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
@@ -23,26 +24,36 @@ namespace SIL.Transcriber
 {
     public static class BackendServiceExtensions
     {
+
         public static IServiceCollection AddApiServices(this IServiceCollection services)
         {
+            services.AddScoped<AppDbContextResolver>();
+            services.AddScoped<LoggingDbContextResolver>();
+
             // add jsonapi dotnet core
             // - includes IHttpContextAccessor as a singleton
-            services.AddJsonApi<AppDbContext>(options => {
+            services.AddJsonApi(options =>
+            {
                 options.Namespace = "api";
                 options.IncludeTotalRecordCount = false;
                 options.DefaultPageSize = 0;
                 options.AllowCustomQueryParameters = true;
                 //options.EnableOperations = true;
-                options.BuildResourceGraph((builder) => {
+                options.BuildResourceGraph((builder) =>
+                {
+                    builder.AddDbContext<AppDbContext>();
+                    builder.AddDbContext<LoggingDbContext>();
                     //builder.AddResource<Dashboard>();
-                    builder.AddResource<DataChanges>();
+                    //builder.AddResource<DataChanges>();
                     builder.AddResource<FileResponse>();
                 });
-            });
+            }, services.AddMvcCore());
 
             services.AddHttpContextAccessor();
 
             // Add service / repository overrides
+            services.AddScoped<IEntityRepository<Dashboard>, DashboardRepository>();
+            services.AddScoped<IEntityRepository<DataChanges>, DataChangesRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
             services.AddScoped<IEntityRepository<GroupMembership>, GroupMembershipRepository>();
             services.AddScoped<IEntityRepository<Invitation>, InvitationRepository>();
@@ -50,19 +61,25 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             services.AddScoped<IEntityRepository<OrganizationMembership>, OrganizationMembershipRepository>();
             services.AddScoped<IEntityRepository<OrgData>, OrgDataRepository>();
+            services.AddScoped<AppDbContextRepository<ParatextToken>, ParatextTokenRepository>();
             services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
             services.AddScoped<IEntityRepository<PassageStateChange>, PassageStateChangeRepository>();
             services.AddScoped<IEntityRepository<Plan>, PlanRepository>();
             services.AddScoped<IEntityRepository<ProjData>, ProjDataRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
             services.AddScoped<IEntityRepository<ProjectIntegration>, ProjectIntegrationRepository>();
+            services.AddScoped<IEntityRepository<Role>, RoleRepository>();
             services.AddScoped<IEntityRepository<Section>, SectionRepository>();
             services.AddScoped<IEntityRepository<SectionPassage>, SectionPassageRepository>();
             services.AddScoped<IEntityRepository<User>, UserRepository>();
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
 
+            services.AddScoped<LoggingDbContextRepository<ParatextSync>, ParatextSyncRepository>();
+            services.AddScoped<LoggingDbContextRepository<ParatextSyncPassage>, ParatextSyncPassageRepository>();
+            services.AddScoped<LoggingDbContextRepository<ParatextTokenHistory>, ParatextTokenHistoryRepository>();
             // services
             services.AddScoped<IResourceService<Activitystate>, ActivitystateService>();
+            services.AddScoped<IResourceService<DataChanges>, DataChangeService>();
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
             services.AddScoped<IResourceService<Group>, GroupService>();
             services.AddScoped<IResourceService<Integration>, IntegrationService>();
@@ -71,6 +88,7 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
             services.AddScoped<IResourceService<ParatextToken>, ParatextTokenService>();
+            services.AddScoped<IResourceService<ParatextTokenHistory>, ParatextTokenHistoryService>();
             services.AddScoped<IResourceService<Passage>, PassageService>();
             services.AddScoped<IResourceService<PassageStateChange>, PassageStateChangeService>();
             services.AddScoped<IResourceService<Plan>, PlanService>();
@@ -86,9 +104,13 @@ namespace SIL.Transcriber
             services.AddScoped<IParatextService, ParatextService>();
             services.AddScoped<SectionPassageService, SectionPassageService>();
 
+            services.AddScoped<ParatextSyncRepository>();
+            services.AddScoped<ParatextSyncPassageRepository>();
+
 
             // EventDispatchers
             services.AddScoped<DashboardRepository>();
+            services.AddScoped<DataChangesRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();
@@ -97,17 +119,23 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<OrgDataRepository>();
+            services.AddScoped<ParatextTokenRepository>();
             services.AddScoped<PassageRepository>();
             services.AddScoped<PassageStateChangeRepository>();
             services.AddScoped<PlanRepository>();
             services.AddScoped<ProjDataRepository>();
             services.AddScoped<ProjectIntegrationRepository>();
             services.AddScoped<ProjectRepository>();
+            services.AddScoped<RoleRepository>();
             services.AddScoped<SectionRepository>();
             services.AddScoped<SectionPassageRepository>();
             services.AddScoped<UserRepository>();
+            services.AddScoped<ParatextSyncRepository>();
+            services.AddScoped<ParatextSyncPassageRepository>();
+            services.AddScoped<ParatextTokenHistoryRepository>();
 
             services.AddScoped<ActivitystateService>();
+            services.AddScoped<DataChangeService>();
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
@@ -116,6 +144,7 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();
             services.AddScoped<ParatextTokenService>();
+            services.AddScoped<ParatextTokenHistoryService>();
             services.AddScoped<PassageService>();
             services.AddScoped<PassageStateChangeService>();
             services.AddScoped<PlanService>();

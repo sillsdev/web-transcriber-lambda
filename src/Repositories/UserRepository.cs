@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +23,7 @@ namespace SIL.Transcriber.Repositories
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             CurrentUserRepository currentUserRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository,  contextResolver)
         {
             this.CurrentUserContext = currentUserContext;

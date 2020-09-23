@@ -22,7 +22,7 @@ namespace SIL.Transcriber.Repositories
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
             ProjectRepository projectRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             ProjectRepository = projectRepository;

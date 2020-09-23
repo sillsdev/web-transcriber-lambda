@@ -49,5 +49,7 @@ namespace SIL.Transcriber.Models
         public List<Passage> Passages { get; set; }
         public bool Archived { get; set; }
 
+        public string SectionHeader(bool addNumbers = true) { return (addNumbers ? Sequencenum.ToString() + " - " : "") + Name; }
+
     }
 }
