@@ -54,6 +54,7 @@ namespace SIL.Transcriber
             // Add service / repository overrides
             services.AddScoped<IEntityRepository<Dashboard>, DashboardRepository>();
             services.AddScoped<IEntityRepository<DataChanges>, DataChangesRepository>();
+            services.AddScoped<AppDbContextRepository<FileResponse>, FileResponseRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
             services.AddScoped<IEntityRepository<GroupMembership>, GroupMembershipRepository>();
             services.AddScoped<IEntityRepository<Invitation>, InvitationRepository>();
@@ -80,6 +81,7 @@ namespace SIL.Transcriber
             // services
             services.AddScoped<IResourceService<Activitystate>, ActivitystateService>();
             services.AddScoped<IResourceService<DataChanges>, DataChangeService>();
+            services.AddScoped<IResourceService<FileResponse>, FileResponseService>();
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
             services.AddScoped<IResourceService<Group>, GroupService>();
             services.AddScoped<IResourceService<Integration>, IntegrationService>();
@@ -112,6 +114,7 @@ namespace SIL.Transcriber
             services.AddScoped<DashboardRepository>();
             services.AddScoped<DataChangesRepository>();
             services.AddScoped<CurrentUserRepository>();
+            services.AddScoped<FileResponseRepository>();
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();
             services.AddScoped<InvitationRepository>();
@@ -136,6 +139,7 @@ namespace SIL.Transcriber
 
             services.AddScoped<ActivitystateService>();
             services.AddScoped<DataChangeService>();
+            services.AddScoped<FileResponseService>();
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
@@ -192,7 +196,7 @@ namespace SIL.Transcriber
                 {
                     OnTokenValidated = context =>
                     {
-                        string TYPE_NAME_IDENTIFIER = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
+                        //string TYPE_NAME_IDENTIFIER = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
                         string TYPE_NAME_EMAILVERIFIED = "https://sil.org/email_verified";
                         // Add the access_token as a claim, as we may actually need it
                         JwtSecurityToken accessToken = context.SecurityToken as JwtSecurityToken;

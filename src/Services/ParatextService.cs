@@ -122,27 +122,27 @@ namespace SIL.Transcriber.Services
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
                     _userSecretRepository.UpdateAsync(token.Id, token);
-                    TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
+                    //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
                 }
                 else
                 {
                     newPTToken.ParatextTokens = token;
-                    TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From DB"));
+                    //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From DB"));
                 }
             }
             else
             {
                 newPTToken.ParatextTokens = _userSecretRepository.CreateAsync(newPTToken.ParatextTokens).Result;
-                TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, newPTToken.ParatextTokens.AccessToken, newPTToken.ParatextTokens.RefreshToken, "From First Login"));
+                //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, newPTToken.ParatextTokens.AccessToken, newPTToken.ParatextTokens.RefreshToken, "From First Login"));
             }
             return newPTToken;
         }
         private Claim GetClaim(string AccessToken, string claimtype)
         {
-            System.Console.WriteLine("XXX GetClaim {0}", claimtype);
+            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
             JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
             Claim claim = accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
-            System.Console.WriteLine("XXX GetClaim {0}", claim.ToString());
+            System.Console.WriteLine("XXX CLAIM GetClaim {0}", claim != null ? claim.ToString(): "null");
             return claim;
         }
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
@@ -246,11 +246,12 @@ namespace SIL.Transcriber.Services
             try
             {
                 Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
+                System.Console.WriteLine("XXX GetClaim service {0}", usernameClaim != null ? usernameClaim.ToString() : "null");
                 return usernameClaim?.Value;
             }
             catch (Exception ex)
             {
-                System.Console.WriteLine(ex.GetType());
+                System.Console.WriteLine("XXX CLAIM service exception:", ex.GetType(), ex.Message);
                 throw (ex);
             }
         }
@@ -322,8 +323,8 @@ namespace SIL.Transcriber.Services
             JObject responseObj = JObject.Parse(responseJson);
 
             //log it
-            requestObj["client_secret"] = "XXX";
-            await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, (string)responseObj["access_token"], (string)responseObj["refresh_token"], requestObj.ToString(), response.ReasonPhrase + responseObj));
+            //requestObj["client_secret"] = "XXX";
+            //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, (string)responseObj["access_token"], (string)responseObj["refresh_token"], requestObj.ToString(), response.ReasonPhrase + responseObj));
             
             response.EnsureSuccessStatusCode();
             
@@ -332,7 +333,7 @@ namespace SIL.Transcriber.Services
             await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
 
             //log it
-            await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
+            //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
             
             return userSecret;
         }
