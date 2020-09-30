@@ -67,7 +67,7 @@ namespace SIL.Transcriber.Services
             var group = new Group
             {
                 Name = entity.AllUsersName ?? "All Users",
-                Abbreviation = newEntity.Name.Substring(0, 3) + "All",
+                Abbreviation = (newEntity.Name.Length > 3 ? newEntity.Name.Substring(0, 3) : newEntity.Name) + "All",
                 Owner = newEntity,
                 AllUsers = true,
             };
