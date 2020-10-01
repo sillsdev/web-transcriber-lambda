@@ -89,11 +89,14 @@ namespace SIL.Transcriber.Services
                     {
                         if ((bool)item[0]["issection"])
                         {
-                            lastSectionId = (int)item[0]["id"];
-                            if (item.Count > 1 && (bool)item[1]["changed"])
+                            if (item[0]["id"] != null)  //saving in chunks may not have saved this section...passages will be marked unchanged
                             {
-                                updpass.Add(item);
-                                updpassages.Add(item[1]["id"] != null ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
+                                lastSectionId = (int)item[0]["id"];
+                                if (item.Count > 1 && (bool)item[1]["changed"])
+                                {
+                                    updpass.Add(item);
+                                    updpassages.Add(item[1]["id"] != null ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
+                                }
                             }
                         }
                         else if ((bool)item[0]["changed"])
