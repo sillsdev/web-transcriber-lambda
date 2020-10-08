@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +12,7 @@ using static SIL.Transcriber.Utility.IEnumerableExtensions;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -24,7 +24,7 @@ namespace SIL.Transcriber.Repositories
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             CurrentUserRepository currentUserRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository,  contextResolver)
         {
             this.CurrentUserContext = currentUserContext;

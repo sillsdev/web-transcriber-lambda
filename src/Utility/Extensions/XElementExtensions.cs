@@ -162,7 +162,6 @@ namespace TranscriberAPI.Utility.Extensions
                 removeParent.Remove();
         }
 
-
         public static IEnumerable<XElement> GetElements(this XElement root, string name)
         {
             return root.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == name);

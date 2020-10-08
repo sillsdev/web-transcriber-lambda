@@ -24,6 +24,7 @@
     <Compile Remove="Controllers\HomeController.cs" />
     <Compile Remove="Controllers\PassagesectionsController.cs" />
     <Compile Remove="Controllers\ProjectusersController.cs" />
+    <Compile Remove="Controllers\RpcControllerBase.cs" />
     <Compile Remove="Controllers\UserrolesController.cs" />
     <Compile Remove="Data\IRepository.cs" />
     <Compile Remove="Data\IUpdateBuilder.cs" />
@@ -69,12 +70,11 @@
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
     <Compile Remove="Repositories\PassageSectionRepository.cs" />
-    <Compile Remove="Services\IUserAccessor.cs" />
+    <Compile Remove="Services\Auth0ManagementApiTokenService.cs" />
     <Compile Remove="Services\PassageSectionService.cs" />
     <Compile Remove="Services\PlantypeService.cs" />
     <Compile Remove="Services\ProjecttypeService.cs" />
     <Compile Remove="Services\RoleService.cs" />
-    <Compile Remove="Services\UserAccessor.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -96,6 +96,7 @@
     <PackageReference Include="AWSSDK.S3" Version="3.3.101.11" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.69" />
     <PackageReference Include="IdentityModel" Version="3.10.10" />
+    <PackageReference Include="idunno.Authentication.Basic" Version="2.2.2" />
     <PackageReference Include="JsonApiDotNetCore" Version="3.1.0" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.4" />
@@ -109,6 +110,7 @@
     <PackageReference Include="RestSharp" Version="106.6.9" />
     <PackageReference Include="SIL.Core" Version="7.0.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
+    <PackageReference Include="System.Text.Json" Version="4.7.2" />
 	</ItemGroup>
  
 

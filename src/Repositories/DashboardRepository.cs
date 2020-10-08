@@ -16,15 +16,16 @@ using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class DashboardRepository : DefaultEntityRepository<Dashboard, int>
+    public class DashboardRepository : AppDbContextRepository<Dashboard>
     {
         protected readonly AppDbContext dbContext;
 
         public DashboardRepository(
               ILoggerFactory loggerFactory,
               IJsonApiContext jsonApiContext,
-              IDbContextResolver contextResolver
-          ) : base(loggerFactory, jsonApiContext, contextResolver)
+              CurrentUserRepository currentUserRepository,
+              AppDbContextResolver contextResolver
+            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
         }
@@ -54,7 +55,7 @@ namespace SIL.Transcriber.Repositories
         {
             return dbContext.Passages.Where(p => !p.Archived);
         }
-        private IQueryable<BaseModel>ScripturePlans()
+        private IQueryable<BaseModel> ScripturePlans()
         {
             return dbContext.Plans.Where(p => !p.Archived && p.PlantypeId == 1);
         }
@@ -64,7 +65,7 @@ namespace SIL.Transcriber.Repositories
         }
         private IQueryable<BaseModel> Paratext()
         {
-            return dbContext.Plans.Where(pl => !pl.Archived && pl.PlantypeId == 1).Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s=> s.Id,  p => p.SectionId, (s, p) => p).Where(p => p.State == "done");
+            return dbContext.Plans.Where(pl => !pl.Archived && pl.PlantypeId == 1).Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(p => p.State == "done");
         }
         public override IQueryable<Dashboard> Get()
         {
@@ -91,4 +92,4 @@ namespace SIL.Transcriber.Repositories
             return entities.AsQueryable();
         }
     }
- }
+}

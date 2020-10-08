@@ -1,14 +1,18 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class DataChanges : Identifiable<int> //GRRR forced to put this here by JSONAPI
+    public partial class DataChanges : BaseModel
     {
+        [NotMapped]
         [Attr("querydate")] 
         public DateTime Querydate { get; set; }
+        [NotMapped]
         [Attr("changes")]  
         public OrbitId[][] Changes { get; set; }
+        [NotMapped]
         [Attr("deleted")]  
         public OrbitId[][] Deleted { get; set; }
     }

@@ -96,7 +96,7 @@ namespace SIL.Transcriber.Models
 
             if (omSuper != null)
                 return true; //they have all the roles
-
+            if (this.OrganizationMemberships is null) return false;
             return this.OrganizationMemberships.Where(r => r.OrganizationId == orgId && r.RoleName == role && !r.Archived).FirstOrDefault() != null;
         }
         public bool HasGroupRole(RoleName role, int groupid)

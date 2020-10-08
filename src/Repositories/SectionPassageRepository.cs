@@ -1,13 +1,12 @@
 ﻿
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -19,7 +18,7 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
             JsonApiContext = jsonApiContext;
@@ -50,7 +49,21 @@ namespace SIL.Transcriber.Repositories
             dbContext.SaveChanges();
             return passages;
         }
-
+        public Section UpdateSectionModified(int sectionId)
+        {
+            Section section = dbContext.Sections.Find(sectionId);
+            dbContext.Sections.Update(section);
+            dbContext.SaveChanges();
+            return section;
+        }
+        public Plan UpdatePlanModified(int planId)
+        {
+            Plan plan = dbContext.Plans.Find(planId);
+            plan.SectionCount = dbContext.Sections.Where(s => s.PlanId == planId && !s.Archived).Count();
+            dbContext.Plans.Update(plan);
+            dbContext.SaveChanges();
+            return plan;
+        }
         public Passage GetPassage(int id)
         {
             return dbContext.Passages.First(p => p.Id == id);

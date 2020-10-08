@@ -16,9 +16,9 @@ namespace SIL.Transcriber.Services
 {
     public class OrganizationService : BaseArchiveService<Organization>
     {
-        public IEntityRepository<OrganizationMembership> OrganizationMembershipRepository { get; }
+        public OrganizationMembershipRepository OrganizationMembershipRepository { get; }
         public CurrentUserRepository CurrentUserRepository { get; }
-        public IEntityRepository<Group> GroupRepository { get; }
+        public GroupRepository GroupRepository { get; }
         public GroupMembershipRepository GroupMembershipRepository { get; }
         private HttpContext HttpContext;
 
@@ -26,8 +26,8 @@ namespace SIL.Transcriber.Services
             IHttpContextAccessor httpContextAccessor,
             IJsonApiContext jsonApiContext,
             IEntityRepository<Organization> organizationRepository,
-            IEntityRepository<OrganizationMembership> organizationMembershipRepository,
-            IEntityRepository<Group> groupRepository,
+            OrganizationMembershipRepository organizationMembershipRepository,
+            GroupRepository groupRepository,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
            ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
@@ -67,7 +67,7 @@ namespace SIL.Transcriber.Services
             var group = new Group
             {
                 Name = entity.AllUsersName ?? "All Users",
-                Abbreviation = newEntity.Name.Substring(0, 3) + "All",
+                Abbreviation = (newEntity.Name.Length > 3 ? newEntity.Name.Substring(0, 3) : newEntity.Name) + "All",
                 Owner = newEntity,
                 AllUsers = true,
             };

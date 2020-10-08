@@ -28,7 +28,7 @@ namespace SIL.Transcriber.Services
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
-            IEntityRepository<Project> projectRepository,
+            ProjectRepository projectRepository,
             GroupRepository groupRepository,
             OrganizationRepository organizationRepository,
             SectionService sectionService,

@@ -19,7 +19,7 @@ namespace SIL.Transcriber.Services
         private HttpContext HttpContext;
         public PassageService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<Passage> PassageRepository,
+            PassageRepository PassageRepository,
             IHttpContextAccessor httpContextAccessor,
         ILoggerFactory loggerFactory) : base(jsonApiContext, PassageRepository, loggerFactory)
         {

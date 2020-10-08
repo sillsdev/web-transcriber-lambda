@@ -14,14 +14,14 @@ namespace SIL.Transcriber.Forms.Projects
     {
         public UserRepository UserRepository { get; set; }
         public GroupRepository GroupRepository { get; set; }
-        public IEntityRepository<Organization> OrganizationRepository { get; set; }
+        public OrganizationRepository OrganizationRepository { get; set; }
         public ICurrentUserContext CurrentUserContext { get; }
  
         public CreateForm(
             UserRepository userRepository,
             GroupRepository groupRepository,
             ICurrentUserContext currentUserContext,
-            IEntityRepository<Organization> organizationRepository)
+            OrganizationRepository organizationRepository)
             : base(userRepository,  currentUserContext)
         {
             UserRepository = userRepository;

@@ -8,6 +8,7 @@ using SIL.Transcriber.Models;
 using System.Threading.Tasks;
 using System;
 using Microsoft.Extensions.Logging;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -89,7 +90,7 @@ namespace SIL.Transcriber.Controllers
 
             if (existing != null) return existing;
 
-            if (currentUserContext.Auth0Id == null)
+            if (currentUserContext.Auth0Id == null || currentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", ""))
             {
                 Console.WriteLine("No Auth0 user.");
                 return null;

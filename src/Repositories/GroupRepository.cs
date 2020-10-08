@@ -9,6 +9,7 @@ using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.IEnumerableExtensions;
 using static SIL.Transcriber.Utility.RepositoryExtensions;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -18,7 +19,7 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
         }

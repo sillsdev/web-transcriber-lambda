@@ -19,7 +19,7 @@ namespace SIL.Transcriber.Controllers
         public OfflinedataController(
            ILoggerFactory loggerFactory,
            IJsonApiContext jsonApiContext,
-           IResourceService<FileResponse> frService,
+           FileResponseService frService,
            ICurrentUserContext currentUserContext,
            OrganizationService organizationService,
            UserService userService,

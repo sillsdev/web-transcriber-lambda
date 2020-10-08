@@ -2,60 +2,27 @@ using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using SIL.Paratext.Models;
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using SIL.Transcriber.Utility;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using JsonApiDotNetCore.Data;
+using Microsoft.Extensions.Logging;
+using JsonApiDotNetCore.Services;
+using SIL.Transcriber.Repositories;
+using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : BaseDbContext
     {
-        public HttpContext HttpContext { get; }
-
         public ICurrentUserContext CurrentUserContext { get; }
-        public DbContextOptions<AppDbContext> Options { get; }
-        public IHttpContextAccessor HttpContextAccessor { get; }
-        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : base(options)
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : 
+            base(options, httpContextAccessor)
         {
-            HttpContext = httpContextAccessor.HttpContext;
-            HttpContextAccessor = httpContextAccessor;
             CurrentUserContext = currentUserContext;
-            Options = options;
-        }
-        private void LowerCaseDB(ModelBuilder builder)
-        {
-            foreach (IMutableEntityType entity in builder.Model.GetEntityTypes())
-            {
-                // Replace table names
-                entity.Relational().TableName = entity.Relational().TableName.ToLower();
-
-                // Replace column names            
-                foreach (IMutableProperty property in entity.GetProperties())
-                {
-                    property.Relational().ColumnName = property.Name.ToLower();
-                }
-
-                foreach (IMutableKey key in entity.GetKeys())
-                {
-                    key.Relational().Name = key.Relational().Name.ToLower();
-                }
-
-                foreach (IMutableForeignKey key in entity.GetForeignKeys())
-                {
-                    key.Relational().Name = key.Relational().Name.ToLower();
-                }
-
-                foreach (IMutableIndex index in entity.GetIndexes())
-                {
-                    index.Relational().Name = index.Relational().Name.ToLower();
-                }
-            }
         }
         private void DefineManyToMany(ModelBuilder modelBuilder)
         {
@@ -112,9 +79,6 @@ namespace SIL.Transcriber.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-            builder.HasPostgresExtension("uuid-ossp");
-            //make all query items lowercase to send to postgres...
-            LowerCaseDB(builder);
             DefineManyToMany(builder);
         }
         private int CurrentUserId()
@@ -122,45 +86,6 @@ namespace SIL.Transcriber.Data
             string auth0Id = this.CurrentUserContext.Auth0Id;
             User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
             return userFromResult == null ? -1 : userFromResult.Id;
-        }
-        //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
-        private void AddTimestamps()
-        {
-            System.Collections.Generic.IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            DateTime now = DateTime.UtcNow;
-            foreach (EntityEntry entry in entries)
-            {
-                if (entry.Entity is ITrackDate trackDate)
-                {
-                    if (entry.State == EntityState.Added)
-                    {
-                        if (trackDate.DateCreated == null) //if the front end set it, leave it.  We're using this to catch duplicates
-                        {
-                            trackDate.DateCreated = now;
-                            trackDate.DateUpdated = now;
-                        }
-                    }
-                    else
-                        trackDate.DateUpdated = now;
-                }
-            }
-            int userid = CurrentUserId();
-            if (userid > 0) // we allow s3 trigger anonymous access
-            {
-                entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
-                foreach (EntityEntry entry in entries)
-                {
-                    entry.CurrentValues["LastModifiedBy"] = userid;
-                }
-
-            }
-
-            string origin = HttpContext.GetFP() ?? "noFP";
-            entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            foreach (EntityEntry entry in entries)
-            {
-                entry.CurrentValues["LastModifiedOrigin"] = origin;
-            }
         }
         public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -173,15 +98,15 @@ namespace SIL.Transcriber.Data
         }
         public override int SaveChanges()
         {
+            AddTimestamps(CurrentUserId());
             UpdateSoftDeleteStatuses();
-            AddTimestamps();
             return base.SaveChanges();
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
+            AddTimestamps(CurrentUserId());
             UpdateSoftDeleteStatuses();
-            AddTimestamps();
             return await base.SaveChangesAsync(cancellationToken);
         }
         //The database would handle this on delete, but EFCore would throw an error,
@@ -207,6 +132,7 @@ namespace SIL.Transcriber.Data
         }
         public DbSet<Activitystate> Activitystates { get; set; }
         public DbSet<Dashboard> Dashboards { get; set; }
+        public DbSet<DataChanges> DataChanges { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
@@ -230,5 +156,34 @@ namespace SIL.Transcriber.Data
         public DbSet<User> Users { get; set; }
         public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
 
+    }
+    public class AppDbContextResolver : IDbContextResolver
+    {
+        private readonly AppDbContext _context;
+        public AppDbContextResolver(AppDbContext context)
+        {
+            _context = context;
+        }
+        public DbContext GetContext()
+        {
+            return _context;
+        }
+
+        public DbSet<TEntity> GetDbSet<TEntity>() where TEntity : class
+        {
+            return _context.Set<TEntity>();
+        }
+    }
+
+    public class AppDbContextRepository<TResource> : DefaultEntityRepository<TResource>
+    where TResource : class, IIdentifiable<int>
+    {
+        public AppDbContextRepository(
+            ILoggerFactory loggerFactory,
+            IJsonApiContext jsonApiContext,
+            CurrentUserRepository currentUserRepository,
+            AppDbContextResolver contextResolver
+           ) : base(loggerFactory, jsonApiContext, contextResolver)
+        { }
     }
 }

@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -24,7 +25,7 @@ namespace SIL.Transcriber.Repositories
               ILoggerFactory loggerFactory,
               IJsonApiContext jsonApiContext,
               CurrentUserRepository CurrentUserRepository,
-              IDbContextResolver contextResolver,
+              AppDbContextResolver contextResolver,
               IJsonApiSerializer jsonSer,
               OrganizationService orgService,
               GroupMembershipService grpMemService
@@ -75,6 +76,8 @@ namespace SIL.Transcriber.Repositories
                 if (!CheckAdd(12, projects,dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 //projectintegrations
                 if (!CheckAdd(13, dbContext.Projectintegrations.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived),dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                //plans
+                if (!CheckAdd(14, dbContext.Plans.Join(projects, pl => pl.ProjectId, p => p.Id, (pl,p) => pl).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 iStartNext = -1; //Done!
             } while (false); //do it once
             if (iStart == iStartNext)

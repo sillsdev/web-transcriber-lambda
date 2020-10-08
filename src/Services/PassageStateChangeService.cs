@@ -14,7 +14,7 @@ namespace SIL.Transcriber.Services
     {
         public PassageStateChangeService(
             IJsonApiContext jsonApiContext,
-            IEntityRepository<PassageStateChange> repository,
+            PassageStateChangeRepository repository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, repository, loggerFactory)
         {
         }

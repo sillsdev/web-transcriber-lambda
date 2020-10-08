@@ -6,10 +6,9 @@ using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
-using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -19,7 +18,7 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            IDbContextResolver contextResolver
+            AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
         }
