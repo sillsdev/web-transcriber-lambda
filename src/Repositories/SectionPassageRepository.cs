@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Repositories
         public Plan UpdatePlanModified(int planId)
         {
             Plan plan = dbContext.Plans.Find(planId);
-            plan.SectionCount = dbContext.Sections.Where(s => s.PlanId == planId).Count();
+            plan.SectionCount = dbContext.Sections.Where(s => s.PlanId == planId && !s.Archived).Count();
             dbContext.Plans.Update(plan);
             dbContext.SaveChanges();
             return plan;
