@@ -1,18 +1,11 @@
-﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Models;
-using JsonApiDotNetCore.Serialization;
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+
 
 namespace SIL.Transcriber.Repositories
 {
