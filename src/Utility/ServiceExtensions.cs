@@ -29,7 +29,18 @@ namespace SIL.Transcriber.Utility
                 return await baseQuery();
 
         }
+        public static void RemoveScopedToCurrentUser(
+                              IJsonApiContext jsonApiContext)
+        {
+            var query = jsonApiContext.QuerySet;
+            if (query != null)
+            {
+                FilterQuery filter = query.Filters.Find(fq => fq.Attribute == "currentuser");
+                if (filter != null)
+                    query.Filters.Remove(filter);
+            }
 
+        }
         public static async Task<IEnumerable<T>> GetScopedToCurrentUser<T>(
                               Func<Task<IEnumerable<T>>> baseQuery,
                               IJsonApiContext jsonApiContext)
