@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using System.Linq;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -33,7 +34,7 @@ namespace SIL.Transcriber.Controllers
         public StatehistoryController(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
-            IResourceService<VwPassageStateHistoryEmail> resourceService,
+            VwPassageStateHistoryEmailService resourceService,
             ICurrentUserContext currentUserContext,
             OrganizationService organizationService,
             UserService userService)
