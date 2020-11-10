@@ -77,26 +77,36 @@ namespace SIL.Transcriber.Services
                 WriteEntry(entry, eafxml);
             }
         }
-        private void AddStreamEntry(ZipArchive zipArchive, Stream fileStream, string dir, string newName)
+        private bool AddStreamEntry(ZipArchive zipArchive, Stream fileStream, string dir, string newName)
         {
-            ZipArchiveEntry entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
-            using (Stream zipEntryStream = entry.Open())
+            if (fileStream != null)
             {
-                //Copy the attachment stream to the zip entry stream
-                fileStream.CopyTo(zipEntryStream);
+                ZipArchiveEntry entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
+                using (Stream zipEntryStream = entry.Open())
+                {
+                    //Copy the attachment stream to the zip entry stream
+                    fileStream.CopyTo(zipEntryStream);
+                }
+                return true;
             }
+            return false;
         }
-        private void AddStreamEntry(ZipArchive zipArchive, string url, string dir, string newName)
+        private bool AddStreamEntry(ZipArchive zipArchive, string url, string dir, string newName)
         {
-            AddStreamEntry(zipArchive, GetStreamFromUrl(url), dir, newName);
+            return AddStreamEntry(zipArchive, GetStreamFromUrl(url), dir, newName);
         }
         private static Stream GetStreamFromUrl(string url)
         {
             byte[] imageData = null;
-
-            using (WebClient wc = new System.Net.WebClient())
-                imageData = wc.DownloadData(url);
-
+            try
+            {
+                using (WebClient wc = new System.Net.WebClient())
+                    imageData = wc.DownloadData(url);
+            }
+            catch
+            {
+                return null;
+            }
             return new MemoryStream(imageData);
         }
         private void AddOrgLogos(ZipArchive zipArchive, List<Organization> orgs)
@@ -105,8 +115,10 @@ namespace SIL.Transcriber.Services
             {
                 if (!string.IsNullOrEmpty(o.LogoUrl))
                 {
-                    AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png");
-                    o.LogoUrl = "logos/" + o.Slug + ".png";
+                    if (AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png"))
+                        o.LogoUrl = "logos/" + o.Slug + ".png";
+                    else
+                        o.LogoUrl = null;
                 }
             });
         }
