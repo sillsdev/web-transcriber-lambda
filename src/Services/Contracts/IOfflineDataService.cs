@@ -8,6 +8,7 @@ namespace SIL.Transcriber.Services
         FileResponse ExportProject(int id, int start);
         FileResponse ImportFileURL(string sFile);
         Task<FileResponse> ImportFileAsync(int projectid, string filename);
+        Task<FileResponse> ImportFileAsync(string filename);
 
     }
 }

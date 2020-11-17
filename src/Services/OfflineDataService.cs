@@ -518,14 +518,60 @@ namespace SIL.Transcriber.Services
             }
             return "";
         }
-        public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
+        public async Task<FileResponse> ImportFileAsync(string sFile)
         {
-            const string ContentType = "application/itf";
-            DateTime sourceDate;
-
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
             ZipArchive archive = new ZipArchive(response.FileStream);
-            List<string>report =new List<string>();
+            List<string> report = new List<string>();
+            List<string> errors = new List<string>();
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                ZipArchive zipentry = new ZipArchive(entry.Open());
+                FileResponse fr = await ProcessImportFileAsync(zipentry, 0, entry.Name);
+                if (fr.Status == HttpStatusCode.OK)
+                {
+                    report.Add(fr.Message.Replace("[", "").Replace("]", ""));
+                }
+                else
+                {
+                    errors.Add(entry.Name + ":" + fr.Message);
+                }
+            }
+            report.RemoveAll(s => s.Length == 0);
+            errors.RemoveAll(s => s.Length == 0);
+            if (errors.Count() > 0)
+                return errorResponse("[" + string.Join(",", errors) + "]", sFile);
+
+            return new FileResponse()
+            {
+                Message = "[" + string.Join(",", report) + "]",
+                FileURL = sFile,
+                Status = HttpStatusCode.OK,
+                ContentType = "application/itf",
+            };
+        }
+        public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
+        {
+            S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
+            ZipArchive archive = new ZipArchive(response.FileStream);
+            return await ProcessImportFileAsync(archive, projectid, sFile);
+        }
+        private FileResponse errorResponse(string msg, string sFile)
+        {
+            const string ContentType = "application/itf";
+            return new FileResponse()
+            {
+                Message = msg,
+                FileURL = sFile,
+                Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                ContentType = ContentType,
+            };
+        }
+        private async Task<FileResponse> ProcessImportFileAsync(ZipArchive archive, int projectid, string sFile)
+        {
+            DateTime sourceDate;
+            List<string> report = new List<string>();
+
             try
             {
                 ZipArchiveEntry checkEntry = archive.GetEntry("SILTranscriberOffline");
@@ -533,13 +579,7 @@ namespace SIL.Transcriber.Services
             }
             catch
             {
-                return new FileResponse()
-                {
-                    Message = "Invalid ITF File - SILTranscriberOffline not present",
-                    FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
+                return errorResponse("Invalid ITF File - SILTranscriberOffline not present", sFile);
             }
             try
             {
@@ -548,51 +588,28 @@ namespace SIL.Transcriber.Services
             }
             catch
             {
-                return new FileResponse()
-                {
-                    Message = "Invalid ITF File - SILTranscriber not present",
-                    FileURL = sFile,
-                    Status = HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
+                return errorResponse("Invalid ITF File - SILTranscriber not present", sFile);
             }
-            //check project
-            Project project;
-            try
+            //check project if provided
+            if (projectid > 0)
             {
-                ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
-                if (projectsEntry==null)
-                    return new FileResponse()
-                    {
-                        Message = "Invalid ITF File - projects data not present",
-                        FileURL = sFile,
-                        Status = HttpStatusCode.UnprocessableEntity,
-                        ContentType = ContentType,
-                    };
-
-                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
-                project = projects.Find(p => p.Id == projectid);
-                if (project==null)
-                    return new FileResponse()
-                    {
-                        Message = "This ITF File does not contain the current Project",
-                        FileURL = sFile,
-                        Status = (HttpStatusCode)450,
-                        ContentType = ContentType,
-                    };
-             
-            }
-            catch
-            {
-                return new FileResponse()
+                Project project;
+                try
                 {
-                    Message = "Invalid ITF File - projects file not present",
-                    FileURL = sFile,
-                    Status = HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
-            }
+                    ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
+                    if (projectsEntry == null)
+                        return errorResponse("Invalid ITF File - projects data not present", sFile);
 
+                    List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
+                    project = projects.Find(p => p.Id == projectid);
+                    if (project == null)
+                        return errorResponse("This ITF File does not contain the current Project", sFile);
+                }
+                catch
+                {
+                    return errorResponse("Invalid ITF File - projects file not present", sFile);
+                }
+            }
             try
             {
                 foreach (ZipArchiveEntry entry in archive.Entries)
@@ -776,14 +793,7 @@ namespace SIL.Transcriber.Services
             }
             catch (Exception ex)
             {
-                return new FileResponse()
-                {
-                    Message = ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""),
-
-                    FileURL = sFile,
-                    Status = HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
+                return errorResponse(ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""), sFile);
             }
         }
     }
