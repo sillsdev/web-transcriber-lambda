@@ -1,15 +1,12 @@
 ﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Models;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
@@ -30,14 +27,27 @@ namespace SIL.Transcriber.Services
             JsonApiContext = jsonApiContext;
             this.Logger = loggerFactory.CreateLogger<TResource>();
         }
-        public virtual IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since)
+        public virtual IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since, int project)
         {
-            return GetChanges(GetAsync().Result, currentuser, origin, since);
+            if (currentuser > 0)
+                return GetChanges(GetAsync().Result, currentuser, origin, since);
+            else
+                return GetChanges(GetByProjAsync(project).Result, currentuser, origin, since);
         }
+        public async Task<IEnumerable<TResource>> GetByProjAsync(int project)
+        {
+            return await GetScopedToProjects(
+                base.GetAsync,
+                JsonApiContext, 
+                project);
+        }
+
         public IEnumerable<TResource> GetChanges(IEnumerable<TResource> entities, int currentuser, string origin, DateTime since)
         {
             if (entities == null) return null;
-            return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
+            if (currentuser > 0)
+                return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
+            return entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
         }
     }
 }

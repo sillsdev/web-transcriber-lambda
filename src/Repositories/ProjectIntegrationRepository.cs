@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
@@ -31,26 +28,36 @@ namespace SIL.Transcriber.Repositories
         {
             ProjectRepository = projectRepository;
         }
+        public IQueryable<ProjectIntegration> ProjectProjectIntegrations(IQueryable<ProjectIntegration> entities, IQueryable<Project> projects)
+        {
+            return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);          
+        }
         public IQueryable<ProjectIntegration> UsersProjectIntegrations(IQueryable<ProjectIntegration> entities, IQueryable<Project> projects = null)
         {
-           if (projects == null)
+            if (projects == null)
                 projects = ProjectRepository.UsersProjects(dbContext.Projects);
-
-            return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
-            
+            return ProjectProjectIntegrations(entities, projects);
+        }
+        public IQueryable<ProjectIntegration> ProjectProjectIntegrations(IQueryable<ProjectIntegration> entities, string projectid)
+        {
+            return ProjectProjectIntegrations(entities, ProjectRepository.ProjectProjects(dbContext.Projects, projectid));
         }
 
         public override IQueryable<ProjectIntegration> Filter(IQueryable<ProjectIntegration> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                IQueryable<Project> projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                 return UsersProjectIntegrations(entities); //, projects);
             }
 
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersProjectIntegrations(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectProjectIntegrations(entities, filterQuery.Value);
             }
             return base.Filter(entities, filterQuery);
         }

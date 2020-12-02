@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
@@ -10,6 +9,7 @@ using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.IEnumerableExtensions;
 using static SIL.Transcriber.Utility.RepositoryExtensions;
 using SIL.Transcriber.Data;
+using System.Collections.Generic;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -27,16 +27,21 @@ namespace SIL.Transcriber.Repositories
         {
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                var orgIds = CurrentUser.OrganizationIds.OrEmpty();
+                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
                 //if I'm an admin in the org, give me all groups in that org
                 //otherwise give me just the groups I'm a member of
-                var orgadmins = orgIds.Where(o => CurrentUser.HasOrgRole(RoleName.Admin, o));
+                IEnumerable<int> orgadmins = orgIds.Where(o => CurrentUser.HasOrgRole(RoleName.Admin, o));
 
                 entities = entities
                        .Where(g => orgadmins.Contains(g.OrganizationId) || CurrentUser.GroupIds.Contains(g.Id));
 
             }
             return entities;
+        }
+        public IQueryable<Group> ProjectGroups(IQueryable<Group> entities, string projectid)
+        {
+            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id.ToString() == projectid);
+            return entities.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
         }
         public override IQueryable<Group> Filter(IQueryable<Group> entities, FilterQuery filterQuery)
         {
@@ -47,6 +52,10 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersGroups(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectGroups(entities, filterQuery.Value);
             }
             return base.Filter(entities, filterQuery);
         }
