@@ -29,18 +29,21 @@ namespace SIL.Transcriber.Repositories
         {
         }
 
+        public IQueryable<Project> ProjectProjects(IQueryable<Project> entities, string projectid)
+        {
+           return entities.Where(p => p.Id.ToString() == projectid);
+        }
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {
-            var orgIds = CurrentUser.OrganizationIds.OrEmpty();
+            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 //if I'm an admin in the org, give me all projects in all groups in that org
                 //otherwise give me just the projects in the groups I'm a member of
-                var orgadmins = orgIds.Where(o => currentUserRepository.IsOrgAdmin(CurrentUser, o));
+                IEnumerable<int> orgadmins = orgIds.Where(o => currentUserRepository.IsOrgAdmin(CurrentUser, o));
 
                 entities = entities
                        .Where(p => orgadmins.Contains(p.OrganizationId) || CurrentUser.GroupIds.Contains(p.GroupId));
-
             }
             return entities;
         }
@@ -52,11 +55,11 @@ namespace SIL.Transcriber.Repositories
                 return entities.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
             }
 
-            var value = filterQuery.Value;
-            var op = filterQuery.Operation.ToEnum<FilterOperations>(defaultValue: FilterOperations.eq);
+            string value = filterQuery.Value;
+            FilterOperations op = filterQuery.Operation.ToEnum<FilterOperations>(defaultValue: FilterOperations.eq);
 
             if (filterQuery.Has(PROJECT_UPDATED_DATE)) {
-                var date = value.DateTimeFromISO8601();
+                DateTime date = value.DateTimeFromISO8601();
 
                 switch(op) {
                     case FilterOperations.ge:
@@ -82,6 +85,10 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersProjects(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectProjects(entities, value);
             }
             return base.Filter(entities, filterQuery);
         }

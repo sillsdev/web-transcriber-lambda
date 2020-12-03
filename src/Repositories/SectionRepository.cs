@@ -1,7 +1,7 @@
-﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Internal.Query;
+﻿using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
@@ -33,10 +33,14 @@ namespace SIL.Transcriber.Repositories
         //get my sections in these projects
         public IQueryable<Section> UsersSections(IQueryable<Section> entities, IQueryable<Project> projects)
         {
-            var plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
-            return UsersSections(entities, plans);
+            IQueryable<Plan> plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
+            return PlansSections(entities, plans);
         }
 
+        public IQueryable<Section> PlansSections(IQueryable<Section> entities, IQueryable<Plan> plans)
+        {
+            return entities.Join(plans, s => s.PlanId, p => p.Id, (s, p) => s);
+        }
         public IQueryable<Section> UsersSections(IQueryable<Section> entities, IQueryable<Plan> plans = null)
         {
             //this gets just the plans I have access to
@@ -44,27 +48,32 @@ namespace SIL.Transcriber.Repositories
             {
                 plans = PlanRepository.UsersPlans(dbContext.Plans);
             }
-
-             return entities.Join(plans, s=>s.PlanId, p=>p.Id, (s, p) => s);
+            return PlansSections(entities, plans);
         }
-         // This is the set of all Sections that a user has access to.
+
+        // This is the set of all Sections that a user has access to.
         public IQueryable<Section> GetWithPassages()
         {
             //you'd think this would work...but you'd be wrong;
             //return Include(Get(), "passages");
             //no error...but no passages either  return Get().Include(s => s.Passages);
-            var sections = UsersSections(Include(dbContext.Sections, "passages"));
+            IQueryable<Section> sections = UsersSections(Include(dbContext.Sections, "passages"));
             return sections;
         }
-    #endregion
-    #region Overrides
-    public override IQueryable<Section> Filter(IQueryable<Section> entities, FilterQuery filterQuery)
+        #endregion
+        public IQueryable<Section> ProjectSections(IQueryable<Section> entities, string projectid)
+        {
+            return PlansSections(entities, PlanRepository.ProjectPlans(dbContext.Plans, projectid));
+        }
+
+        #region Overrides
+        public override IQueryable<Section> Filter(IQueryable<Section> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER)) 
             {
                 if (filterQuery.HasSpecificOrg())
                 {
-                    var projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                    IQueryable<Project> projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                     return UsersSections(entities, projects);
                 }
                 return UsersSections(entities);
@@ -73,14 +82,18 @@ namespace SIL.Transcriber.Repositories
             {
                 return UsersSections(entities);
             }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectSections(entities, filterQuery.Value);
+            }
             return base.Filter(entities, filterQuery);
         }
         #endregion
         #region ParatextSync
         public IQueryable<Section> GetSectionsAtStatus(int projectId, string status)
         {
-            var sections = GetWithPassages().Include(s => s.Plan);
-            var projectsections = dbContext.Projects.Join(sections, p => p.Id, s => s.Plan.ProjectId, (p, s) => s);
+            IIncludableQueryable<Section, Plan> sections = GetWithPassages().Include(s => s.Plan);
+            IQueryable<Section> projectsections = dbContext.Projects.Join(sections, p => p.Id, s => s.Plan.ProjectId, (p, s) => s);
             return projectsections.Where(s => s.Passages.All(p => p.State == status));
         }
         public async Task<IList<SectionSummary>> SectionSummary(int PlanId, string book, int chapter)
@@ -89,7 +102,7 @@ namespace SIL.Transcriber.Repositories
             var passagewithsection = dbContext.Passages.Join(dbContext.Sections.Where(section => section.PlanId == PlanId), passage => passage.SectionId, section => section.Id, (passage, section) => new { passage, section }).Where(x => x.passage.Book == book && x.passage.StartChapter == chapter);
             await passagewithsection.GroupBy(p => p.section).ForEachAsync(ps =>
               {
-                  var newss = new SectionSummary()
+                  SectionSummary newss = new SectionSummary()
                   {
                       section = ps.FirstOrDefault().section,
                       Book = book,

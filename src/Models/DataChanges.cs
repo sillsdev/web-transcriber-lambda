@@ -11,10 +11,10 @@ namespace SIL.Transcriber.Models
         public DateTime Querydate { get; set; }
         [NotMapped]
         [Attr("changes")]  
-        public OrbitId[][] Changes { get; set; }
+        public OrbitId[] Changes { get; set; }
         [NotMapped]
         [Attr("deleted")]  
-        public OrbitId[][] Deleted { get; set; }
+        public OrbitId[] Deleted { get; set; }
     }
 }
 

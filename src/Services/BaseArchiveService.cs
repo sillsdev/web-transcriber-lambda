@@ -21,9 +21,9 @@ namespace SIL.Transcriber.Services
         {
        }
 
-        public override IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since)
+        public override IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since, int project)
         {
-            IEnumerable<TResource> entities = base.GetChanges(currentuser, origin, since);
+            IEnumerable<TResource> entities = base.GetChanges(currentuser, origin, since, project);
             return entities.Where(t => !t.Archived);;
         }
 

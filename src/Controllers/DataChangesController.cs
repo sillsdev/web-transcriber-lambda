@@ -1,14 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
@@ -19,6 +16,7 @@ namespace SIL.Transcriber.Controllers
     public class DatachangesController : JsonApiController<DataChanges, int>
     {
         DataChangeService service;
+
         public DatachangesController(
             IJsonApiContext jsonApiContext,
             IResourceService<DataChanges> resourceService)
@@ -33,7 +31,14 @@ namespace SIL.Transcriber.Controllers
             if (!DateTime.TryParse(since, out dtSince))
                 return new UnprocessableEntityResult();
             dtSince = dtSince.ToUniversalTime();
-            return Ok(service.GetChanges(origin, dtSince));
+            return Ok(service.GetUserChanges(origin, dtSince));
+        }
+
+        [HttpGet("projects/{origin}")]
+        public IActionResult GetProjectDataChanges([FromRoute] string origin, string projList)
+        {
+            ProjDate[] x = JsonConvert.DeserializeObject<ProjDate[]>(projList);
+            return Ok(service.GetProjectChanges(origin, x));
         }
     }
 }

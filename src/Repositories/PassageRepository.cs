@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
@@ -34,25 +33,31 @@ namespace SIL.Transcriber.Repositories
         public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, IQueryable<Project> projects)
         {
             IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, projects);
-
-            return UsersPassages(entities, sections);
+            return SectionsPassages(entities, sections);
         }
 
+        public IQueryable<Passage> SectionsPassages(IQueryable<Passage> entities, IQueryable<Section> sections)
+        {
+            return entities.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
+        }
         public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, IQueryable<Section> sections = null)
         {
             if (sections == null)
             {
                 sections = SectionRepository.UsersSections(dbContext.Sections);
             }
-            return entities.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
+            return SectionsPassages(entities, sections);
         }
         public IQueryable<Passage> UsersPassages(IQueryable<Passage> entities, int planid)
         {
             IQueryable<Plan> plans = dbContext.Plans.Where(p => p.Id == planid);
-
             IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, plans);
-
-            return UsersPassages(entities, sections);
+            return SectionsPassages(entities, sections);
+        }
+        public IQueryable<Passage> ProjectPassages(IQueryable<Passage> entities, string projectid)
+        {
+            IQueryable<Section> sections = SectionRepository.ProjectSections(dbContext.Sections, projectid);
+            return SectionsPassages(entities, sections);
         }
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {
@@ -70,6 +75,10 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersPassages(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectPassages(entities, filterQuery.Value);
             }
             if (filterQuery.Has(PLANID))
             {

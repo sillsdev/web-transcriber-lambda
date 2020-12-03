@@ -384,11 +384,6 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                     //projects
-                    projects.ToList().ForEach(p =>
-                    {
-                        p.DateExported = exported;
-                        dbContext.Projects.Update(p);
-                    });
                     AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
                     startNext=1;
                 }
@@ -459,9 +454,10 @@ namespace SIL.Transcriber.Services
         }
         public FileResponse ImportFileURL(string sFile)
         {
-            const string ContentType = "application/itf";
+            string extension = Path.GetExtension(sFile);
+            string ContentType = "application/" + extension;
             // Project project = dbContext.Projects.Where(p => p.Id == id).First();
-            string fileName = string.Format("{0}_{1}.itf", Path.GetFileNameWithoutExtension(sFile), DateTime.Now.Ticks);
+            string fileName = string.Format("{0}_{1}.{2}", Path.GetFileNameWithoutExtension(sFile), DateTime.Now.Ticks, extension);
             //get a signedurl for it now
             return new FileResponse()
             {
@@ -625,26 +621,28 @@ namespace SIL.Transcriber.Services
                             foreach(User u in users)
                             {
                                 User user = dbContext.Users.Find(u.Id);
-                                
-                                if (user.DateUpdated > sourceDate)
-                                    report.Add(UserChangesReport(user, u));
+                                if (user.DateUpdated != u.DateUpdated)
+                                {
+                                    if (user.DateUpdated > sourceDate && user.DateUpdated != u.DateUpdated)
+                                        report.Add(UserChangesReport(user, u));
 
-                                user.DigestPreference = u.DigestPreference;
-                                user.FamilyName = u.FamilyName;
-                                user.GivenName = u.GivenName;
-                                user.Locale = u.Locale;
-                                user.Name = u.Name;
-                                user.NewsPreference = u.NewsPreference;
-                                user.Phone = u.Phone;
-                                user.playbackspeed = u.playbackspeed;
-                                user.progressbartypeid = u.progressbartypeid;
-                                user.timercountup = u.timercountup;
-                                user.Timezone = u.Timezone;
-                                user.uilanguagebcp47 = u.uilanguagebcp47;
-                                user.LastModifiedBy = u.LastModifiedBy;
-                                user.DateUpdated = DateTime.UtcNow; 
-                                /* TODO: figure out if the avatar needs uploading */
-                                dbContext.Users.Update(user);
+                                    user.DigestPreference = u.DigestPreference;
+                                    user.FamilyName = u.FamilyName;
+                                    user.GivenName = u.GivenName;
+                                    user.Locale = u.Locale;
+                                    user.Name = u.Name;
+                                    user.NewsPreference = u.NewsPreference;
+                                    user.Phone = u.Phone;
+                                    user.playbackspeed = u.playbackspeed;
+                                    user.progressbartypeid = u.progressbartypeid;
+                                    user.timercountup = u.timercountup;
+                                    user.Timezone = u.Timezone;
+                                    user.uilanguagebcp47 = u.uilanguagebcp47;
+                                    user.LastModifiedBy = u.LastModifiedBy;
+                                    user.DateUpdated = DateTime.UtcNow;
+                                    /* TODO: figure out if the avatar needs uploading */
+                                    dbContext.Users.Update(user);
+                                }
                             };
                             break;
 

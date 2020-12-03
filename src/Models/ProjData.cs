@@ -20,5 +20,8 @@ namespace SIL.Transcriber.Models
             [NotMapped]
             [Attr("projectid")]
             public int ProjectId { get; set; }
+            [NotMapped]
+            [Attr("snapshotdate")]
+            public string SnapshotDate { get; set; }
     }
 }

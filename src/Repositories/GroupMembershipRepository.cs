@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
@@ -29,13 +28,22 @@ namespace SIL.Transcriber.Repositories
             HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
         }
+        public IQueryable<GroupMembership> GroupsGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups)
+        {
+            return entities.Join(groups, gm => gm.GroupId, g => g.Id, (gm, g) => gm);
+        }
         public IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
         {
             if (groups == null)
             {
                 groups = GroupRepository.UsersGroups(dbContext.Groups);
             }
-            return entities.Join(groups, gm => gm.GroupId, g => g.Id, (gm, g) => gm);
+            return GroupsGroupMemberships(entities, groups);
+        }
+        public IQueryable<GroupMembership> ProjectGroupMemberships(IQueryable<GroupMembership> entities, string project)
+        {
+            IQueryable<Group> groups = GroupRepository.ProjectGroups(dbContext.Groups, project);
+            return GroupsGroupMemberships(entities, groups);
         }
         #region Overrides
         public override IQueryable<GroupMembership> Filter(IQueryable<GroupMembership> entities, FilterQuery filterQuery)
@@ -52,6 +60,10 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersGroupMemberships(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectGroupMemberships(entities, filterQuery.Value);
             }
             if (filterQuery.Has(DATA_START_INDEX)) //ignore
             {

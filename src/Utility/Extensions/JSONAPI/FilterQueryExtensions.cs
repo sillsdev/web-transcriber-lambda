@@ -1,10 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using SIL.Transcriber.Services;
+
 
 namespace SIL.Transcriber.Utility.Extensions.JSONAPI
 {
@@ -12,6 +8,7 @@ namespace SIL.Transcriber.Utility.Extensions.JSONAPI
     {
         public static string ORGANIZATION_HEADER = "organization-header";
         public static string ALLOWED_CURRENTUSER = "currentuser";
+        public static string PROJECT_LIST = "projectlist";
         public static string PROJECT_SEARCH_TERM = "project-id";
         public static string PROJECT_UPDATED_DATE = "project-updated-date";
         public static string DATA_START_INDEX = "start-index";
