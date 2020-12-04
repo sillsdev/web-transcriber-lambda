@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System;
 using Microsoft.Extensions.Logging;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using JsonApiDotNetCore.Internal;
+using System.Linq;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -88,7 +90,18 @@ namespace SIL.Transcriber.Controllers
         {
             User existing = userService.GetCurrentUser();
 
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                /* temp code to fix avatars */
+                if (existing.avatarurl != null && existing.avatarurl.StartsWith("avatars"))
+                {
+                    existing.avatarurl = currentUserContext.Avatar;
+                    ContextEntity contextEntity = jsonApiContext.ResourceGraph.GetContextEntity("users");
+                    jsonApiContext.AttributesToUpdate[contextEntity.Attributes.Where(a => a.PublicAttributeName == "avatar-url").First()] = existing.avatarurl;
+                    await userService.UpdateAsync(existing.Id, existing);
+                }
+                return existing;
+            }
 
             if (currentUserContext.Auth0Id == null || currentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", ""))
             {

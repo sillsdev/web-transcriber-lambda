@@ -115,10 +115,10 @@ namespace SIL.Transcriber.Services
             {
                 if (!string.IsNullOrEmpty(o.LogoUrl))
                 {
-                    if (AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png"))
-                        o.LogoUrl = "logos/" + o.Slug + ".png";
-                    else
-                        o.LogoUrl = null;
+                    AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png");
+                    //    o.LogoUrl = "logos/" + o.Slug + ".png";
+                    //else
+                    //    o.LogoUrl = null;
                 }
             });
         }
@@ -129,7 +129,7 @@ namespace SIL.Transcriber.Services
                 if (!string.IsNullOrEmpty(u.avatarurl))
                 {
                     AddStreamEntry(zipArchive, u.avatarurl, "avatars/", u.Id.ToString() + u.FamilyName + ".png");
-                    u.avatarurl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
+                    //u.avatarurl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
                 }
             });
         }
