@@ -38,7 +38,7 @@ namespace SIL.Transcriber.Forms.GroupMemberships
             else
             {
                 var projectsExist = ProjectRepository.Get()
-                                                .Where(p => p.GroupId == groupMembership.GroupId && p.OwnerId == groupMembership.UserId)
+                                                .Where(p => p.GroupId == groupMembership.GroupId && p.OwnerId == groupMembership.UserId && !p.Archived)
                                                 .Any();
                 if (projectsExist)
                 {
