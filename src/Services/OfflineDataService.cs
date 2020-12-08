@@ -587,25 +587,30 @@ namespace SIL.Transcriber.Services
                 return errorResponse("Invalid ITF File - SILTranscriber not present", sFile);
             }
             //check project if provided
-            if (projectid > 0)
-            {
                 Project project;
-                try
-                {
-                    ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
-                    if (projectsEntry == null)
-                        return errorResponse("Invalid ITF File - projects data not present", sFile);
+            try
+            {
+                ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
+                if (projectsEntry == null)
+                    return errorResponse("Invalid ITF File - projects data not present", sFile);
 
-                    List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
+                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
+                if (projectid > 0)
+                {
                     project = projects.Find(p => p.Id == projectid);
                     if (project == null)
                         return errorResponse("This ITF File does not contain the current Project", sFile);
                 }
-                catch
-                {
-                    return errorResponse("Invalid ITF File - projects file not present", sFile);
-                }
+                project = dbContext.Projects.Find(projects[0].Id);
+                if (project.Archived)
+                    return errorResponse("Project " + project.Name + " has been deleted.", sFile);
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return errorResponse("Invalid ITF File - projects file not present", sFile);
+            }
+            
             try
             {
                 foreach (ZipArchiveEntry entry in archive.Entries)

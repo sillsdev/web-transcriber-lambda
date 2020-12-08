@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
@@ -17,16 +15,19 @@ namespace SIL.Transcriber.Services
     {
         public ICurrentUserContext CurrentUserContext { get; }
         public UserRepository UserRepository { get; }
+        public ProjectRepository ProjectRepository { get; }
 
         public GroupService(
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             GroupRepository groupRepository,
+            ProjectRepository projectRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, groupRepository,  loggerFactory)
         {
             CurrentUserContext = currentUserContext;
             UserRepository = userRepository;
+            ProjectRepository = projectRepository;
         }
 
 
@@ -51,6 +52,20 @@ namespace SIL.Transcriber.Services
                 throw new JsonApiException(updateForm.Errors);
             }
             return await base.UpdateAsync(id, resource);
+        }
+
+        public override async Task<bool> DeleteAsync(int id)
+        {
+            var deleteForm = new DeleteForm(UserRepository,
+                                            ProjectRepository,
+                                             (GroupRepository)MyRepository,
+                                            CurrentUserContext);
+            if (!deleteForm.IsValid(id))
+            {
+                throw new JsonApiException(deleteForm.Errors);
+            }
+
+            return await base.DeleteAsync(id);
         }
     }
 }
