@@ -530,13 +530,13 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
-                    errors.Add(entry.Name + ":" + fr.Message);
+                    errors.Add(JsonConvert.SerializeObject(fr));
                 }
             }
             report.RemoveAll(s => s.Length == 0);
             errors.RemoveAll(s => s.Length == 0);
             if (errors.Count() > 0)
-                return errorResponse("[" + string.Join(",", errors) + "]", sFile);
+                return errorResponse("{\"errors\": [" + string.Join(",", errors) + "], \"report\": [" + string.Join(", ", report) + "]}", sFile);
 
             return new FileResponse()
             {
@@ -552,14 +552,22 @@ namespace SIL.Transcriber.Services
             ZipArchive archive = new ZipArchive(response.FileStream);
             return await ProcessImportFileAsync(archive, projectid, sFile);
         }
-        private FileResponse errorResponse(string msg, string sFile)
+        private FileResponse projectDeletedResponse(string msg, string sFile)
+        {
+            return errorResponse(msg, sFile, System.Net.HttpStatusCode.MovedPermanently);
+        }
+        private FileResponse NotCurrentProjectResponse(string msg, string sFile)
+        {
+            return errorResponse(msg, sFile, System.Net.HttpStatusCode.NotAcceptable);
+        }
+        private FileResponse errorResponse(string msg, string sFile, HttpStatusCode status = System.Net.HttpStatusCode.UnprocessableEntity)
         {
             const string ContentType = "application/itf";
             return new FileResponse()
             {
                 Message = msg,
                 FileURL = sFile,
-                Status = System.Net.HttpStatusCode.UnprocessableEntity,
+                Status = status,
                 ContentType = ContentType,
             };
         }
@@ -575,7 +583,7 @@ namespace SIL.Transcriber.Services
             }
             catch
             {
-                return errorResponse("Invalid ITF File - SILTranscriberOffline not present", sFile);
+                return errorResponse("SILTranscriberOffline not present", sFile);
             }
             try
             {
@@ -584,7 +592,7 @@ namespace SIL.Transcriber.Services
             }
             catch
             {
-                return errorResponse("Invalid ITF File - SILTranscriber not present", sFile);
+                return errorResponse("SILTranscriber not present", sFile);
             }
             //check project if provided
                 Project project;
@@ -592,23 +600,26 @@ namespace SIL.Transcriber.Services
             {
                 ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
                 if (projectsEntry == null)
-                    return errorResponse("Invalid ITF File - projects data not present", sFile);
-
-                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
+                    return errorResponse("Project data not present", sFile);
+                string json = new StreamReader(projectsEntry.Open()).ReadToEnd();
+                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(json);
                 if (projectid > 0)
                 {
                     project = projects.Find(p => p.Id == projectid);
                     if (project == null)
-                        return errorResponse("This ITF File does not contain the current Project", sFile);
+                    {
+                        project = dbContext.Projects.Find(projects[0].Id);
+                        return NotCurrentProjectResponse(project.Name, sFile);
+                    }
                 }
                 project = dbContext.Projects.Find(projects[0].Id);
                 if (project.Archived)
-                    return errorResponse("Project " + project.Name + " has been deleted.", sFile);
+                    return projectDeletedResponse(project.Name, sFile);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                return errorResponse("Invalid ITF File - projects file not present", sFile);
+                return errorResponse("Invalid ITF File - error finding project -" + ex.Message, sFile);
             }
             
             try
