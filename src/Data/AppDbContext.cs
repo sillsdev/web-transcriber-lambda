@@ -37,6 +37,10 @@ namespace SIL.Transcriber.Data
             EntityTypeBuilder<Passage> passageEntity = modelBuilder.Entity<Passage>();
             EntityTypeBuilder<Section> sectionEntity = modelBuilder.Entity<Section>();
 
+            passageEntity.HasMany(p => p.Mediafiles)
+                .WithOne(mf => mf.Passage)
+                .HasForeignKey(mf => mf.PassageId);
+
             groupEntity
                 .HasMany(g => g.GroupMemberships)
                 .WithOne(gm => gm.Group)

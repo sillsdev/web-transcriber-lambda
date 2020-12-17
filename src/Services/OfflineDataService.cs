@@ -525,8 +525,9 @@ namespace SIL.Transcriber.Services
                 ZipArchive zipentry = new ZipArchive(entry.Open());
                 FileResponse fr = await ProcessImportFileAsync(zipentry, 0, entry.Name);
                 if (fr.Status == HttpStatusCode.OK)
-                {
-                    report.Add(fr.Message.Replace("[", "").Replace("]", ""));
+                {   //remove beginning and ending brackets
+                    string msg = fr.Message.StartsWith("[") ?  fr.Message.Substring(1, fr.Message.Length - 2) : fr.Message;
+                    report.Add(msg);
                 }
                 else
                 {
