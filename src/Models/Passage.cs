@@ -53,7 +53,7 @@ namespace SIL.Transcriber.Models
 
         public bool ReadyToSync
         {
-            get { return State == "approved"; }
+            get { return State == "approved" && !Archived; }
         }
         private int startChapter = 0, endChapter = 0, startVerse = 0, endVerse = 0;
         public int StartChapter

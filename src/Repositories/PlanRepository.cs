@@ -1,5 +1,4 @@
-﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Internal.Query;
+﻿using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -28,24 +27,36 @@ namespace SIL.Transcriber.Repositories
         {
             ProjectRepository = projectRepository;
         }
+
+        public IQueryable<Plan> ProjectsPlans(IQueryable<Plan> entities, IQueryable<Project> projects)
+        {
+            return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
+        }
+        public IQueryable<Plan> ProjectPlans(IQueryable<Plan> entities, string projectid)
+        {
+            return ProjectsPlans(entities, ProjectRepository.ProjectProjects(dbContext.Projects, projectid));
+        }
         public IQueryable<Plan> UsersPlans(IQueryable<Plan> entities, IQueryable<Project> projects = null)
         {
             if (projects == null)
                 projects = ProjectRepository.UsersProjects(dbContext.Projects);
 
-            return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
-
+            return ProjectsPlans(entities, projects);
         }
         public override IQueryable<Plan> Filter(IQueryable<Plan> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
             {
-                 var projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
+                IQueryable<Project> projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
                  return UsersPlans(entities, projects);
             }
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersPlans(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectPlans(entities, filterQuery.Value);
             }
             return base.Filter(entities, filterQuery);
         }       

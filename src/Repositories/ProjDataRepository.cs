@@ -60,7 +60,8 @@ namespace SIL.Transcriber.Repositories
                 projectid = 0;          
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
-            
+            string snapshotDate = DateTime.UtcNow.ToString();
+
             do
             {
                 //plans
@@ -70,9 +71,11 @@ namespace SIL.Transcriber.Repositories
                 //sections
                 IQueryable<Section> sections = dbContext.Sections.Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s).Where(x => !x.Archived);
                 if (!CheckAdd(1, sections, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
-
+                
+                //passages
                 IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
                 if (!CheckAdd(2, passages, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                
                 //mediafiles
                 if (!CheckAdd(3, dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
 
@@ -86,6 +89,7 @@ namespace SIL.Transcriber.Repositories
             ProjData ProjData = entities.FirstOrDefault();
             ProjData.Json = data + FinishData();
             ProjData.Startnext = iStartNext;
+            ProjData.SnapshotDate = snapshotDate;
             return entities;
         }
         public override IQueryable<ProjData> Get()

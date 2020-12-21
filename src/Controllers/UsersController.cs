@@ -32,7 +32,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("current-user")]
         public async Task<IActionResult> GetCurrentUser()
         {
-            var currentUser = CurrentUser;
+            User currentUser = CurrentUser;
 
             return await base.GetAsync(currentUser.Id);
         }

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Repositories;
 using JsonApiDotNetCore.Models;
+using System.Collections.Generic;
 
 namespace SIL.Transcriber.Data
 {
@@ -35,6 +36,10 @@ namespace SIL.Transcriber.Data
             EntityTypeBuilder<GroupMembership> groupMemberEntity = modelBuilder.Entity<GroupMembership>();
             EntityTypeBuilder<Passage> passageEntity = modelBuilder.Entity<Passage>();
             EntityTypeBuilder<Section> sectionEntity = modelBuilder.Entity<Section>();
+
+            passageEntity.HasMany(p => p.Mediafiles)
+                .WithOne(mf => mf.Passage)
+                .HasForeignKey(mf => mf.PassageId);
 
             groupEntity
                 .HasMany(g => g.GroupMemberships)
@@ -98,23 +103,25 @@ namespace SIL.Transcriber.Data
         }
         public override int SaveChanges()
         {
-            AddTimestamps(CurrentUserId());
             UpdateSoftDeleteStatuses();
+            AddTimestamps(CurrentUserId());
             return base.SaveChanges();
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            AddTimestamps(CurrentUserId());
             UpdateSoftDeleteStatuses();
+            AddTimestamps(CurrentUserId());
             return await base.SaveChangesAsync(cancellationToken);
         }
         //The database would handle this on delete, but EFCore would throw an error,
         //so handle it here too
         private void UpdateSoftDeleteStatuses()
         {
-            foreach (EntityEntry entry in ChangeTracker.Entries())
+            List<EntityEntry> entries = ChangeTracker.Entries().ToList();
+            for (int ix = entries.Count - 1; ix >= 0; ix--)
             {
+                EntityEntry entry = entries[ix];
                 if (entry.Entity is IArchive)
                 {
                     switch (entry.State)
@@ -123,8 +130,13 @@ namespace SIL.Transcriber.Data
                             entry.CurrentValues["Archived"] = false;
                             break;
                         case EntityState.Deleted:
-                            entry.State = EntityState.Modified;
-                            entry.CurrentValues["Archived"] = true;
+                            if ((bool)entry.CurrentValues["Archived"] == true)
+                                entry.State = EntityState.Detached;  
+                            else
+                            {
+                                entry.State = EntityState.Modified;
+                                entry.CurrentValues["Archived"] = true;
+                            }
                             break;
                     }
                 }
