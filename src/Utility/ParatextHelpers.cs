@@ -5,6 +5,7 @@ using SIL.Transcriber.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using TranscriberAPI.Utility.Extensions;
 
@@ -74,7 +75,7 @@ namespace SIL.Transcriber.Utility
                     {
                         if (((XElement)next).FirstNode != null) ((XElement)next).FirstNode.Remove();
                         next = next.NextNode;
-                        rem.Remove();
+                        if (((XElement)rem).FirstNode == null) rem.Remove();
                     }
                     else next = null;
                 }
@@ -235,12 +236,10 @@ namespace SIL.Transcriber.Utility
                 }
             return stop;
         }
-
-        public static XElement GenerateParatextData(XElement chapterContent, Passage currentPassage, string transcription, bool addNumbers)
+        public static SortedList<string, XElement> GetExistingVerses(XElement chapterContent, Passage currentPassage, out XElement thisVerse)
         {
+            XElement exactVerse = null;
             IEnumerable<XElement> verses = chapterContent.GetElements("verse");
-            XElement thisVerse = null;
-            //find the verses that contain verses in my range
             SortedList<string, XElement> existing = new SortedList<string, XElement>();
             for (int ix = currentPassage.StartVerse; ix <= currentPassage.EndVerse; ix++)
             {
@@ -249,57 +248,132 @@ namespace SIL.Transcriber.Utility
                 {
                     if (verse.Verses() == currentPassage.Verses)
                     {
-                        thisVerse = verse;
-                        //if our section is there...add it to the remove list
-                        if (!existing.ContainsKey("S" + verse.Verses()) && currentPassage.Sequencenum == 1 && verse.Parent.IsPara() && verse.Parent.PreviousNode != null && verse.Parent.PreviousNode.IsSection())
-                            existing.Add("S" + verse.Verses(), (XElement)verse.Parent.PreviousNode);
+                        if (!existing.ContainsKey(verse.Verses()))
+                        {
+                            exactVerse = verse;
+                            existing.Add(verse.Verses(), verse);
+                            //if our section is there...add it to the remove list
+                            if (!existing.ContainsKey("S" + verse.Verses()) && currentPassage.Sequencenum == 1 && verse.Parent.IsPara() && verse.Parent.PreviousNode != null && verse.Parent.PreviousNode.IsSection())
+                                existing.Add("S" + verse.Verses(), (XElement)verse.Parent.PreviousNode);
+                        }
                     }
                     else
                     {
-                        if (!existing.ContainsKey(verse.Verses()) && verse.VerseText() == "")
+                        if (!existing.ContainsKey(verse.Verses()) && (verse.VerseText() == "" || (verse.StartVerse() >= currentPassage.StartVerse && verse.EndVerse() <= currentPassage.EndVerse)))
                         {
                             existing.Add(verse.Verses(), verse);
                         }
                     }
                 });
             }
-            existing.Values.ForEach(v => {
-                if (v.IsVerse())
-                    v.RemoveVerse();
-                else
-                    v.RemoveSection();
-            });
+            thisVerse = exactVerse;
+            return existing;
+        }
 
-            if (thisVerse != null)
+        private static IEnumerable<Passage> ParseTranscription(Passage currentPassage, string transcription)
+        {
+            string pattern = @"(\\v\s*[1-9+]-*[1-9+]*)";
+            List<Passage> ret = new List<Passage>();
+            // Create a Regex  
+            Regex rg = new Regex(pattern);
+
+            // Get all matches  
+            MatchCollection internalverses = rg.Matches(transcription);
+            if (internalverses.Count == 0)
             {
-                thisVerse = MoveToPara(thisVerse);
-                ReplaceText(thisVerse, transcription);
+                currentPassage.LastComment = transcription;
+                ret.Add(currentPassage);
             }
-            else
+            // Report on each match.
+            for (int ix = 0; ix < internalverses.Count; ix++)
             {
-                verses = chapterContent.GetElements("verse");
-                XNode nextVerse = FindNodeAfterVerse(currentPassage.StartVerse, currentPassage.EndVerse, verses);
-                if (nextVerse == null)
-                {   //add it at the end
-                    thisVerse = AddParatextVerse(chapterContent.LastNode, currentPassage.Verses, transcription);
+                Match match = internalverses[ix];
+                int start = match.Index + match.Value.Length;
+                string t =  ix < internalverses.Count-1 ? transcription.Substring(start, internalverses[ix+1].Index - start) : transcription.Substring(start);
+                if (t.EndsWith('\n'))
+                    t = t.Remove(t.Length - 1);
+                Passage p = new Passage
+                {
+                    Book = currentPassage.Book,
+                    Reference = currentPassage.StartChapter.ToString() + ":" + match.Value.Replace("\\v", ""),
+                    LastComment = t.TrimStart(),
+                    SectionId = currentPassage.SectionId,
+                };
+
+                ret.Add(p);
+            }
+            return ret;
+        }
+        public static string GetParatextData(XElement chapterContent, Passage currentPassage)
+        {
+            string transcription = "";
+            //find the verses that contain verses in my range
+            SortedList<string, XElement> existing = GetExistingVerses(chapterContent, currentPassage, out XElement thisVerse);
+            existing.Values.ForEach(v =>
+            {
+                if (v.IsVerse())
+                    transcription += "\\v" + v.Verses() + " " + v.VerseText().Replace("\\p", "\r");
+            });
+            return transcription;
+        }
+        public static XElement GenerateParatextData(XElement chapterContent, Passage currentPassage, string transcription, bool addNumbers)
+        {
+            IEnumerable<Passage> parsedPassages = ParseTranscription(currentPassage, transcription);
+            bool first = true;
+            if (parsedPassages.Count() > 1)
+            {
+                //remove the original range if it exists 
+                GetExistingVerses(chapterContent, currentPassage, out XElement thisVerse);
+                if (thisVerse != null)
+                    thisVerse.RemoveVerse();
+            }
+            parsedPassages.ForEach(p =>
+            {
+                //find the verses that contain verses in my range
+                SortedList<string, XElement> existing = GetExistingVerses(chapterContent, p, out XElement thisVerse);
+                existing.Values.ForEach(v =>
+                {
+                    if (v != thisVerse)
+                    {
+                        if (v.IsVerse())
+                            v.RemoveVerse();
+                        else
+                            v.RemoveSection();
+                    }
+                });
+
+                if (thisVerse != null)
+                {
+                    thisVerse = MoveToPara(thisVerse);
+                    ReplaceText(thisVerse, p.LastComment);
                 }
                 else
-                {   //add before
-                    thisVerse = AddParatextVerse(nextVerse, currentPassage.Verses, transcription, true);
-                }
-            }
-            if (currentPassage.Sequencenum == 1)
-            {
-                //add/update the section header
-                if (thisVerse.PreviousNode.IsSection())
                 {
-                    ((XText)((XElement)thisVerse.PreviousNode).FirstNode).Value = currentPassage.Section.SectionHeader(addNumbers);
+                    IEnumerable<XElement> verses = chapterContent.GetElements("verse");
+                    XNode nextVerse = FindNodeAfterVerse(p.StartVerse, p.EndVerse, verses);
+                    if (nextVerse == null)
+                    {   //add it at the end
+                        thisVerse = AddParatextVerse(chapterContent.LastNode, p.Verses, p.LastComment);
+                    }
+                    else
+                    {   //add before
+                        thisVerse = AddParatextVerse(nextVerse, p.Verses, p.LastComment, true);
+                    }
                 }
-                else
+                if (currentPassage.Sequencenum == 1 && first)
                 {
-                    thisVerse.AddBeforeSelf(ParatextSection(currentPassage.Section.SectionHeader(addNumbers)));
+                    //add/update the section header
+                    if (thisVerse.PreviousNode.IsSection())
+                    {
+                        ((XText)((XElement)thisVerse.PreviousNode).FirstNode).Value = currentPassage.Section.SectionHeader(addNumbers);
+                    }
+                    else
+                    {
+                        thisVerse.AddBeforeSelf(ParatextSection(currentPassage.Section.SectionHeader(addNumbers)));
+                    }
+                    first = false;
                 }
-            }
+            });
             return chapterContent;
         }
     }

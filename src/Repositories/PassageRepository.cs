@@ -65,6 +65,10 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(p => p.ReadyToSync).Include(p => p.Section);
             return passages;
         }
+        public int ProjectId(Passage passage)
+        {
+            return dbContext.Sections.Where(s => s.Id == passage.SectionId).Join(dbContext.Plans, s => s.PlanId, p => p.Id, (s, p) => p).FirstOrDefault().ProjectId ;
+        }
         public override IQueryable<Passage> Filter(IQueryable<Passage> entities, FilterQuery filterQuery)
         {
             if (filterQuery.Has(ORGANIZATION_HEADER))
