@@ -56,16 +56,16 @@ namespace SIL.Transcriber.Utility
             }
             return myLevel;
         }
-        public static void ReplaceText(XElement para, string transcription)
+        private static void RemoveText(XNode next)
         {
-            XNode value = para.FirstNode;
-            XNode next = value.NextNode;
             XNode rem;
             while (next != null)
             {
                 rem = next;
                 if (next.IsText())
                 {
+                    if (next.NextNode != null)
+                        RemoveText(next.NextNode);
                     next = next.Parent.NextNode;
                     rem.Remove();
                 }
@@ -84,6 +84,11 @@ namespace SIL.Transcriber.Utility
                 else //skip notes etc
                     next = next.NextNode;
             }
+        }
+        public static void ReplaceText(XElement para, string transcription)
+        {
+            XNode value = para.FirstNode;
+            RemoveText(value.NextNode);
             string[] lines = transcription.Split('\n');
             XText newverse = new XText(lines[0]);
             value.AddAfterSelf(newverse);
