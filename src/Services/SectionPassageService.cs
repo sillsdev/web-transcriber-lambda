@@ -69,7 +69,7 @@ namespace SIL.Transcriber.Services
 
                     foreach (JArray item in updsecs)
                     {
-                        updsections.Add(item[0]["id"] != null ? MyRepository.GetSection((int)item[0]["id"]).UpdateFrom(item[0]) : new Section(item[0], entity.PlanId));
+                        updsections.Add(item[0]["id"] != null && item[0]["id"].ToString() != "" ? MyRepository.GetSection((int)item[0]["id"]).UpdateFrom(item[0]) : new Section(item[0], entity.PlanId));
                     }
                     if (updsections.Count > 0)
                     {
@@ -89,20 +89,20 @@ namespace SIL.Transcriber.Services
                     {
                         if ((bool)item[0]["issection"])
                         {
-                            if (item[0]["id"] != null)  //saving in chunks may not have saved this section...passages will be marked unchanged
+                            if (item[0]["id"] != null && item[0]["id"].ToString() != "")  //saving in chunks may not have saved this section...passages will be marked unchanged
                             {
                                 lastSectionId = (int)item[0]["id"];
                                 if (item.Count > 1 && (bool)item[1]["changed"])
                                 {
                                     updpass.Add(item);
-                                    updpassages.Add(item[1]["id"] != null ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
+                                    updpassages.Add(item[1]["id"] != null && item[1]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
                                 }
                             }
                         }
                         else if ((bool)item[0]["changed"])
                         {
                             updpass.Add(item);
-                            updpassages.Add(item[0]["id"] != null ? MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]): new Passage(item[0], lastSectionId));
+                            updpassages.Add(item[0]["id"] != null && item[0]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]): new Passage(item[0], lastSectionId));
                         }
                     }
                      if (updpassages.Count > 0)

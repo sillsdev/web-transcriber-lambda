@@ -39,11 +39,6 @@ namespace SIL.Transcriber.Models
         public virtual User Owner { get; set; }
         public int OwnerId { get; set; }
 
-        
-        [NotMapped]
-        [HasManyThrough(nameof(OrganizationMemberships), Link.None)]
-        public List<User> Users { get; set; } 
-       
         [HasMany("organization-memberships", Link.None)]
         public List<OrganizationMembership> OrganizationMemberships { get; set; }
 

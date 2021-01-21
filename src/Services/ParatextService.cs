@@ -178,7 +178,7 @@ namespace SIL.Transcriber.Services
                 // added to the project, or the project doesn't exist and the user is the administrator
                 bool isConnected = false;
                 bool isConnectable = false;
-                IEnumerable<int> projectids = ProjectService.LinkedToParatext(paratextId).Select(p => p.Id);
+                IEnumerable<string> projectids = ProjectService.LinkedToParatext(paratextId).Select(p => p.Id.ToString());
                 if (projects != null && projects.Count() > 0)
                 {
                     isConnected = true;
