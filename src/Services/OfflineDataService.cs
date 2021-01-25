@@ -320,7 +320,7 @@ namespace SIL.Transcriber.Services
 
             S3Response s3response;
             Stream ms;
-            if (start > 7)
+            if (start > 8)
                 return CheckProgress(projectid, fileName);
 
             if (start == 0)
@@ -403,12 +403,14 @@ namespace SIL.Transcriber.Services
                     IQueryable<PassageStateChange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
                     if (!CheckAdd(5, dtBail, ref startNext, zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H')) break;
                     //mediafiles
-                    IQueryable<Mediafile> mediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
-                    //pick just the highest version media per passage
-                    mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                    List<Mediafile> mediaList = mediafiles.OrderBy(m => m.Id).ToList();
-                    if (!AddMediaEaf(6, dtBail, ref startNext, zipArchive, mediaList)) break;
+                    IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m).Where(x => !x.Archived);
+                    IQueryable<Mediafile> attachedmediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                    if (!CheckAdd(6, dtBail, ref startNext, zipArchive, "mediafiles", mediafiles.OrderBy(m => m.Id).ToList(), 'H')) break;
 
+                    //pick just the highest version media per passage
+                    attachedmediafiles = from m in attachedmediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    List<Mediafile> mediaList = attachedmediafiles.OrderBy(m => m.Id).ToList();
+                    if (!AddMediaEaf(7, dtBail, ref startNext, zipArchive, mediaList)) break;
                     const string prefix = "aws.com/";
                     mediaList.ForEach(m =>
                     {
@@ -427,13 +429,11 @@ namespace SIL.Transcriber.Services
                         if (tmp.LastIndexOf("/") > 0)
                             m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
                     });
-                    if (!CheckAdd(7, dtBail,  ref startNext, zipArchive, "mediafiles", mediaList, 'H')) break;
-                    //if (!AddMedia(7, dtBail,  ref startNext, zipArchive, mediaList)) break;
-                    //startNext = -1; //Done!
+                    if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
                 } while (false);
             }
             ms.Position = 0;
-            fileName = fileName + (startNext == 8 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
+            fileName += (startNext == 9 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
             s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == HttpStatusCode.OK)
             {
