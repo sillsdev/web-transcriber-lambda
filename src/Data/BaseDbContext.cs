@@ -56,6 +56,10 @@ namespace SIL.Transcriber.Data
             //make all query items lowercase to send to postgres...
             LowerCaseDB(builder);
         }
+        public string GetFingerprint()
+        {
+            return HttpContext.GetFP() ?? "noFP";
+        }
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
         protected void AddTimestamps(int userid)
         {
@@ -86,7 +90,7 @@ namespace SIL.Transcriber.Data
                 }
 
             }
-            string origin = HttpContext.GetFP() ?? "noFP";
+            string origin = GetFingerprint();
             entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
             foreach (EntityEntry entry in entries)
             {

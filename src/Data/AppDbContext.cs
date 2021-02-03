@@ -143,6 +143,7 @@ namespace SIL.Transcriber.Data
             }
         }
         public DbSet<Activitystate> Activitystates { get; set; }
+        public DbSet<CurrentVersion> CurrentVersions { get; set; }
         public DbSet<Dashboard> Dashboards { get; set; }
         public DbSet<DataChanges> DataChanges { get; set; }
         public DbSet<Group> Groups { get; set; }
@@ -166,6 +167,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Section> Sections { get; set; }
         public DbSet<SectionPassage> Sectionpassages { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserVersion> UserVersions { get; set; }
         public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
 
     }
