@@ -178,7 +178,7 @@ namespace SIL.Transcriber.Services
                 // added to the project, or the project doesn't exist and the user is the administrator
                 bool isConnected = false;
                 bool isConnectable = false;
-                IEnumerable<int> projectids = ProjectService.LinkedToParatext(paratextId).Select(p => p.Id);
+                IEnumerable<string> projectids = ProjectService.LinkedToParatext(paratextId).Select(p => p.Id.ToString());
                 if (projects != null && projects.Count() > 0)
                 {
                     isConnected = true;
@@ -442,7 +442,7 @@ namespace SIL.Transcriber.Services
             }
             return chapterList;
         }
-        private IEnumerable<BookChapter> BookChapters(IQueryable<Passage> passages)
+        private IEnumerable<BookChapter> BookChapters(IEnumerable<Passage> passages)
         {
             return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct();
         }
@@ -457,6 +457,25 @@ namespace SIL.Transcriber.Services
             IQueryable<Passage> passages = PassageService.ReadyToSync(planId);
             return passages.Count();
         }
+
+        public async Task<string> PassageTextAsync(int passageId)
+        {
+            IEnumerable<Passage> passages = PassageService.Get(passageId).ToList();
+            Passage passage = passages.FirstOrDefault();
+            if (passage == null)
+            {
+                throw new Exception("Passage not found or user does not have access to passage.");
+            }
+            string paratextId = ParatextHelpers.ParatextProject(PassageService.GetProjectId(passage), ProjectService);
+            UserSecret userSecret = ParatextLogin();
+            string err = VerifyReferences(userSecret, passages, paratextId);
+            if (err.Length > 0) throw new Exception(err);
+
+            //assume startChapter=endChapter for all passages
+            IEnumerable<BookChapter> book_chapters = BookChapters(passages);
+            List<ParatextChapter> chapterList = await GetPassageChaptersAsync(userSecret, paratextId, book_chapters);
+            return ParatextHelpers.GetParatextData(chapterList.First().OriginalUSX, passage);
+        }
         public async Task<int> ProjectPassagesToSyncCountAsync(int projectId)
         {
             Project project = await ProjectService.GetWithPlansAsync(projectId);
@@ -468,7 +487,7 @@ namespace SIL.Transcriber.Services
             }
             return total;
         }
-        public string VerifyReferences(UserSecret userSecret, IQueryable<Passage> passages, string paratextId)
+        public string VerifyReferences(UserSecret userSecret, IEnumerable<Passage> passages, string paratextId)
         {
             IReadOnlyList<string> books = GetBooksAsync(userSecret, paratextId).Result;
             string err = "";
@@ -502,7 +521,7 @@ namespace SIL.Transcriber.Services
             bool addNumbers = true; //this would be an option in the plan? or the project? 
 
             List<ParatextChapter> chapterList = await GetPassageChaptersAsync(userSecret, paratextId, book_chapters);
-            chapterList.ForEach(c => c.NewUSX = c.OriginalUSX);
+            chapterList.ForEach(c => c.NewUSX = new XElement(c.OriginalUSX));
             ParatextChapter chapter;
             using (IDbContextTransaction transaction = dbContext.Database.BeginTransaction())  
             {
@@ -525,11 +544,12 @@ namespace SIL.Transcriber.Services
                                 chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, transcription, addNumbers);
                                 //log it
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, transcription, chapter.NewUSX.ToString()));
-                                
+
                                 passage.State = "done";
                                 await PassageService.UpdateAsync(passage.Id, passage);
                                 await PassageStateChangeService.CreateAsync(passage, "Paratext");
-                            } catch (Exception ex)
+                            }
+                            catch (Exception ex)
                             {
                                 //log it
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, ex.Message));

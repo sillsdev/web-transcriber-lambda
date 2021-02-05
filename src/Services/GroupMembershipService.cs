@@ -5,7 +5,6 @@ using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Forms.GroupMemberships;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using static SIL.Transcriber.Utility.ServiceExtensions;
@@ -57,18 +56,5 @@ namespace SIL.Transcriber.Services
             return newEntity;
         }
 
-        public override async Task<bool> DeleteAsync(int id)
-        {
-            var deleteForm = new DeleteForm(UserRepository,
-                                            ProjectRepository,
-                                            GroupMembershipRepository,
-                                            CurrentUserContext);
-            if (!deleteForm.IsValid(id))
-            {
-                throw new JsonApiException(deleteForm.Errors);
-            }
-
-            return await base.DeleteAsync(id);
-        }
     }
 }

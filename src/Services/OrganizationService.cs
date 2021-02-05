@@ -58,7 +58,7 @@ namespace SIL.Transcriber.Services
             return entities;
         }
 
-        public override async Task<Organization> CreateAsync(Organization entity)
+        /*public override async Task<Organization> CreateAsync(Organization entity)
         {
             var newEntity = await base.CreateAsync(entity);
 
@@ -75,7 +75,9 @@ namespace SIL.Transcriber.Services
 
             JoinOrg(newEntity, newEntity.Owner, RoleName.Admin, RoleName.Admin);
             return newEntity;
-        }
+        } 
+        */
+
         public void JoinOrg(Organization entity, User user, RoleName orgRole, RoleName groupRole)
         {
             Group allGroup = GroupRepository.Get().Where(g => g.AllUsers && g.OrganizationId == entity.Id).FirstOrDefault();

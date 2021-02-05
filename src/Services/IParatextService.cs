@@ -23,5 +23,6 @@ namespace SIL.Transcriber.Services
         int PlanPassagesToSyncCount(int planId);
         Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId);
         Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId);
-   }
+        Task<string> PassageTextAsync(int passageId);
+    }
 }

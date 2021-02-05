@@ -19,30 +19,42 @@ namespace SIL.Transcriber.Repositories
     public class UserRepository : BaseRepository<User>
     {
         public ICurrentUserContext CurrentUserContext { get; }
+        private OrganizationMembershipRepository OrgMemRepository;
         public UserRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             CurrentUserRepository currentUserRepository,
+            OrganizationMembershipRepository orgmemRepository,
             AppDbContextResolver contextResolver
             ) : base(loggerFactory, jsonApiContext, currentUserRepository,  contextResolver)
         {
             this.CurrentUserContext = currentUserContext;
+            OrgMemRepository = orgmemRepository;
+        }
+        public IQueryable<User> OrgMemUsers(IQueryable<User> entities, IQueryable<OrganizationMembership> orgmems)
+        {
+            return entities.Join(orgmems, u => u.Id, om => om.UserId, (u, om) => u).GroupBy(u => u.Id).Select(g => g.First());
         }
         public IQueryable<User> UsersUsers(IQueryable<User> entities, int org = 0)
         {
             if (org != 0)
             {
-                return entities.Join(dbContext.Organizationmemberships.Where(om => om.OrganizationId==org), u => u.Id, om => om.UserId, (u, om) => u).GroupBy(u => u.Id).Select(g => g.First());
+                return OrgMemUsers(entities, dbContext.Organizationmemberships.Where(om => om.OrganizationId == org));
             }
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                var orgIds = CurrentUser.OrganizationIds.OrEmpty();
+                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
                 //always give me all users in that org
                 //add groupby and select because once we join with om, we duplicate users
-                entities = entities.Join(dbContext.Organizationmemberships.Where(om => orgIds.Contains(om.OrganizationId)), u => u.Id, om => om.UserId, (u, om) => u).GroupBy(u => u.Id).Select(g => g.First());
+                OrgMemUsers(entities, dbContext.Organizationmemberships.Where(om => orgIds.Contains(om.OrganizationId)));
             }
             return entities;
+        }
+        public IQueryable<User> ProjectUsers(IQueryable<User> entities, string projectid)
+        {
+            IQueryable<OrganizationMembership> orgmems = OrgMemRepository.ProjectOrganizationMemberships(dbContext.Organizationmemberships, projectid);
+            return OrgMemUsers(entities, orgmems);
         }
         #region Overrides
         public override IQueryable<User> Filter(IQueryable<User> entities, FilterQuery filterQuery)
@@ -52,7 +64,7 @@ namespace SIL.Transcriber.Repositories
                 if (filterQuery.HasSpecificOrg())
                 {
                     int specifiedOrgId;
-                    var hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
+                    bool hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
                     return UsersUsers(entities, specifiedOrgId);
                 }
                 return UsersUsers(entities);
@@ -60,6 +72,10 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersUsers(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectUsers(entities, filterQuery.Value);
             }
             return base.Filter(entities, filterQuery);
         }

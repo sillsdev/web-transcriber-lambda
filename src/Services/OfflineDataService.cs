@@ -77,26 +77,36 @@ namespace SIL.Transcriber.Services
                 WriteEntry(entry, eafxml);
             }
         }
-        private void AddStreamEntry(ZipArchive zipArchive, Stream fileStream, string dir, string newName)
+        private bool AddStreamEntry(ZipArchive zipArchive, Stream fileStream, string dir, string newName)
         {
-            ZipArchiveEntry entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
-            using (Stream zipEntryStream = entry.Open())
+            if (fileStream != null)
             {
-                //Copy the attachment stream to the zip entry stream
-                fileStream.CopyTo(zipEntryStream);
+                ZipArchiveEntry entry = zipArchive.CreateEntry(dir + newName, CompressionLevel.Optimal);
+                using (Stream zipEntryStream = entry.Open())
+                {
+                    //Copy the attachment stream to the zip entry stream
+                    fileStream.CopyTo(zipEntryStream);
+                }
+                return true;
             }
+            return false;
         }
-        private void AddStreamEntry(ZipArchive zipArchive, string url, string dir, string newName)
+        private bool AddStreamEntry(ZipArchive zipArchive, string url, string dir, string newName)
         {
-            AddStreamEntry(zipArchive, GetStreamFromUrl(url), dir, newName);
+            return AddStreamEntry(zipArchive, GetStreamFromUrl(url), dir, newName);
         }
         private static Stream GetStreamFromUrl(string url)
         {
             byte[] imageData = null;
-
-            using (WebClient wc = new System.Net.WebClient())
-                imageData = wc.DownloadData(url);
-
+            try
+            {
+                using (WebClient wc = new System.Net.WebClient())
+                    imageData = wc.DownloadData(url);
+            }
+            catch
+            {
+                return null;
+            }
             return new MemoryStream(imageData);
         }
         private void AddOrgLogos(ZipArchive zipArchive, List<Organization> orgs)
@@ -106,7 +116,9 @@ namespace SIL.Transcriber.Services
                 if (!string.IsNullOrEmpty(o.LogoUrl))
                 {
                     AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png");
-                    o.LogoUrl = "logos/" + o.Slug + ".png";
+                    //    o.LogoUrl = "logos/" + o.Slug + ".png";
+                    //else
+                    //    o.LogoUrl = null;
                 }
             });
         }
@@ -117,7 +129,7 @@ namespace SIL.Transcriber.Services
                 if (!string.IsNullOrEmpty(u.avatarurl))
                 {
                     AddStreamEntry(zipArchive, u.avatarurl, "avatars/", u.Id.ToString() + u.FamilyName + ".png");
-                    u.avatarurl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
+                    //u.avatarurl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
                 }
             });
         }
@@ -308,7 +320,7 @@ namespace SIL.Transcriber.Services
 
             S3Response s3response;
             Stream ms;
-            if (start > 7)
+            if (start > 8)
                 return CheckProgress(projectid, fileName);
 
             if (start == 0)
@@ -372,11 +384,6 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                     //projects
-                    projects.ToList().ForEach(p =>
-                    {
-                        p.DateExported = exported;
-                        dbContext.Projects.Update(p);
-                    });
                     AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
                     startNext=1;
                 }
@@ -396,12 +403,14 @@ namespace SIL.Transcriber.Services
                     IQueryable<PassageStateChange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
                     if (!CheckAdd(5, dtBail, ref startNext, zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H')) break;
                     //mediafiles
-                    IQueryable<Mediafile> mediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
-                    //pick just the highest version media per passage
-                    mediafiles = from m in mediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                    List<Mediafile> mediaList = mediafiles.OrderBy(m => m.Id).ToList();
-                    if (!AddMediaEaf(6, dtBail, ref startNext, zipArchive, mediaList)) break;
+                    IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m).Where(x => !x.Archived);
+                    IQueryable<Mediafile> attachedmediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                    if (!CheckAdd(6, dtBail, ref startNext, zipArchive, "mediafiles", mediafiles.OrderBy(m => m.Id).ToList(), 'H')) break;
 
+                    //pick just the highest version media per passage
+                    attachedmediafiles = from m in attachedmediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    List<Mediafile> mediaList = attachedmediafiles.OrderBy(m => m.Id).ToList();
+                    if (!AddMediaEaf(7, dtBail, ref startNext, zipArchive, mediaList)) break;
                     const string prefix = "aws.com/";
                     mediaList.ForEach(m =>
                     {
@@ -420,13 +429,11 @@ namespace SIL.Transcriber.Services
                         if (tmp.LastIndexOf("/") > 0)
                             m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
                     });
-                    if (!CheckAdd(7, dtBail,  ref startNext, zipArchive, "mediafiles", mediaList, 'H')) break;
-                    //if (!AddMedia(7, dtBail,  ref startNext, zipArchive, mediaList)) break;
-                    //startNext = -1; //Done!
+                    if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
                 } while (false);
             }
             ms.Position = 0;
-            fileName = fileName + (startNext == 8 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
+            fileName += (startNext == 9 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
             s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == HttpStatusCode.OK)
             {
@@ -447,9 +454,10 @@ namespace SIL.Transcriber.Services
         }
         public FileResponse ImportFileURL(string sFile)
         {
-            const string ContentType = "application/itf";
+            string extension = Path.GetExtension(sFile);
+            string ContentType = "application/" + extension;
             // Project project = dbContext.Projects.Where(p => p.Id == id).First();
-            string fileName = string.Format("{0}_{1}.itf", Path.GetFileNameWithoutExtension(sFile), DateTime.Now.Ticks);
+            string fileName = string.Format("{0}_{1}.{2}", Path.GetFileNameWithoutExtension(sFile), DateTime.Now.Ticks, extension);
             //get a signedurl for it now
             return new FileResponse()
             {
@@ -506,14 +514,69 @@ namespace SIL.Transcriber.Services
             }
             return "";
         }
-        public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
+        public async Task<FileResponse> ImportFileAsync(string sFile)
         {
-            const string ContentType = "application/itf";
-            DateTime sourceDate;
-
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
             ZipArchive archive = new ZipArchive(response.FileStream);
-            List<string>report =new List<string>();
+            List<string> report = new List<string>();
+            List<string> errors = new List<string>();
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                ZipArchive zipentry = new ZipArchive(entry.Open());
+                FileResponse fr = await ProcessImportFileAsync(zipentry, 0, entry.Name);
+                if (fr.Status == HttpStatusCode.OK)
+                {   //remove beginning and ending brackets
+                    string msg = fr.Message.StartsWith("[") ?  fr.Message.Substring(1, fr.Message.Length - 2) : fr.Message;
+                    report.Add(msg);
+                }
+                else
+                {
+                    errors.Add(JsonConvert.SerializeObject(fr));
+                }
+            }
+            report.RemoveAll(s => s.Length == 0);
+            errors.RemoveAll(s => s.Length == 0);
+            if (errors.Count() > 0)
+                return errorResponse("{\"errors\": [" + string.Join(",", errors) + "], \"report\": [" + string.Join(", ", report) + "]}", sFile);
+
+            return new FileResponse()
+            {
+                Message = "[" + string.Join(",", report) + "]",
+                FileURL = sFile,
+                Status = HttpStatusCode.OK,
+                ContentType = "application/itf",
+            };
+        }
+        public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
+        {
+            S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
+            ZipArchive archive = new ZipArchive(response.FileStream);
+            return await ProcessImportFileAsync(archive, projectid, sFile);
+        }
+        private FileResponse projectDeletedResponse(string msg, string sFile)
+        {
+            return errorResponse(msg, sFile, System.Net.HttpStatusCode.MovedPermanently);
+        }
+        private FileResponse NotCurrentProjectResponse(string msg, string sFile)
+        {
+            return errorResponse(msg, sFile, System.Net.HttpStatusCode.NotAcceptable);
+        }
+        private FileResponse errorResponse(string msg, string sFile, HttpStatusCode status = System.Net.HttpStatusCode.UnprocessableEntity)
+        {
+            const string ContentType = "application/itf";
+            return new FileResponse()
+            {
+                Message = msg,
+                FileURL = sFile,
+                Status = status,
+                ContentType = ContentType,
+            };
+        }
+        private async Task<FileResponse> ProcessImportFileAsync(ZipArchive archive, int projectid, string sFile)
+        {
+            DateTime sourceDate;
+            List<string> report = new List<string>();
+
             try
             {
                 ZipArchiveEntry checkEntry = archive.GetEntry("SILTranscriberOffline");
@@ -521,13 +584,7 @@ namespace SIL.Transcriber.Services
             }
             catch
             {
-                return new FileResponse()
-                {
-                    Message = "Invalid ITF File - SILTranscriberOffline not present",
-                    FileURL = sFile,
-                    Status = System.Net.HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
+                return errorResponse("SILTranscriberOffline not present", sFile);
             }
             try
             {
@@ -536,51 +593,36 @@ namespace SIL.Transcriber.Services
             }
             catch
             {
-                return new FileResponse()
-                {
-                    Message = "Invalid ITF File - SILTranscriber not present",
-                    FileURL = sFile,
-                    Status = HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
+                return errorResponse("SILTranscriber not present", sFile);
             }
-            //check project
-            Project project;
+            //check project if provided
+                Project project;
             try
             {
                 ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
-                if (projectsEntry==null)
-                    return new FileResponse()
-                    {
-                        Message = "Invalid ITF File - projects data not present",
-                        FileURL = sFile,
-                        Status = HttpStatusCode.UnprocessableEntity,
-                        ContentType = ContentType,
-                    };
-
-                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(new StreamReader(projectsEntry.Open()).ReadToEnd());
-                project = projects.Find(p => p.Id == projectid);
-                if (project==null)
-                    return new FileResponse()
-                    {
-                        Message = "This ITF File does not contain the current Project",
-                        FileURL = sFile,
-                        Status = (HttpStatusCode)450,
-                        ContentType = ContentType,
-                    };
-             
-            }
-            catch
-            {
-                return new FileResponse()
+                if (projectsEntry == null)
+                    return errorResponse("Project data not present", sFile);
+                string json = new StreamReader(projectsEntry.Open()).ReadToEnd();
+                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(json);
+                if (projectid > 0)
                 {
-                    Message = "Invalid ITF File - projects file not present",
-                    FileURL = sFile,
-                    Status = HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
+                    project = projects.Find(p => p.Id == projectid);
+                    if (project == null)
+                    {
+                        project = dbContext.Projects.Find(projects[0].Id);
+                        return NotCurrentProjectResponse(project.Name, sFile);
+                    }
+                }
+                project = dbContext.Projects.Find(projects[0].Id);
+                if (project.Archived)
+                    return projectDeletedResponse(project.Name, sFile);
             }
-
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return errorResponse("Invalid ITF File - error finding project -" + ex.Message, sFile);
+            }
+            
             try
             {
                 foreach (ZipArchiveEntry entry in archive.Entries)
@@ -596,26 +638,28 @@ namespace SIL.Transcriber.Services
                             foreach(User u in users)
                             {
                                 User user = dbContext.Users.Find(u.Id);
-                                
-                                if (user.DateUpdated > sourceDate)
-                                    report.Add(UserChangesReport(user, u));
+                                if (user.DateUpdated != u.DateUpdated)
+                                {
+                                    if (user.DateUpdated > sourceDate && user.DateUpdated != u.DateUpdated)
+                                        report.Add(UserChangesReport(user, u));
 
-                                user.DigestPreference = u.DigestPreference;
-                                user.FamilyName = u.FamilyName;
-                                user.GivenName = u.GivenName;
-                                user.Locale = u.Locale;
-                                user.Name = u.Name;
-                                user.NewsPreference = u.NewsPreference;
-                                user.Phone = u.Phone;
-                                user.playbackspeed = u.playbackspeed;
-                                user.progressbartypeid = u.progressbartypeid;
-                                user.timercountup = u.timercountup;
-                                user.Timezone = u.Timezone;
-                                user.uilanguagebcp47 = u.uilanguagebcp47;
-                                user.LastModifiedBy = u.LastModifiedBy;
-                                user.DateUpdated = DateTime.UtcNow; 
-                                /* TODO: figure out if the avatar needs uploading */
-                                dbContext.Users.Update(user);
+                                    user.DigestPreference = u.DigestPreference;
+                                    user.FamilyName = u.FamilyName;
+                                    user.GivenName = u.GivenName;
+                                    user.Locale = u.Locale;
+                                    user.Name = u.Name;
+                                    user.NewsPreference = u.NewsPreference;
+                                    user.Phone = u.Phone;
+                                    user.playbackspeed = u.playbackspeed;
+                                    user.progressbartypeid = u.progressbartypeid;
+                                    user.timercountup = u.timercountup;
+                                    user.Timezone = u.Timezone;
+                                    user.uilanguagebcp47 = u.uilanguagebcp47;
+                                    user.LastModifiedBy = u.LastModifiedBy;
+                                    user.DateUpdated = DateTime.UtcNow;
+                                    /* TODO: figure out if the avatar needs uploading */
+                                    dbContext.Users.Update(user);
+                                }
                             };
                             break;
 
@@ -764,14 +808,7 @@ namespace SIL.Transcriber.Services
             }
             catch (Exception ex)
             {
-                return new FileResponse()
-                {
-                    Message = ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""),
-
-                    FileURL = sFile,
-                    Status = HttpStatusCode.UnprocessableEntity,
-                    ContentType = ContentType,
-                };
+                return errorResponse(ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""), sFile);
             }
         }
     }

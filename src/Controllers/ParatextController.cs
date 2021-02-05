@@ -86,6 +86,12 @@ namespace SIL.Transcriber.Controllers
             int passages = _paratextService.PlanPassagesToSyncCount(planId);
             return Ok(passages);
         }
+        [HttpGet("passage/{passageid}")]
+        public async Task<ActionResult<string>> PassageTextAsync([FromRoute] int passageid)
+        {
+            string text = await _paratextService.PassageTextAsync(passageid);
+            return Ok(text);
+        }
 
         [HttpPost("plan/{planid}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostPlanAsync([FromRoute] int planId)

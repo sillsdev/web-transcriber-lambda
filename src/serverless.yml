@@ -70,7 +70,7 @@ resources:
     IsDevx: {"Fn::Equals" : ["${self:custom.myStage}", "devx"]}
     IsDev: {"Fn::Equals" : ["${self:custom.myStage}", "dev"]}
     IsQA:  {"Fn::Equals" : ["${self:custom.myStage}", "qa"]}
-    CreateResourcesOriginal: !Not [Condition: IsProd]
+    #CreateResourcesOriginal: !Not [Condition: IsProd]
     CreateResources:  {"Fn::And": ["Fn::Equals" : ["${self:custom.myStage}", "qa"], "Fn::Equals" : ["${self:custom.isDebug}", ""]]}
   Resources:
 ## Create database - needs VPC with two subnets

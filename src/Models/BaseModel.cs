@@ -11,6 +11,23 @@ namespace SIL.Transcriber.Models
         public DateTime? DateUpdated { get; set; }
         [Attr("last-modified-by")]
         public int? LastModifiedBy { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        [HasOne("last-modified-by-user", Link.None)]
+        public User LastModifiedByUser { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public int? LastModifiedByUserId
+        {
+            get
+            {
+                return LastModifiedBy;
+            }
+            set
+            {
+                LastModifiedBy = value;
+            }
+        }
         [Attr("last-modified-origin")]
         public string LastModifiedOrigin { get; set; }
         public object ShallowCopy()

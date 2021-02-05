@@ -48,6 +48,12 @@ namespace SIL.Transcriber.Controllers
         {
             return await _service.ImportFileAsync(projectid, filename);
         }
-                     
+
+        [HttpPut("sync/{filename}")]
+        public async Task<ActionResult<FileResponse>> ProcessSyncFileAsync([FromRoute] string filename)
+        {
+            return await _service.ImportFileAsync(filename);
+        }
+
     }
 }

@@ -1,35 +1,36 @@
 ﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Models;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
     public class BaseArchiveService<TResource> : BaseService<TResource>
          where TResource : BaseModel, IArchive
     {
+ 
         public BaseArchiveService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<TResource> myRepository,
             ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
         {
-        }
+       }
 
-        public override IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since)
+        public override IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since, int project)
         {
-            IEnumerable<TResource> entities = base.GetChanges(currentuser, origin, since);
+            IEnumerable<TResource> entities = base.GetChanges(currentuser, origin, since, project);
             return entities.Where(t => !t.Archived);;
         }
 
         public IEnumerable<TResource> GetDeletedSince(int currentuser, string origin, DateTime since)
         {
-            IEnumerable<TResource> entities = base.GetAsync().Result; //avoid the current user thing...
+            RemoveScopedToCurrentUser(JsonApiContext);                 //avoid the current user thing...
+            IEnumerable <TResource> entities = base.GetAsync().Result; //avoid the archived check...
             return base.GetChanges(entities, currentuser, origin, since).Where(t => t.Archived); ;
         }
         public override async Task<IEnumerable<TResource>> GetAsync()

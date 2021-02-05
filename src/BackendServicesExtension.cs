@@ -52,6 +52,7 @@ namespace SIL.Transcriber
             services.AddHttpContextAccessor();
 
             // Add service / repository overrides
+            services.AddScoped<IEntityRepository<CurrentVersion>, CurrentVersionRepository>();
             services.AddScoped<IEntityRepository<Dashboard>, DashboardRepository>();
             services.AddScoped<IEntityRepository<DataChanges>, DataChangesRepository>();
             services.AddScoped<AppDbContextRepository<FileResponse>, FileResponseRepository>();
@@ -73,6 +74,7 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Section>, SectionRepository>();
             services.AddScoped<IEntityRepository<SectionPassage>, SectionPassageRepository>();
             services.AddScoped<IEntityRepository<User>, UserRepository>();
+            services.AddScoped<IEntityRepository<UserVersion>, UserVersionRepository>();
             services.AddScoped<IEntityRepository<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailRepository>();
 
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
@@ -82,6 +84,7 @@ namespace SIL.Transcriber
             services.AddScoped<LoggingDbContextRepository<ParatextTokenHistory>, ParatextTokenHistoryRepository>();
             // services
             services.AddScoped<IResourceService<Activitystate>, ActivitystateService>();
+            services.AddScoped<IResourceService<CurrentVersion>, CurrentVersionService>();
             services.AddScoped<IResourceService<DataChanges>, DataChangeService>();
             services.AddScoped<IResourceService<FileResponse>, FileResponseService>();
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
@@ -100,6 +103,7 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<ProjectIntegration>, ProjectIntegrationService>();
             services.AddScoped<IResourceService<Section>, SectionService>();
             services.AddScoped<IResourceService<User>, UserService>();
+            services.AddScoped<IResourceService<UserVersion>, UserVersionService>();
             services.AddScoped<IResourceService<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
@@ -113,6 +117,7 @@ namespace SIL.Transcriber
 
 
             // EventDispatchers
+            services.AddScoped<CurrentVersionRepository>();
             services.AddScoped<DashboardRepository>();
             services.AddScoped<DataChangesRepository>();
             services.AddScoped<CurrentUserRepository>();
@@ -136,11 +141,13 @@ namespace SIL.Transcriber
             services.AddScoped<SectionRepository>();
             services.AddScoped<SectionPassageRepository>();
             services.AddScoped<UserRepository>();
+            services.AddScoped<UserVersionRepository>();
             services.AddScoped<ParatextSyncRepository>();
             services.AddScoped<ParatextSyncPassageRepository>();
             services.AddScoped<ParatextTokenHistoryRepository>();
 
             services.AddScoped<ActivitystateService>();
+            services.AddScoped<CurrentVersionService>(); 
             services.AddScoped<DataChangeService>();
             services.AddScoped<FileResponseService>();
             services.AddScoped<GroupMembershipService>();
@@ -159,6 +166,7 @@ namespace SIL.Transcriber
             services.AddScoped<ProjectService>();
             services.AddScoped<SectionService>();
             services.AddScoped<UserService>();
+            services.AddScoped<UserVersionService>();
             services.AddScoped<VwPassageStateHistoryEmailService>();
             
             services.AddSingleton<IAuthService, AuthService>();

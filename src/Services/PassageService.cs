@@ -17,6 +17,7 @@ namespace SIL.Transcriber.Services
     public class PassageService : BaseArchiveService<Passage>
     {
         private HttpContext HttpContext;
+
         public PassageService(
             IJsonApiContext jsonApiContext,
             PassageRepository PassageRepository,
@@ -35,18 +36,26 @@ namespace SIL.Transcriber.Services
 
         public override async Task<Passage> GetAsync(int id)
         {
-            var passages = await GetAsync();
+            IEnumerable<Passage> passages = await GetAsync();
 
             return passages.SingleOrDefault(g => g.Id == id);
         }
-        
+
         public IQueryable<Passage> GetBySection(int SectionId)
         {
-            PassageRepository pr = (PassageRepository)MyRepository;
-            return pr.Get()
+            return MyRepository.Get()
                     .Include(p => p.Section)
                     .Include(p=> p.Mediafiles)
                     .Where(p => p.SectionId == SectionId);
+        }
+        public IQueryable<Passage> Get(int id)
+        {
+            return MyRepository.Get().Include(p => p.Section).Where(p => p.Id == id);
+        }
+        public int GetProjectId(Passage passage)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+            return pr.ProjectId(passage);
         }
         public IQueryable<Passage> ReadyToSync(int PlanId)
         {

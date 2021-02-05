@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using JsonApiDotNetCore.Models;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Globalization;
 
 namespace SIL.Transcriber.Models
 {

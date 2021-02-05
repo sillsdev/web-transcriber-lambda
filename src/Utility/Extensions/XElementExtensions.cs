@@ -104,19 +104,21 @@ namespace TranscriberAPI.Utility.Extensions
             XNode next = value.NextNode;
             while (next != null)
             {
-                if (next.IsText())
+                if (next.IsVerse() || next.IsSection())
+                    next = null;
+                else if (next.IsText())
                 {
                     text += ((XText)next).Value + '\n';
+                    if (next.NextNode != null)
+                        text += VerseText((XElement)next.NextNode);
                     next = next.Parent.NextNode;
                 }
-                else if (next.IsPara())
+                else if (next.IsPara() && !next.IsSection())
                 {
                     if (((XElement)next).FirstNode != null && ((XElement)next).FirstNode.IsText())
                         next = ((XElement)next).FirstNode;
                     else next = null;
                 }
-                else if (next.IsVerse())
-                    next = null;
                 else //skip notes etc
                     next = next.NextNode;
             }

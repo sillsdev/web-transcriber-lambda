@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
@@ -41,14 +40,22 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
             return UsersMediafiles(entities, plans);
         }
-
+        private IQueryable<Mediafile> PlansMediafiles(IQueryable<Mediafile> entities, IQueryable<Plan> plans)
+        {
+            return entities.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
+        }
 
         private IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Plan> plans = null)
         {
             if (plans == null)
                 plans = PlanRepository.UsersPlans(dbContext.Plans);
 
-            return entities.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
+            return PlansMediafiles(entities, plans);
+        }
+        private IQueryable<Mediafile> ProjectsMediafiles(IQueryable<Mediafile> entities, string projectid)
+        {
+            IQueryable<Plan> plans = PlanRepository.ProjectPlans(dbContext.Plans, projectid);
+            return PlansMediafiles(entities, plans);
         }
         public override IQueryable<Mediafile> Filter(IQueryable<Mediafile> entities, FilterQuery filterQuery)
         {
@@ -60,6 +67,10 @@ namespace SIL.Transcriber.Repositories
             if (filterQuery.Has(ALLOWED_CURRENTUSER))
             {
                 return UsersMediafiles(entities);
+            }
+            if (filterQuery.Has(PROJECT_LIST))
+            {
+                return ProjectsMediafiles(entities, filterQuery.Value);
             }
             if (filterQuery.Has(PROJECT_SEARCH_TERM))
             {
