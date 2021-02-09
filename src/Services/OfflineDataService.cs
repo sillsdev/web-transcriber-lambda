@@ -420,14 +420,7 @@ namespace SIL.Transcriber.Services
                         //change the s3File to have the onlinepath + filename
                         string tmp = m.AudioUrl;
                         m.AudioUrl = "media/" + m.S3File;
-                        //extract the path
-                        if (tmp.IndexOf("?") > 0)
-                            tmp = tmp.Substring(0, tmp.IndexOf("?"));
-                        if (tmp.IndexOf(prefix) > 0)
-                            tmp = tmp.Substring(tmp.IndexOf(prefix) + prefix.Length);
-                        //this looks like 475_Org11/438_NewPla/02%20Tyrannosaurus%20Funk__a7e1f4c0-96d3-466b-952c-5c82c077dacc.mp3
-                        if (tmp.LastIndexOf("/") > 0)
-                            m.S3File = tmp.Substring(0, tmp.LastIndexOf("/")) + "/" + m.S3File;
+                        m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
                     });
                     if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
                 } while (false);

@@ -64,7 +64,7 @@ namespace SIL.Transcriber.Services
             return plan.Project.Organization.Slug + "/" + plan.Slug;
         }
 
-        private string DirectoryName(Mediafile entity)
+        public string DirectoryName(Mediafile entity)
         {
             Plan plan = PlanRepository.GetWithProject(entity.PlanId);
             return DirectoryName(plan);
