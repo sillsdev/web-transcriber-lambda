@@ -1,5 +1,6 @@
 ﻿using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using System;
@@ -38,7 +39,10 @@ namespace SIL.Transcriber.Repositories
         }
         private IQueryable<BaseModel> TrainingProjects()
         {
-            return dbContext.Projects.Where(p => !p.Archived && p.Name.ToLower().Contains("training"));
+            IQueryable<Plan> ps = dbContext.Plans.Where(p => !p.Archived);
+
+            return ps.Where(p => JObject.Parse(p.Tags)["training"] == null ? false : JObject.Parse(p.Tags)["training"].Value<bool>());
+            //return dbContext.Projects.Where(p => !p.Archived && p.Name.ToLower().Contains("training"));
         }
         private IQueryable<BaseModel> Plans()
         {
