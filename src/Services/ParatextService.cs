@@ -546,8 +546,10 @@ namespace SIL.Transcriber.Services
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, transcription, chapter.NewUSX.ToString()));
 
                                 passage.State = "done";
+                                await PassageStateChangeService.CreateAsync(passage, "Paratext -" + passage.LastComment);
+                                passage.LastComment = "";
                                 await PassageService.UpdateAsync(passage.Id, passage);
-                                await PassageStateChangeService.CreateAsync(passage, "Paratext");
+
                             }
                             catch (Exception ex)
                             {
