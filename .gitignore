@@ -10,3 +10,6 @@ test/serverless.env.yml
 
 auth0Rules/*
 authUserPull/*
+
+*.ps1
+*.rep

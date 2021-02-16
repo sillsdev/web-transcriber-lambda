@@ -33,36 +33,33 @@ namespace SIL.Transcriber.Repositories
             DateTime checkDate = DateTime.Now.AddDays(-7);
             return entities.Where(e => (updated ? e.DateUpdated : e.DateCreated) > checkDate).Count();
         }
-        private IQueryable<BaseModel> Projects()
+        private IQueryable<Project> Projects()
         {
             return dbContext.Projects.Where(p => !p.Archived);
         }
-        private IQueryable<BaseModel> TrainingProjects()
+        private IQueryable<Plan> TrainingProjects()
         {
-            IQueryable<Plan> ps = dbContext.Plans.Where(p => !p.Archived);
-
-            return ps.Where(p => JObject.Parse(p.Tags)["training"] == null ? false : JObject.Parse(p.Tags)["training"].Value<bool>());
-            //return dbContext.Projects.Where(p => !p.Archived && p.Name.ToLower().Contains("training"));
+            return Plans().Where(p => p.Tags == null || JObject.Parse(p.Tags)["training"] == null ? false : JObject.Parse(p.Tags)["training"].Value<bool>());
         }
-        private IQueryable<BaseModel> Plans()
+        private IQueryable<Plan> Plans()
         {
-            return dbContext.Plans.Where(p => !p.Archived);
+            return dbContext.Plans.Where(p => !p.Archived && (p.Tags == null || JObject.Parse(p.Tags)["testing"] == null || !JObject.Parse(p.Tags)["testing"].Value<bool>()));
         }
-        private IQueryable<BaseModel> Passages()
+        private IQueryable<Passage> Passages()
         {
-            return dbContext.Passages.Where(p => !p.Archived);
+            return Plans().Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(p => !p.Archived);
         }
-        private IQueryable<BaseModel> ScripturePlans()
+        private IQueryable<Plan> ScripturePlans()
         {
-            return dbContext.Plans.Where(p => !p.Archived && p.PlantypeId == 1);
+            return Plans().Where(p => p.PlantypeId == 1);
         }
-        private IQueryable<BaseModel> Transcriptions()
+        private IQueryable<Mediafile> Transcriptions()
         {
-            return dbContext.Mediafiles.Where(m => !m.Archived && m.Transcription != null && m.Transcription.Length > 0);
+            return Plans().Join(dbContext.Mediafiles.Where(m => !m.Archived && m.Transcription != null && m.Transcription.Length > 0), pl => pl.Id, m => m.PlanId, (pl, m) => m);
         }
-        private IQueryable<BaseModel> Paratext()
+        private IQueryable<Passage> Paratext()
         {
-            return dbContext.Plans.Where(pl => !pl.Archived && pl.PlantypeId == 1).Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(p => p.State == "done");
+            return ScripturePlans().Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(p => p.State == "done");
         }
         public override IQueryable<Dashboard> Get()
         {
