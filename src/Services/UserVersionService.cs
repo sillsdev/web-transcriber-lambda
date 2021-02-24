@@ -14,10 +14,13 @@ namespace SIL.Transcriber.Services
             ILoggerFactory loggerFactory) : base(jsonApiContext, userversionRepository, loggerFactory)
         {
         }
-
         public UserVersion StoreVersion(string version)
         {
-            return ((UserVersionRepository)MyRepository).CreateOrUpdate(version);
+            return StoreVersion(version, "unknown");
+        }
+        public UserVersion StoreVersion(string version, string env)
+        {
+            return ((UserVersionRepository)MyRepository).CreateOrUpdate(version, env);
         }
     }
 }

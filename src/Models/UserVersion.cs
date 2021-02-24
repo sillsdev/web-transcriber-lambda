@@ -8,5 +8,6 @@ namespace SIL.Transcriber.Models
 {
     public class UserVersion : Version
     {
+        public string Environment { get; set; }
     }
 }

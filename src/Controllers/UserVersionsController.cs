@@ -28,6 +28,13 @@ namespace SIL.Transcriber.Controllers
         {
             return Ok( ((UserVersionService)service).StoreVersion(version));
         }
+
+        [AllowAnonymous]
+        [HttpPost("2/{version}")]
+        public IActionResult PostVersionAsync([FromRoute] string version, [FromForm] string env)
+        {
+            return Ok(((UserVersionService)service).StoreVersion(version, env));
+        }
     }
 }
 

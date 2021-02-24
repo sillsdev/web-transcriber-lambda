@@ -18,29 +18,27 @@ namespace SIL.Transcriber.Repositories
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
         }
-        public UserVersion CreateOrUpdate(string version)
+        public UserVersion CreateOrUpdate(string version, string env)
         {
             string fp = dbContext.GetFingerprint();
 
             UserVersion uv = Get().Where(x => x.LastModifiedOrigin == fp).FirstOrDefault();
             if (uv != null)
             {
-                if (uv.DesktopVersion != version)
-                {
-                    uv.DesktopVersion = version;
-                    dbContext.Update(uv);
-                    dbContext.SaveChanges();
-                }
+                uv.DesktopVersion = version;
+                uv.Environment = env;
+                dbContext.Update(uv);
             }
             else
             {
                 uv = new UserVersion
                 {
-                    DesktopVersion = version
+                    DesktopVersion = version,
+                    Environment = env,
                 };
                 dbContext.UserVersions.Add(uv);
-                dbContext.SaveChanges();
             }
+            dbContext.SaveChanges();
             CurrentVersion cv = dbContext.CurrentVersions.FirstOrDefault();
             uv.DesktopVersion = cv.DesktopVersion;
             uv.DateUpdated = cv.DateUpdated;
