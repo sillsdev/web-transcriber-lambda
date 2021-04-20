@@ -17,7 +17,13 @@ namespace TranscriberAPI.Utility.Extensions
                 return null;
             return value.Attribute("number").Value;
         }
-
+        public static string SortableVerses(this XElement value)
+        {
+            ParseReference(value.Verses(), out int startVerse, out int endVerse);
+            if (endVerse == startVerse)
+                return startVerse.ToString("D4");
+            return startVerse.ToString("D4") + "-" + endVerse.ToString("D4");
+        }
         public static void SetReference(this XElement value, string reference)
         {
             Debug.Assert(IsVerse(value));
