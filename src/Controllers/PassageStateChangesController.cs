@@ -24,13 +24,6 @@ namespace SIL.Transcriber.Controllers
         }
 
 #pragma warning disable 1998
-        [HttpPatch("{id}")]
-        public override async Task<IActionResult> PatchAsync(int id, [FromBody] PassageStateChange entity)
-        {
-            throw new JsonApiException(405, $"Not implemented for State Change.");
-        }
-#pragma warning restore 1998
-#pragma warning disable 1998
         [HttpDelete("{id}")]
         public override async Task<IActionResult> DeleteAsync(int id)
         {
