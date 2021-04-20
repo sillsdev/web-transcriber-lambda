@@ -61,6 +61,9 @@ namespace SIL.Transcriber.Models
         [Attr("is-public")]
         public bool? IsPublic { get; set; } = true;
 
+        [Attr("spell-check")]
+        public bool? SpellCheck { get; set; } = true;
+
         [Attr("date-archived")]
         public DateTime? DateArchived { get; set; }
 
