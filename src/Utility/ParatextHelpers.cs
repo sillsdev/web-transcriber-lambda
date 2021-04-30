@@ -314,6 +314,7 @@ namespace SIL.Transcriber.Utility
             string transcription = "";
             //find the verses that contain verses in my range
             SortedList<string, XElement> existing = GetExistingVerses(chapterContent, currentPassage, out XElement thisVerse);
+            if (existing.Values.Count == 0) throw new Exception("no range");
             existing.Values.ForEach(v =>
             {
                 if (v.IsVerse())
