@@ -610,6 +610,9 @@ namespace SIL.Transcriber.Services
                     if (project.Archived)
                         return projectDeletedResponse(project.Name, sFile);
                 } 
+                if (project==null)
+                    return projectDeletedResponse(projects[0].Name, sFile);
+
             }
             catch (Exception ex)
             {
