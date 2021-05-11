@@ -253,20 +253,20 @@ namespace SIL.Transcriber.Utility
                 {
                     if (verse.Verses() == currentPassage.Verses)
                     {
-                        if (!existing.ContainsKey(verse.Verses()))
+                        if (!existing.ContainsKey(verse.SortableVerses()))
                         {
                             exactVerse = verse;
-                            existing.Add(verse.Verses(), verse);
+                            existing.Add(verse.SortableVerses(), verse);
                             //if our section is there...add it to the remove list
                             if (!existing.ContainsKey("S" + verse.Verses()) && currentPassage.Sequencenum == 1 && verse.Parent.IsPara() && verse.Parent.PreviousNode != null && verse.Parent.PreviousNode.IsSection())
-                                existing.Add("S" + verse.Verses(), (XElement)verse.Parent.PreviousNode);
+                                existing.Add("S" + verse.SortableVerses(), (XElement)verse.Parent.PreviousNode);
                         }
                     }
                     else
                     {
-                        if (!existing.ContainsKey(verse.Verses()) && (verse.VerseText() == "" || (verse.StartVerse() >= currentPassage.StartVerse && verse.EndVerse() <= currentPassage.EndVerse)))
+                        if (!existing.ContainsKey(verse.SortableVerses()) && (verse.VerseText() == "" || (verse.StartVerse() >= currentPassage.StartVerse && verse.EndVerse() <= currentPassage.EndVerse)))
                         {
-                            existing.Add(verse.Verses(), verse);
+                            existing.Add(verse.SortableVerses(), verse);
                         }
                     }
                 });
@@ -314,6 +314,7 @@ namespace SIL.Transcriber.Utility
             string transcription = "";
             //find the verses that contain verses in my range
             SortedList<string, XElement> existing = GetExistingVerses(chapterContent, currentPassage, out XElement thisVerse);
+            if (existing.Values.Count == 0) throw new Exception("no range");
             existing.Values.ForEach(v =>
             {
                 if (v.IsVerse())

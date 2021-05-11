@@ -411,7 +411,6 @@ namespace SIL.Transcriber.Services
                     attachedmediafiles = from m in attachedmediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
                     List<Mediafile> mediaList = attachedmediafiles.OrderBy(m => m.Id).ToList();
                     if (!AddMediaEaf(7, dtBail, ref startNext, zipArchive, mediaList)) break;
-                    const string prefix = "aws.com/";
                     mediaList.ForEach(m =>
                     {
                         //S3File has just the filename
@@ -459,6 +458,10 @@ namespace SIL.Transcriber.Services
                 Status = System.Net.HttpStatusCode.OK,
                 ContentType = ContentType,
             };
+        }
+        private string ProjectDeletedReport(Project project)
+        {
+            return ChangesReport("project", "\"deleted\"", jsonApiSerializer.Serialize(project));
         }
         private string ChangesReport(string type, string online, string imported)
         {
@@ -569,7 +572,7 @@ namespace SIL.Transcriber.Services
         {
             DateTime sourceDate;
             List<string> report = new List<string>();
-
+            List<string> deleted = new List<string>();
             try
             {
                 ZipArchiveEntry checkEntry = archive.GetEntry("SILTranscriberOffline");
@@ -589,7 +592,7 @@ namespace SIL.Transcriber.Services
                 return errorResponse("SILTranscriber not present", sFile);
             }
             //check project if provided
-                Project project;
+            Project project;
             try
             {
                 ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
@@ -597,195 +600,208 @@ namespace SIL.Transcriber.Services
                     return errorResponse("Project data not present", sFile);
                 string json = new StreamReader(projectsEntry.Open()).ReadToEnd();
                 List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(json);
+                project = dbContext.Projects.Find(projects[0].Id);
                 if (projectid > 0)
                 {
-                    project = projects.Find(p => p.Id == projectid);
-                    if (project == null)
+                    if (projectid != project.Id)
                     {
-                        project = dbContext.Projects.Find(projects[0].Id);
                         return NotCurrentProjectResponse(project.Name, sFile);
                     }
-                }
-                project = dbContext.Projects.Find(projects[0].Id);
-                if (project.Archived)
-                    return projectDeletedResponse(project.Name, sFile);
+                    if (project.Archived)
+                        return projectDeletedResponse(project.Name, sFile);
+                } 
+                if (project==null)
+                    return projectDeletedResponse(projects[0].Name, sFile);
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
                 return errorResponse("Invalid ITF File - error finding project -" + ex.Message, sFile);
             }
-            
+           
             try
             {
-                foreach (ZipArchiveEntry entry in archive.Entries)
+                if (project.Archived)
                 {
-                    if (!entry.FullName.StartsWith("data"))
-                        continue;
-                    string data = new StreamReader(entry.Open()).ReadToEnd();
-                    string name = Path.GetFileNameWithoutExtension(entry.Name.Substring(2));
-                    switch (name)
+                    report.Add(ProjectDeletedReport(project));
+                }
+                else
+                {
+                    foreach (ZipArchiveEntry entry in archive.Entries)
                     {
-                        case "users":
-                            List<User> users = jsonApiDeSerializer.DeserializeList<User>(data);
-                            foreach(User u in users)
-                            {
-                                User user = dbContext.Users.Find(u.Id);
-                                if (user.DateUpdated != u.DateUpdated)
+                        if (!entry.FullName.StartsWith("data"))
+                            continue;
+                        string data = new StreamReader(entry.Open()).ReadToEnd();
+                        string name = Path.GetFileNameWithoutExtension(entry.Name.Substring(2));
+                        switch (name)
+                        {
+                            case "users":
+                                List<User> users = jsonApiDeSerializer.DeserializeList<User>(data);
+                                foreach (User u in users)
                                 {
-                                    if (user.DateUpdated > sourceDate && user.DateUpdated != u.DateUpdated)
-                                        report.Add(UserChangesReport(user, u));
-
-                                    user.DigestPreference = u.DigestPreference;
-                                    user.FamilyName = u.FamilyName;
-                                    user.GivenName = u.GivenName;
-                                    user.Locale = u.Locale;
-                                    user.Name = u.Name;
-                                    user.NewsPreference = u.NewsPreference;
-                                    user.Phone = u.Phone;
-                                    user.playbackspeed = u.playbackspeed;
-                                    user.progressbartypeid = u.progressbartypeid;
-                                    user.timercountup = u.timercountup;
-                                    user.Timezone = u.Timezone;
-                                    user.uilanguagebcp47 = u.uilanguagebcp47;
-                                    user.LastModifiedBy = u.LastModifiedBy;
-                                    user.DateUpdated = DateTime.UtcNow;
-                                    /* TODO: figure out if the avatar needs uploading */
-                                    dbContext.Users.Update(user);
-                                }
-                            };
-                            break;
-
-                        case "sections":
-                            List<Section> sections = jsonApiDeSerializer.DeserializeList<Section>(data);
-                            foreach(Section s in sections)
-                            {
-                                Section section = dbContext.Sections.Find(s.Id);
-                                if (section.DateUpdated > sourceDate)
-                                    report.Add( SectionChangesReport(section, s));
-
-                                section.EditorId = s.EditorId;
-                                section.TranscriberId = s.TranscriberId;
-                                section.State = s.State;
-                                section.LastModifiedBy = s.LastModifiedBy;
-                                section.DateUpdated = DateTime.UtcNow; 
-                                dbContext.Sections.Update(section);
-                            };
-                            break;
-
-                        case "passages":
-                            List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
-                            int currentuser = CurrentUser().Id;
-                            foreach (Passage p in passages)
-                            {
-                                Passage passage = dbContext.Passages.Find(p.Id);
-                                if (passage.State != p.State)
-                                {
-                                    if (passage.DateUpdated > sourceDate)
-                                        report.Add( PassageChangesReport(passage, p));
-                                    passage.State = p.State;
-                                    passage.LastModifiedBy = p.LastModifiedBy;
-                                    passage.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Passages.Update(passage);
-                                    PassageStateChange psc = new PassageStateChange();
-                                    psc.Comments = "Imported";  //TODO Localize
-                                    psc.DateCreated = passage.DateUpdated;
-                                    psc.DateUpdated = passage.DateUpdated;
-                                    psc.LastModifiedBy = currentuser;
-                                    psc.PassageId = passage.Id;
-                                    psc.State = passage.State;
-                                    dbContext.Passagestatechanges.Add(psc);
-                                }
-                            };
-                            break;
-
-                        case "mediafiles":
-                            List<Mediafile> mediafiles = jsonApiDeSerializer.DeserializeList<Mediafile>(data);
-                            /*
-                            var newFiles = mediafiles.Where(e => e.StringId == "");
-                            if (newFiles.Count() > 0)
-                            {
-                                dbContext.Mediafiles.AddRange(newFiles);
-                                // upload the file 
-                            } */
-                            foreach(Mediafile m in mediafiles)
-                            {
-                                Mediafile mediafile;
-                                if (m.Id > 0)
-                                {
-                                    mediafile = dbContext.Mediafiles.Find(m.Id);
-                                    if (mediafile.Transcription != m.Transcription)
+                                    User user = dbContext.Users.Find(u.Id);
+                                    if (!user.Archived && user.DateUpdated != u.DateUpdated)
                                     {
-                                        if (mediafile.DateUpdated > sourceDate)
-                                            report.Add(MediafileChangesReport(mediafile, m));
-                                        mediafile.Position = m.Position;
-                                        mediafile.Transcription = m.Transcription;
-                                        mediafile.LastModifiedBy = m.LastModifiedBy;
-                                        mediafile.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Mediafiles.Update(mediafile);
+                                        if (user.DateUpdated > sourceDate && user.DateUpdated != u.DateUpdated)
+                                            report.Add(UserChangesReport(user, u));
+
+                                        user.DigestPreference = u.DigestPreference;
+                                        user.FamilyName = u.FamilyName;
+                                        user.GivenName = u.GivenName;
+                                        user.Locale = u.Locale;
+                                        user.Name = u.Name;
+                                        user.NewsPreference = u.NewsPreference;
+                                        user.Phone = u.Phone;
+                                        user.playbackspeed = u.playbackspeed;
+                                        user.progressbartypeid = u.progressbartypeid;
+                                        user.timercountup = u.timercountup;
+                                        user.Timezone = u.Timezone;
+                                        user.uilanguagebcp47 = u.uilanguagebcp47;
+                                        user.LastModifiedBy = u.LastModifiedBy;
+                                        user.DateUpdated = DateTime.UtcNow;
+                                        /* TODO: figure out if the avatar needs uploading */
+                                        dbContext.Users.Update(user);
                                     }
-                                }
-                                else
-                                {
-                                    /* the only way this happens now is on a reopen.  If we start allowing them to actually replace the mediafile,
-                                     * we'll have to upload it from the zip file and create a new s3 file */
-                                    mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
-                                    Mediafile newmf = (Mediafile)mediafile.ShallowCopy();
-                                    newmf.Transcription = m.Transcription;
-                                    newmf.Id = 0;
-                                    newmf.LastModifiedBy = m.LastModifiedBy;
-                                    newmf.DateCreated = m.DateCreated;
-                                    newmf.VersionNumber = m.VersionNumber;
-                                    newmf.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Mediafiles.Add(newmf);
-                                }
-                            };
-                            break;
-
-                        case "groupmemberships":
-                            List<GroupMembership> grpmems = jsonApiDeSerializer.DeserializeList<GroupMembership>(data);
-                            foreach(GroupMembership gm in grpmems)
-                            {
-                                GroupMembership grpmem = dbContext.Groupmemberships.Find(gm.Id);
-                                if (grpmem.FontSize != gm.FontSize)
-                                {
-                                    if (grpmem.DateUpdated > sourceDate)
-                                        report.Add(GrpMemChangesReport(grpmem, gm));
-                                    grpmem.FontSize = gm.FontSize;
-                                    grpmem.LastModifiedBy = gm.LastModifiedBy;
-                                    grpmem.DateUpdated = DateTime.UtcNow;
-                                    dbContext.Groupmemberships.Update(grpmem);
-                                }
-                            };
-                            break;
-
-                        /*  Local changes to project integrations should just stay local
-                        case "projectintegrations":
-                            List<ProjectIntegration> pis = jsonApiDeSerializer.DeserializeList<ProjectIntegration>(data);
-                            break;
-                        */
-
-                        case "passagestatechanges":
-                            List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
-                            foreach(PassageStateChange psc in pscs)
-                            {
-                                //see if it's already there...
-                                IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
-                                if (dups.Count() == 0)
-                                {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
-                                    dbContext.Passagestatechanges.Add(new PassageStateChange
-                                    {
-                                        PassageId = psc.PassageId,
-                                        State = psc.State,
-                                        DateCreated = psc.DateCreated,
-                                        Comments = psc.Comments,
-                                        LastModifiedBy = psc.LastModifiedBy,
-                                        DateUpdated = DateTime.UtcNow,
-                                    });
                                 };
+                                break;
 
-                            };
-                            break;
+                            case "sections":
+                                List<Section> sections = jsonApiDeSerializer.DeserializeList<Section>(data);
+                                foreach (Section s in sections)
+                                {
+                                    Section section = dbContext.Sections.Find(s.Id);
+                                    if (!section.Archived)
+                                    {
+                                        if (section.DateUpdated > sourceDate)
+                                            report.Add(SectionChangesReport(section, s));
+
+                                        section.EditorId = s.EditorId;
+                                        section.TranscriberId = s.TranscriberId;
+                                        section.State = s.State;
+                                        section.LastModifiedBy = s.LastModifiedBy;
+                                        section.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Sections.Update(section);
+                                    }
+                                };
+                                break;
+
+                            case "passages":
+                                List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
+                                int currentuser = CurrentUser().Id;
+                                foreach (Passage p in passages)
+                                {
+                                    Passage passage = dbContext.Passages.Find(p.Id);
+                                    if (!passage.Archived && passage.State != p.State)
+                                    {
+                                        if (passage.DateUpdated > sourceDate)
+                                        {
+                                            report.Add(PassageChangesReport(passage, p));
+                                        }
+                                        passage.State = p.State;
+                                        passage.LastModifiedBy = p.LastModifiedBy;
+                                        passage.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Passages.Update(passage);
+                                        PassageStateChange psc = new PassageStateChange();
+                                        psc.Comments = "Imported";  //TODO Localize
+                                        psc.DateCreated = passage.DateUpdated;
+                                        psc.DateUpdated = passage.DateUpdated;
+                                        psc.LastModifiedBy = currentuser;
+                                        psc.PassageId = passage.Id;
+                                        psc.State = passage.State;
+                                        dbContext.Passagestatechanges.Add(psc);
+                                    }
+                                };
+                                break;
+
+                            case "mediafiles":
+                                List<Mediafile> mediafiles = jsonApiDeSerializer.DeserializeList<Mediafile>(data);
+                                /*
+                                var newFiles = mediafiles.Where(e => e.StringId == "");
+                                if (newFiles.Count() > 0)
+                                {
+                                    dbContext.Mediafiles.AddRange(newFiles);
+                                    // upload the file 
+                                } */
+                                foreach (Mediafile m in mediafiles)
+                                {
+                                    Mediafile mediafile;
+                                    if (m.Id > 0)
+                                    {
+                                        mediafile = dbContext.Mediafiles.Find(m.Id);
+                                        if (!mediafile.Archived && mediafile.Transcription != m.Transcription)
+                                        {
+                                            if (mediafile.DateUpdated > sourceDate)
+                                                report.Add(MediafileChangesReport(mediafile, m));
+                                            mediafile.Position = m.Position;
+                                            mediafile.Transcription = m.Transcription;
+                                            mediafile.LastModifiedBy = m.LastModifiedBy;
+                                            mediafile.DateUpdated = DateTime.UtcNow;
+                                            dbContext.Mediafiles.Update(mediafile);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        /* the only way this happens now is on a reopen.  If we start allowing them to actually replace the mediafile,
+                                         * we'll have to upload it from the zip file and create a new s3 file */
+                                        mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                        Mediafile newmf = (Mediafile)mediafile.ShallowCopy();
+                                        newmf.Transcription = m.Transcription;
+                                        newmf.Id = 0;
+                                        newmf.LastModifiedBy = m.LastModifiedBy;
+                                        newmf.DateCreated = m.DateCreated;
+                                        newmf.VersionNumber = m.VersionNumber;
+                                        newmf.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Mediafiles.Add(newmf);
+                                    }
+                                };
+                                break;
+
+                            case "groupmemberships":
+                                List<GroupMembership> grpmems = jsonApiDeSerializer.DeserializeList<GroupMembership>(data);
+                                foreach (GroupMembership gm in grpmems)
+                                {
+                                    GroupMembership grpmem = dbContext.Groupmemberships.Find(gm.Id);
+                                    if (!grpmem.Archived && grpmem.FontSize != gm.FontSize)
+                                    {
+                                        if (grpmem.DateUpdated > sourceDate)
+                                            report.Add(GrpMemChangesReport(grpmem, gm));
+                                        grpmem.FontSize = gm.FontSize;
+                                        grpmem.LastModifiedBy = gm.LastModifiedBy;
+                                        grpmem.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Groupmemberships.Update(grpmem);
+                                    }
+                                };
+                                break;
+
+                            /*  Local changes to project integrations should just stay local
+                            case "projectintegrations":
+                                List<ProjectIntegration> pis = jsonApiDeSerializer.DeserializeList<ProjectIntegration>(data);
+                                break;
+                            */
+
+                            case "passagestatechanges":
+                                List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
+                                foreach (PassageStateChange psc in pscs)
+                                {
+                                    //see if it's already there...
+                                    IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
+                                    if (dups.Count() == 0)
+                                    {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
+                                        dbContext.Passagestatechanges.Add(new PassageStateChange
+                                        {
+                                            PassageId = psc.PassageId,
+                                            State = psc.State,
+                                            DateCreated = psc.DateCreated,
+                                            Comments = psc.Comments,
+                                            LastModifiedBy = psc.LastModifiedBy,
+                                            DateUpdated = DateTime.UtcNow,
+                                        });
+                                    };
+
+                                };
+                                break;
+                        }
                     }
                 }
                 int ret = await dbContext.SaveChangesNoTimestampAsync();
