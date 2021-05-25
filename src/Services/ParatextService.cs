@@ -106,11 +106,11 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin()
         {
             User currentUser = CurrentUserRepository.GetCurrentUser().Result;
-            UserSecret newPTToken = CurrentUserContext.ParatextLogin(GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"), currentUser.Id);
+            UserSecret newPTToken = CurrentUserContext.ParatextLogin(GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-AudioManager"), currentUser.Id);
 
             if (newPTToken == null)
             {
-                throw new Exception("User is not logged in to Paratext-Transcriber");
+                throw new Exception("User is not logged in to Paratext-AudioManager");
             }
             //get existing
             IEnumerable<ParatextToken> tokens = ParatextTokenService.GetAsync().Result;
