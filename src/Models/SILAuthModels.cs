@@ -31,30 +31,10 @@ namespace SIL.Auth.Models
         public DateTime createdAt { get; set; }
         public DateTime updatedAt { get; set; }
     }
-    public class SILAuth_User
+    public class SILAuth_User: Auth0.ManagementApi.Models.User
     {
-        public int id { get; set; }
-        public string name { get; set; }
-        public string givenname { get; set; }
-        public string familyname { get; set; }
-        public string nickname { get; set; }
-        public string email { get; set; }
-        public bool emailverified { get; set; }
-        public string phone { get; set; }
-        public string timezone { get; set; }
-        public string locale { get; set; }
-        public bool? isLocked { get; set; }
-        public string externalid { get; set; }
-        public string profilevisibility { get; set; }
-        public bool? emailnotification { get; set; }
-        public string identitytoken { get; set; }
-        public string uilanguagebcp47 { get; set; }
-        public string avatarurl { get; set; }
-        public bool? archived { get; set; }
-        public string authid { get; set; }
-        public DateTime createdAt { get; set; }
-        public DateTime updatedAt { get; set; }
     }
+
     public class SILAuth_Invite
     {
         public int id { get; set; }

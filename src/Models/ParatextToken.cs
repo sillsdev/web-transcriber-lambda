@@ -20,7 +20,7 @@ namespace SIL.Paratext.Models
         {
             get
             {
-                var accessToken = new JwtSecurityToken(AccessToken);
+                JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
                 if (accessToken.Payload.Iat != null)
                     return EpochTime.DateTime((long)accessToken.Payload.Iat);
                 return DateTime.MinValue;

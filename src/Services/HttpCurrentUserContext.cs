@@ -1,9 +1,8 @@
 ﻿using System;
-using Auth0.ManagementApi;
-using Auth0.ManagementApi.Models;
+using SIL.Auth.Models;
 using Microsoft.AspNetCore.Http;
 using SIL.Transcriber.Utility;
-using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using Auth0.ManagementApi.Models;
 using SIL.Paratext.Models;
 using System.Linq;
 using Microsoft.Extensions.Logging;
@@ -19,7 +18,7 @@ namespace SIL.Transcriber.Services
         private string auth0Id;
         private string authType;
 
-        private User auth0User;
+        private SILAuth_User auth0User;
         protected ILogger<ICurrentUserContext> Logger { get; set; }
 
         public HttpCurrentUserContext(
@@ -44,7 +43,7 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        private User Auth0User
+        private SILAuth_User Auth0User
         {
             get
             {
@@ -54,7 +53,7 @@ namespace SIL.Transcriber.Services
                     {
                         //auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
 
-                        auth0User = AuthService.GetUserAsync(Auth0Id).Result;
+                        auth0User = AuthService.GetUser(Auth0Id);
 
                     }
                     catch (Exception ex)

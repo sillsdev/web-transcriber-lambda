@@ -44,7 +44,7 @@ namespace SIL.Transcriber.Models
         [Attr("uilanguagebcp47")]
         public string uilanguagebcp47 { get; set; }
         [Attr("timercount-up")]
-        public Boolean? timercountup { get; set; }
+        public bool? timercountup { get; set; }
         [Attr("playback-speed")]
         public int? playbackspeed { get; set; }
         [Attr("progressbar-typeid")]

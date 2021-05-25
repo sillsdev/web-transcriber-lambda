@@ -35,7 +35,7 @@ namespace SIL.Transcriber.Services
         {
             HttpContext = httpContextAccessor.HttpContext;
             silAuthClient = new HttpClient();
-            var domainUri = new Uri(GetVarOrThrow("SIL_TR_SILAUTH_API"));
+            Uri domainUri = new Uri(GetVarOrThrow("SIL_TR_SILID_DOMAIN"));
             silAuthClient.BaseAddress = domainUri;
             silAuthClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", HttpContext.GetJWT().Result);
         }
@@ -69,7 +69,7 @@ namespace SIL.Transcriber.Services
             HttpResponseMessage response = silAuthClient.GetAsync("organizations/" + orgId.ToString()).Result;
             if (response.IsSuccessStatusCode)
             {
-                var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
                 return OrgFromSILAuth(JsonConvert.DeserializeObject<SILAuth_Organization>(jsonData));
             }
             else
@@ -82,7 +82,7 @@ namespace SIL.Transcriber.Services
             HttpResponseMessage response = silAuthClient.GetAsync("organizations").Result;
             if (response.IsSuccessStatusCode)
             {
-                var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
                 return JsonConvert.DeserializeObject<List<SILAuth_Organization>>(jsonData);
             }
             else
@@ -96,7 +96,7 @@ namespace SIL.Transcriber.Services
             HttpResponseMessage response = silAuthClient.GetAsync("memberships").Result;
             if (response.IsSuccessStatusCode)
             {
-                var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
                 List<SILAuth_Membership> memberships = JsonConvert.DeserializeObject<List<SILAuth_Membership>>(jsonData);
                 memberships = memberships.FindAll(m => m.userId == SILUser);
                 string silOrgs = "|";
@@ -112,17 +112,17 @@ namespace SIL.Transcriber.Services
         }
         public SILAuth_User GetUser(string Auth0Id)
         {
-            HttpResponseMessage response = silAuthClient.GetAsync("user/" + Auth0Id).Result;
+            HttpResponseMessage response = silAuthClient.GetAsync("agent/" + Auth0Id).Result;
             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
 
-            var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
-            List<SILAuth_User> users = JsonConvert.DeserializeObject<List<SILAuth_User>>(jsonData); //because of bad data it could be a list
+            string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+            List<SILAuth_User> users = JsonConvert.DeserializeObject<List<SILAuth_User>>(jsonData); 
             return users[0];
         }
         public SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId)
         {
-            var requestObj = new JObject(
+            JObject requestObj = new JObject(
                 new JProperty("name ", name),
                 new JProperty("givenname ", givenName),
                 new JProperty("familyname ",familyName),
@@ -135,12 +135,12 @@ namespace SIL.Transcriber.Services
             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
 
-            var jsonData = GetData(response.Content.ReadAsStringAsync().Result, "user");
+            string jsonData = GetData(response.Content.ReadAsStringAsync().Result, "user");
            return JsonConvert.DeserializeObject<SILAuth_User>(jsonData);
         }
         public int CreateInvite(string email, string orgName, int silOrgId, int silUserId)
         {
-            var requestObj = new JObject(
+            JObject requestObj = new JObject(
                 new JProperty("email", email),
                 new JProperty("orgId", silOrgId),
                 new JProperty("userId", silUserId));
@@ -150,7 +150,7 @@ namespace SIL.Transcriber.Services
             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
 
-            var jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+            string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
             SILAuth_Invite invite = JsonConvert.DeserializeObject<SILAuth_Invite>(jsonData);
 
             requestObj = new JObject(

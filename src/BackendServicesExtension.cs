@@ -170,6 +170,7 @@ namespace SIL.Transcriber
             services.AddScoped<VwPassageStateHistoryEmailService>();
             
             services.AddSingleton<IAuthService, AuthService>();
+            services.AddSingleton<ISILIdentityService, SILIdentityService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OfflineDataService>();
             services.AddScoped<OrgDataService>();

@@ -41,6 +41,7 @@ provider:
     SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}
     SIL_TR_WEBHOOK_PASSWORD:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_PASSWORD}
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
+    SIL_TR_SILID_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_SILID_DOMAIN}
 
 package:
   artifact: bin/release/netcoreapp2.1/deploy-package_${self:custom.myStage}.zip

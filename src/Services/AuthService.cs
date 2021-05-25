@@ -24,10 +24,9 @@ namespace SIL.Transcriber.Services
         private readonly HttpClient _httpClient;
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
         private string _accessToken;
-        private ManagementApiClient managementApiClient;
-
-
-        public AuthService()
+        //private ManagementApiClient managementApiClient;
+        private ISILIdentityService SILIdentity;
+        public AuthService(ISILIdentityService silIdentity)
         {
             string domain = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
             if (!domain.EndsWith("/")) domain += "/";
@@ -35,6 +34,7 @@ namespace SIL.Transcriber.Services
             {
                 BaseAddress =new Uri(domain)
             };
+            SILIdentity = silIdentity;
         }
 
         public bool ValidateWebhookCredentials(string username, string password)
@@ -42,25 +42,9 @@ namespace SIL.Transcriber.Services
             return GetVarOrThrow("SIL_TR_WEBHOOK_USERNAME") == username && GetVarOrThrow("SIL_TR_WEBHOOK_PASSWORD") == password;
         }
 
-        private ManagementApiClient ManagementApiClient
+        public Auth.Models.SILAuth_User GetUser(string Auth0Id)
         {
-            get
-            {
-                if (managementApiClient == null)
-                {
-                    (string AccessToken, bool Refreshed) = GetAccessTokenAsync().Result;
-                    string accessToken = AccessToken;
-                    Uri domainUri = new Uri(GetVarOrThrow("SIL_TR_AUTH0_DOMAIN"));
-                    managementApiClient = new ManagementApiClient(accessToken, domainUri.Host);
-                }
-                return managementApiClient;
-            }
-        }
-
-        public async Task<User> GetUserAsync(string Auth0Id)
-        {
-                //auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
-            return await ManagementApiClient.Users.GetAsync(Auth0Id);
+            return SILIdentity.GetUser(Auth0Id);
         }
 
         public Task ResendVerification(string authId)
@@ -69,7 +53,7 @@ namespace SIL.Transcriber.Services
             {
                 UserId = authId
             };
-            return ManagementApiClient.Jobs.SendVerificationEmailAsync(content);
+        throw new Exception("not implemented");
         }
 
         private async Task<(string AccessToken, bool Refreshed)> GetAccessTokenAsync()
