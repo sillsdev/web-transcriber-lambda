@@ -187,6 +187,7 @@ resources:
 ##Resources -> /{proxy} -> Actions Enable Cors
 ## Add X-Fp, to Access-Control-Allow-Headers
 ## Push "Enable cors and replace existing cors headers" button
+
 ##This doesn't work...so go create this s3 bucket manually
 # Further instructions in file AWSConfig.txt
 
