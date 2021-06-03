@@ -1,0 +1,26 @@
+{
+  "name": "web-transcriber-lambda",
+  "version": "1.0.0",
+  "description": "REST API for transcriber - hosted in AWS lambda function",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sillsdev/web-transcriber-lambda.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sillsdev/web-transcriber-lambda/issues"
+  },
+  "homepage": "https://github.com/sillsdev/web-transcriber-lambda#readme",
+  "devDependencies": {
+    "serverless-domain-manager": "^5.1.0"
+  }
+}
