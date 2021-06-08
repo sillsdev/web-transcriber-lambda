@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using JsonApiDotNetCore.Internal;
 using System.Linq;
+using Microsoft.Net.Http.Headers;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -75,7 +76,7 @@ namespace SIL.Transcriber.Controllers
         {
             get
             {
-                if (_currentUser == null)
+                if (_currentUser == null && HttpContext != null &&  HttpContext.Request.Headers[HeaderNames.Authorization].Count > 0)
                 {
                     // current user has not yet been found for this request.
                     // find or create because users are managed by auth0 and

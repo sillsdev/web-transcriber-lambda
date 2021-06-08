@@ -13,3 +13,5 @@ authUserPull/*
 
 *.ps1
 *.rep
+
+node_modules/*
