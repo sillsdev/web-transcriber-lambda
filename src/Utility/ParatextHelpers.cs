@@ -56,40 +56,11 @@ namespace SIL.Transcriber.Utility
             }
             return myLevel;
         }
-        private static void RemoveText(XNode next)
+        public static void ReplaceText(XElement value, string transcription)
         {
-            XNode rem;
-            while (next != null)
-            {
-                rem = next;
-                if (next.IsText())
-                {
-                    if (next.NextNode != null)
-                        RemoveText(next.NextNode);
-                    next = next.Parent.NextNode;
-                    rem.Remove();
-                }
-                else if (next.IsPara())
-                {
-                    if (((XElement)next).FirstNode == null || ((XElement)next).FirstNode.IsText())
-                    {
-                        if (((XElement)next).FirstNode != null) ((XElement)next).FirstNode.Remove();
-                        next = next.NextNode;
-                        if (((XElement)rem).FirstNode == null) rem.Remove();
-                    }
-                    else next = null;
-                }
-                else if (next.IsVerse())
-                    next = null;
-                else //skip notes etc
-                    next = next.NextNode;
-            }
-        }
-        public static void ReplaceText(XElement para, string transcription)
-        {
-            XNode value = para.FirstNode;
-            RemoveText(value.NextNode);
+            value.RemoveText();
             string[] lines = transcription.Split('\n');
+            if (lines.Length == 1 && !lines[0].EndsWith('\n')) lines[0] += '\n';
             XText newverse = new XText(lines[0]);
             value.AddAfterSelf(newverse);
             XNode last = value.Parent;
@@ -110,19 +81,21 @@ namespace SIL.Transcriber.Utility
         }
         private static XElement AddParatextVerse(XNode parent, string verses, string text, bool before = false)
         {
-            string[] lines = text.Split('\n');
-            XText newverse = new XText(lines[0]);
-            XElement first = ParatextPara("p", new XElement("verse", new XAttribute("number", verses), new XAttribute("style", "v"), newverse));
+            //string[] lines = text.Split('\n');
+            //XText newverse = new XText(lines[0]);
+            XElement verse = new XElement("verse", new XAttribute("number", verses), new XAttribute("style", "v"), null);
+            XElement first = ParatextPara("p", verse);
             if (before)
                 parent.AddBeforeSelf(first);
             else
                 parent.AddAfterSelf(first);
-            XNode last = first;
+            ReplaceText(verse, text);
+            /*XNode last = first;
             for (int ix = 1; ix < lines.Length; ix++)
             {
                 last.AddAfterSelf(ParatextPara("p", new XText(lines[ix])));
                 last = last.NextNode;
-            }
+            }*/
             return first;
         }
 
@@ -350,7 +323,6 @@ namespace SIL.Transcriber.Utility
 
                 if (thisVerse != null)
                 {
-                    thisVerse = MoveToPara(thisVerse);
                     ReplaceText(thisVerse, p.LastComment);
                 }
                 else
@@ -375,7 +347,7 @@ namespace SIL.Transcriber.Utility
                     }
                     else
                     {
-                        thisVerse.AddBeforeSelf(ParatextSection(currentPassage.Section.SectionHeader(addNumbers)));
+                        MoveToPara(thisVerse).AddBeforeSelf(ParatextSection(currentPassage.Section.SectionHeader(addNumbers)));
                     }
                     first = false;
                 }

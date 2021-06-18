@@ -85,6 +85,19 @@ namespace TranscriberAPI.Utility.Extensions
                 return false;
             return ((XElement)value).Name.LocalName == "verse";
         }
+        public static bool IsNote(this XNode value)
+        {
+            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
+                return false;
+            return ((XElement)value).Name.LocalName == "note" || ((XElement)value).Name.LocalName == "rem";
+        }
+        public static bool HasChildren(this XNode value)
+        {
+            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
+                return false;
+            return ((XElement)value).FirstNode != null;
+        }
+
         public static string SectionText(this XElement section)
         {
             if (!IsText(section.FirstNode))
@@ -114,16 +127,13 @@ namespace TranscriberAPI.Utility.Extensions
                     next = null;
                 else if (next.IsText())
                 {
-                    text += ((XText)next).Value + '\n';
-                    if (next.NextNode != null)
-                        text += VerseText((XElement)next.NextNode);
-                    next = next.Parent.NextNode;
+                    text += ((XText)next).Value;
+                    next = next.NextNode ?? next.Parent.NextNode;
                 }
                 else if (next.IsPara() && !next.IsSection())
                 {
-                    if (((XElement)next).FirstNode != null && ((XElement)next).FirstNode.IsText())
-                        next = ((XElement)next).FirstNode;
-                    else next = null;
+                    text += '\n';
+                    next = ((XElement)next).FirstNode ?? ((XElement)next).NextNode;
                 }
                 else //skip notes etc
                     next = next.NextNode;
@@ -143,31 +153,48 @@ namespace TranscriberAPI.Utility.Extensions
             Debug.Assert(IsSection(value));
             value.Remove();
         }
-        public static void RemoveVerse(this XElement value)
+        public static void RemoveText(this XElement value)
+        {
+            if (IsPara(value))
+                value = (XElement)value.FirstNode;
+            Debug.Assert(IsVerse(value));
+            XNode next = HasChildren(value) ? value.FirstNode : value.NextNode ?? value.Parent.NextNode;
+            XNode rem, remParent;
+
+            while (next != null)
+            {
+                rem = null;
+                if (next.IsVerse() || next.IsSection())
+                    next = null;
+                else if (!IsNote(next) && !HasChildren(next))
+                {
+                    rem = next;
+                }
+                if (next != null) {
+                    next = HasChildren(next) ? ((XElement)next).FirstNode : next.NextNode ?? next.Parent.NextNode;
+                }
+                if (rem != null)
+                {
+                    remParent = rem.Parent.DescendantNodes().Count() == 1 ? rem.Parent : null;
+                    rem.Remove();
+                    if (remParent != null) remParent.Remove();
+                }
+                
+            }
+        }
+        public static bool RemoveVerse(this XElement value)
         {
             Debug.Assert(IsVerse(value));
             XElement removeParent = value.Parent.IsPara() && value.Parent.GetElements("verse").Count() == 1 ? value.Parent : null;
-            XNode next = value.NextNode;
-            while (next != null)
+            RemoveText(value);
+            if (!value.HasChildren())
             {
-                if (next.IsText())
-                {
-                    XNode rem = next;
-                    next = removeParent != null ? removeParent.NextNode : null;
-                    rem.Remove();
-                }
-                else if (next.IsPara() && !next.IsSection() && !IsVerse(((XElement)next).FirstNode))
-                {
-                    XNode rem = next;
-                    next = next.NextNode;
-                    rem.Remove();
-                }
-                else
-                    next = null;
+                value.Remove();
+                if (removeParent != null)
+                    removeParent.Remove();
+                return true;
             }
-            value.Remove();
-            if (removeParent != null)
-                removeParent.Remove();
+            return false;
         }
 
         public static IEnumerable<XElement> GetElements(this XElement root, string name)
