@@ -64,7 +64,7 @@ namespace SIL.Transcriber.Data
         protected void AddTimestamps(int userid)
         {
             System.Collections.Generic.IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            DateTime now = DateTime.UtcNow;
+            DateTime now = DateTime.UtcNow.AddSeconds(2);
             foreach (EntityEntry entry in entries)
             {
                 if (entry.Entity is ITrackDate trackDate)
