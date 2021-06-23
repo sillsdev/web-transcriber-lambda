@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,16 +16,18 @@ namespace SIL.Transcriber.Services
     {
         private ICurrentUserContext CurrentUserContext { get; }
         private CurrentUserRepository CurrentUserRepository { get; }
-
+        public IAuthService AuthService { get; set; }
         public UserService(
             IJsonApiContext jsonApiContext,
             ICurrentUserContext currentUserContext,
             UserRepository userRepository,
             CurrentUserRepository currentUserRepository,
+            IAuthService authService,
             ILoggerFactory loggerFactory) : base(jsonApiContext, userRepository, loggerFactory)
         {
             CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;
+            AuthService = authService;
         }
 
         public override async Task<IEnumerable<User>> GetAsync()
@@ -56,6 +59,7 @@ namespace SIL.Transcriber.Services
             {
                 throw new JsonApiException(404, $"User Id '{id}' not found."); ;
             }
+            AuthService.UpdateUser(resource);
             return await base.UpdateAsync(id, resource);
         }
 

@@ -7,6 +7,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
@@ -21,6 +22,7 @@ namespace SIL.Transcriber.Services
         Organization OrgFromSILAuth(SILAuth_Organization entity);
         Organization OrgFromSILAuth(Organization newEntity, SILAuth_Organization entity);
         SILAuth_User GetUser(string Auth0Id);
+        SILAuth_User UpdateUser(SIL.Transcriber.Models.User user);
         SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId);
         int CreateInvite(string email, string orgName, int silOrgId, int silUserId);
     }
@@ -28,7 +30,7 @@ namespace SIL.Transcriber.Services
     {
         private HttpContext HttpContext;
         private HttpClient silAuthClient;
-
+        protected ILogger<SILIdentityService> Logger { get; set; }
         public SILIdentityService(
             IHttpContextAccessor httpContextAccessor,
             ILoggerFactory loggerFactory)
@@ -37,18 +39,11 @@ namespace SIL.Transcriber.Services
             silAuthClient = new HttpClient();
             Uri domainUri = new Uri(GetVarOrThrow("SIL_TR_SILID_DOMAIN"));
             silAuthClient.BaseAddress = domainUri;
-            silAuthClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", HttpContext.GetJWT().Result);
+            var jwt = HttpContext.GetJWT().Result;
+            silAuthClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
+            this.Logger = loggerFactory.CreateLogger<SILIdentityService>();
         }
 
-        private string GetData(string response, string searchstring = "data")
-        {
-            //find the data
-            //const string search = "\"data\":";
-            string search = "\"" + searchstring + "\":";
-            string data = response.Substring(response.IndexOf(search) + search.Length);
-
-            return data.Remove(data.Length - 1);
-        }
         public Organization OrgFromSILAuth(Organization newEntity, SILAuth_Organization entity)
         {
             newEntity.SilId = entity.id;
@@ -69,7 +64,7 @@ namespace SIL.Transcriber.Services
             HttpResponseMessage response = silAuthClient.GetAsync("organizations/" + orgId.ToString()).Result;
             if (response.IsSuccessStatusCode)
             {
-                string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                string jsonData = response.Content.ReadAsStringAsync().Result;
                 return OrgFromSILAuth(JsonConvert.DeserializeObject<SILAuth_Organization>(jsonData));
             }
             else
@@ -82,7 +77,7 @@ namespace SIL.Transcriber.Services
             HttpResponseMessage response = silAuthClient.GetAsync("organizations").Result;
             if (response.IsSuccessStatusCode)
             {
-                string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                string jsonData = response.Content.ReadAsStringAsync().Result;
                 return JsonConvert.DeserializeObject<List<SILAuth_Organization>>(jsonData);
             }
             else
@@ -96,7 +91,7 @@ namespace SIL.Transcriber.Services
             HttpResponseMessage response = silAuthClient.GetAsync("memberships").Result;
             if (response.IsSuccessStatusCode)
             {
-                string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+                string jsonData = response.Content.ReadAsStringAsync().Result;
                 List<SILAuth_Membership> memberships = JsonConvert.DeserializeObject<List<SILAuth_Membership>>(jsonData);
                 memberships = memberships.FindAll(m => m.userId == SILUser);
                 string silOrgs = "|";
@@ -115,10 +110,49 @@ namespace SIL.Transcriber.Services
             HttpResponseMessage response = silAuthClient.GetAsync("agent/" + Auth0Id).Result;
             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
+            string jsonData = response.Content.ReadAsStringAsync().Result;
+            SILAuth_User user = JsonConvert.DeserializeObject<SILAuth_User>(jsonData);
+            if (user.user_metadata.ContainsKey("silLocale"))
+                user.silLocale = user.user_metadata["silLocale"]["iso6393"].ToString();
+            if (user.user_metadata.ContainsKey("zoneinfo"))
+                user.zoneinfo = user.user_metadata["zoneinfo"]["name"].ToString();
 
-            string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
-            List<SILAuth_User> users = JsonConvert.DeserializeObject<List<SILAuth_User>>(jsonData); 
-            return users[0];
+            return user;
+        }
+        public SILAuth_User UpdateUser(User user)
+        {
+            SILAuth_User authuser = GetUser(user.ExternalId);
+            Debug.WriteLine(authuser);
+            JObject requestObj = new JObject();
+            if (authuser.name != user.Name)
+                requestObj.Add("name", user.Name);
+            if (authuser.given_name != user.GivenName)
+                requestObj.Add("given_name", user.GivenName);
+            if (authuser.family_name != user.FamilyName)
+                requestObj.Add("family_name", user.FamilyName);
+            if (requestObj.HasValues)
+            {
+                HttpResponseMessage response = silAuthClient.PatchAsync("agent/" + authuser.user_id, new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json")).Result;
+
+                if (!response.IsSuccessStatusCode)
+                    throw new Exception(response.ReasonPhrase);
+            }
+            if (authuser.silLocale != user.Locale)
+            {
+                HttpResponseMessage response = silAuthClient.PatchAsync("locale/" + user.Locale, new StringContent("{}", Encoding.UTF8, "application/json")).Result;
+                if (!response.IsSuccessStatusCode)
+                    throw new Exception(response.ReasonPhrase);
+            }
+            if (authuser.zoneinfo != user.Timezone)
+            {
+                JObject reqObj = new JObject(
+                new JProperty("timezone ", user.Timezone));
+
+                HttpResponseMessage response = silAuthClient.PatchAsync("timezone/" + authuser.user_id, new StringContent(reqObj.ToString(), Encoding.UTF8, "application/json")).Result;
+                if (!response.IsSuccessStatusCode)
+                    throw new Exception(response.ReasonPhrase);
+            }
+            return GetUser(user.ExternalId);
         }
         public SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId)
         {
@@ -135,7 +169,7 @@ namespace SIL.Transcriber.Services
             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
 
-            string jsonData = GetData(response.Content.ReadAsStringAsync().Result, "user");
+            string jsonData = response.Content.ReadAsStringAsync().Result;
            return JsonConvert.DeserializeObject<SILAuth_User>(jsonData);
         }
         public int CreateInvite(string email, string orgName, int silOrgId, int silUserId)
@@ -150,7 +184,7 @@ namespace SIL.Transcriber.Services
             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
 
-            string jsonData = GetData(response.Content.ReadAsStringAsync().Result);
+            string jsonData = response.Content.ReadAsStringAsync().Result;
             SILAuth_Invite invite = JsonConvert.DeserializeObject<SILAuth_Invite>(jsonData);
 
             requestObj = new JObject(

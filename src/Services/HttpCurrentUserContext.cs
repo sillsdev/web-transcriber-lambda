@@ -116,7 +116,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                return Auth0User.Email;
+                return Auth0User.email;
             }
         }
 
@@ -124,7 +124,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                return Auth0User.FirstName;  //HttpContext.GetAuth0GivenName() ;
+                return Auth0User.given_name;  //HttpContext.GetAuth0GivenName() ;
             }
         }
 
@@ -132,7 +132,7 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                return Auth0User.LastName;  //HttpContext.GetAuth0SurName();
+                return Auth0User.family_name;  //HttpContext.GetAuth0SurName();
             }
         }
 
@@ -140,21 +140,21 @@ namespace SIL.Transcriber.Services
         {
             get
             {
-                return Auth0User.FullName;  //HttpContext.GetAuth0Name();
+                return Auth0User.name;  //HttpContext.GetAuth0Name();
             }
         }
         public string Avatar
         {
             get
             {
-                return Auth0User.Picture;  //HttpContext.GetAuth0Name();
+                return Auth0User.picture;  //HttpContext.GetAuth0Name();
             }
         }
         public bool EmailVerified
         {
             get
             {
-                return Auth0User.EmailVerified ?? false; 
+                return Auth0User.email_verified; 
             }
         }
         /*
@@ -208,8 +208,8 @@ namespace SIL.Transcriber.Services
         }
         public UserSecret ParatextLogin(string connection, int userId)
         {
-            var identities = Auth0User.Identities;
-            Identity ptIdentity = identities.FirstOrDefault(i => i.Connection == connection); //i.e. "Paratext-Transcriber"
+            var identities = Auth0User.identities;
+            Identity ptIdentity = identities.FirstOrDefault(i => i.Connection.ToString() == connection); //i.e. "Paratext-Transcriber"
             return ParatextToken(ptIdentity, userId);
         }
     }
