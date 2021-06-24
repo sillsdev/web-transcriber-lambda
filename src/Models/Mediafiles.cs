@@ -46,5 +46,8 @@ namespace SIL.Transcriber.Models
 
         public bool Archived { get; set; }
 
+        [Attr("segments")]
+        [Column(TypeName = "jsonb")]
+        public string Segments { get; set; }
     }
 }
