@@ -222,7 +222,7 @@ namespace SIL.Transcriber.Services
         /// </remarks>
         public static string CoerceValidFileName(string filename)
         {
-            string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+            string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(Path.GetInvalidFileNameChars()) + "'");
             string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);
 
             string[] reservedWords = new[]
