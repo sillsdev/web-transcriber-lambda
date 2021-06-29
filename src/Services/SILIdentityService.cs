@@ -16,95 +16,97 @@ namespace SIL.Transcriber.Services
 {
     public interface ISILIdentityService
     {
-        Organization GetOrganization(int orgId);
-        List<SILAuth_Organization> GetOrganizations();
-        List<SILAuth_Organization> GetOrganizations(int silUserId);
-        Organization OrgFromSILAuth(SILAuth_Organization entity);
-        Organization OrgFromSILAuth(Organization newEntity, SILAuth_Organization entity);
+        /*
+        //06/2021 teams dropped from identity
+        Organization GetOrganization(string teamId);
+        List<SILId_Team> GetTeams();
+        Organization OrgFromSILAuth(SILId_Team entity);
+        Organization OrgFromSILAuth(Organization newEntity, SILId_Team entity);
+        SILId_Team CreateTeam(string teamName);
+        string CreateInvite(string email, string teamGuid);
+        SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId);
+        */
         SILAuth_User GetUser(string Auth0Id);
         SILAuth_User UpdateUser(SIL.Transcriber.Models.User user);
-        SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId);
-        int CreateInvite(string email, string orgName, int silOrgId, int silUserId);
-    }
+     }
+
     public class SILIdentityService : ISILIdentityService
     {
         private HttpContext HttpContext;
         private HttpClient silAuthClient;
+        private UserService userService;
         protected ILogger<SILIdentityService> Logger { get; set; }
         public SILIdentityService(
             IHttpContextAccessor httpContextAccessor,
+            UserService UserService,
             ILoggerFactory loggerFactory)
         {
             HttpContext = httpContextAccessor.HttpContext;
             silAuthClient = new HttpClient();
             Uri domainUri = new Uri(GetVarOrThrow("SIL_TR_SILID_DOMAIN"));
             silAuthClient.BaseAddress = domainUri;
-            var jwt = HttpContext.GetJWT().Result;
+            string jwt = HttpContext.GetJWT().Result;
             silAuthClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwt);
             this.Logger = loggerFactory.CreateLogger<SILIdentityService>();
+            userService = UserService;
         }
-
-        public Organization OrgFromSILAuth(Organization newEntity, SILAuth_Organization entity)
+        /*
+        //06/2021 teams dropped from identity
+        public Organization OrgFromSILAuth(Organization newEntity, SILId_Team entity)
         {
-            newEntity.SilId = entity.id;
+            //newEntity.SilGuid = entity.id;
             newEntity.Name = entity.name;
-            newEntity.LogoUrl = entity.logo;
-            newEntity.Description = entity.description;
-            newEntity.WebsiteUrl = entity.websiteurl;
             return newEntity;
         }
-
-        public Organization OrgFromSILAuth(SILAuth_Organization entity)
+        //06/2021 ready
+        public Organization OrgFromSILAuth(SILId_Team entity)
         {
             return OrgFromSILAuth(new Organization(), entity);
         }
-
-        public Organization GetOrganization(int orgId)
+        //06/2021 ready
+        public Organization GetOrganization(string teamGuid)
         {
-            HttpResponseMessage response = silAuthClient.GetAsync("organizations/" + orgId.ToString()).Result;
+            HttpResponseMessage response = silAuthClient.GetAsync("team/" + teamGuid.ToString()).Result;
             if (response.IsSuccessStatusCode)
             {
                 string jsonData = response.Content.ReadAsStringAsync().Result;
-                return OrgFromSILAuth(JsonConvert.DeserializeObject<SILAuth_Organization>(jsonData));
+                return OrgFromSILAuth(JsonConvert.DeserializeObject<SILId_Team>(jsonData));
             }
             else
             {
                 throw new Exception(response.ReasonPhrase);
             }
         }
-        public List<SILAuth_Organization> GetOrganizations()
+        //06/2021 ready
+        public List<SILId_Team> GetTeams()
         {
-            HttpResponseMessage response = silAuthClient.GetAsync("organizations").Result;
+            HttpResponseMessage response = silAuthClient.GetAsync("team").Result;
             if (response.IsSuccessStatusCode)
             {
                 string jsonData = response.Content.ReadAsStringAsync().Result;
-                return JsonConvert.DeserializeObject<List<SILAuth_Organization>>(jsonData);
+                return JsonConvert.DeserializeObject<List<SILId_Team>>(jsonData);
             }
             else
             {
                 throw new Exception(response.ReasonPhrase);
             }
         }
-
-        public List<SILAuth_Organization> GetOrganizations(int SILUser)
+        //06/2021 ready
+        public SILId_Team CreateTeam(string teamName)
         {
-            HttpResponseMessage response = silAuthClient.GetAsync("memberships").Result;
-            if (response.IsSuccessStatusCode)
-            {
-                string jsonData = response.Content.ReadAsStringAsync().Result;
-                List<SILAuth_Membership> memberships = JsonConvert.DeserializeObject<List<SILAuth_Membership>>(jsonData);
-                memberships = memberships.FindAll(m => m.userId == SILUser);
-                string silOrgs = "|";
-                memberships.ForEach(m => silOrgs += m.orgId.ToString() + "|");
+            User user = userService.GetCurrentUser();
+            JObject reqObj = new JObject(
+               new JProperty("name", teamName),
+               new JProperty("leader", user.Email));
 
-                List<SILAuth_Organization> orgs = GetOrganizations();
-                return orgs.FindAll(o => silOrgs.Contains("|" + o.id.ToString() + "|"));
-            }
-            else
-            {
+             HttpResponseMessage response = silAuthClient.PostAsync("team", new StringContent(reqObj.ToString(), Encoding.UTF8, "application/json")).Result;
+             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
-            }
-        }
+            string jsonData = response.Content.ReadAsStringAsync().Result;
+            SILId_Team team = JsonConvert.DeserializeObject<SILId_Team>(jsonData);
+            return team;
+        } */
+        //06/2021 - update to bcp-47
         public SILAuth_User GetUser(string Auth0Id)
         {
             HttpResponseMessage response = silAuthClient.GetAsync("agent/" + Auth0Id).Result;
@@ -119,6 +121,7 @@ namespace SIL.Transcriber.Services
 
             return user;
         }
+        //06/2021 ready - update to bcp-47
         public SILAuth_User UpdateUser(User user)
         {
             SILAuth_User authuser = GetUser(user.ExternalId);
@@ -130,30 +133,35 @@ namespace SIL.Transcriber.Services
                 requestObj.Add("given_name", user.GivenName);
             if (authuser.family_name != user.FamilyName)
                 requestObj.Add("family_name", user.FamilyName);
-            if (requestObj.HasValues)
+            if (requestObj.HasValues && !authuser.user_id.StartsWith("google"))
             {
                 HttpResponseMessage response = silAuthClient.PatchAsync("agent/" + authuser.user_id, new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json")).Result;
 
                 if (!response.IsSuccessStatusCode)
                     throw new Exception(response.ReasonPhrase);
             }
+
             if (authuser.silLocale != user.Locale)
             {
-                HttpResponseMessage response = silAuthClient.PatchAsync("locale/" + user.Locale, new StringContent("{}", Encoding.UTF8, "application/json")).Result;
+                string locale = user.Locale == "en" ? "eng" : "tlh"; //TEMP!!
+                HttpResponseMessage response = silAuthClient.PutAsync("locale/" + locale, new StringContent("", Encoding.UTF8, "application/json")).Result;
                 if (!response.IsSuccessStatusCode)
-                    throw new Exception(response.ReasonPhrase);
-            }
+                    throw new Exception("Locale update error: " + locale + " " + response.ReasonPhrase);
+            } 
+           
             if (authuser.zoneinfo != user.Timezone)
             {
                 JObject reqObj = new JObject(
-                new JProperty("timezone ", user.Timezone));
+                new JProperty("timezone", user.Timezone));
 
-                HttpResponseMessage response = silAuthClient.PatchAsync("timezone/" + authuser.user_id, new StringContent(reqObj.ToString(), Encoding.UTF8, "application/json")).Result;
+                HttpResponseMessage response = silAuthClient.PutAsync("timezone/" + authuser.user_id, new StringContent(reqObj.ToString(), Encoding.UTF8, "application/json")).Result;
                 if (!response.IsSuccessStatusCode)
-                    throw new Exception(response.ReasonPhrase);
+                    throw new Exception("Timezone update error: " + user.Timezone + " " + response.ReasonPhrase);
             }
             return GetUser(user.ExternalId);
         }
+        /*
+        //06/2021 I don't think we can do this in the current identity
         public SILAuth_User CreateUser(string name, string givenName, string familyName, string email, string externalId)
         {
             JObject requestObj = new JObject(
@@ -172,29 +180,24 @@ namespace SIL.Transcriber.Services
             string jsonData = response.Content.ReadAsStringAsync().Result;
            return JsonConvert.DeserializeObject<SILAuth_User>(jsonData);
         }
-        public int CreateInvite(string email, string orgName, int silOrgId, int silUserId)
+        /*
+        /*
+        public string CreateInvite(string email, string teamGuid)
         {
             JObject requestObj = new JObject(
-                new JProperty("email", email),
-                new JProperty("orgId", silOrgId),
-                new JProperty("userId", silUserId));
+                new JProperty("email", email));
+
 
             //call the Identity api and receive an invitation id
-            HttpResponseMessage response = silAuthClient.PostAsync("invite", new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json")).Result;
+            HttpResponseMessage response = silAuthClient.PutAsync("team/"+teamGuid+"/agent", new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json")).Result;
             if (!response.IsSuccessStatusCode)
                 throw new Exception(response.ReasonPhrase);
 
             string jsonData = response.Content.ReadAsStringAsync().Result;
-            SILAuth_Invite invite = JsonConvert.DeserializeObject<SILAuth_Invite>(jsonData);
+            SILId_Invite invite = JsonConvert.DeserializeObject<SILId_Invite>(jsonData);
 
-            requestObj = new JObject(
-                new JProperty("email", email),
-                new JProperty("orgName", orgName),
-                new JProperty("inviteId", invite.id));
-
-            //tell the Identity api to send the email (duh...it should have done that above)
-            silAuthClient.PostAsync("sendEmail", new StringContent(requestObj.ToString(), Encoding.UTF8, "application/json"));
-            return invite.id;
+            return invite.uuid;
         }
+        */
     }
 }

@@ -15,23 +15,11 @@ namespace SIL.Auth.Models
         public DateTime createdAt { get; set; }
         public DateTime updatedAt { get; set; }
     }
-    public class SILAuth_Organization
+    public class SILId_Team
     {
-        public int id { get; set; }
-        public int guid { get; set; }
-        public string uniquekey { get; set; }
-        public int code { get; set; }
+        public string id { get; set; }
         public string name { get; set; }
-        public string description { get; set; }
-        public string logo { get; set; }
-        public string websiteurl { get; set; }
-        public bool verified { get; set; }
-        public string verifiedby { get; set; }
-        public string verifieddate { get; set; }
-        public bool active { get; set; }
-        public int? userId { get; set; }
-        public DateTime createdAt { get; set; }
-        public DateTime updatedAt { get; set; }
+        public string leader { get; set; }
     }
     public class SILAuth_User
     {
@@ -52,14 +40,11 @@ namespace SIL.Auth.Models
         public DateTime updated_at { get; set; }
     }
 
-    public class SILAuth_Invite
+    public class SILId_Invite
     {
-        public int id { get; set; }
-        public string email { get; set; }
-        public int orgId { get; set; }
-        public int userId { get; set; }
-        public DateTime createdAt { get; set; }
-        public DateTime updatedAt { get; set; }
+        public string uuid { get; set; }
+        public string recipient { get; set; }
+        public string type { get; set; }
+        public SILId_Team data { get; set; }
     }
-
 }
