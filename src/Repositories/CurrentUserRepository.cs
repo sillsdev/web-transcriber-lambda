@@ -29,37 +29,31 @@ namespace SIL.Transcriber.Repositories
         private AppDbContext DBContext { get; }
         private ICurrentUserContext CurrentUserContext { get; }
         protected ILogger<User> Logger { get; set; }
-
+        private User curUser;
         // memoize once per local thread,
         // since the current user can't change in a single request
         // this should be ok.
-        public async Task<User> GetCurrentUser()
+        public async Task<User> GetCurrentUser(bool checkForUpdate = false)
         {
-            string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
-
-            User userFromResult = this.DBContext
-                .Users.Local
-                .FirstOrDefault(u => !u.Archived && u.ExternalId.Equals(auth0Id));
-
-            if (userFromResult != null) {
-                return await System.Threading.Tasks.Task.FromResult(userFromResult);
-            }
-
-            User currentUser = await Get()
-                .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
-                .Include(user => user.OrganizationMemberships)
-                .Include(user => user.GroupMemberships)
-                .FirstOrDefaultAsync();
-
-            if (currentUser != null)
+            if (curUser == null)
             {
-                User copy = (User)currentUser.ShallowCopy();
-                copy.OrganizationMemberships = currentUser.OrganizationMemberships.Where(om => !om.Archived).ToList();
-                copy.GroupMemberships = currentUser.GroupMemberships.Where(gm => !gm.Archived).ToList();
+                string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
 
-                return copy;
+                User currentUser = await Get()
+                    .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
+                    .Include(user => user.OrganizationMemberships)
+                    .Include(user => user.GroupMemberships)
+                    .FirstOrDefaultAsync();
+
+                if (currentUser != null)
+                {
+                    User copy = (User)currentUser.ShallowCopy();
+                    copy.OrganizationMemberships = currentUser.OrganizationMemberships.Where(om => !om.Archived).ToList();
+                    copy.GroupMemberships = currentUser.GroupMemberships.Where(gm => !gm.Archived).ToList();
+                    curUser = copy;
+                }
             }
-            return null;
+            return curUser;
         }
         public bool IsSuperAdmin(User currentuser)
         {
