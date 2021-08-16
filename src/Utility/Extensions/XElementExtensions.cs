@@ -119,7 +119,7 @@ namespace TranscriberAPI.Utility.Extensions
             if (value.NextNode == null)
                 return "";
             //ignore cross ref, notes, etc
-            string text = (bool)(value.FirstNode?.NextNode?.IsText()) ? ((XText)value.FirstNode.NextNode).Value  : "";
+            string text = value.FirstNode?.NextNode?.IsText() ?? false ? ((XText)value.FirstNode.NextNode).Value  : "";
             XNode next = value.NextNode;
             while (next != null)
             {
