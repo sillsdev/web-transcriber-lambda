@@ -101,6 +101,7 @@ namespace SIL.Transcriber.Utility
 
         private static XElement MoveToPara(XElement verse)
         {
+            if (verse.IsPara()) return verse;
             string text = verse.VerseText();
             if (verse.Parent.IsPara()) 
             {
@@ -337,20 +338,21 @@ namespace SIL.Transcriber.Utility
                     {   //add before
                         thisVerse = AddParatextVerse(nextVerse, p.Verses, p.LastComment, true);
                     }
-                }
+                } 
                 if (currentPassage.Sequencenum == 1 && first)
                 {
+                    XElement vp = MoveToPara(thisVerse);
                     //add/update the section header
-                    if (thisVerse.PreviousNode.IsSection())
+                    if (vp.PreviousNode.IsSection())
                     {
                         ((XText)((XElement)thisVerse.PreviousNode).FirstNode).Value = currentPassage.Section.SectionHeader(addNumbers);
                     }
                     else
                     {
-                        MoveToPara(thisVerse).AddBeforeSelf(ParatextSection(currentPassage.Section.SectionHeader(addNumbers)));
+                        vp.AddBeforeSelf(ParatextSection(currentPassage.Section.SectionHeader(addNumbers)));
                     }
                     first = false;
-                }
+                } 
             });
             return chapterContent;
         }
