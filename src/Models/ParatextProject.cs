@@ -12,5 +12,8 @@ namespace SIL.Paratext.Models
         public bool IsConnected { get; set; }
         public bool IsConnectable { get; set; }
         public string CurrentUserRole { get; set; }
-   }
+        public string ProjectType { get; internal set; }
+        public string ShortName { get; internal set; }
+        public string BaseProject { get; internal set; }
+    }
 }
