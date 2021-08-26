@@ -63,7 +63,8 @@ namespace SIL.Transcriber.Utility
             if (lines.Length == 1 && !lines[0].EndsWith('\n')) lines[0] += '\n';
             XText newverse = new XText(lines[0]);
             value.AddAfterSelf(newverse);
-            XNode last = value.Parent;
+            XNode last = value.Parent.IsPara() ? value.Parent : value.NextNode;
+
             for (int ix = 1; ix < lines.Length; ix++)
             {
                 last.AddAfterSelf(ParatextPara("p", new XText(lines[ix])));
