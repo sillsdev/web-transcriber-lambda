@@ -214,8 +214,8 @@ namespace SIL.Transcriber.Services
                 subProjects.ForEach(sp =>
                 {
                     if (sp.Name.Length == 0) sp.Name = sp.ProjectType + " " + proj.Name;
-                    sp.LanguageName = (sp.LanguageName.Length > 0 ? "," : "") + proj.LanguageName;
-                    sp.LanguageTag = (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
+                    sp.LanguageName += (sp.LanguageName.Length > 0 ? "," : "") + proj.LanguageName;
+                    sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
             }
             return projects;
