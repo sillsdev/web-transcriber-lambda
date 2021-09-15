@@ -199,13 +199,23 @@ namespace SIL.Transcriber.Services
                 proj.Name = name;
                 proj.LanguageName = langName;
                 proj.LanguageTag = langTag;
-
+            }
+            //now go through them again to link BT to base project
+            foreach (JToken projectObj in projectArray)
+            {
+                JToken identificationObj = projectObj["identification_systemId"]
+                    .FirstOrDefault(id => (string)id["type"] == "paratext");
+                if (identificationObj == null)
+                    continue;
+                string paratextId = (string)identificationObj["text"];
+                ParatextProject proj = projects.FirstOrDefault(p => p.ParatextId == paratextId);
                 List<ParatextProject> subProjects = projects.FindAll(p => p.BaseProject == paratextId);
+
                 subProjects.ForEach(sp =>
                 {
-                    sp.Name = sp.ProjectType + " " + name;
-                    sp.LanguageName = langName;
-                    sp.LanguageTag = langTag;
+                    if (sp.Name.Length == 0) sp.Name = sp.ProjectType + " " + proj.Name;
+                    sp.LanguageName += (sp.LanguageName.Length > 0 ? "," : "") + proj.LanguageName;
+                    sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
             }
             return projects;
@@ -213,7 +223,7 @@ namespace SIL.Transcriber.Services
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag)
         {
             IReadOnlyList<ParatextProject> projects = await GetProjectsAsync(userSecret);
-            return projects.Where(p => p.LanguageTag == languageTag).ToList();
+            return projects.Where(p => p.LanguageTag.Split(",").Contains(languageTag)).ToList();
         }
 
         public async Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId)
