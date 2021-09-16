@@ -24,13 +24,16 @@ namespace SIL.Transcriber.Forms.Groups
         }
         public bool IsValid(int id)
         {
+            /*  if it's not there...don't worry about it
+             *  if it still has projects...don't worry about it.  The only way to delete a group currently in the UI
+             *  is to delete the team...which automatically deletes the projects.  So if we're out of sync...no worries.
             Group group = GroupRepository.Get().Where(g => g.Id == id).FirstOrDefaultAsync().Result;
             if (group == null)
             {
                AddError("Record being deleted not found", 404);
             }
             else
-            {
+            { 
                 bool projectsExist = ProjectRepository.Get()
                                         .Where(p => p.GroupId == group.Id && !p.Archived)
                                         .Any();
@@ -38,7 +41,7 @@ namespace SIL.Transcriber.Forms.Groups
                 {
                     AddError("Project exists for this group");
                 }
-            }
+            } */
             return base.IsValid();
         }
     }
