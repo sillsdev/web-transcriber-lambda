@@ -42,10 +42,21 @@ namespace SIL.Transcriber.Repositories
             dbContext.SaveChanges();
             return sections;
         }
-
+        public List<Section> BulkDeleteSections(List<Section> sections)
+        {
+            dbContext.RemoveRange(sections);
+            dbContext.SaveChanges();
+            return sections;
+        }
         public List<Passage> BulkUpdatePassages(List<Passage> passages)
         {
             dbContext.UpdateRange(passages);
+            dbContext.SaveChanges();
+            return passages;
+        }
+        public List<Passage> BulkDeletePassages(List<Passage> passages)
+        {
+            dbContext.RemoveRange(passages);
             dbContext.SaveChanges();
             return passages;
         }

@@ -42,7 +42,7 @@ namespace SIL.Transcriber.Forms.Groups
                     AddError("Project exists for this group");
                 }
             } */
-            return base.IsValid();
+            return IsValid();
         }
     }
 }

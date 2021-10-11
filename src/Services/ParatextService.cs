@@ -342,11 +342,13 @@ namespace SIL.Transcriber.Services
             
             userSecret.ParatextTokens.AccessToken = (string)responseObj["access_token"];
             userSecret.ParatextTokens.RefreshToken = (string)responseObj["refresh_token"];
-            await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
+            if (userSecret.ParatextTokens.RefreshToken != null)
+                await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
+            else throw new Exception("401 RefreshTokenNull.  Expected on Dev and QA.  Login again with Paratext connection.");
 
             //log it
             //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
-            
+
             return userSecret;
         }
 

@@ -28,7 +28,15 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("projects")]
         public async Task<ActionResult<IEnumerable<ParatextProject>>> GetAsync()
         {
-            UserSecret userSecret = _paratextService.ParatextLogin();
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
             try
             {
                 IReadOnlyList<ParatextProject> projects = await _paratextService.GetProjectsAsync(userSecret);
@@ -42,7 +50,15 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("projects/{languagetag}")]
         public async Task<ActionResult<IEnumerable<ParatextProject>>> GetAsync([FromRoute] string languageTag)
         {
-            UserSecret userSecret = _paratextService.ParatextLogin();
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
             try
             {
                 IReadOnlyList<ParatextProject> projects = await _paratextService.GetProjectsAsync(userSecret, languageTag);
@@ -59,7 +75,15 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("username")]
         public ActionResult<string> Username()
         {
-            UserSecret userSecret = _paratextService.ParatextLogin();
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
 
             string username = _paratextService.GetParatextUsername(userSecret);
             return Ok(username);
@@ -68,7 +92,15 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("section/{sectionid}")]
         public async Task<ActionResult<List<ParatextChapter>>> GetSectionBookAsync([FromRoute] int sectionId)
         {
-            UserSecret userSecret = _paratextService.ParatextLogin();
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
             List<ParatextChapter> chapters = await _paratextService.GetSectionChaptersAsync(userSecret, sectionId);
             return Ok(chapters);
         }
@@ -96,14 +128,32 @@ namespace SIL.Transcriber.Controllers
         [HttpPost("plan/{planid}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostPlanAsync([FromRoute] int planId)
         {
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
             /* get all the sections that are ready to sync */
-            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(_paratextService.ParatextLogin(), planId);
+            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(userSecret, planId);
             return Ok(chapters);
         }
         [HttpPost("project/{projectid}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostProjectAsync([FromRoute] int projectId)
         {
-            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(_paratextService.ParatextLogin(), projectId);
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
+            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(userSecret, projectId);
             return Ok();
         }
 
