@@ -153,17 +153,33 @@ namespace SIL.Transcriber.Services
             string username = usernameClaim?.Value;
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, "projects");
             XElement reposElem = XElement.Parse(response);
-            Dictionary<string, string> repos = new Dictionary<string, string>();
+            List<ParatextProject> projects = new List<ParatextProject>();
             foreach (XElement repoElem in reposElem.Elements("repo"))
             {
                 string projId = (string)repoElem.Element("projid");
                 XElement userElem = repoElem.Element("users")?.Elements("user")
                     ?.FirstOrDefault(ue => (string)ue.Element("name") == username);
-                repos[projId] = (string)userElem?.Element("role");
+                string role = (string)userElem?.Element("role");
+                IEnumerable<string> projectids = ProjectService.LinkedToParatext(projId).Select(p => p.Id.ToString());
+
+                projects.Add(new ParatextProject
+                {
+                    ParatextId = projId,
+                    ProjectType = (string)repoElem.Element("projecttype"),
+                    BaseProject = (string)repoElem.Element("baseprojid"),
+                    ShortName = (string)repoElem.Element("proj"),
+                    Name = "",
+                    LanguageTag = "",
+                    LanguageName = "",
+                    ProjectIds = projectids,
+                    IsConnectable = (role == ParatextProjectRoles.Administrator || role == ParatextProjectRoles.Translator),
+                    CurrentUserRole = role,
+                });
             }
+            //get more info for those projects that are registered
             response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "projects");
             JArray projectArray = JArray.Parse(response);
-            List<ParatextProject> projects = new List<ParatextProject>();
+
             foreach (JToken projectObj in projectArray)
             {
                 JToken identificationObj = projectObj["identification_systemId"]
@@ -171,47 +187,43 @@ namespace SIL.Transcriber.Services
                 if (identificationObj == null)
                     continue;
                 string paratextId = (string)identificationObj["text"];
-                if (!repos.TryGetValue(paratextId, out string role))
+                ParatextProject proj = projects.FirstOrDefault(p => p.ParatextId == paratextId);
+                if (proj == null)
                     continue;
 
-                // determine if the project is connectable, i.e. either the project exists and the user hasn't been
-                // added to the project, or the project doesn't exist and the user is the administrator
-                bool isConnected = false;
-                bool isConnectable = false;
-                IEnumerable<string> projectids = ProjectService.LinkedToParatext(paratextId).Select(p => p.Id.ToString());
-                if (projects != null && projects.Count() > 0)
-                {
-                    isConnected = true;
-                    isConnectable = true;// !project.UserRoles.ContainsKey(userSecret.Id);
-                }
-                else if (role == ParatextProjectRoles.Administrator || role == ParatextProjectRoles.Translator)
-                {
-                    isConnectable = true;
-                }
-
+                string name = (string)identificationObj["fullname"];
                 string langName = (string)projectObj["language_iso"];
+                string langTag = (string)projectObj["language_ldml"];
                 //if (StandardSubtags.TryGetLanguageFromIso3Code(langName, out LanguageSubtag subtag))
-                //    langName = subtag.Name;
+                //   langName = subtag.Name;
+                proj.Name = name;
+                proj.LanguageName = langName;
+                proj.LanguageTag = langTag;
+            }
+            //now go through them again to link BT to base project
+            foreach (JToken projectObj in projectArray)
+            {
+                JToken identificationObj = projectObj["identification_systemId"]
+                    .FirstOrDefault(id => (string)id["type"] == "paratext");
+                if (identificationObj == null)
+                    continue;
+                string paratextId = (string)identificationObj["text"];
+                ParatextProject proj = projects.FirstOrDefault(p => p.ParatextId == paratextId);
+                List<ParatextProject> subProjects = projects.FindAll(p => p.BaseProject == paratextId);
 
-                projects.Add(new ParatextProject
+                subProjects.ForEach(sp =>
                 {
-                    ParatextId = paratextId,
-                    Name = (string)identificationObj["fullname"],
-                    LanguageTag = (string)projectObj["language_ldml"],
-                    LanguageName = langName,
-                    ProjectIds = projectids,
-                    IsConnected = isConnected,
-                    IsConnectable = isConnectable,
-                    CurrentUserRole = role,
+                    if (sp.Name.Length == 0) sp.Name = sp.ProjectType + " " + proj.Name;
+                    sp.LanguageName += (sp.LanguageName.Length > 0 ? "," : "") + proj.LanguageName;
+                    sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
             }
-
             return projects;
         }
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag)
         {
             IReadOnlyList<ParatextProject> projects = await GetProjectsAsync(userSecret);
-            return projects.Where(p => p.LanguageTag == languageTag).ToList();
+            return projects.Where(p => p.LanguageTag.Split(",").Contains(languageTag)).ToList();
         }
 
         public async Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId)
@@ -330,11 +342,13 @@ namespace SIL.Transcriber.Services
             
             userSecret.ParatextTokens.AccessToken = (string)responseObj["access_token"];
             userSecret.ParatextTokens.RefreshToken = (string)responseObj["refresh_token"];
-            await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
+            if (userSecret.ParatextTokens.RefreshToken != null)
+                await _userSecretRepository.UpdateAsync(userSecret.ParatextTokens.Id, userSecret.ParatextTokens);
+            else throw new Exception("401 RefreshTokenNull.  Expected on Dev and QA.  Login again with Paratext connection.");
 
             //log it
             //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
-            
+
             return userSecret;
         }
 

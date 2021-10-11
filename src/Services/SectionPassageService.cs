@@ -64,9 +64,10 @@ namespace SIL.Transcriber.Services
                 try
                 {
                     IEnumerable<JToken> updsecs = data.Where(d => (bool)d[0]["issection"] && (bool)d[0]["changed"]);
+
                     //add all sections
                     List<Section> updsections = new List<Section>();
-
+                   
                     foreach (JArray item in updsecs)
                     {
                         updsections.Add(item[0]["id"] != null && item[0]["id"].ToString() != "" ? MyRepository.GetSection((int)item[0]["id"]).UpdateFrom(item[0]) : new Section(item[0], entity.PlanId));
@@ -85,6 +86,7 @@ namespace SIL.Transcriber.Services
                     /* process all the passages now */
                     List<JToken> updpass = new List<JToken>();
                     List<Passage> updpassages = new List<Passage>();
+                    List<Passage> delpassages = new List<Passage>();
                     foreach (JArray item in data)
                     {
                         if ((bool)item[0]["issection"])
@@ -92,10 +94,15 @@ namespace SIL.Transcriber.Services
                             if (item[0]["id"] != null && item[0]["id"].ToString() != "")  //saving in chunks may not have saved this section...passages will be marked unchanged
                             {
                                 lastSectionId = (int)item[0]["id"];
-                                if (item.Count > 1 && (bool)item[1]["changed"])
+                                if (item.Count > 1)
                                 {
-                                    updpass.Add(item);
-                                    updpassages.Add(item[1]["id"] != null && item[1]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
+                                    if ((bool)item[1]["changed"]) {
+                                        updpass.Add(item);
+                                        updpassages.Add(item[1]["id"] != null && item[1]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
+                                    } else if(item[1]["deleted"] != null && (bool)item[1]["deleted"])
+                                    {
+                                        delpassages.Add(MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]));
+                                    }  
                                 }
                             }
                         }
@@ -103,6 +110,9 @@ namespace SIL.Transcriber.Services
                         {
                             updpass.Add(item);
                             updpassages.Add(item[0]["id"] != null && item[0]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]): new Passage(item[0], lastSectionId));
+                        } else if (item[0]["deleted"] != null && (bool)item[0]["deleted"])
+                        {
+                            delpassages.Add(MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]));
                         }
                     }
                      if (updpassages.Count > 0)
@@ -117,6 +127,18 @@ namespace SIL.Transcriber.Services
                             ix++;
                         }
                     }
+                    if (delpassages.Count > 0)
+                    {
+                        MyRepository.BulkDeletePassages(delpassages);
+                        delpassages.ForEach(p => MyRepository.UpdateSectionModified(p.SectionId));
+                    }
+                    IEnumerable<JToken> delsecs = data.Where(d => (bool)d[0]["issection"] && d[0]["deleted"] != null && (bool)d[0]["deleted"]);
+                    List<Section> delsections = new List<Section>();
+                    foreach (JArray item in delsecs)
+                    {
+                        delsections.Add(MyRepository.GetSection((int)item[0]["id"]));
+                    }
+                    MyRepository.BulkDeleteSections(delsections);
                     MyRepository.UpdatePlanModified(entity.PlanId);
                     transaction.Commit();
                     entity.Data = JsonConvert.SerializeObject(data);
