@@ -729,12 +729,13 @@ namespace SIL.Transcriber.Services
                                     if (m.Id > 0)
                                     {
                                         mediafile = dbContext.Mediafiles.Find(m.Id);
-                                        if (!mediafile.Archived && mediafile.Transcription != m.Transcription)
+                                        if (!mediafile.Archived && (mediafile.Transcription != m.Transcription || mediafile.Segments != m.Segments))
                                         {
                                             if (mediafile.DateUpdated > sourceDate)
                                                 report.Add(MediafileChangesReport(mediafile, m));
                                             mediafile.Position = m.Position;
                                             mediafile.Transcription = m.Transcription;
+                                            mediafile.Segments = m.Segments;
                                             mediafile.LastModifiedBy = m.LastModifiedBy;
                                             mediafile.DateUpdated = DateTime.UtcNow;
                                             dbContext.Mediafiles.Update(mediafile);
@@ -747,6 +748,7 @@ namespace SIL.Transcriber.Services
                                         mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
                                         Mediafile newmf = (Mediafile)mediafile.ShallowCopy();
                                         newmf.Transcription = m.Transcription;
+                                        newmf.Segments = m.Segments;
                                         newmf.Id = 0;
                                         newmf.LastModifiedBy = m.LastModifiedBy;
                                         newmf.DateCreated = m.DateCreated;
