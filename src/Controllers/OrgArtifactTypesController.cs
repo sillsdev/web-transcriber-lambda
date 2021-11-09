@@ -1,0 +1,20 @@
+﻿using JsonApiDotNetCore.Services;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
+using Microsoft.Extensions.Logging;
+
+namespace SIL.Transcriber.Controllers
+{
+    public class OrgartifacttypesController : BaseController<OrgArtifactType>
+    {
+        public OrgartifacttypesController(
+             ILoggerFactory loggerFactory,
+            IJsonApiContext jsonApiContext,
+            IResourceService<OrgArtifactType> resourceService,
+            ICurrentUserContext currentUserContext,
+            OrganizationService organizationService,
+            UserService userService)
+          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+        { }
+    }
+}
