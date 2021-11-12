@@ -52,8 +52,6 @@ namespace SIL.Transcriber
             services.AddHttpContextAccessor();
 
             // Add service / repository overrides
-            services.AddScoped<IEntityRepository<ArtifactCategory>, ArtifactCategoryRepository>();
-            services.AddScoped<IEntityRepository<ArtifactType>, ArtifactTypeRepository>();
             services.AddScoped<IEntityRepository<Comment>, CommentRepository>();
             services.AddScoped<IEntityRepository<CurrentVersion>, CurrentVersionRepository>();
             services.AddScoped<IEntityRepository<Dashboard>, DashboardRepository>();
@@ -66,8 +64,8 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             services.AddScoped<IEntityRepository<OrganizationMembership>, OrganizationMembershipRepository>();
-            services.AddScoped<IEntityRepository<OrgArtifactCategory>, OrgArtifactCategoryRepository>();
-            services.AddScoped<IEntityRepository<OrgArtifactType>, OrgArtifactTypeRepository>();
+            services.AddScoped<IEntityRepository<ArtifactCategory>, ArtifactCategoryRepository>();
+            services.AddScoped<IEntityRepository<ArtifactType>, ArtifactTypeRepository>();
             services.AddScoped<IEntityRepository<OrgData>, OrgDataRepository>();
             services.AddScoped<IEntityRepository<OrgWorkflowStep>, OrgWorkflowStepRepository>();
             services.AddScoped<AppDbContextRepository<ParatextToken>, ParatextTokenRepository>();
@@ -95,8 +93,6 @@ namespace SIL.Transcriber
             services.AddScoped<LoggingDbContextRepository<ParatextTokenHistory>, ParatextTokenHistoryRepository>();
             // services
             services.AddScoped<IResourceService<Activitystate>, ActivitystateService>();
-            services.AddScoped<IResourceService<ArtifactType>, ArtifactTypeService>();
-            services.AddScoped<IResourceService<ArtifactCategory>, ArtifactCategoryService>();
             services.AddScoped<IResourceService<Comment>, CommentService>();
             services.AddScoped<IResourceService<CurrentVersion>, CurrentVersionService>();
             services.AddScoped<IResourceService<DataChanges>, DataChangeService>(); 
@@ -109,8 +105,8 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Mediafile>, MediafileService>();
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
-            services.AddScoped<IResourceService<OrgArtifactType>, OrgArtifactTypeService>();
-            services.AddScoped<IResourceService<OrgArtifactCategory>, OrgArtifactCategoryService>();
+            services.AddScoped<IResourceService<ArtifactType>, ArtifactTypeService>();
+            services.AddScoped<IResourceService<ArtifactCategory>, ArtifactCategoryService>();
             services.AddScoped<IResourceService<OrgWorkflowStep>, OrgWorkflowStepService>();
             services.AddScoped<IResourceService<ParatextToken>, ParatextTokenService>();
             services.AddScoped<IResourceService<ParatextTokenHistory>, ParatextTokenHistoryService>();
@@ -138,8 +134,6 @@ namespace SIL.Transcriber
 
 
             // EventDispatchers
-            services.AddScoped<ArtifactCategoryRepository>();
-            services.AddScoped<ArtifactTypeRepository>();
             services.AddScoped<CommentRepository>();
             services.AddScoped<CurrentVersionRepository>();
             services.AddScoped<DashboardRepository>();
@@ -153,8 +147,8 @@ namespace SIL.Transcriber
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationRepository>();
-            services.AddScoped<OrgArtifactCategoryRepository>();
-            services.AddScoped<OrgArtifactTypeRepository>();
+            services.AddScoped<ArtifactCategoryRepository>();
+            services.AddScoped<ArtifactTypeRepository>();
             services.AddScoped<OrgDataRepository>();
             services.AddScoped<OrgWorkflowStepRepository>();
             services.AddScoped<ParatextTokenRepository>();
@@ -178,8 +172,6 @@ namespace SIL.Transcriber
             services.AddScoped<ParatextTokenHistoryRepository>();
 
             services.AddScoped<ActivitystateService>();
-            services.AddScoped<ArtifactCategoryService>();
-            services.AddScoped<ArtifactTypeService>();
             services.AddScoped<CommentService>();
             services.AddScoped<CurrentVersionService>();
             services.AddScoped<DataChangeService>();
@@ -193,8 +185,8 @@ namespace SIL.Transcriber
             services.AddScoped<OfflineDataService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();
-            services.AddScoped<OrgArtifactCategoryService>();
-            services.AddScoped<OrgArtifactTypeService>();
+            services.AddScoped<ArtifactCategoryService>();
+            services.AddScoped<ArtifactTypeService>();
             services.AddScoped<OrgDataService>();
             services.AddScoped<OrgWorkflowStepService>();
             services.AddScoped<ParatextTokenService>();

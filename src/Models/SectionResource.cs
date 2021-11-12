@@ -21,12 +21,9 @@ namespace SIL.Transcriber.Models
         [HasOne("steps", Link.None)]
         public int[] Steps { get; set; }
 
-        [HasMany("section-resource-org-workflow-steps", Link.None)]
-        public List<SectionResourceOrgWorkflowStep> SectionResourceOrgWorkflowSteps { get; set; }
-
-        [NotMapped]
-        [HasMany("org-workflow-steps", Link.None)]
-        public IEnumerable<OrgWorkflowStep> OrgWorkflowSteps => SectionResourceOrgWorkflowSteps?.Where(sr => !sr.Archived).Select(sr => sr.OrgWorkflowStep);
+        public int orgWorkflowStepId { get; set; }
+        [HasOne("org-workflow-step", Link.None)]
+        public OrgWorkflowStep OrgWorkflowStep { get; set; }
 
         [HasMany("section-resource-users", Link.None)]
         public List<SectionResourceUser> SectionResourceUsers { get; set; }

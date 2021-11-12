@@ -14,6 +14,7 @@ namespace SIL.Transcriber.Utility.Extensions.JSONAPI
         public static string DATA_START_INDEX = "start-index";
         public static string PLANID = "plan-id";
         public static string IDLIST = "id-list";
+        public static string VERSION = "json";
 
         public static bool Has(this FilterQuery filterQuery, string param)
         {

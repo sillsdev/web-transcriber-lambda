@@ -103,6 +103,10 @@ namespace SIL.Transcriber.Repositories
                 string[] idList = filterQuery.Value.Split("|");
                 return entities.Where(e => idList.Any(i => i == e.Id.ToString()));
             }
+
+            if (filterQuery.Has(VERSION))
+                return entities;
+            
             return base.Filter(entities, filterQuery);
         }
     }
