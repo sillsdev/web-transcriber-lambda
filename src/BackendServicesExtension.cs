@@ -75,6 +75,7 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<ProjData>, ProjDataRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
             services.AddScoped<IEntityRepository<ProjectIntegration>, ProjectIntegrationRepository>();
+            services.AddScoped<IEntityRepository<Resource>, ResourceRepository>();
             services.AddScoped<IEntityRepository<Role>, RoleRepository>();
             services.AddScoped<IEntityRepository<Section>, SectionRepository>();
             services.AddScoped<IEntityRepository<SectionPassage>, SectionPassageRepository>();
@@ -157,6 +158,7 @@ namespace SIL.Transcriber
             services.AddScoped<ProjDataRepository>();
             services.AddScoped<ProjectIntegrationRepository>();
             services.AddScoped<ProjectRepository>();
+            services.AddScoped<ResourceRepository>();
             services.AddScoped<RoleRepository>();
             services.AddScoped<VwPassageStateHistoryEmailRepository>();
             services.AddScoped<WorkflowStepRepository>();
