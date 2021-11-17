@@ -78,7 +78,6 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Role>, RoleRepository>();
             services.AddScoped<IEntityRepository<Section>, SectionRepository>();
             services.AddScoped<IEntityRepository<SectionPassage>, SectionPassageRepository>();
-            services.AddScoped<IEntityRepository<SectionResourceOrgWorkflowStep>, SectionResourceOrgWorkflowStepRepository>();
             services.AddScoped<IEntityRepository<SectionResource>, SectionResourceRepository>();
             services.AddScoped<IEntityRepository<SectionResourceUser>, SectionResourceUserRepository>();
             services.AddScoped<IEntityRepository<User>, UserRepository>();
@@ -117,11 +116,11 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<ProjectIntegration>, ProjectIntegrationService>();
             services.AddScoped<IResourceService<Section>, SectionService>();
             services.AddScoped<IResourceService<SectionResource>, SectionResourceService>();
-            services.AddScoped<IResourceService<SectionResourceOrgWorkflowStep>, SectionResourceOrgWorkflowStepService>();
             services.AddScoped<IResourceService<SectionResourceUser>, SectionResourceUserService>(); 
             services.AddScoped<IResourceService<User>, UserService>();
             services.AddScoped<IResourceService<UserVersion>, UserVersionService>();
             services.AddScoped<IResourceService<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailService>();
+            services.AddScoped<IResourceService<WorkflowStep>, WorkflowStepService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
             services.AddScoped<IOfflineDataService, OfflineDataService>();
@@ -159,11 +158,11 @@ namespace SIL.Transcriber
             services.AddScoped<ProjectIntegrationRepository>();
             services.AddScoped<ProjectRepository>();
             services.AddScoped<RoleRepository>();
-            services.AddScoped<VwPassageStateHistoryEmailRepository>(); 
+            services.AddScoped<VwPassageStateHistoryEmailRepository>();
+            services.AddScoped<WorkflowStepRepository>();
             services.AddScoped<SectionRepository>();
             services.AddScoped<SectionPassageRepository>();
             services.AddScoped<SectionResourceRepository>();
-            services.AddScoped<SectionResourceOrgWorkflowStepRepository>();
             services.AddScoped<SectionResourceUserRepository>();
             services.AddScoped<UserRepository>();
             services.AddScoped<UserVersionRepository>();
@@ -200,11 +199,11 @@ namespace SIL.Transcriber
             services.AddScoped<SectionPassageService>();
             services.AddScoped<SectionResourceService>();
             services.AddScoped<SectionResourceUserService>();
-            services.AddScoped<SectionResourceOrgWorkflowStepService>();
             services.AddScoped<UserService>();
             services.AddScoped<UserVersionService>();
             services.AddScoped<VwPassageStateHistoryEmailService>();
-            
+            services.AddScoped<WorkflowStepService>();
+
             services.AddSingleton<IAuthService, AuthService>();
             return services;
         }

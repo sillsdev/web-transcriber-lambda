@@ -185,8 +185,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Section> Sections { get; set; }
         public DbSet<SectionPassage> Sectionpassages { get; set; }
         public DbSet<SectionResource> Sectionresources { get; set; }
-        public DbSet<SectionResourceOrgWorkflowStep> Sectionresourcesorgworkflowsteps { get; set; }
-        public DbSet<SectionResourceUser> Sectionresourcesusers { get; set; }
+        public DbSet<SectionResourceUser> Sectionresourceusers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<UserVersion> UserVersions { get; set; }
         public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }

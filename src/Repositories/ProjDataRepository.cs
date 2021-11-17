@@ -88,11 +88,11 @@ namespace SIL.Transcriber.Repositories
                 if (version > 3)
                 {
                     //discussions
-                    IQueryable<Discussion> discussions = dbContext.Discussions.Join(mediafiles, d => d.Mediafileid, m => m.Id, (d, m) => d).Where(x => !x.Archived);
+                    IQueryable<Discussion> discussions = dbContext.Discussions.Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d).Where(x => !x.Archived);
                     if (!CheckAdd(5, discussions, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
 
                     //comments
-                    if (!CheckAdd(6, dbContext.Comments.Join(discussions, c => c.Discussionid, d => d.Id, (c, d) => c).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                    if (!CheckAdd(6, dbContext.Comments.Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 }
                 iStartNext = -1; //Done!
             } while (false); //do it once

@@ -39,8 +39,8 @@ namespace SIL.Transcriber.Repositories
         private IQueryable<Comment> PlansComments(IQueryable<Comment> entities, IQueryable<Plan> plans)
         {
             IQueryable<Mediafile> mediafiles = dbContext.Mediafiles.Join(plans, (m => m.PlanId), p => p.Id, (m, p) => m);
-            IQueryable<Discussion> discussions = dbContext.Discussions.Join(mediafiles, (d => d.Mediafileid), m => m.Id, (d,m) => d);
-            return entities.Join(discussions, c => c.Discussionid, d => d.Id, (c,d) => c);
+            IQueryable<Discussion> discussions = dbContext.Discussions.Join(mediafiles, (d => d.MediafileId), m => m.Id, (d,m) => d);
+            return entities.Join(discussions, c => c.DiscussionId, d => d.Id, (c,d) => c);
         }
 
         private IQueryable<Comment> UsersComments(IQueryable<Comment> entities, IQueryable<Plan> plans = null)

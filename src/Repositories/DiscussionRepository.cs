@@ -39,7 +39,7 @@ namespace SIL.Transcriber.Repositories
         private IQueryable<Discussion> PlansDiscussions(IQueryable<Discussion> entities, IQueryable<Plan> plans)
         {
             IQueryable<Mediafile> mediafiles = dbContext.Mediafiles.Join(plans, (m => m.PlanId), p => p.Id, (m, p) => m);
-            return dbContext.Discussions.Join(mediafiles, (d => d.Mediafileid), m => m.Id, (d, m) => d);
+            return dbContext.Discussions.Join(mediafiles, (d => d.MediafileId), m => m.Id, (d, m) => d);
         }
 
         private IQueryable<Discussion> UsersDiscussions(IQueryable<Discussion> entities, IQueryable<Plan> plans = null)

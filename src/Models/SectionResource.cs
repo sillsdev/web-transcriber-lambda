@@ -18,9 +18,6 @@ namespace SIL.Transcriber.Models
         [HasOne("mediafile", Link.None)]
         public Mediafile Mediafile { get; set; }
 
-        [HasOne("steps", Link.None)]
-        public int[] Steps { get; set; }
-
         public int orgWorkflowStepId { get; set; }
         [HasOne("org-workflow-step", Link.None)]
         public OrgWorkflowStep OrgWorkflowStep { get; set; }

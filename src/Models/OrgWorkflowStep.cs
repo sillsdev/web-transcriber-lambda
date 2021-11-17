@@ -9,7 +9,7 @@ namespace SIL.Transcriber.Models
         [HasOne("organization", Link.None)]
         public Organization Organization { get; set; }
 
-        public int ParentId { get; set; }
+        public int? ParentId { get; set; }
         [HasOne("parent", Link.None)]
         public OrgWorkflowStep Parent { get; set; }  
     }
