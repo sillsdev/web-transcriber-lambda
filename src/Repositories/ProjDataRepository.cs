@@ -93,6 +93,12 @@ namespace SIL.Transcriber.Repositories
 
                     //comments
                     if (!CheckAdd(6, dbContext.Comments.Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                    
+                    IQueryable<SectionResource> sectionresources = dbContext.Sectionresources.Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr).Where(x => !x.Archived);
+                    if (!CheckAdd(7, sectionresources, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                   
+                    IQueryable<SectionResourceUser> srusers = dbContext.Sectionresourceusers.Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u).Where(x => !x.Archived);
+                    if (!CheckAdd(8, srusers, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 }
                 iStartNext = -1; //Done!
             } while (false); //do it once

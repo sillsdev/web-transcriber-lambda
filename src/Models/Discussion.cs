@@ -8,7 +8,7 @@ namespace SIL.Transcriber.Models
     {
         [Attr("subject")]
         public string Subject { get; set; }
-        public int MediafileId { get; set; }
+        public int? MediafileId { get; set; }
         [HasOne("mediafile", Link.None)]
         public Mediafile Mediafile { get; set; }
         [Attr("segments")]

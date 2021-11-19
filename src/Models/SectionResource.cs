@@ -7,13 +7,19 @@ namespace SIL.Transcriber.Models
 {
     public partial class SectionResource : BaseModel, IArchive
     {
+        [Attr("sequence-num")]
+        public int SequenceNum { get; set; }
+
+        [Attr("description")]
+        public string Description { get; set; }
+
         [Attr("section-id")]
         public int SectionId { get; set; }
 
         [HasOne("section", Link.None)]
         public Section Section { get; set; }
         [Attr("mediafile-id")]
-        public int MediafileId { get; set; }
+        public int? MediafileId { get; set; }
 
         [HasOne("mediafile", Link.None)]
         public Mediafile Mediafile { get; set; }

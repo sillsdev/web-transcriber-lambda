@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class SectionResourcesController : BaseController<SectionResource>
+    public class SectionresourcesController : BaseController<SectionResource>
     {
-        public SectionResourcesController(
+        public SectionresourcesController(
              ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             IResourceService<SectionResource> resourceService,

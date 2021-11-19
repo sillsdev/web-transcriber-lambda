@@ -29,8 +29,9 @@ namespace SIL.Transcriber.Models
         public string SectionName { get; set; }
         [Attr("section-sequencenum")]
         public int? SectionSequencenum { get; set; }
-        
 
+
+        [Attr("passage-id")]
         public int Passageid { get; set; }
         [Attr("passage-sequencenum")]
         public int PassageSequencenum { get; set; }
