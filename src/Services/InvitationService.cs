@@ -17,6 +17,7 @@ namespace SIL.Transcriber.Services
     {
         private ILoggerFactory LoggerFactory;
         private OrganizationService OrganizationService;
+        private UserRepository UserRepository;
         private GroupMembershipRepository GroupMembershipRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
 
@@ -24,6 +25,7 @@ namespace SIL.Transcriber.Services
             IJsonApiContext jsonApiContext,
             InvitationRepository invitationRepository,
             OrganizationService organizationService,
+            UserRepository userRepository,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
             ILoggerFactory loggerFactory
@@ -32,6 +34,7 @@ namespace SIL.Transcriber.Services
             LoggerFactory = loggerFactory;
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
+            UserRepository = userRepository;
             GroupMembershipRepository = groupMembershipRepository;
         }
         public override async Task<IEnumerable<Invitation>> GetAsync()
@@ -110,6 +113,8 @@ namespace SIL.Transcriber.Services
                         oldentity.GroupRoleId = (int)RoleName.Transcriber;
                     GroupMembershipRepository.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
                 }
+                //update the user so all other users in the new org get the user downloaded with the next datachange
+                UserRepository.Refresh( currentUser);
             }
             return await base.UpdateAsync(id, entity);
         }

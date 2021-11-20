@@ -114,5 +114,23 @@ namespace SIL.Transcriber.Repositories
                        .Include(user => user.GroupMemberships)
                        .FirstOrDefaultAsync();
         }
+
+        public void Refresh(User u)
+        {
+            User local = dbContext.Set<User>().Local.FirstOrDefault(entry => entry.Id.Equals(u.Id));
+
+             // check if local is not null 
+             if (local != null)
+             {
+                 dbContext.Entry(local).State = EntityState.Detached;
+             }
+             else
+             {
+                local = u;
+             }
+            local.LastModifiedOrigin = "refresh";  //this will get overwritten but just change something to force a save
+            dbContext.Update(local);
+            dbContext.SaveChanges();
+        }
     }
 }
