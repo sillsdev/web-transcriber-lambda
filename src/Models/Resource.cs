@@ -60,8 +60,7 @@ namespace SIL.Transcriber.Models
         public string S3File { get; set; }
         [Attr("filesize")]
         public long Filesize { get; set; }
-        public bool Archived { get; set; }
-
+        
         [Attr("languagebcp47")]
         public string Languagebcp47 { get; set; }
 
