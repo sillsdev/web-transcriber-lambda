@@ -40,8 +40,8 @@ namespace SIL.Transcriber.Models
         public string Book { get; set; }
         [Attr("reference")]
         public string Reference { get; set; }
-        [Attr("passage")]
-        public string Passage { get; set; }
+        [Attr("passage-desc")]
+        public string PassageDesc { get; set; }
         [Attr("version-number")]
         public int? VersionNumber { get; set; }
 

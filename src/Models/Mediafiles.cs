@@ -66,6 +66,7 @@ namespace SIL.Transcriber.Models
         public string PerformedBy { get; set; }
         [Attr("ready-to-share")]
         public bool ReadyToShare { get; set; }
+        [Attr("resource-passage-id")]
         public int? ResourcePassageId { get; set; }
         [HasOne("resource-passage", Link.None)]
         public Passage ResourcePassage { get; set; }

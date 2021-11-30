@@ -31,7 +31,7 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Project> ProjectProjects(IQueryable<Project> entities, string projectid)
         {
-           return entities.Where(p => p.Id.ToString() == projectid);
+           return entities.Where(p => p.StringId == projectid);
         }
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {
