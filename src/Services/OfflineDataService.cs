@@ -29,6 +29,7 @@ namespace SIL.Transcriber.Services
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
         const string ContentType = "application/ptf";
+        const int LAST_ADD= 15;
         protected ILogger<OfflineDataService> Logger { get; set; }
 
         public OfflineDataService(AppDbContextResolver contextResolver,
@@ -47,7 +48,6 @@ namespace SIL.Transcriber.Services
             _S3service = service;
             this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
-
         private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
 
         private void WriteEntry(ZipArchiveEntry entry, string contents)
@@ -275,7 +275,7 @@ namespace SIL.Transcriber.Services
             {
                 //it's not there yet...
                 Logger.LogInformation("status file not available");
-                startNext = 9;
+                startNext = LAST_ADD+1;
             }
             if (startNext < 0)
             {
@@ -287,7 +287,7 @@ namespace SIL.Transcriber.Services
                 catch { };
             }
             else
-                startNext = Math.Max(startNext, 9);
+                startNext = Math.Max(startNext, LAST_ADD+1);
 
             return new FileResponse()
             {
@@ -320,7 +320,7 @@ namespace SIL.Transcriber.Services
 
             S3Response s3response;
             Stream ms;
-            if (start > 8)
+            if (start > LAST_ADD)
                 return CheckProgress(projectid, fileName);
 
             if (start == 0)
@@ -348,6 +348,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "workflowsteps", dbContext.Roles.ToList(), 'B');
 
                     //org
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
@@ -404,13 +405,31 @@ namespace SIL.Transcriber.Services
                     if (!CheckAdd(5, dtBail, ref startNext, zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H')) break;
                     //mediafiles
                     IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m).Where(x => !x.Archived);
-                    IQueryable<Mediafile> attachedmediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                    IQueryable<Mediafile> attachedmediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => x.ResourcePassageId == null && !x.Archived);
                     if (!CheckAdd(6, dtBail, ref startNext, zipArchive, "mediafiles", mediafiles.OrderBy(m => m.Id).ToList(), 'H')) break;
+
+                    if (!CheckAdd(7, dtBail, ref startNext, zipArchive, "artifactcategorys", dbContext.Artifactcategorys.Where(a => (a.OrganizationId == null || a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
+                    if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "artifacttypes", dbContext.Artifactcategorys.Where(a => (a.OrganizationId == null || a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
+                    if (!CheckAdd(9, dtBail, ref startNext, zipArchive, "orgworkflowsteps", dbContext.Orgworkflowsteps.Where(a => (a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
+                    IQueryable<Discussion> discussions = dbContext.Discussions.Join(attachedmediafiles, d => d.MediafileId, m => m.Id, (d, m) => d).Where(x => !x.Archived);
+                    if (!CheckAdd(10, dtBail, ref startNext, zipArchive, "discussions", discussions.ToList(), 'D')) break;
+                    if (!CheckAdd(11, dtBail, ref startNext, zipArchive, "comments", dbContext.Comments.Join(discussions, c=>c.DiscussionId, d=>d.Id, (c,d) => c).Where(x => !x.Archived).ToList(), 'E')) break;
+
+                    IQueryable<SectionResource> sectionresources = dbContext.Sectionresources.Join(sections, r => r.SectionId, s => s.Id, (r, s) => r).Where(x => !x.Archived);
+                    if (!CheckAdd(12, dtBail, ref startNext, zipArchive, "sectionresources", sectionresources.ToList(), 'G')) break;
+                    if (!CheckAdd(13, dtBail, ref startNext, zipArchive, "sectionresourceusers", sectionresources.Join(dbContext.Sectionresourceusers, r=>r.Id, u=>u.SectionResourceId, (r,u)=>u).Where(x => !x.Archived).ToList(), 'H')) break;
+                    //get the mediafiles associated with section resources
+                    IQueryable<Mediafile> resourcemediafiles = dbContext.Mediafiles.Join(sectionresources, m => m.Id, r => r.MediafileId, (m, r) => m).Where(x => !x.Archived);
+                    //now get the resource mediafiles associated with those mediafiles
+                    resourcemediafiles = dbContext.Mediafiles.Join(resourcemediafiles, m=>m.PassageId, r=>r.ResourcePassageId, (m,r) => m).Where(x => x.ReadyToShare && !x.Archived);
+                    //pick just the highest version media per passage
+                    resourcemediafiles = from m in resourcemediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
                     //pick just the highest version media per passage
                     attachedmediafiles = from m in attachedmediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
                     List<Mediafile> mediaList = attachedmediafiles.OrderBy(m => m.Id).ToList();
-                    if (!AddMediaEaf(7, dtBail, ref startNext, zipArchive, mediaList)) break;
+                    if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, mediaList)) break;
+                    mediaList = mediaList.Concat(resourcemediafiles.ToList()).ToList();
                     mediaList.ForEach(m =>
                     {
                         //S3File has just the filename
@@ -421,11 +440,11 @@ namespace SIL.Transcriber.Services
                         m.AudioUrl = "media/" + m.S3File;
                         m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
                     });
-                    if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
+                    if (!CheckAdd(LAST_ADD, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
                 } while (false);
             }
             ms.Position = 0;
-            fileName += (startNext == 9 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
+            fileName += (startNext == LAST_ADD+1 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
             s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == HttpStatusCode.OK)
             {

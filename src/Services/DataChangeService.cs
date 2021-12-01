@@ -117,7 +117,7 @@ namespace SIL.Transcriber.Services
                     list.AddUnique(t.ids);
             });
         }
-        public DataChanges GetProjectChanges(string origin, ProjDate[] projects, string version = "1")
+        public DataChanges GetProjectChanges(string origin, ProjDate[] projects, string version = "1", string section = "A")
         {
             DateTime dtNow = DateTime.UtcNow;
             List<OrbitId> changes = new List<OrbitId>();
@@ -127,7 +127,7 @@ namespace SIL.Transcriber.Services
 
             foreach(ProjDate pd in projects)
             {
-                List<OrbitId>[] ret = GetChanges(origin, pd.since, 0, pd.id, dbVersion );
+                List<OrbitId>[] ret = GetChanges(origin, pd.since, 0, pd.id, dbVersion,section );
                 AddNewChanges(ret[0], changes);
                 AddNewChanges(ret[1], deleted);
             }
@@ -135,61 +135,70 @@ namespace SIL.Transcriber.Services
             deleted.RemoveAll(d => d.ids.Count == 0);
             return new DataChanges() { Id = 1, Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
         }
-        public DataChanges GetUserChanges(string origin, DateTime dtSince, string version="1")
+        public DataChanges GetUserChanges(string origin, DateTime dtSince, string version="1", string section="A")
         {
             DateTime dtNow = DateTime.UtcNow;
             if (!int.TryParse(version, out int dbVersion))
                 dbVersion = 1;
-            List<OrbitId>[] ret = GetChanges(origin, dtSince, CurrentUser().Id, 0, dbVersion);
+            List<OrbitId>[] ret = GetChanges(origin, dtSince, CurrentUser().Id, 0, dbVersion,section);
             ret[0].RemoveAll(c => c.ids.Count == 0);
             ret[1].RemoveAll(d => d.ids.Count == 0);
             return new DataChanges() { Id = 1, Querydate = dtNow, Changes = ret[0].ToArray(), Deleted = ret[1].ToArray() };
         }
-        private List<OrbitId>[] GetChanges(string origin, DateTime dtSince, int currentUser, int project, int dbVersion)
+        private List<OrbitId>[] GetChanges(string origin, DateTime dtSince, int currentUser, int project, int dbVersion, string section)
         {
             List<OrbitId> changes = new List<OrbitId>();
             List<OrbitId> deleted = new List<OrbitId>();
-            
-            BuildList(UserService.GetChanges(currentUser, origin, dtSince, project), "user", changes);
-            BuildList(UserService.GetDeletedSince(currentUser, origin, dtSince), "user", deleted, false);
-            
-            BuildList(OrganizationService.GetChanges(currentUser, origin, dtSince, project), "organization", changes);
-            BuildList(OrganizationService.GetDeletedSince(currentUser, origin, dtSince), "organization", deleted, false);
-            
-            BuildList(OrgMemService.GetChanges(currentUser, origin, dtSince, project), "organizationmembership", changes);
-            BuildList(OrgMemService.GetDeletedSince(currentUser, origin, dtSince), "organizationmembership", deleted, false);
-            
-            BuildList(GroupService.GetChanges(currentUser, origin, dtSince, project), "group", changes);
-            BuildList(GroupService.GetDeletedSince(currentUser, origin, dtSince), "group", deleted, false);
-            
-            BuildList(GMService.GetChanges(currentUser, origin, dtSince, project), "groupmembership", changes);
-            BuildList(GMService.GetDeletedSince(currentUser, origin, dtSince), "groupmembership", deleted, false);
-            
-            BuildList(ProjectService.GetChanges(currentUser, origin, dtSince, project), "project", changes);
-            BuildList(ProjectService.GetDeletedSince(currentUser, origin, dtSince), "project", deleted, false);
-            
-            BuildList(PlanService.GetChanges(currentUser, origin, dtSince, project), "plan", changes);
-            BuildList(PlanService.GetDeletedSince(currentUser, origin, dtSince), "plan", deleted, false);
-            
-            BuildList(SectionService.GetChanges(currentUser, origin, dtSince, project), "section", changes);
-            BuildList(SectionService.GetDeletedSince(currentUser, origin, dtSince), "section", deleted, false);
-            
-            BuildList(PassageService.GetChanges(currentUser, origin, dtSince, project), "passage", changes);
-            BuildList(PassageService.GetDeletedSince(currentUser, origin, dtSince), "passage", deleted, false);
-            
-            BuildList(MediafileService.GetChanges(currentUser, origin, dtSince, project), "mediafile", changes);
-            BuildList(MediafileService.GetDeletedSince(currentUser, origin, dtSince), "mediafile", deleted, false);
-            
-            BuildList(PassageStateChangeService.GetChanges(currentUser, origin, dtSince, project), "passagestatechange", changes);
-            
-            BuildList(ProjIntService.GetChanges(currentUser, origin, dtSince, project), "projectintegration", changes);
-            //BuildList(ProjIntService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "projectintegration", deleted);
-            
-            BuildList(InvitationService.GetChanges(currentUser, origin, dtSince, project), "invitation", changes);
-            //BuildList(InvitationService.GetDeleted().Result.Where(p => (p.LastModifiedBy != CurrentUser.Id || p.LastModifiedOrigin != HttpContext.GetOrigin()) && p.DateUpdated > dtSince), "invitation", deleted);
+            Logger.LogInformation($"GetChanges {section} {dtSince}");
 
-            if (dbVersion > 3)
+            if (section == "A")
             {
+                BuildList(UserService.GetChanges(currentUser, origin, dtSince, project), "user", changes);
+                BuildList(UserService.GetDeletedSince(currentUser, origin, dtSince), "user", deleted, false);
+
+                Logger.LogInformation($"GetChanges organization");
+                BuildList(OrganizationService.GetChanges(currentUser, origin, dtSince, project), "organization", changes);
+                BuildList(OrganizationService.GetDeletedSince(currentUser, origin, dtSince), "organization", deleted, false);
+
+                BuildList(OrgMemService.GetChanges(currentUser, origin, dtSince, project), "organizationmembership", changes);
+                BuildList(OrgMemService.GetDeletedSince(currentUser, origin, dtSince), "organizationmembership", deleted, false);
+
+                Logger.LogInformation($"GetChanges group");
+                BuildList(GroupService.GetChanges(currentUser, origin, dtSince, project), "group", changes);
+                BuildList(GroupService.GetDeletedSince(currentUser, origin, dtSince), "group", deleted, false);
+
+                BuildList(GMService.GetChanges(currentUser, origin, dtSince, project), "groupmembership", changes);
+                BuildList(GMService.GetDeletedSince(currentUser, origin, dtSince), "groupmembership", deleted, false);
+
+                BuildList(ProjectService.GetChanges(currentUser, origin, dtSince, project), "project", changes);
+                BuildList(ProjectService.GetDeletedSince(currentUser, origin, dtSince), "project", deleted, false);
+
+                Logger.LogInformation($"GetChanges plan");
+                BuildList(PlanService.GetChanges(currentUser, origin, dtSince, project), "plan", changes);
+                BuildList(PlanService.GetDeletedSince(currentUser, origin, dtSince), "plan", deleted, false);
+
+                BuildList(SectionService.GetChanges(currentUser, origin, dtSince, project), "section", changes);
+                BuildList(SectionService.GetDeletedSince(currentUser, origin, dtSince), "section", deleted, false);
+
+                BuildList(PassageService.GetChanges(currentUser, origin, dtSince, project), "passage", changes);
+                BuildList(PassageService.GetDeletedSince(currentUser, origin, dtSince), "passage", deleted, false);
+
+                BuildList(MediafileService.GetChanges(currentUser, origin, dtSince, project), "mediafile", changes);
+                BuildList(MediafileService.GetDeletedSince(currentUser, origin, dtSince), "mediafile", deleted, false);
+
+                BuildList(PassageStateChangeService.GetChanges(currentUser, origin, dtSince, project), "passagestatechange", changes);
+
+                BuildList(ProjIntService.GetChanges(currentUser, origin, dtSince, project), "projectintegration", changes);
+                //BuildList(ProjIntService.GetDeleted().Result.Where(p => p.DateUpdated > dtSince), "projectintegration", deleted);
+
+                Logger.LogInformation($"GetChanges invitation");
+                BuildList(InvitationService.GetChanges(currentUser, origin, dtSince, project), "invitation", changes);
+                //BuildList(InvitationService.GetDeleted().Result.Where(p => (p.LastModifiedBy != CurrentUser.Id || p.LastModifiedOrigin != HttpContext.GetOrigin()) && p.DateUpdated > dtSince), "invitation", deleted);
+            }
+            if (dbVersion > 3 && section == "B")
+            {
+                Logger.LogInformation($"GetChanges artifactcategory");
+
                 BuildList(ArtifactCategoryService.GetChanges(currentUser, origin, dtSince, project), "artifactcategory", changes);
                 BuildList(ArtifactCategoryService.GetDeletedSince(currentUser, origin, dtSince), "artifactcategory", deleted, false);
                 
@@ -199,21 +208,21 @@ namespace SIL.Transcriber.Services
                 BuildList(CommentService.GetChanges(currentUser, origin, dtSince, project), "comment", changes);
                 BuildList(CommentService.GetDeletedSince(currentUser, origin, dtSince), "comment", deleted, false);
 
-                BuildList(DiscussionService.GetChanges(currentUser, origin, dtSince, project), "discussion", changes);
-                BuildList(DiscussionService.GetDeletedSince(currentUser, origin, dtSince), "discussion", deleted, false);
-
+                Logger.LogInformation($"GetChanges discussion");
                 BuildList(DiscussionService.GetChanges(currentUser, origin, dtSince, project), "discussion", changes);
                 BuildList(DiscussionService.GetDeletedSince(currentUser, origin, dtSince), "discussion", deleted, false);
 
                 BuildList(OrgWorkflowStepService.GetChanges(currentUser, origin, dtSince, project), "orgworkflowstep", changes);
                 BuildList(OrgWorkflowStepService.GetDeletedSince(currentUser, origin, dtSince), "orgworkflowstep", deleted, false);
 
+                Logger.LogInformation($"GetChanges sectionresource");
                 BuildList(SectionResourceService.GetChanges(currentUser, origin, dtSince, project), "sectionresource", changes);
                 BuildList(SectionResourceService.GetDeletedSince(currentUser, origin, dtSince), "sectionresource", deleted, false);
 
                 BuildList(SectionResourceUserService.GetChanges(currentUser, origin, dtSince, project), "sectionresourceuser", changes);
                 BuildList(SectionResourceUserService.GetDeletedSince(currentUser, origin, dtSince), "sectionresourceuser", deleted, false);
 
+                Logger.LogInformation($"GetChanges workflowstep");
                 BuildList(WorkflowStepService.GetChanges(currentUser, origin, dtSince, project), "workflowstep", changes);
                 BuildList(WorkflowStepService.GetDeletedSince(currentUser, origin, dtSince), "workflowstep", deleted, false);
             }
