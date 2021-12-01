@@ -12,6 +12,7 @@ namespace SIL.Transcriber.Services
         Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag);
         string GetParatextUsername(UserSecret userSecret);
         Task<Attempt<string>> TryGetProjectRoleAsync(UserSecret userSecret, string paratextId);
+        Task<Attempt<string>> TryGetUserEmailsAsync(UserSecret userSecret, string email);
         Task<IReadOnlyList<string>> GetBooksAsync(UserSecret userSecret, string projectId);
         Task<string> GetBookTextAsync(UserSecret userSecret, string projectId, string bookId);
         Task<string> UpdateBookTextAsync(UserSecret userSecret, string projectId, string bookId,

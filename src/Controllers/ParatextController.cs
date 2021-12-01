@@ -88,6 +88,22 @@ namespace SIL.Transcriber.Controllers
             string username = _paratextService.GetParatextUsername(userSecret);
             return Ok(username);
         }
+        [HttpGet("useremail/{inviteId}")]
+        public ActionResult<string> UserEmails([FromRoute] string inviteId)
+        {
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
+
+            Utility.Attempt<string> x = _paratextService.TryGetUserEmailsAsync(userSecret, inviteId).Result;
+            return Ok(x.Result);
+        }
 
         [HttpGet("section/{sectionid}")]
         public async Task<ActionResult<List<ParatextChapter>>> GetSectionBookAsync([FromRoute] int sectionId)
