@@ -31,7 +31,9 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Project> ProjectProjects(IQueryable<Project> entities, string projectid)
         {
-           return entities.Where(p => p.StringId == projectid);
+           //Do not use the stringId here...that evaluates in code instead of in sql and is SLOW
+           int.TryParse(projectid, out int id);
+           return entities.Where(p => p.Id == id);
         }
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {

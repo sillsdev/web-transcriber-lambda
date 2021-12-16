@@ -6,7 +6,7 @@ namespace SIL.Transcriber.Models
     public partial class SectionResourceUser : BaseModel, IArchive
     {
 
-        [HasOne("section-resource", Link.None)]
+        [HasOne("sectionresource", Link.None)]
         public virtual SectionResource SectionResource { get; set; }
 
         //[Attr("section-resource-id")]

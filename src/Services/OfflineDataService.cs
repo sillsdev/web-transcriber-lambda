@@ -711,7 +711,7 @@ namespace SIL.Transcriber.Services
                                 foreach (Passage p in passages)
                                 {
                                     Passage passage = dbContext.Passages.Find(p.Id);
-                                    if (!passage.Archived && passage.State != p.State)
+                                    if (passage != null && !passage.Archived && passage.State != p.State)
                                     {
                                         if (passage.DateUpdated > sourceDate)
                                         {

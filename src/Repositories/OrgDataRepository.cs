@@ -87,11 +87,11 @@ namespace SIL.Transcriber.Repositories
 
                 if (version > 3)
                 {
-                    if (!CheckAdd(15, dbContext.Workflowsteps, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                    if (!CheckAdd(15, dbContext.Workflowsteps.Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                     IEnumerable<int> ids = orgs.Select(o => o.Id);
-                    var cats = dbContext.Artifactcategorys.Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
+                    IQueryable<ArtifactCategory> cats = dbContext.Artifactcategorys.Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
                     if (!CheckAdd(16, cats, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
-                    var typs = dbContext.Artifacttypes.Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
+                    IQueryable<ArtifactType> typs = dbContext.Artifacttypes.Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
                     if (!CheckAdd(17, typs, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                     if (!CheckAdd(18, dbContext.Orgworkflowsteps.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
                 }

@@ -40,20 +40,21 @@ namespace SIL.Transcriber.Controllers
             ProjDate[] x = JsonConvert.DeserializeObject<ProjDate[]>(projList);
             return Ok(service.GetProjectChanges(origin, x));
         }
-        [HttpGet("v{version}/{section}/since/{since}")]
-        public ActionResult GetDataChangesVersion([FromRoute] string version,string section, string since, string origin)
+        [HttpGet("v{version}/{start}/since/{since}")]
+        public ActionResult GetDataChangesVersion([FromRoute] string version,int start, string since, string origin)
         {
             if (!DateTime.TryParse(since, out DateTime dtSince))
                 return new UnprocessableEntityResult();
             dtSince = dtSince.ToUniversalTime();
-            return Ok(service.GetUserChanges(origin, dtSince, version, section));
+            return Ok(service.GetUserChanges(origin, dtSince, version, start));
         }
 
-        [HttpGet("v{version}/{section}/projects/{origin}")]
-        public IActionResult GetProjectDataChangesVersion([FromRoute] string version,string section,string origin, string projList)
+        [HttpGet("v{version}/{start}/project/{origin}")]
+        public IActionResult GetProjectDataChangesVersion([FromRoute] string version,int start,string origin, string projList)
         {
-            ProjDate[] x = JsonConvert.DeserializeObject<ProjDate[]>(projList);
-            return Ok(service.GetProjectChanges(origin, x, version, section));
+            ProjDate x = JsonConvert.DeserializeObject<ProjDate>(projList);
+            ProjDate[] pd = { x };
+            return Ok(service.GetProjectChanges(origin, pd, version, start));
         }
     }
 }
