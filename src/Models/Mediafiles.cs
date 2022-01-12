@@ -70,5 +70,8 @@ namespace SIL.Transcriber.Models
         public int? ResourcePassageId { get; set; }
         [HasOne("resource-passage", Link.None)]
         public Passage ResourcePassage { get; set; }
+        [Attr("offline-id")]
+        public string OfflineId { get; set; }
+
     }
 }

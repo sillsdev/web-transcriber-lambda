@@ -82,6 +82,7 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
+            if (entity.VersionNumber == null) entity.VersionNumber = 1;
             if (entity.PassageId == 0 || entity.PassageId is null)
             {   
                 entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
@@ -91,11 +92,20 @@ namespace SIL.Transcriber.Services
             else
             {
                 if (entity.ResourcePassageId == null)
-                {   //reopen
+                {   
                     //find the latest and copy the s3file from it
                     Mediafile mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
                     if (mfs != null)
+                    {
                         entity.S3File = mfs.S3File;
+                        entity.VersionNumber = mfs.VersionNumber + 1;
+                    }
+                } else
+                {
+                    //pick just the highest version media per passage
+                    Mediafile sourcemediafile = MediafileRepository.Get().Where(x => x.PassageId == entity.ResourcePassageId && x.ReadyToShare && !x.Archived).OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    entity.AudioUrl = sourcemediafile.AudioUrl;
+                    entity.S3File = sourcemediafile.S3File;
                 }
             }
             return await base.CreateAsync(entity);
