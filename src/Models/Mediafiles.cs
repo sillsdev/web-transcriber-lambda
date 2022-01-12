@@ -8,18 +8,24 @@ namespace SIL.Transcriber.Models
         [Attr("passage-id")]
         public int? PassageId { get; set; }
         [HasOne("passage", Link.None)]
-        public virtual Passage Passage { get; set; }
+        public Passage Passage { get; set; }
 
         [Attr("plan-id")]
         public int PlanId { get; set; }
         [HasOne("plan", Link.None)]
-        public virtual Plan Plan { get; set; }
+        public Plan Plan { get; set; }
 
+        [Attr("artifact-type-id")]
+        public int? ArtifactTypeId { get; set; }
+        [HasOne("artifact-type", Link.None)]
+        public ArtifactType ArtifactType { get; set; }
+        public int? ArtifactCategoryId { get; set; }
+        [HasOne("artifact-category", Link.None)]
+        public ArtifactCategory ArtifactCategory { get; set; }
 
         [Attr("version-number")]
         public int? VersionNumber { get; set; }
-        [Attr("artifact-type")]
-        public string ArtifactType { get; set; }
+
         [Attr("eaf-url")]
         public string EafUrl { get; set; }
         [Attr("audio-url")]
@@ -49,5 +55,20 @@ namespace SIL.Transcriber.Models
         [Attr("segments")]
         [Column(TypeName = "jsonb")]
         public string Segments { get; set; }
+        public int? RecordedbyUserId { get; set; }
+        [Attr("recordedby-user")]
+        public User RecordedbyUser { get; set; }
+
+        [Attr("languagebcp47")]
+        public string Languagebcp47 { get; set; }
+        
+        [Attr("performed-by")]
+        public string PerformedBy { get; set; }
+        [Attr("ready-to-share")]
+        public bool ReadyToShare { get; set; }
+        [Attr("resource-passage-id")]
+        public int? ResourcePassageId { get; set; }
+        [HasOne("resource-passage", Link.None)]
+        public Passage ResourcePassage { get; set; }
     }
 }

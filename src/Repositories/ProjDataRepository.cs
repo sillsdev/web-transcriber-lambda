@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using SIL.Transcriber.Data;
+using Newtonsoft.Json;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -17,20 +18,24 @@ namespace SIL.Transcriber.Repositories
         protected readonly IJsonApiSerializer jsonApiSerializer;
         protected readonly OrganizationService organizationService;
         protected readonly GroupMembershipService gmService;
-
+        protected readonly IJsonApiContext jsonApiContext;
+        protected int filterVersion = 0;
+        protected string filterStart = "";
+        protected string filterProject = "";
         public ProjDataRepository(
               ILoggerFactory loggerFactory,
-              IJsonApiContext jsonApiContext,
+              IJsonApiContext JsonApiContext,
               CurrentUserRepository CurrentUserRepository,
               AppDbContextResolver contextResolver,
               IJsonApiSerializer jsonSer,
               OrganizationService orgService,
               GroupMembershipService grpMemService
-          ) : base(loggerFactory, jsonApiContext, CurrentUserRepository, contextResolver)
+          ) : base(loggerFactory, JsonApiContext, CurrentUserRepository, contextResolver)
         {
             jsonApiSerializer = jsonSer;
             organizationService = orgService;
             gmService = grpMemService;
+            jsonApiContext = JsonApiContext;
         }
 
         private bool CheckAdd(int check, object entity, DateTime dtBail, int start, ref int completed, ref string data)
@@ -48,16 +53,14 @@ namespace SIL.Transcriber.Repositories
             return true;
         }
 
-        private IQueryable<ProjData> GetData(IQueryable<ProjData> entities, string project, string start)
+        private IQueryable<ProjData> GetData(IQueryable<ProjData> entities, string project, string start, int version = 1)
         {
             string data = "";
-            int iStart;
-            if (!int.TryParse(start, out iStart))
+            if (!int.TryParse(start, out int iStart))
                 iStart = 0;
             int iStartNext = iStart;
-            int projectid;
-            if (!int.TryParse(project, out projectid))
-                projectid = 0;          
+            if (!int.TryParse(project, out int projectid))
+                projectid = 0;
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
             string snapshotDate = DateTime.UtcNow.ToString();
@@ -75,12 +78,28 @@ namespace SIL.Transcriber.Repositories
                 //passages
                 IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
                 if (!CheckAdd(2, passages, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
-                
+
                 //mediafiles
-                if (!CheckAdd(3, dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                IQueryable<Mediafile> mediafiles = dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived);
+                if (!CheckAdd(3, mediafiles, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
 
                 //passagestatechanges
                 if (!CheckAdd(4, dbContext.Passagestatechanges.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                if (version > 3)
+                {
+                    //discussions
+                    IQueryable<Discussion> discussions = dbContext.Discussions.Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d).Where(x => !x.Archived);
+                    if (!CheckAdd(5, discussions, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+
+                    //comments
+                    if (!CheckAdd(6, dbContext.Comments.Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                    
+                    IQueryable<SectionResource> sectionresources = dbContext.Sectionresources.Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr).Where(x => !x.Archived);
+                    if (!CheckAdd(7, sectionresources, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                   
+                    IQueryable<SectionResourceUser> srusers = dbContext.Sectionresourceusers.Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u).Where(x => !x.Archived);
+                    if (!CheckAdd(8, srusers, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                }
                 iStartNext = -1; //Done!
             } while (false); //do it once
             if (iStart == iStartNext)
@@ -94,17 +113,60 @@ namespace SIL.Transcriber.Repositories
         }
         public override IQueryable<ProjData> Get()
         {
-            List<ProjData> entities = new List<ProjData>();
-            entities.Add(new ProjData());
+            List<ProjData> entities = new List<ProjData>
+            {
+                new ProjData()
+            };
             return entities.AsQueryable();
+        }
+        private void ResetFilters()
+        {
+            filterStart = "";
+            filterVersion = 0;
+            filterProject = "";
+        }
+        private IQueryable<ProjData> ApplyFilter(IQueryable<ProjData> entities)
+        {
+            if (filterVersion == 0 && jsonApiContext.QuerySet.Filters.Find(f => f.Attribute.ToLower() == VERSION) == null)
+            {
+                filterVersion = 1;
+            }
+            if (filterStart != "" && filterProject != "" && filterVersion != 0)
+            {
+                IQueryable<ProjData> result = GetData(entities, filterProject, filterStart, filterVersion);
+                ResetFilters();
+                return result;
+            }
+            return entities;
         }
         public override IQueryable<ProjData> Filter(IQueryable<ProjData> entities, FilterQuery filterQuery)
         {
+            if (filterQuery.Has(VERSION))
+            {
+                //if I'm first...just remember my value
+                dynamic x = JsonConvert.DeserializeObject(filterQuery.Value);
+                try
+                {
+                    filterVersion = x.version;
+                }
+                catch
+                {
+                    filterVersion = 1;
+                }
+                return ApplyFilter(entities);
+            }
+            if (filterQuery.Has(DATA_START_INDEX))
+            {
+                filterStart = filterQuery.Value;
+                return ApplyFilter(entities);
+            }
             if (filterQuery.Has(PROJECT_SEARCH_TERM))
             {
-                return GetData(entities, filterQuery.Value, "0");
+                filterProject = filterQuery.Value;
+                return ApplyFilter(entities);
             }
             return entities;
+
         }
     }
 }

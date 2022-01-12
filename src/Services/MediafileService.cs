@@ -70,26 +70,7 @@ namespace SIL.Transcriber.Services
             return DirectoryName(plan);
         }
 
-        //set the version number
-        private async Task InitNewMediafileAsync(Mediafile entity)
-        {
-            //aws versioning on
-            //entity.S3File = entity.OriginalFile;
-            entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
-            IQueryable<Mediafile> mfs = MediafileRepository.Get().Where(mf => mf.OriginalFile == entity.OriginalFile && mf.PlanId == entity.PlanId && !mf.Archived);
-            if (mfs.Count() == 0)
-                entity.VersionNumber = 1;
-            else
-            {
-                Mediafile last = mfs.Where(mf => mf.Id == mfs.Max(m => m.Id)).First();
-                entity.VersionNumber = last.VersionNumber + 1;
-                entity.PassageId = last.PassageId;
-                if (entity.PassageId != null)
-                {
-                    await PassageService.UpdateToReadyStateAsync((int)entity.PassageId);
-                }
-            }
-        }
+        
         public async Task<Mediafile> UpdateFileInfo(int id, long filesize, decimal duration)
         {
             Mediafile mf = MediafileRepository.Get(id);
@@ -102,16 +83,20 @@ namespace SIL.Transcriber.Services
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             if (entity.PassageId == 0 || entity.PassageId is null)
-            { //eh..hacky way to tell if we're uploading a new one, or copying one because it's being reopened
-                await InitNewMediafileAsync(entity); //set the version number
+            {   
+                entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
                 S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
                 entity.AudioUrl = response.Message;
             }
             else
             {
-                //find the latest and copy the s3file from it
-                Mediafile mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
-                entity.S3File = mfs.S3File;
+                if (entity.ResourcePassageId == null)
+                {   //reopen
+                    //find the latest and copy the s3file from it
+                    Mediafile mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
+                    if (mfs != null)
+                        entity.S3File = mfs.S3File;
+                }
             }
             return await base.CreateAsync(entity);
         }
@@ -132,7 +117,7 @@ namespace SIL.Transcriber.Services
         */
         public async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
         {
-            await InitNewMediafileAsync(entity);
+            entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
             S3Response response = await _S3service.UploadFileAsync(FileToUpload, DirectoryName(entity));
             entity.S3File = response.Message;
             entity.Filesize = FileToUpload.Length / 1024;
@@ -145,7 +130,15 @@ namespace SIL.Transcriber.Services
         public async Task<Mediafile> GetFileSignedUrlAsync(int id)
         {
             Mediafile mf = MediafileRepository.Get(id);
-            mf.AudioUrl = _S3service.SignedUrlForGet(mf.S3File, DirectoryName(mf), mf.ContentType).Message;
+            if (mf.ResourcePassageId != null)
+            {
+                Mediafile res = MediafileRepository.GetLatestShared((int)mf.ResourcePassageId);
+                mf.AudioUrl = _S3service.SignedUrlForGet(res.S3File, DirectoryName(res), res.ContentType).Message;
+            }
+            else
+            {
+                mf.AudioUrl = _S3service.SignedUrlForGet(mf.S3File, DirectoryName(mf), mf.ContentType).Message;
+            }
             await MediafileRepository.UpdateAsync(id, mf);
             return mf;
         }

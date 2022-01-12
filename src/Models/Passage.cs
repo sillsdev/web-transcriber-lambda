@@ -45,7 +45,12 @@ namespace SIL.Transcriber.Models
 
         [HasOne("section", Link.None)]
         public virtual Section Section { get; set; }
-        
+
+        public int? OrgWorkflowStepId { get; set; }
+
+        [HasOne("org-workflow-step", Link.None)]
+        public virtual OrgWorkflowStep OrgWorkflowStep { get; set; }
+
         [HasMany("mediafiles", Link.None)]
         public virtual List<Mediafile> Mediafiles { get; set; }
 

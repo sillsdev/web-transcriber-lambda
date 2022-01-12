@@ -7,7 +7,7 @@ using SIL.Transcriber.Services;
 using System.Threading.Tasks;
 
 
-namespace TranscriberAPI.Controllers
+namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

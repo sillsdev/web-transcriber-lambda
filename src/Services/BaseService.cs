@@ -49,6 +49,16 @@ namespace SIL.Transcriber.Services
                 return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
             return entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
         }
+
+        public override async Task<bool> DeleteAsync(int id)
+        {
+            TResource existing = await base.GetAsync(id);
+            if (existing == null)
+            {
+                return true;
+            }
+            return await base.DeleteAsync(id);
+        }
     }
 }
 

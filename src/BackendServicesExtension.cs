@@ -52,9 +52,11 @@ namespace SIL.Transcriber
             services.AddHttpContextAccessor();
 
             // Add service / repository overrides
+            services.AddScoped<IEntityRepository<Comment>, CommentRepository>();
             services.AddScoped<IEntityRepository<CurrentVersion>, CurrentVersionRepository>();
             services.AddScoped<IEntityRepository<Dashboard>, DashboardRepository>();
             services.AddScoped<IEntityRepository<DataChanges>, DataChangesRepository>();
+            services.AddScoped<IEntityRepository<Discussion>, DiscussionRepository>();
             services.AddScoped<AppDbContextRepository<FileResponse>, FileResponseRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
             services.AddScoped<IEntityRepository<GroupMembership>, GroupMembershipRepository>();
@@ -62,7 +64,10 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
             services.AddScoped<IEntityRepository<OrganizationMembership>, OrganizationMembershipRepository>();
+            services.AddScoped<IEntityRepository<ArtifactCategory>, ArtifactCategoryRepository>();
+            services.AddScoped<IEntityRepository<ArtifactType>, ArtifactTypeRepository>();
             services.AddScoped<IEntityRepository<OrgData>, OrgDataRepository>();
+            services.AddScoped<IEntityRepository<OrgWorkflowStep>, OrgWorkflowStepRepository>();
             services.AddScoped<AppDbContextRepository<ParatextToken>, ParatextTokenRepository>();
             services.AddScoped<IEntityRepository<Passage>, PassageRepository>();
             services.AddScoped<IEntityRepository<PassageStateChange>, PassageStateChangeRepository>();
@@ -70,12 +75,16 @@ namespace SIL.Transcriber
             services.AddScoped<IEntityRepository<ProjData>, ProjDataRepository>();
             services.AddScoped<IEntityRepository<Project>, ProjectRepository>();
             services.AddScoped<IEntityRepository<ProjectIntegration>, ProjectIntegrationRepository>();
+            services.AddScoped<IEntityRepository<Resource>, ResourceRepository>();
             services.AddScoped<IEntityRepository<Role>, RoleRepository>();
             services.AddScoped<IEntityRepository<Section>, SectionRepository>();
             services.AddScoped<IEntityRepository<SectionPassage>, SectionPassageRepository>();
+            services.AddScoped<IEntityRepository<SectionResource>, SectionResourceRepository>();
+            services.AddScoped<IEntityRepository<SectionResourceUser>, SectionResourceUserRepository>();
             services.AddScoped<IEntityRepository<User>, UserRepository>();
             services.AddScoped<IEntityRepository<UserVersion>, UserVersionRepository>();
             services.AddScoped<IEntityRepository<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailRepository>();
+            services.AddScoped<IEntityRepository<WorkflowStep>, WorkflowStepRepository>();
 
             services.AddScoped<IUpdateService<Project, int>, ProjectService>();
 
@@ -84,8 +93,10 @@ namespace SIL.Transcriber
             services.AddScoped<LoggingDbContextRepository<ParatextTokenHistory>, ParatextTokenHistoryRepository>();
             // services
             services.AddScoped<IResourceService<Activitystate>, ActivitystateService>();
+            services.AddScoped<IResourceService<Comment>, CommentService>();
             services.AddScoped<IResourceService<CurrentVersion>, CurrentVersionService>();
-            services.AddScoped<IResourceService<DataChanges>, DataChangeService>();
+            services.AddScoped<IResourceService<DataChanges>, DataChangeService>(); 
+            services.AddScoped<IResourceService<Discussion>, DiscussionService>();
             services.AddScoped<IResourceService<FileResponse>, FileResponseService>();
             services.AddScoped<IResourceService<GroupMembership>, GroupMembershipService>();
             services.AddScoped<IResourceService<Group>, GroupService>();
@@ -94,6 +105,9 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Mediafile>, MediafileService>();
             services.AddScoped<IResourceService<OrganizationMembership>, OrganizationMembershipService>();
             services.AddScoped<IResourceService<Organization>, OrganizationService>();
+            services.AddScoped<IResourceService<ArtifactType>, ArtifactTypeService>();
+            services.AddScoped<IResourceService<ArtifactCategory>, ArtifactCategoryService>();
+            services.AddScoped<IResourceService<OrgWorkflowStep>, OrgWorkflowStepService>();
             services.AddScoped<IResourceService<ParatextToken>, ParatextTokenService>();
             services.AddScoped<IResourceService<ParatextTokenHistory>, ParatextTokenHistoryService>();
             services.AddScoped<IResourceService<Passage>, PassageService>();
@@ -102,9 +116,12 @@ namespace SIL.Transcriber
             services.AddScoped<IResourceService<Project>, ProjectService>();
             services.AddScoped<IResourceService<ProjectIntegration>, ProjectIntegrationService>();
             services.AddScoped<IResourceService<Section>, SectionService>();
+            services.AddScoped<IResourceService<SectionResource>, SectionResourceService>();
+            services.AddScoped<IResourceService<SectionResourceUser>, SectionResourceUserService>(); 
             services.AddScoped<IResourceService<User>, UserService>();
             services.AddScoped<IResourceService<UserVersion>, UserVersionService>();
             services.AddScoped<IResourceService<VwPassageStateHistoryEmail>, VwPassageStateHistoryEmailService>();
+            services.AddScoped<IResourceService<WorkflowStep>, WorkflowStepService>();
             //services.AddScoped<IResourceService<OrganizationMembershipInvite>, OrganizationMembershipInviteService>();
             services.AddScoped<IS3Service, S3Service>();
             services.AddScoped<IOfflineDataService, OfflineDataService>();
@@ -117,9 +134,11 @@ namespace SIL.Transcriber
 
 
             // EventDispatchers
+            services.AddScoped<CommentRepository>();
             services.AddScoped<CurrentVersionRepository>();
             services.AddScoped<DashboardRepository>();
             services.AddScoped<DataChangesRepository>();
+            services.AddScoped<DiscussionRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<FileResponseRepository>();
             services.AddScoped<GroupMembershipRepository>();
@@ -128,7 +147,10 @@ namespace SIL.Transcriber
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationRepository>();
+            services.AddScoped<ArtifactCategoryRepository>();
+            services.AddScoped<ArtifactTypeRepository>();
             services.AddScoped<OrgDataRepository>();
+            services.AddScoped<OrgWorkflowStepRepository>();
             services.AddScoped<ParatextTokenRepository>();
             services.AddScoped<PassageRepository>();
             services.AddScoped<PassageStateChangeRepository>();
@@ -136,10 +158,14 @@ namespace SIL.Transcriber
             services.AddScoped<ProjDataRepository>();
             services.AddScoped<ProjectIntegrationRepository>();
             services.AddScoped<ProjectRepository>();
+            services.AddScoped<ResourceRepository>();
             services.AddScoped<RoleRepository>();
-            services.AddScoped<VwPassageStateHistoryEmailRepository>(); 
+            services.AddScoped<VwPassageStateHistoryEmailRepository>();
+            services.AddScoped<WorkflowStepRepository>();
             services.AddScoped<SectionRepository>();
             services.AddScoped<SectionPassageRepository>();
+            services.AddScoped<SectionResourceRepository>();
+            services.AddScoped<SectionResourceUserRepository>();
             services.AddScoped<UserRepository>();
             services.AddScoped<UserVersionRepository>();
             services.AddScoped<ParatextSyncRepository>();
@@ -147,16 +173,23 @@ namespace SIL.Transcriber
             services.AddScoped<ParatextTokenHistoryRepository>();
 
             services.AddScoped<ActivitystateService>();
-            services.AddScoped<CurrentVersionService>(); 
+            services.AddScoped<CommentService>();
+            services.AddScoped<CurrentVersionService>();
             services.AddScoped<DataChangeService>();
+            services.AddScoped<DiscussionService>();
             services.AddScoped<FileResponseService>();
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
             services.AddScoped<InvitationService>();
             services.AddScoped<MediafileService>();
+            services.AddScoped<OfflineDataService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();
+            services.AddScoped<ArtifactCategoryService>();
+            services.AddScoped<ArtifactTypeService>();
+            services.AddScoped<OrgDataService>();
+            services.AddScoped<OrgWorkflowStepService>();
             services.AddScoped<ParatextTokenService>();
             services.AddScoped<ParatextTokenHistoryService>();
             services.AddScoped<PassageService>();
@@ -165,15 +198,15 @@ namespace SIL.Transcriber
             services.AddScoped<ProjectIntegrationService>();
             services.AddScoped<ProjectService>();
             services.AddScoped<SectionService>();
+            services.AddScoped<SectionPassageService>();
+            services.AddScoped<SectionResourceService>();
+            services.AddScoped<SectionResourceUserService>();
             services.AddScoped<UserService>();
             services.AddScoped<UserVersionService>();
             services.AddScoped<VwPassageStateHistoryEmailService>();
-            
+            services.AddScoped<WorkflowStepService>();
+
             services.AddSingleton<IAuthService, AuthService>();
-            services.AddScoped<OrganizationMembershipService>();
-            services.AddScoped<OfflineDataService>();
-            services.AddScoped<OrgDataService>();
-            services.AddScoped<SectionPassageService>();
             return services;
         }
 

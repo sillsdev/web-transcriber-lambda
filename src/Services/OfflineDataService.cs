@@ -29,6 +29,7 @@ namespace SIL.Transcriber.Services
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
         const string ContentType = "application/ptf";
+        const int LAST_ADD= 15;
         protected ILogger<OfflineDataService> Logger { get; set; }
 
         public OfflineDataService(AppDbContextResolver contextResolver,
@@ -47,7 +48,6 @@ namespace SIL.Transcriber.Services
             _S3service = service;
             this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
-
         private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
 
         private void WriteEntry(ZipArchiveEntry entry, string contents)
@@ -275,7 +275,7 @@ namespace SIL.Transcriber.Services
             {
                 //it's not there yet...
                 Logger.LogInformation("status file not available");
-                startNext = 9;
+                startNext = LAST_ADD+1;
             }
             if (startNext < 0)
             {
@@ -287,7 +287,7 @@ namespace SIL.Transcriber.Services
                 catch { };
             }
             else
-                startNext = Math.Max(startNext, 9);
+                startNext = Math.Max(startNext, LAST_ADD+1);
 
             return new FileResponse()
             {
@@ -320,7 +320,7 @@ namespace SIL.Transcriber.Services
 
             S3Response s3response;
             Stream ms;
-            if (start > 8)
+            if (start > LAST_ADD)
                 return CheckProgress(projectid, fileName);
 
             if (start == 0)
@@ -348,6 +348,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "workflowsteps", dbContext.Roles.ToList(), 'B');
 
                     //org
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
@@ -404,28 +405,60 @@ namespace SIL.Transcriber.Services
                     if (!CheckAdd(5, dtBail, ref startNext, zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H')) break;
                     //mediafiles
                     IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m).Where(x => !x.Archived);
-                    IQueryable<Mediafile> attachedmediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => !x.Archived);
+                    IQueryable<Mediafile> attachedmediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => x.ResourcePassageId == null && !x.Archived);
+
+                    //I need my mediafiles plus any shared resource mediafiles
+                    IQueryable<SectionResource> sectionresources = dbContext.Sectionresources.Join(sections, r => r.SectionId, s => s.Id, (r, s) => r).Where(x => !x.Archived);
+              
+                    //get the mediafiles associated with section resources
+                    IQueryable<Mediafile> resourcemediafiles = dbContext.Mediafiles.Join(sectionresources, m => m.Id, r => r.MediafileId, (m, r) => m).Where(x => !x.Archived);
+
+                    //now get any shared resource mediafiles associated with those mediafiles
+                    IQueryable<Mediafile> sourcemediafiles = dbContext.Mediafiles.Join(resourcemediafiles, m => m.PassageId, r => r.ResourcePassageId, (m, r) => m).Where(x => x.ReadyToShare && !x.Archived);
+                    //pick just the highest version media per passage
+                    sourcemediafiles = from m in sourcemediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    
+                    foreach (Mediafile mf in resourcemediafiles.Where(m => m.ResourcePassageId != null))
+                    { //make sure we have the latest
+                        Mediafile res = sourcemediafiles.Where(s => s.PassageId == mf.ResourcePassageId).FirstOrDefault();
+                        mf.AudioUrl = _S3service.SignedUrlForGet(res.S3File, mediaService.DirectoryName(res), res.ContentType).Message;
+                        dbContext.Mediafiles.Update(mf);
+                    }
                     if (!CheckAdd(6, dtBail, ref startNext, zipArchive, "mediafiles", mediafiles.OrderBy(m => m.Id).ToList(), 'H')) break;
 
-                    //pick just the highest version media per passage
-                    attachedmediafiles = from m in attachedmediafiles group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                    List<Mediafile> mediaList = attachedmediafiles.OrderBy(m => m.Id).ToList();
-                    if (!AddMediaEaf(7, dtBail, ref startNext, zipArchive, mediaList)) break;
-                    mediaList.ForEach(m =>
+                    if (!CheckAdd(7, dtBail, ref startNext, zipArchive, "artifactcategorys", dbContext.Artifactcategorys.Where(a => (a.OrganizationId == null || a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
+                    if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "artifacttypes", dbContext.Artifacttypes.Where(a => (a.OrganizationId == null || a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
+                    if (!CheckAdd(9, dtBail, ref startNext, zipArchive, "orgworkflowsteps", dbContext.Orgworkflowsteps.Where(a => (a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
+                    IQueryable<Discussion> discussions = dbContext.Discussions.Join(attachedmediafiles, d => d.MediafileId, m => m.Id, (d, m) => d).Where(x => !x.Archived);
+                    if (!CheckAdd(10, dtBail, ref startNext, zipArchive, "discussions", discussions.ToList(), 'D')) break;
+                    if (!CheckAdd(11, dtBail, ref startNext, zipArchive, "comments", dbContext.Comments.Join(discussions, c=>c.DiscussionId, d=>d.Id, (c,d) => c).Where(x => !x.Archived).ToList(), 'E')) break;
+
+                    if (!CheckAdd(12, dtBail, ref startNext, zipArchive, "sectionresources", sectionresources.ToList(), 'G')) break;
+                    if (!CheckAdd(13, dtBail, ref startNext, zipArchive, "sectionresourceusers", sectionresources.Join(dbContext.Sectionresourceusers, r=>r.Id, u=>u.SectionResourceId, (r,u)=>u).Where(x => !x.Archived).ToList(), 'H')) break;
+                    ArtifactType vernacular = dbContext.Artifacttypes.Where(a => a.Typename == "vernacular").FirstOrDefault();
+                    //Now I need the media list of just those files to download...
+                    //pick just the highest version media per passage (vernacular only)
+                    IQueryable<Mediafile> vernmediafiles = from m in attachedmediafiles where m.ArtifactTypeId == null || m.ArtifactTypeId == vernacular.Id group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    IQueryable<Mediafile> mediaList = vernmediafiles ;
+                    if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, mediaList.ToList())) break;
+                    mediaList = mediaList.Concat(sourcemediafiles);
+                    //this should get comments and uploaded resources - not accounting for edited comments for now...
+                    mediaList = mediaList.Concat(mediafiles.Where(m => m.ArtifactTypeId != null && m.ArtifactTypeId != vernacular.Id));
+                    List<Mediafile> myCopy = mediaList.ToList();
+                    myCopy.ForEach(m =>
                     {
                         //S3File has just the filename
                         //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
                         //change the audioUrl to have the offline path + filename
                         //change the s3File to have the onlinepath + filename
-                        string tmp = m.AudioUrl;
                         m.AudioUrl = "media/" + m.S3File;
                         m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
                     });
-                    if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
+                    if (!CheckAdd(LAST_ADD, dtBail, ref startNext, zipArchive, "attachedmediafiles", myCopy, 'Z')) break;
                 } while (false);
             }
             ms.Position = 0;
-            fileName += (startNext == 9 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
+            fileName += (startNext == LAST_ADD+1 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
             s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
             if (s3response.Status == HttpStatusCode.OK)
             {
@@ -568,6 +601,8 @@ namespace SIL.Transcriber.Services
                 ContentType = ContentType,
             };
         }
+
+
         private async Task<FileResponse> ProcessImportFileAsync(ZipArchive archive, int projectid, string sFile)
         {
             DateTime sourceDate;
@@ -692,7 +727,7 @@ namespace SIL.Transcriber.Services
                                 foreach (Passage p in passages)
                                 {
                                     Passage passage = dbContext.Passages.Find(p.Id);
-                                    if (!passage.Archived && passage.State != p.State)
+                                    if (passage != null && !passage.Archived && passage.State != p.State)
                                     {
                                         if (passage.DateUpdated > sourceDate)
                                         {
@@ -716,13 +751,10 @@ namespace SIL.Transcriber.Services
 
                             case "mediafiles":
                                 List<Mediafile> mediafiles = jsonApiDeSerializer.DeserializeList<Mediafile>(data);
-                                /*
-                                var newFiles = mediafiles.Where(e => e.StringId == "");
-                                if (newFiles.Count() > 0)
-                                {
-                                    dbContext.Mediafiles.AddRange(newFiles);
-                                    // upload the file 
-                                } */
+                                int vernacularId = 0;
+                                ArtifactType vernacular = dbContext.Artifacttypes.Where(at => at.Typename == "vernacular").FirstOrDefault();
+                                if (vernacular != null) vernacularId = vernacular.Id;
+
                                 foreach (Mediafile m in mediafiles)
                                 {
                                     Mediafile mediafile;
@@ -743,18 +775,31 @@ namespace SIL.Transcriber.Services
                                     }
                                     else
                                     {
-                                        /* the only way this happens now is on a reopen.  If we start allowing them to actually replace the mediafile,
-                                         * we'll have to upload it from the zip file and create a new s3 file */
-                                        mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
-                                        Mediafile newmf = (Mediafile)mediafile.ShallowCopy();
-                                        newmf.Transcription = m.Transcription;
-                                        newmf.Segments = m.Segments;
-                                        newmf.Id = 0;
-                                        newmf.LastModifiedBy = m.LastModifiedBy;
-                                        newmf.DateCreated = m.DateCreated;
-                                        newmf.VersionNumber = m.VersionNumber;
-                                        newmf.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Mediafiles.Add(newmf);
+                                        ZipArchiveEntry f = archive.Entries.Where(e => e.Name == m.OriginalFile).FirstOrDefault();
+                                        if (f != null)
+                                        {
+                                            using (Stream s = f.Open())
+                                            {
+                                                using (MemoryStream ms = new MemoryStream())
+                                                {
+                                                    s.CopyTo(ms);
+                                                    ms.Position = 0; // rewind
+                                                    s.Position = 0;
+                                                    string S3File = Path.GetFileNameWithoutExtension(m.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(m.OriginalFile);
+                                                    S3Response response = await _S3service.UploadFileAsync(s, true, m.ContentType, S3File, mediaService.DirectoryName(m));
+                                                    m.S3File = response.Message;
+                                                }
+                                            }
+                                        }
+
+                                        /* check the artifacttype */
+                                        if (m.ArtifactTypeId is null || m.ArtifactTypeId == vernacularId)
+                                        {
+                                            mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                            m.VersionNumber = mediafile.VersionNumber + 1;
+                                        }
+                                        m.DateUpdated = DateTime.UtcNow;
+                                        dbContext.Mediafiles.Add(m);
                                     }
                                 };
                                 break;

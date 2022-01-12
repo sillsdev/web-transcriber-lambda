@@ -46,6 +46,7 @@ namespace SIL.Transcriber.Services
         private SectionService SectionService;
         private ProjectService ProjectService;
         private PlanService PlanService;
+        private InvitationService InvitationService;
         private ParatextTokenService ParatextTokenService;
         private readonly ParatextTokenRepository _userSecretRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
@@ -72,6 +73,7 @@ namespace SIL.Transcriber.Services
             ParatextSyncPassageRepository paratextSyncPassageRepository,
             CurrentUserRepository currentUserRepository,
             ParatextTokenHistoryRepository tokenHistoryRepo,
+            InvitationService invitationService,
            ILoggerFactory loggerFactory)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
@@ -88,7 +90,7 @@ namespace SIL.Transcriber.Services
             ParatextSyncRepository = paratextSyncRepository;
             ParatextSyncPassageRepository =paratextSyncPassageRepository;
             TokenHistoryRepo = tokenHistoryRepo;
-
+            InvitationService = invitationService;
             this.Logger = loggerFactory.CreateLogger<ParatextService>();
 
             _httpClientHandler = new HttpClientHandler();
@@ -236,6 +238,33 @@ namespace SIL.Transcriber.Services
                     $"projects/{paratextId}/members/{subClaim.Value}");
                 JObject memberObj = JObject.Parse(response);
                 return Attempt.Success((string)memberObj["role"]);
+            }
+            catch (HttpRequestException ex)
+            {
+                return Attempt.Failure((string)null, ex.Message);
+            }
+        }
+        public async Task<Attempt<string>> TryGetUserEmailsAsync(UserSecret userSecret, string inviteId)
+        {
+            try
+            {
+                VerifyUserSecret(userSecret);
+                if (!int.TryParse(inviteId, out int id))
+                    return Attempt.Failure("Invalid invitation Id");
+
+                Invitation invite = InvitationService.Get(id);
+                string response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get,
+                    $"users/?emails.address=" +invite.Email);
+                JArray memberObj = JArray.Parse(response);
+                if (memberObj.Count > 0 && memberObj[0]["username"].ToString() == GetParatextUsername(userSecret))
+                {
+                    invite.Email = CurrentUserContext.Email;
+                    invite.Accepted = true;
+                    await InvitationService.UpdateAsync(id, invite);
+                    return Attempt.Success(inviteId);
+                }
+                else
+                    return Attempt.Failure("notfound");
             }
             catch (HttpRequestException ex)
             {

@@ -81,6 +81,11 @@ namespace SIL.Transcriber.Repositories
             }
             return base.Filter(entities, filterQuery);
         }
+        public Mediafile GetLatestShared(int passageId)
+        {
+            return Get().Where(p => p.PassageId == passageId && p.ReadyToShare).OrderBy(m => m.VersionNumber).LastOrDefault();
+        }
+
         public Mediafile Get(int id)
         {
             return Get().SingleOrDefault(p => p.Id == id);
