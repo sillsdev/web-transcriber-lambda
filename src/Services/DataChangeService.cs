@@ -267,14 +267,14 @@ namespace SIL.Transcriber.Services
                 }
                 if (CheckStart(15, dtBail, startNext) == 15)
                 {
-                    BuildList(CommentService.GetChanges(currentUser, origin, dtSince, project), "comment", changes);
-                    BuildList(CommentService.GetDeletedSince(currentUser, origin, dtSince), "comment", deleted, false);
-                    startNext++;
-                }
-                if (CheckStart(16, dtBail,  startNext) == 16)
-                {
                     BuildList(DiscussionService.GetChanges(currentUser, origin, dtSince, project), "discussion", changes);
                     BuildList(DiscussionService.GetDeletedSince(currentUser, origin, dtSince), "discussion", deleted, false);
+                    startNext++;
+                }
+                if (CheckStart(16, dtBail, startNext) == 16)
+                {
+                    BuildList(CommentService.GetChanges(currentUser, origin, dtSince, project), "comment", changes);
+                    BuildList(CommentService.GetDeletedSince(currentUser, origin, dtSince), "comment", deleted, false);
                     startNext++;
                 }
                 if (CheckStart(17, dtBail,  startNext) == 17)
