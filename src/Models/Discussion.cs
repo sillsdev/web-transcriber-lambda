@@ -27,6 +27,8 @@ namespace SIL.Transcriber.Models
         public int? ArtifactCategoryId { get; set; }
         [HasOne("artifact-category", Link.None)]
         public ArtifactCategory ArtifactCategory { get; set; }
+        [Attr("offline-id")]
+        public string OfflineId { get; set; }
         public bool Archived { get; set; }
     }
 }
