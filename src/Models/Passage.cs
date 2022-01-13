@@ -51,6 +51,10 @@ namespace SIL.Transcriber.Models
         [HasOne("org-workflow-step", Link.None)]
         public virtual OrgWorkflowStep OrgWorkflowStep { get; set; }
 
+        [Attr("step-complete")]
+        [Column(TypeName = "jsonb")]
+        public string StepComplete { get; set; } //json
+
         [HasMany("mediafiles", Link.None)]
         public virtual List<Mediafile> Mediafiles { get; set; }
 
