@@ -621,7 +621,9 @@ namespace SIL.Transcriber.Services
             foreach (Mediafile m in mediafiles)
             {
                 if (m.Id == 0)
-                { CopyMediaFile(m, archive); }
+                { 
+                    await CopyMediaFile(m, archive); 
+                }
             }
         }
         private async Task CopyMediaFile(Mediafile m, ZipArchive archive)
@@ -840,21 +842,26 @@ namespace SIL.Transcriber.Services
                                     }
                                     else
                                     {
-                                        dbContext.Discussions.Add(new Discussion
+                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                        Discussion discussion = dbContext.Discussions.Where(x => x.OfflineId == d.OfflineId).FirstOrDefault();
+                                        if (discussion == null)
                                         {
-                                            ArtifactCategoryId = d.ArtifactCategoryId,
-                                            MediafileId = d.MediafileId,
-                                            OfflineId = d.OfflineId,
-                                            OrgWorkflowStepId = d.OrgWorkflowStepId,
-                                            RoleId = d.RoleId,
-                                            Resolved = d.Resolved,
-                                            Segments = d.Segments,
-                                            Subject = d.Subject,
-                                            UserId = d.UserId,
-                                            LastModifiedBy = d.LastModifiedBy,
-                                            DateCreated = d.DateCreated,
-                                            DateUpdated = DateTime.UtcNow,
-                                        });
+                                            dbContext.Discussions.Add(new Discussion
+                                            {
+                                                ArtifactCategoryId = d.ArtifactCategoryId,
+                                                MediafileId = d.MediafileId,
+                                                OfflineId = d.OfflineId,
+                                                OrgWorkflowStepId = d.OrgWorkflowStepId,
+                                                RoleId = d.RoleId,
+                                                Resolved = d.Resolved,
+                                                Segments = d.Segments,
+                                                Subject = d.Subject,
+                                                UserId = d.UserId,
+                                                LastModifiedBy = d.LastModifiedBy,
+                                                DateCreated = d.DateCreated,
+                                                DateUpdated = DateTime.UtcNow,
+                                            });
+                                        }
                                     }
                                 }
                                 break;
@@ -878,19 +885,24 @@ namespace SIL.Transcriber.Services
                                     }
                                     else
                                     {
-                                        dbContext.Comments.Add(new Comment
+                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                        Comment comment = dbContext.Comments.Where(x => x.OfflineId == c.OfflineId).FirstOrDefault();
+                                        if (comment == null)
                                         {
-                                            OfflineId = c.OfflineId,
-                                            OfflineMediafileId = c.OfflineMediafileId,
-                                            OfflineDiscussionId = c.OfflineDiscussionId,
-                                            DiscussionId = c.DiscussionId == 0 ? null : c.DiscussionId,
-                                            CommentText = c.CommentText,
-                                            MediafileId = c.MediafileId,
-                                            LastModifiedBy = c.LastModifiedBy,
-                                            DateCreated = c.DateCreated,
-                                            DateUpdated = DateTime.UtcNow,
-                                        });
-                                        //mediafileid will be updated when mediafiles are processed if 0;
+                                            dbContext.Comments.Add(new Comment
+                                            {
+                                                OfflineId = c.OfflineId,
+                                                OfflineMediafileId = c.OfflineMediafileId,
+                                                OfflineDiscussionId = c.OfflineDiscussionId,
+                                                DiscussionId = c.DiscussionId == 0 ? null : c.DiscussionId,
+                                                CommentText = c.CommentText,
+                                                MediafileId = c.MediafileId,
+                                                LastModifiedBy = c.LastModifiedBy,
+                                                DateCreated = c.DateCreated,
+                                                DateUpdated = DateTime.UtcNow,
+                                            });
+                                            //mediafileid will be updated when mediafiles are processed if 0;
+                                        }
                                     }
                                 }
                                 break;
@@ -921,42 +933,48 @@ namespace SIL.Transcriber.Services
                                     }
                                     else
                                     {
-                                        /* check the artifacttype */
-                                        if (m.ArtifactTypeId is null || m.ArtifactTypeId == vernacularId)
+                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                        mediafile = dbContext.Mediafiles.Where(x => x.OfflineId == m.OfflineId).FirstOrDefault();
+                                        if (mediafile == null)
                                         {
-                                            mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
-                                            m.VersionNumber = mediafile.VersionNumber + 1;
+                                            /* check the artifacttype */
+                                            if (m.ArtifactTypeId == null || m.ArtifactTypeId == vernacularId)
+                                            {
+                                                mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived && (p.ArtifactTypeId == null || p.ArtifactTypeId == vernacularId)).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                                if (mediafile != null) m.VersionNumber = mediafile.VersionNumber + 1;
+                                                else m.VersionNumber = 1;
+                                            }
+                                            m.S3File = Path.GetFileNameWithoutExtension(m.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(m.OriginalFile);
+                                            m.AudioUrl = _S3service.SignedUrlForPut(m.S3File, mediaService.DirectoryName(m), m.ContentType).Message;
+                                            await CopyMediaFile(m, archive);
+                                            dbContext.Mediafiles.Add(new Mediafile
+                                            {
+                                                ArtifactTypeId = m.ArtifactTypeId,
+                                                ArtifactCategoryId = m.ArtifactCategoryId,
+                                                AudioUrl = m.AudioUrl,
+                                                ContentType = m.ContentType,
+                                                Duration = m.Duration,
+                                                Filesize = m.Filesize,
+                                                OriginalFile = m.OriginalFile,
+                                                Languagebcp47 = m.Languagebcp47,
+                                                LastModifiedByUserId = m.LastModifiedByUserId,
+                                                OfflineId = m.OfflineId,
+                                                PassageId = m.PassageId,
+                                                PerformedBy = m.PerformedBy,
+                                                PlanId = m.PlanId,
+                                                Position = m.Position,
+                                                ReadyToShare = m.ReadyToShare,
+                                                RecordedbyUserId = m.RecordedbyUserId,
+                                                ResourcePassageId = m.ResourcePassageId,
+                                                S3File = m.S3File,
+                                                Segments = m.Segments,
+                                                Transcription = m.Transcription,
+                                                VersionNumber = m.VersionNumber,
+                                                LastModifiedBy = m.LastModifiedBy,
+                                                DateCreated = m.DateCreated,
+                                                DateUpdated = DateTime.UtcNow,
+                                            });
                                         }
-                                        m.S3File = Path.GetFileNameWithoutExtension(m.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(m.OriginalFile);
-                                        m.AudioUrl = _S3service.SignedUrlForPut(m.S3File, mediaService.DirectoryName(m), m.ContentType).Message;
-                                       // await CopyMediaFile(m, archive);
-                                        dbContext.Mediafiles.Add(new Mediafile //do I get an id here?
-                                        {
-                                            ArtifactTypeId = m.ArtifactTypeId,
-                                            ArtifactCategoryId = m.ArtifactCategoryId,
-                                            AudioUrl = m.AudioUrl,
-                                            ContentType = m.ContentType,
-                                            Duration = m.Duration,
-                                            Filesize = m.Filesize,
-                                            OriginalFile = m.OriginalFile,
-                                            Languagebcp47 = m.Languagebcp47,
-                                            LastModifiedByUserId = m.LastModifiedByUserId,
-                                            OfflineId = m.OfflineId,
-                                            PassageId = m.PassageId,
-                                            PerformedBy = m.PerformedBy,
-                                            PlanId = m.PlanId,
-                                            Position = m.Position,
-                                            ReadyToShare = m.ReadyToShare,
-                                            RecordedbyUserId = m.RecordedbyUserId,
-                                            ResourcePassageId = m.ResourcePassageId,
-                                            S3File = m.S3File,
-                                            Segments = m.Segments,
-                                            Transcription = m.Transcription,
-                                            VersionNumber = m.VersionNumber,
-                                            LastModifiedBy = m.LastModifiedBy,
-                                            DateCreated = m.DateCreated,
-                                            DateUpdated = DateTime.UtcNow,
-                                        });
                                     }
                                 };
                                 break;
