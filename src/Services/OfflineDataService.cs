@@ -673,6 +673,35 @@ namespace SIL.Transcriber.Services
             dbContext.Comments.UpdateRange(comments);
             dbContext.SaveChanges();
         }
+        private int CompareMediafilesByArtifactTypeVersionDesc(Mediafile a, Mediafile b)
+        {
+            if (a == null)
+            {
+                if (b == null) return 0;
+                else return -1;
+            }
+            else
+            { //a is not null
+                if (b == null) return 1;
+                else
+                {//neither a nor b is null
+                    if (mediaService.IsVernacularMedia(a))
+                    {
+                        if (mediaService.IsVernacularMedia(b))
+                            return (int)(a.VersionNumber - b.VersionNumber);  //both vernacular so use version number
+                        else
+                            return -1;
+                    }
+                    else
+                    {
+                        if (mediaService.IsVernacularMedia(b))
+                            return 1;
+                        else  //neither is a vernacular so should all be version 1
+                            return 0;
+                    }
+                }
+            }
+        }
         private async Task<FileResponse> ProcessImportFileAsync(ZipArchive archive, int projectid, string sFile)
         {
             DateTime sourceDate;
@@ -879,6 +908,7 @@ namespace SIL.Transcriber.Services
                                                 report.Add(CommentChangesReport(comment, c));
                                             comment.CommentText = c.CommentText;
                                             comment.MediafileId = c.MediafileId;
+                                            comment.OfflineMediafileId = c.OfflineMediafileId;
                                             comment.DateUpdated = DateTime.UtcNow;
                                             dbContext.Comments.Update(comment);
                                         }
@@ -909,10 +939,8 @@ namespace SIL.Transcriber.Services
 
                             case "mediafiles":
                                 mediafiles = jsonApiDeSerializer.DeserializeList<Mediafile>(data);
-                                int vernacularId = 0;
-                                ArtifactType vernacular = dbContext.Artifacttypes.Where(at => at.Typename == "vernacular").FirstOrDefault();
-                                if (vernacular != null) vernacularId = vernacular.Id;
-
+                                mediafiles.Sort(CompareMediafilesByArtifactTypeVersionDesc);
+                                Dictionary<int, int> passageVersions = new Dictionary<int, int>();
                                 foreach (Mediafile m in mediafiles)
                                 {
                                     Mediafile mediafile;
@@ -937,12 +965,22 @@ namespace SIL.Transcriber.Services
                                         mediafile = dbContext.Mediafiles.Where(x => x.OfflineId == m.OfflineId).FirstOrDefault();
                                         if (mediafile == null)
                                         {
+                                            if (!Convert.ToBoolean(m.VersionNumber)) m.VersionNumber = 1;
+
                                             /* check the artifacttype */
-                                            if (m.ArtifactTypeId == null || m.ArtifactTypeId == vernacularId)
+                                            if (m.PassageId != null && mediaService.IsVernacularMedia(m))
                                             {
-                                                mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived && (p.ArtifactTypeId == null || p.ArtifactTypeId == vernacularId)).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
-                                                if (mediafile != null) m.VersionNumber = mediafile.VersionNumber + 1;
-                                                else m.VersionNumber = 1;
+                                                int existingVersion;
+                                                if (passageVersions.TryGetValue((int)m.PassageId, out existingVersion))
+                                                {
+                                                    m.VersionNumber = existingVersion+1;
+                                                }
+                                                else
+                                                {
+                                                    mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived && mediaService.IsVernacularMedia(p)).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                                    if (mediafile != null) m.VersionNumber = mediafile.VersionNumber + 1;
+                                                }
+                                                passageVersions[(int)m.PassageId] = (int)m.VersionNumber;
                                             }
                                             m.S3File = Path.GetFileNameWithoutExtension(m.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(m.OriginalFile);
                                             m.AudioUrl = _S3service.SignedUrlForPut(m.S3File, mediaService.DirectoryName(m), m.ContentType).Message;

@@ -16,8 +16,7 @@ namespace SIL.Transcriber.Services
         protected IEntityRepository<TResource> MyRepository { get; }
         protected IJsonApiContext JsonApiContext { get; }
         protected ILogger<TResource> Logger { get; set; }
-
-
+        
         public BaseService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<TResource> myRepository,
