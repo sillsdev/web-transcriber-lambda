@@ -1,6 +1,7 @@
 ﻿using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace SIL.Transcriber.Services
         protected IEntityRepository<TResource> MyRepository { get; }
         protected IJsonApiContext JsonApiContext { get; }
         protected ILogger<TResource> Logger { get; set; }
-
+        
 
         public BaseService(
             IJsonApiContext jsonApiContext,
@@ -58,6 +59,13 @@ namespace SIL.Transcriber.Services
                 return true;
             }
             return await base.DeleteAsync(id);
+        }
+        public int VernacularId(AppDbContext dbContext)
+        {
+            int vernacularId = 0;
+            ArtifactType vernacular = dbContext.Artifacttypes.Where(at => at.Typename == "vernacular").FirstOrDefault();
+            if (vernacular != null) vernacularId = vernacular.Id;
+            return vernacularId;
         }
     }
 }

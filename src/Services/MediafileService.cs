@@ -17,6 +17,7 @@ using static SIL.Transcriber.Utility.ParatextHelpers;
 using System.Xml.Linq;
 using System.Web;
 using TranscriberAPI.Utility.Extensions;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Services
 {
@@ -26,8 +27,9 @@ namespace SIL.Transcriber.Services
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
         private PassageService PassageService { get; set; }
+        protected readonly AppDbContext dbContext;
 
-        public MediafileService(
+        public MediafileService(AppDbContextResolver contextResolver,
             IJsonApiContext jsonApiContext,
             MediafileRepository basemediafileRepository,
             PlanRepository planRepository,
@@ -39,6 +41,7 @@ namespace SIL.Transcriber.Services
             PlanRepository = planRepository;
             PassageService = passageService;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
+            dbContext = (AppDbContext)contextResolver.GetContext();
         }
 
         public override async Task<IEnumerable<Mediafile>> GetAsync()
@@ -80,34 +83,39 @@ namespace SIL.Transcriber.Services
             await base.UpdateAsync(id, mf);
             return mf;
         }
+        public bool IsVernacularMedia(Mediafile mf)
+        {
+            return mf.ArtifactTypeId == null || mf.ArtifactTypeId == VernacularId(dbContext);
+        }
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             if (entity.VersionNumber == null) entity.VersionNumber = 1;
-            if (entity.PassageId == 0 || entity.PassageId is null)
-            {   
-                entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
-                S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
-                entity.AudioUrl = response.Message;
-            }
-            else
+            if (entity.ResourcePassageId == null)
             {
-                if (entity.ResourcePassageId == null)
-                {   
-                    //find the latest and copy the s3file from it
-                    Mediafile mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
+                if (IsVernacularMedia(entity) && entity.PassageId != null)
+                {
+                    //find the latest and copy the s3file from it -- this is a reopen (I hope)
+                    Mediafile mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && IsVernacularMedia(mf) && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
                     if (mfs != null)
                     {
                         entity.S3File = mfs.S3File;
                         entity.VersionNumber = mfs.VersionNumber + 1;
                     }
-                } else
-                {
-                    //pick just the highest version media per passage
-                    Mediafile sourcemediafile = MediafileRepository.Get().Where(x => x.PassageId == entity.ResourcePassageId && x.ReadyToShare && !x.Archived).OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                    entity.AudioUrl = sourcemediafile.AudioUrl;
-                    entity.S3File = sourcemediafile.S3File;
                 }
+                else
+                {
+                    entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
+                    S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
+                    entity.AudioUrl = response.Message;
+                }
+            } else
+            {
+                //pick just the highest version media per passage
+                Mediafile sourcemediafile = MediafileRepository.Get().Where(x => x.PassageId == entity.ResourcePassageId && x.ReadyToShare && !x.Archived).OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                entity.AudioUrl = sourcemediafile.AudioUrl;
+                entity.S3File = sourcemediafile.S3File;
             }
+            
             return await base.CreateAsync(entity);
         }
         /*
