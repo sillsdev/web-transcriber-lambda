@@ -1,7 +1,6 @@
 ﻿using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using System;
 using System.Collections.Generic;
@@ -18,7 +17,6 @@ namespace SIL.Transcriber.Services
         protected IJsonApiContext JsonApiContext { get; }
         protected ILogger<TResource> Logger { get; set; }
         
-
         public BaseService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<TResource> myRepository,
