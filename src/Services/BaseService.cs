@@ -60,13 +60,6 @@ namespace SIL.Transcriber.Services
             }
             return await base.DeleteAsync(id);
         }
-        public int VernacularId(AppDbContext dbContext)
-        {
-            int vernacularId = 0;
-            ArtifactType vernacular = dbContext.Artifacttypes.Where(at => at.Typename == "vernacular").FirstOrDefault();
-            if (vernacular != null) vernacularId = vernacular.Id;
-            return vernacularId;
-        }
     }
 }
 

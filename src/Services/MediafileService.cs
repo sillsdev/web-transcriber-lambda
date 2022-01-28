@@ -83,6 +83,13 @@ namespace SIL.Transcriber.Services
             await base.UpdateAsync(id, mf);
             return mf;
         }
+        private int VernacularId(AppDbContext dbContext)
+        {
+            int vernacularId = 0;
+            ArtifactType vernacular = dbContext.Artifacttypes.Where(at => at.Typename == "vernacular").FirstOrDefault();
+            if (vernacular != null) vernacularId = vernacular.Id;
+            return vernacularId;
+        }
         public bool IsVernacularMedia(Mediafile mf)
         {
             return mf.ArtifactTypeId == null || mf.ArtifactTypeId == VernacularId(dbContext);
