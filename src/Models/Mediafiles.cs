@@ -72,6 +72,17 @@ namespace SIL.Transcriber.Models
         public Passage ResourcePassage { get; set; }
         [Attr("offline-id")]
         public string OfflineId { get; set; }
+        [Attr("source-media-offline-id")]
+        public string SourceMediaOfflineId { get; set; }
+
+        [Attr("source-media-id")]
+        public int? SourceMediaId { get; set; }
+        [HasOne("source-media",Link.None)]
+        public Mediafile SourceMedia { get; set; }
+
+        [Attr("source-segments")]
+        [Column(TypeName = "jsonb")]
+        public string SourceSegments { get; set; }
 
     }
 }
