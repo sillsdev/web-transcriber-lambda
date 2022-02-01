@@ -644,7 +644,7 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
-        private void UpdateCommentIds()
+        private void UpdateOfflineIds()
         {
             /* fix comment ids */
             IQueryable<Comment> comments = dbContext.Comments.Where(c => c.MediafileId == null && c.OfflineMediafileId != null);
@@ -671,6 +671,18 @@ namespace SIL.Transcriber.Services
                 }
             }
             dbContext.Comments.UpdateRange(comments);
+            IQueryable<Mediafile> mediafiles = dbContext.Mediafiles.Where(c => c.SourceMediaId == null && c.SourceMediaOfflineId != null);
+            foreach (Mediafile m in mediafiles)
+            {
+                Mediafile sourcemedia = dbContext.Mediafiles.Where(sm => m.OfflineId == m.SourceMediaOfflineId).FirstOrDefault();
+                if (sourcemedia != null)
+                {
+                    m.SourceMediaId = sourcemedia.Id;
+                    m.LastModifiedOrigin = "electron";
+                    m.DateUpdated = DateTime.UtcNow;
+                }
+            }
+            dbContext.Mediafiles.UpdateRange(mediafiles);
             dbContext.SaveChanges();
         }
         private int CompareMediafilesByArtifactTypeVersionDesc(Mediafile a, Mediafile b)
@@ -954,6 +966,7 @@ namespace SIL.Transcriber.Services
                                             mediafile.Position = m.Position;
                                             mediafile.Transcription = m.Transcription;
                                             mediafile.Segments = m.Segments;
+                                            mediafile.SourceSegments = m.SourceSegments;
                                             mediafile.LastModifiedBy = m.LastModifiedBy;
                                             mediafile.DateUpdated = DateTime.UtcNow;
                                             dbContext.Mediafiles.Update(mediafile);
@@ -1008,6 +1021,9 @@ namespace SIL.Transcriber.Services
                                                 Segments = m.Segments,
                                                 Transcription = m.Transcription,
                                                 VersionNumber = m.VersionNumber,
+                                                SourceMediaId = m.SourceMediaId,
+                                                SourceMediaOfflineId = m.SourceMediaOfflineId,
+                                                SourceSegments = m.SourceSegments,
                                                 LastModifiedBy = m.LastModifiedBy,
                                                 DateCreated = m.DateCreated,
                                                 DateUpdated = DateTime.UtcNow,
@@ -1064,7 +1080,7 @@ namespace SIL.Transcriber.Services
                     }
                     int ret = await dbContext.SaveChangesNoTimestampAsync();
 
-                    UpdateCommentIds();
+                    UpdateOfflineIds();
                 }
                 report.RemoveAll(s => s.Length == 0);
                 
