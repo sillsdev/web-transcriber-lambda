@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Linq;
 using SIL.Logging.Models;
@@ -108,6 +109,7 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin()
         {
             User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            if (currentUser == null) throw new Exception("Unable to get current user information");
             UserSecret newPTToken = CurrentUserContext.ParatextLogin(GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"), currentUser.Id);
 
             if (newPTToken == null)
@@ -153,9 +155,11 @@ namespace SIL.Transcriber.Services
 
             Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             string username = usernameClaim?.Value;
+            Logger.LogInformation($"TTY A: {DateTime.Now} {username}");
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, "projects");
             XElement reposElem = XElement.Parse(response);
             List<ParatextProject> projects = new List<ParatextProject>();
+            Logger.LogInformation($"TTY B: {DateTime.Now} {reposElem}");
             foreach (XElement repoElem in reposElem.Elements("repo"))
             {
                 string projId = (string)repoElem.Element("projid");
@@ -178,9 +182,12 @@ namespace SIL.Transcriber.Services
                     CurrentUserRole = role,
                 });
             }
+            //projects.ForEach(p => Logger.LogInformation($"TTY C: {DateTime.Now} {JsonConvert.SerializeObject(p)}") );
+            
             //get more info for those projects that are registered
             response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "projects");
             JArray projectArray = JArray.Parse(response);
+            Logger.LogInformation($"TTY D: {DateTime.Now} {projectArray}");
 
             foreach (JToken projectObj in projectArray)
             {
@@ -202,6 +209,8 @@ namespace SIL.Transcriber.Services
                 proj.LanguageName = langName;
                 proj.LanguageTag = langTag;
             }
+            Logger.LogInformation($"TTY E: {DateTime.Now} {projectArray}");
+
             //now go through them again to link BT to base project
             foreach (JToken projectObj in projectArray)
             {
@@ -220,11 +229,13 @@ namespace SIL.Transcriber.Services
                     sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
             }
+            Logger.LogInformation($"TTY F: {DateTime.Now} {projectArray}");
             return projects;
         }
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag)
         {
             IReadOnlyList<ParatextProject> projects = await GetProjectsAsync(userSecret);
+            Logger.LogInformation($"TTY R: {DateTime.Now} {JsonConvert.SerializeObject(projects)}");
             return projects.Where(p => p.LanguageTag.Split(",").Contains(languageTag)).ToList();
         }
 
