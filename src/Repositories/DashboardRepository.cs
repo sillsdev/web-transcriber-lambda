@@ -57,9 +57,9 @@ namespace SIL.Transcriber.Repositories
         {
             return Plans().Join(dbContext.Mediafiles.Where(m => !m.Archived && m.Transcription != null && m.Transcription.Length > 0), pl => pl.Id, m => m.PlanId, (pl, m) => m);
         }
-        private IQueryable<Passage> Paratext()
+        private IQueryable<Mediafile> Paratext()
         {
-            return ScripturePlans().Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(p => p.State == "done");
+            return ScripturePlans().Join(dbContext.Mediafiles, pl => pl.Id, m => m.PlanId, (pl, m) => m).Where(m => m.TranscriptionState == "done");
         }
         public override IQueryable<Dashboard> Get()
         {

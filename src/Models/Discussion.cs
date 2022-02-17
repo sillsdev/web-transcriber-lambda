@@ -29,6 +29,8 @@ namespace SIL.Transcriber.Models
         public ArtifactCategory ArtifactCategory { get; set; }
         [Attr("offline-id")]
         public string OfflineId { get; set; }
+        [Attr("offline-mediafile-id")]
+        public string OfflineMediafileId { get; set; }
         public bool Archived { get; set; }
     }
 }

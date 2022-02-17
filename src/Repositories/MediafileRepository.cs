@@ -85,7 +85,12 @@ namespace SIL.Transcriber.Repositories
         {
             return Get().Where(p => p.PassageId == passageId && p.ReadyToShare).OrderBy(m => m.VersionNumber).LastOrDefault();
         }
-
+        public IQueryable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId = 0)
+        {
+            //this should disqualify media that has a new version that isn't ready...but doesn't (yet)
+            IQueryable<Mediafile> media = dbContext.Mediafiles.Where(m => m.PlanId == PlanId && (artifactTypeId == 0 ? m.ArtifactTypeId == null : m.ArtifactTypeId == artifactTypeId) && !m.Archived && m.ReadyToSync).OrderBy(m => m.PassageId).ThenBy(m => m.VersionNumber);
+            return media;
+        }
         public Mediafile Get(int id)
         {
             return Get().SingleOrDefault(p => p.Id == id);

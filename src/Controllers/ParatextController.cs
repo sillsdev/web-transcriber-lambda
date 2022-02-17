@@ -124,14 +124,26 @@ namespace SIL.Transcriber.Controllers
         public async Task<ActionResult<int>> ProjectPassagesToSyncCount([FromRoute] int projectId)
         {
 
-            int passages = await _paratextService.ProjectPassagesToSyncCountAsync(projectId);
+            int passages = await _paratextService.ProjectPassagesToSyncCountAsync(projectId, 0);
             return Ok(passages);
         }
+        [HttpGet("project/{projectId}/{type}/count")]
+        public async Task<ActionResult<int>> ProjectPassagesToSyncCount([FromRoute] int projectId, [FromRoute] int type)
+        {
 
+            int passages = await _paratextService.ProjectPassagesToSyncCountAsync(projectId, type);
+            return Ok(passages);
+        }
         [HttpGet("plan/{planid}/count")]
         public ActionResult<int> PassageReadyToSyncCount([FromRoute] int planId)
         {
-            int passages = _paratextService.PlanPassagesToSyncCount(planId);
+            int passages = _paratextService.PlanPassagesToSyncCount(planId, 0); //vernacular
+            return Ok(passages);
+        }
+        [HttpGet("plan/{planid}/{type}/count")]
+        public ActionResult<int> PassageReadyToSyncCount([FromRoute] int planId, [FromRoute] int type)
+        {
+            int passages = _paratextService.PlanPassagesToSyncCount(planId, type);
             return Ok(passages);
         }
         [HttpGet("passage/{passageid}")]
@@ -154,7 +166,23 @@ namespace SIL.Transcriber.Controllers
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
             /* get all the sections that are ready to sync */
-            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(userSecret, planId);
+            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(userSecret, planId, 0);
+            return Ok(chapters);
+        }
+        [HttpPost("plan/{planid}/{type}")]
+        public async Task<ActionResult<List<ParatextChapter>>> PostPlanAsync([FromRoute] int planId, [FromRoute] int type)
+        {
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
+            /* get all the sections that are ready to sync */
+            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(userSecret, planId, type);
             return Ok(chapters);
         }
         [HttpPost("project/{projectid}")]
@@ -169,7 +197,7 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(userSecret, projectId);
+            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(userSecret, projectId, 0);
             return Ok();
         }
 

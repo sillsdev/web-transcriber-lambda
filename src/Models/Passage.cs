@@ -15,7 +15,6 @@ namespace SIL.Transcriber.Models
         {
             UpdateFrom(item);
             SectionId = sectionId;
-            State = "noMedia";
         }
         public Passage UpdateFrom(JToken item)
         {
@@ -60,10 +59,6 @@ namespace SIL.Transcriber.Models
 
         public bool Archived { get; set; }
 
-        public bool ReadyToSync
-        {
-            get { return State == "approved" && !Archived; }
-        }
         private int startChapter = 0, endChapter = 0, startVerse = 0, endVerse = 0;
         public int StartChapter
         {

@@ -106,10 +106,7 @@ namespace SIL.Transcriber.Services
         {
             return ProjectIntegrationRepository.IntegrationSettings(projectId, integration);
         }
-        public IEnumerable<Section> GetSectionsAtStatus(int projectId, string status)
-        {
-            return SectionService.GetSectionsAtStatus(projectId, status);
-        }
+
         public bool IsLinkedToParatext(Project p, string ParatextId)
         {
             return ParatextProject(p.Id) == ParatextId;
