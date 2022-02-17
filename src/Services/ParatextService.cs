@@ -215,16 +215,9 @@ namespace SIL.Transcriber.Services
             Logger.LogInformation($"TTY E: {DateTime.Now} {projectArray}");
 
             //now go through them again to link BT to base project
-            foreach (JToken projectObj in projectArray)
+            foreach (ParatextProject proj in projects)
             {
-                JToken identificationObj = projectObj["identification_systemId"]
-                    .FirstOrDefault(id => (string)id["type"] == "paratext");
-                if (identificationObj == null)
-                    continue;
-                string paratextId = (string)identificationObj["text"];
-                ParatextProject proj = projects.FirstOrDefault(p => p.ParatextId == paratextId);
-                List<ParatextProject> subProjects = projects.FindAll(p => p.BaseProject == paratextId);
-
+                List<ParatextProject> subProjects = projects.FindAll(p => p.BaseProject == proj.ParatextId);
                 subProjects.ForEach(sp =>
                 {
                     if (sp.Name.Length == 0) sp.Name = sp.ProjectType + " " + proj.Name;
@@ -232,6 +225,7 @@ namespace SIL.Transcriber.Services
                     sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
             }
+            
             Logger.LogInformation($"TTY F: {DateTime.Now} {projectArray}");
             return projects;
         }
@@ -598,14 +592,14 @@ namespace SIL.Transcriber.Services
                         {
                             try
                             {
-                                Mediafile mediafile = mediafiles.Where(m => m.PassageId == passage.Id).LastOrDefault();
+                                Mediafile mediafile = mediafiles.Where(m => m.PassageId == passage.Id).LastOrDefault(); 
                                 string transcription = mediafile.Transcription;
                                 chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, transcription, addNumbers);
                                 //log it
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, transcription, chapter.NewUSX.ToString()));
 
-                                mediafile.TranscriptionState = "done";
-                                await PassageStateChangeService.CreateAsync(passage, mediafile.TranscriptionState, "Paratext -" + passage.LastComment);
+                                mediafile.Transcriptionstate = "done";
+                                await PassageStateChangeService.CreateAsync(passage, mediafile.Transcriptionstate, "Paratext -" + passage.LastComment);
                                 passage.LastComment = "";
                                 await MediafileService.UpdateAsync(mediafile.Id, mediafile);
                             }

@@ -124,7 +124,7 @@ namespace SIL.Transcriber.Services
         public async Task<Mediafile> UpdateToReadyStateAsync(int id)
         {
             Mediafile p = await MediafileRepository.GetAsync(id);
-            p.TranscriptionState = "transcribeReady";
+            p.Transcriptionstate = "transcribeReady";
             string fp = HttpContext.GetFP();
             HttpContext.SetFP("api");  //even the guy who sent this needs these changes
             await base.UpdateAsync(id, p);

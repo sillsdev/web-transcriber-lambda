@@ -51,8 +51,8 @@ namespace SIL.Transcriber.Models
         public double Position { get; set; }
         [Attr("topic")]
         public string Topic { get; set; }
-        [Attr("transcription-state")]
-        public string TranscriptionState { get; set; }
+        [Attr("transcriptionstate")]
+        public string Transcriptionstate { get; set; }
         public bool Archived { get; set; }
 
         [Attr("segments")]
@@ -89,7 +89,7 @@ namespace SIL.Transcriber.Models
 
         public bool ReadyToSync
         {
-            get { return TranscriptionState == "approved" && !Archived; }
+            get { return Transcriptionstate == "approved" && !Archived; }
         }
 
     }

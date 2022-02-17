@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Repositories
         }
         private IQueryable<Mediafile> Paratext()
         {
-            return ScripturePlans().Join(dbContext.Mediafiles, pl => pl.Id, m => m.PlanId, (pl, m) => m).Where(m => m.TranscriptionState == "done");
+            return ScripturePlans().Join(dbContext.Mediafiles, pl => pl.Id, m => m.PlanId, (pl, m) => m).Where(m => m.Transcriptionstate == "done");
         }
         public override IQueryable<Dashboard> Get()
         {

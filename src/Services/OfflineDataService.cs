@@ -982,7 +982,7 @@ namespace SIL.Transcriber.Services
                                         mediafile = dbContext.Mediafiles.Find(m.Id);
                                         if (!mediafile.Archived && (
                                             mediafile.Transcription != m.Transcription || 
-                                            mediafile.TranscriptionState != m.TranscriptionState || 
+                                            mediafile.Transcriptionstate != m.Transcriptionstate || 
                                             mediafile.Segments != m.Segments ||
                                             mediafile.SourceMediaId != m.SourceMediaId ||
                                             mediafile.SourceMediaOfflineId != m.SourceMediaOfflineId ||
@@ -993,7 +993,7 @@ namespace SIL.Transcriber.Services
                                                 report.Add(MediafileChangesReport(mediafile, m));
                                             mediafile.Position = m.Position;
                                             mediafile.Transcription = m.Transcription;
-                                            mediafile.TranscriptionState = m.TranscriptionState;
+                                            mediafile.Transcriptionstate = m.Transcriptionstate;
                                             mediafile.Segments = m.Segments;
                                             mediafile.SourceSegments = m.SourceSegments;
                                             mediafile.SourceMediaOfflineId = m.SourceMediaOfflineId;
