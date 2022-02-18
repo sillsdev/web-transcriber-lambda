@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Linq;
 using SIL.Logging.Models;
@@ -41,6 +42,7 @@ namespace SIL.Transcriber.Services
         private readonly HttpClient _dataAccessClient;
         private readonly HttpClient _registryClient;
 
+        private MediafileService MediafileService;
         private PassageService PassageService;
         private PassageStateChangeService PassageStateChangeService;
         private SectionService SectionService;
@@ -63,6 +65,7 @@ namespace SIL.Transcriber.Services
             IHttpContextAccessor httpContextAccessor,
             ICurrentUserContext currentUserContext,
             PassageService passageService,
+            MediafileService mediafileService,
             PassageStateChangeService passageStateChangeService,
             SectionService sectionService,
             PlanService planService,
@@ -80,6 +83,7 @@ namespace SIL.Transcriber.Services
             HttpContext = httpContextAccessor.HttpContext;
             _userSecretRepository = userSecrets;
             PassageService = passageService;
+            MediafileService = mediafileService;
             PassageStateChangeService = passageStateChangeService;
             SectionService = sectionService;
             ProjectService = projectService;
@@ -108,6 +112,7 @@ namespace SIL.Transcriber.Services
         public UserSecret ParatextLogin()
         {
             User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            if (currentUser == null) throw new Exception("Unable to get current user information");
             UserSecret newPTToken = CurrentUserContext.ParatextLogin(GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"), currentUser.Id);
 
             if (newPTToken == null)
@@ -178,6 +183,7 @@ namespace SIL.Transcriber.Services
                     CurrentUserRole = role,
                 });
             }
+            
             //get more info for those projects that are registered
             response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "projects");
             JArray projectArray = JArray.Parse(response);
@@ -202,17 +208,11 @@ namespace SIL.Transcriber.Services
                 proj.LanguageName = langName;
                 proj.LanguageTag = langTag;
             }
-            //now go through them again to link BT to base project
-            foreach (JToken projectObj in projectArray)
-            {
-                JToken identificationObj = projectObj["identification_systemId"]
-                    .FirstOrDefault(id => (string)id["type"] == "paratext");
-                if (identificationObj == null)
-                    continue;
-                string paratextId = (string)identificationObj["text"];
-                ParatextProject proj = projects.FirstOrDefault(p => p.ParatextId == paratextId);
-                List<ParatextProject> subProjects = projects.FindAll(p => p.BaseProject == paratextId);
 
+            //now go through them again to link BT to base project
+            foreach (ParatextProject proj in projects)
+            {
+                List<ParatextProject> subProjects = projects.FindAll(p => p.BaseProject == proj.ParatextId);
                 subProjects.ForEach(sp =>
                 {
                     if (sp.Name.Length == 0) sp.Name = sp.ProjectType + " " + proj.Name;
@@ -220,6 +220,7 @@ namespace SIL.Transcriber.Services
                     sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
             }
+            
             return projects;
         }
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag)
@@ -495,10 +496,9 @@ namespace SIL.Transcriber.Services
             IQueryable<Passage> passages = PassageService.GetBySection(sectionId);
             return await GetPassageChaptersAsync(userSecret, paratextId, BookChapters(passages));
         }
-        public int PlanPassagesToSyncCount(int planId)
+        public int PlanPassagesToSyncCount(int planId, int artifactTypeId)
         {
-            IQueryable<Passage> passages = PassageService.ReadyToSync(planId);
-            return passages.Count();
+            return MediafileService.ReadyToSync(planId, artifactTypeId).Count();
         }
 
         public async Task<string> PassageTextAsync(int passageId)
@@ -519,14 +519,14 @@ namespace SIL.Transcriber.Services
             List<ParatextChapter> chapterList = await GetPassageChaptersAsync(userSecret, paratextId, book_chapters);
             return ParatextHelpers.GetParatextData(chapterList.First().OriginalUSX, passage);
         }
-        public async Task<int> ProjectPassagesToSyncCountAsync(int projectId)
+        public async Task<int> ProjectPassagesToSyncCountAsync(int projectId, int artifactTypeid)
         {
             Project project = await ProjectService.GetWithPlansAsync(projectId);
             int total = 0;
             foreach (Plan p in project.Plans)
             {
-                IQueryable<Passage> passages = PassageService.ReadyToSync(p.Id);
-                total += passages.Count();
+                 
+                total += MediafileService.ReadyToSync(p.Id, artifactTypeid).Count();
             }
             return total;
         }
@@ -549,12 +549,14 @@ namespace SIL.Transcriber.Services
             return err;
         }
 
-        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId)
+        public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, int artifactTypeId)
         {
             User currentUser = CurrentUserRepository.GetCurrentUser().Result;
             Plan plan = PlanService.Get(planId);
             string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
-            IQueryable<Passage> passages = PassageService.ReadyToSync(planId);
+            IQueryable<Mediafile> mediafiles = MediafileService.ReadyToSync(planId, artifactTypeId);
+            List<Passage> passages = new List<Passage>();
+            mediafiles.ForEach(m => passages.Add(m.Passage));
             string err = VerifyReferences(userSecret, passages, paratextId);
             if (err.Length > 0) throw new Exception(err);
 
@@ -583,16 +585,16 @@ namespace SIL.Transcriber.Services
                         {
                             try
                             {
-                                string transcription = PassageService.GetTranscription(passage) ?? "";
+                                Mediafile mediafile = mediafiles.Where(m => m.PassageId == passage.Id).LastOrDefault(); 
+                                string transcription = mediafile.Transcription;
                                 chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, transcription, addNumbers);
                                 //log it
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, transcription, chapter.NewUSX.ToString()));
 
-                                passage.State = "done";
-                                await PassageStateChangeService.CreateAsync(passage, "Paratext -" + passage.LastComment);
+                                mediafile.Transcriptionstate = "done";
+                                await PassageStateChangeService.CreateAsync(passage, mediafile.Transcriptionstate, "Paratext -" + passage.LastComment);
                                 passage.LastComment = "";
-                                await PassageService.UpdateAsync(passage.Id, passage);
-
+                                await MediafileService.UpdateAsync(mediafile.Id, mediafile);
                             }
                             catch (Exception ex)
                             {
@@ -634,14 +636,14 @@ namespace SIL.Transcriber.Services
             }
             return chapterList;
         }
-        public async Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId)
+        public async Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId, int artifactTypeId)
         {
             var project = await ProjectService.GetWithPlansAsync(projectId);
             List<ParatextChapter> chapters = new List<ParatextChapter>();
             foreach (Plan p in project.Plans)
             {
                 if (!p.Archived)
-                    chapters.AddRange(await SyncPlanAsync(userSecret, p.Id));
+                    chapters.AddRange(await SyncPlanAsync(userSecret, p.Id, artifactTypeId));
             }
             return chapters;
 

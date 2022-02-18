@@ -16,15 +16,12 @@ namespace SIL.Transcriber.Services
 {
     public class PassageService : BaseArchiveService<Passage>
     {
-        private HttpContext HttpContext;
 
         public PassageService(
             IJsonApiContext jsonApiContext,
             PassageRepository PassageRepository,
-            IHttpContextAccessor httpContextAccessor,
         ILoggerFactory loggerFactory) : base(jsonApiContext, PassageRepository, loggerFactory)
         {
-            HttpContext = httpContextAccessor.HttpContext;
         }
 
         public override async Task<IEnumerable<Passage>> GetAsync()
@@ -57,11 +54,6 @@ namespace SIL.Transcriber.Services
             PassageRepository pr = (PassageRepository)MyRepository;
             return pr.ProjectId(passage);
         }
-        public IQueryable<Passage> ReadyToSync(int PlanId)
-        {
-            PassageRepository pr = (PassageRepository)MyRepository;
-            return pr.ReadyToSync(PlanId);
-        }
         public string GetTranscription(Passage passage)
         {
             PassageRepository pr = (PassageRepository)MyRepository;
@@ -76,17 +68,6 @@ namespace SIL.Transcriber.Services
             return Regex.Replace(trans,pattern, "");
            
         }
-        public async Task<Passage> UpdateToReadyStateAsync(int id)
-        {
-            PassageRepository pr = (PassageRepository)MyRepository;
 
-            Passage p = await pr.GetAsync(id);
-            p.State = "transcribeReady";
-            string fp = HttpContext.GetFP();
-            HttpContext.SetFP("api");  //even the guy who sent this needs these changes
-            await base.UpdateAsync(id, p);
-            HttpContext.SetFP(fp);
-            return p;
-        }
     }
 }

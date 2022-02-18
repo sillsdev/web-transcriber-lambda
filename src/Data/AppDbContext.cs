@@ -101,8 +101,12 @@ namespace SIL.Transcriber.Data
         private int CurrentUserId()
         {
             string auth0Id = this.CurrentUserContext.Auth0Id;
-            User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
-            return userFromResult == null ? -1 : userFromResult.Id;
+            if (auth0Id != null)
+            {
+                User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
+                return userFromResult == null ? -1 : userFromResult.Id;
+            }
+            return -1;
         }
         public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
         {

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -13,11 +12,11 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using static SIL.Transcriber.Utility.ServiceExtensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
-using static SIL.Transcriber.Utility.ParatextHelpers;
 using System.Xml.Linq;
 using System.Web;
 using TranscriberAPI.Utility.Extensions;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
@@ -28,6 +27,7 @@ namespace SIL.Transcriber.Services
         private MediafileRepository MediafileRepository { get; set; }
         private PassageService PassageService { get; set; }
         protected readonly AppDbContext dbContext;
+        private HttpContext HttpContext;
 
         public MediafileService(AppDbContextResolver contextResolver,
             IJsonApiContext jsonApiContext,
@@ -35,13 +35,15 @@ namespace SIL.Transcriber.Services
             PlanRepository planRepository,
             PassageService passageService,
             ILoggerFactory loggerFactory,
-            IS3Service service) : base(jsonApiContext, basemediafileRepository, loggerFactory)
+            IS3Service service,           
+            IHttpContextAccessor httpContextAccessor) : base(jsonApiContext, basemediafileRepository, loggerFactory)
         {
             _S3service = service;
             PlanRepository = planRepository;
             PassageService = passageService;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
             dbContext = (AppDbContext)contextResolver.GetContext();
+            HttpContext = httpContextAccessor.HttpContext;
         }
 
         public override async Task<IEnumerable<Mediafile>> GetAsync()
@@ -92,38 +94,46 @@ namespace SIL.Transcriber.Services
         }
         public bool IsVernacularMedia(Mediafile mf)
         {
-            return mf.ArtifactTypeId == null || mf.ArtifactTypeId == VernacularId(dbContext);
+            return mf.ArtifactTypeId == null; // This starts another thread on the context|| mf.ArtifactTypeId == VernacularId(dbContext);
         }
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             if (entity.VersionNumber == null) entity.VersionNumber = 1;
             if (entity.ResourcePassageId == null)
             {
+                entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
+                S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
+                entity.AudioUrl = response.Message;
                 if (IsVernacularMedia(entity) && entity.PassageId != null)
                 {
-                    //find the latest and copy the s3file from it -- this is a reopen (I hope)
                     Mediafile mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && IsVernacularMedia(mf) && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
                     if (mfs != null)
                     {
-                        entity.S3File = mfs.S3File;
                         entity.VersionNumber = mfs.VersionNumber + 1;
                     }
                 }
-                else
-                {
-                    entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
-                    S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
-                    entity.AudioUrl = response.Message;
-                }
             } else
             {
-                //pick just the highest version media per passage
+                //pick the highest version media of the resource per passage
                 Mediafile sourcemediafile = MediafileRepository.Get().Where(x => x.PassageId == entity.ResourcePassageId && x.ReadyToShare && !x.Archived).OrderByDescending(m => m.VersionNumber).FirstOrDefault();
                 entity.AudioUrl = sourcemediafile.AudioUrl;
                 entity.S3File = sourcemediafile.S3File;
             }
-            
             return await base.CreateAsync(entity);
+        }
+        public async Task<Mediafile> UpdateToReadyStateAsync(int id)
+        {
+            Mediafile p = await MediafileRepository.GetAsync(id);
+            p.Transcriptionstate = "transcribeReady";
+            string fp = HttpContext.GetFP();
+            HttpContext.SetFP("api");  //even the guy who sent this needs these changes
+            await base.UpdateAsync(id, p);
+            HttpContext.SetFP(fp);
+            return p;
+        }
+        public IQueryable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId)
+        {
+             return MediafileRepository.ReadyToSync(PlanId, artifactTypeId);
         }
         /*
         public override async Task<Mediafile> UpdateAsync(int id, Mediafile media)

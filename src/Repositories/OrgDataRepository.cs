@@ -107,8 +107,10 @@ namespace SIL.Transcriber.Repositories
         }
         public override IQueryable<OrgData> Get()
         {
-            List<OrgData> entities = new List<OrgData>();
-            entities.Add(new OrgData());
+            List<OrgData> entities = new List<OrgData>
+            {
+                new OrgData()
+            };
             return entities.AsQueryable();
         }
         public override IQueryable<OrgData> Filter(IQueryable<OrgData> entities, FilterQuery filterQuery)

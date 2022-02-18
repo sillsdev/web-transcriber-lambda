@@ -49,7 +49,10 @@ namespace SIL.Transcriber.Models
         public long Filesize { get; set; }
         [Attr("position")]
         public double Position { get; set; }
-
+        [Attr("topic")]
+        public string Topic { get; set; }
+        [Attr("transcriptionstate")]
+        public string Transcriptionstate { get; set; }
         public bool Archived { get; set; }
 
         [Attr("segments")]
@@ -83,6 +86,11 @@ namespace SIL.Transcriber.Models
         [Attr("source-segments")]
         [Column(TypeName = "jsonb")]
         public string SourceSegments { get; set; }
+
+        public bool ReadyToSync
+        {
+            get { return Transcriptionstate == "approved" && !Archived; }
+        }
 
     }
 }

@@ -20,10 +20,10 @@ namespace SIL.Transcriber.Services
         Task<string> GetNotesAsync(UserSecret userSecret, string projectId, string bookId);
         Task<string> UpdateNotesAsync(UserSecret userSecret, string projectId, string notesText);
         Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId);
-        Task<int> ProjectPassagesToSyncCountAsync(int projectId);
-        int PlanPassagesToSyncCount(int planId);
-        Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId);
-        Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId);
+        Task<int> ProjectPassagesToSyncCountAsync(int projectId, int artifactTypeId);
+        int PlanPassagesToSyncCount(int planId, int artifactTypeId);
+        Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, int artifactTypeId);
+        Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId, int artifactTypeId);
         Task<string> PassageTextAsync(int passageId);
     }
 }
