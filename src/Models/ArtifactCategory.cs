@@ -7,6 +7,10 @@ namespace SIL.Transcriber.Models
     {
         [Attr("categoryname")]
         public string Categoryname { get; set; }
+        [Attr("discussion")]
+        public bool Discussion { get; set; }
+        [Attr("resource")]
+        public bool Resource { get; set; }
         public bool Archived { get; set; }
         public int? OrganizationId { get; set; }
         [HasOne("organization", Link.None)]
