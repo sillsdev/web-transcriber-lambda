@@ -7,20 +7,20 @@ namespace SIL.Transcriber.Models
     {
         [Attr("passage-id")]
         public int? PassageId { get; set; }
-        [HasOne("passage", Link.None)]
+        [HasOne("passage", JsonApiDotNetCore.Models.Link.None)]
         public Passage Passage { get; set; }
 
         [Attr("plan-id")]
         public int PlanId { get; set; }
-        [HasOne("plan", Link.None)]
+        [HasOne("plan", JsonApiDotNetCore.Models.Link.None)]
         public Plan Plan { get; set; }
 
         [Attr("artifact-type-id")]
         public int? ArtifactTypeId { get; set; }
-        [HasOne("artifact-type", Link.None)]
+        [HasOne("artifact-type", JsonApiDotNetCore.Models.Link.None)]
         public ArtifactType ArtifactType { get; set; }
         public int? ArtifactCategoryId { get; set; }
-        [HasOne("artifact-category", Link.None)]
+        [HasOne("artifact-category", JsonApiDotNetCore.Models.Link.None)]
         public ArtifactCategory ArtifactCategory { get; set; }
 
         [Attr("version-number")]
@@ -59,8 +59,6 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         public string Segments { get; set; }
         public int? RecordedbyUserId { get; set; }
-        [Attr("recordedby-user")]
-        public User RecordedbyUser { get; set; }
 
         [Attr("languagebcp47")]
         public string Languagebcp47 { get; set; }
@@ -71,8 +69,11 @@ namespace SIL.Transcriber.Models
         public bool ReadyToShare { get; set; }
         [Attr("resource-passage-id")]
         public int? ResourcePassageId { get; set; }
-        [HasOne("resource-passage", Link.None)]
+        [HasOne("resource-passage", JsonApiDotNetCore.Models.Link.None)]
         public Passage ResourcePassage { get; set; }
+        [Attr("link")]
+        public bool? Link { get; set; }
+
         [Attr("offline-id")]
         public string OfflineId { get; set; }
         [Attr("source-media-offline-id")]
@@ -80,7 +81,7 @@ namespace SIL.Transcriber.Models
 
         [Attr("source-media-id")]
         public int? SourceMediaId { get; set; }
-        [HasOne("source-media",Link.None)]
+        [HasOne("source-media", JsonApiDotNetCore.Models.Link.None)]
         public Mediafile SourceMedia { get; set; }
 
         [Attr("source-segments")]
