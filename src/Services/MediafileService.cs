@@ -26,6 +26,7 @@ namespace SIL.Transcriber.Services
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MediafileRepository { get; set; }
         private PassageService PassageService { get; set; }
+        private PassageStateChangeService PSCService { get; set; }
         protected readonly AppDbContext dbContext;
         private HttpContext HttpContext;
 
@@ -34,6 +35,7 @@ namespace SIL.Transcriber.Services
             MediafileRepository basemediafileRepository,
             PlanRepository planRepository,
             PassageService passageService,
+            PassageStateChangeService pscService,
             ILoggerFactory loggerFactory,
             IS3Service service,           
             IHttpContextAccessor httpContextAccessor) : base(jsonApiContext, basemediafileRepository, loggerFactory)
@@ -41,6 +43,7 @@ namespace SIL.Transcriber.Services
             _S3service = service;
             PlanRepository = planRepository;
             PassageService = passageService;
+            PSCService = pscService;
             MediafileRepository = (MediafileRepository)MyRepository; //from base
             dbContext = (AppDbContext)contextResolver.GetContext();
             HttpContext = httpContextAccessor.HttpContext;
@@ -99,6 +102,8 @@ namespace SIL.Transcriber.Services
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             if (entity.VersionNumber == null) entity.VersionNumber = 1;
+            if (entity.Link == null) entity.Link = false;
+            if (entity.Transcriptionstate == null) entity.Transcriptionstate = "transcribeReady";
             if (entity.ResourcePassageId == null)
             {
                 entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
@@ -118,6 +123,17 @@ namespace SIL.Transcriber.Services
                 Mediafile sourcemediafile = MediafileRepository.Get().Where(x => x.PassageId == entity.ResourcePassageId && x.ReadyToShare && !x.Archived).OrderByDescending(m => m.VersionNumber).FirstOrDefault();
                 entity.AudioUrl = sourcemediafile.AudioUrl;
                 entity.S3File = sourcemediafile.S3File;
+            }
+            if (entity.PassageId != null && entity.EafUrl != null)
+            {
+                //create a passage state change with this info
+                await PSCService.CreateAsync(new PassageStateChange
+                {
+                    PassageId = (int)entity.PassageId,
+                    State = "",
+                    Comments = entity.EafUrl
+                });
+                entity.EafUrl = "";
             }
             return await base.CreateAsync(entity);
         }

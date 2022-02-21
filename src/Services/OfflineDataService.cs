@@ -348,7 +348,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
-                    AddJsonEntry(zipArchive, "workflowsteps", dbContext.Roles.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "workflowsteps", dbContext.Workflowsteps.ToList(), 'B');
 
                     //org
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
@@ -647,12 +647,13 @@ namespace SIL.Transcriber.Services
         private void UpdateOfflineIds()
         {
             /* fix comment ids */
-            IQueryable<Comment> comments = dbContext.Comments.Where(c => c.MediafileId == null && c.OfflineMediafileId != null);
+            IQueryable<Comment> comments = dbContext.Comments.Where(c => c.OfflineMediafileId != null);
             foreach (Comment c in comments)
             {
                 Mediafile mediafile = dbContext.Mediafiles.Where(m => m.OfflineId == c.OfflineMediafileId).FirstOrDefault();
                 if (mediafile != null)
                 {
+                    c.OfflineMediafileId = null;
                     c.MediafileId = mediafile.Id;
                     c.LastModifiedOrigin = "electron";
                     c.DateUpdated = DateTime.UtcNow;
@@ -986,17 +987,21 @@ namespace SIL.Transcriber.Services
                                             mediafile.Segments != m.Segments ||
                                             mediafile.SourceMediaId != m.SourceMediaId ||
                                             mediafile.SourceMediaOfflineId != m.SourceMediaOfflineId ||
-                                            mediafile.SourceSegments != m.SourceSegments
+                                            mediafile.SourceSegments != m.SourceSegments ||
+                                             mediafile.Topic != m.Topic
                                             ))
                                         {
                                             if (mediafile.DateUpdated > sourceDate)
                                                 report.Add(MediafileChangesReport(mediafile, m));
+                                            mediafile.Link = m.Link != null ? m.Link : false;
                                             mediafile.Position = m.Position;
-                                            mediafile.Transcription = m.Transcription;
-                                            mediafile.Transcriptionstate = m.Transcriptionstate;
+                                            mediafile.RecordedbyUserId = m.RecordedbyUserId;
                                             mediafile.Segments = m.Segments;
                                             mediafile.SourceSegments = m.SourceSegments;
                                             mediafile.SourceMediaOfflineId = m.SourceMediaOfflineId;
+                                            mediafile.Topic = m.Topic;
+                                            mediafile.Transcription = m.Transcription;
+                                            mediafile.Transcriptionstate = m.Transcriptionstate;
                                             mediafile.LastModifiedBy = m.LastModifiedBy;
                                             mediafile.DateUpdated = DateTime.UtcNow;
                                             dbContext.Mediafiles.Update(mediafile);
@@ -1039,6 +1044,7 @@ namespace SIL.Transcriber.Services
                                                 OriginalFile = m.OriginalFile,
                                                 Languagebcp47 = m.Languagebcp47,
                                                 LastModifiedByUserId = m.LastModifiedByUserId,
+                                                Link = m.Link != null ? m.Link : false,
                                                 OfflineId = m.OfflineId,
                                                 PassageId = m.PassageId,
                                                 PerformedBy = m.PerformedBy,
@@ -1049,7 +1055,9 @@ namespace SIL.Transcriber.Services
                                                 ResourcePassageId = m.ResourcePassageId,
                                                 S3File = m.S3File,
                                                 Segments = m.Segments,
+                                                Topic = m.Topic,
                                                 Transcription = m.Transcription,
+                                                Transcriptionstate = m.Transcriptionstate,
                                                 VersionNumber = m.VersionNumber,
                                                 SourceMediaId = m.SourceMediaId,
                                                 SourceMediaOfflineId = m.SourceMediaOfflineId,
