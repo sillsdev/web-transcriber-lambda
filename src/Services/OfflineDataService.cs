@@ -348,7 +348,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
                     AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
-                    AddJsonEntry(zipArchive, "workflowsteps", dbContext.Roles.ToList(), 'B');
+                    AddJsonEntry(zipArchive, "workflowsteps", dbContext.Workflowsteps.ToList(), 'B');
 
                     //org
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(o => o.Id == project.OrganizationId);
