@@ -95,7 +95,7 @@ namespace SIL.Transcriber.Services
             WorkflowStepService = workflowStepService;
             CurrentUserRepository = currentUserRepository;
         }
-        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
+        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
 
         private void BuildList(IEnumerable<BaseModel> recs, string type, List<OrbitId> addTo, bool toEnd = true)
         {
@@ -172,7 +172,7 @@ namespace SIL.Transcriber.Services
 
         private int CheckStart(int check, DateTime dtBail, int completed)
         {
-            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail) return 1000;
             return completed;
         }

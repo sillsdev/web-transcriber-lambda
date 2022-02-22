@@ -38,7 +38,7 @@ namespace SIL.Transcriber.Services
             GroupMembershipRepository = groupMembershipRepository;
             GroupRepository = groupRepository;
         }
-        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
+        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
 
         public override async Task<IEnumerable<Organization>> GetAsync()
         {

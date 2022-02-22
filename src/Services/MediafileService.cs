@@ -99,6 +99,18 @@ namespace SIL.Transcriber.Services
         {
             return mf.ArtifactTypeId == null; // This starts another thread on the context|| mf.ArtifactTypeId == VernacularId(dbContext);
         }
+        public async Task<string> GetNewFileNameAsync(Mediafile mf)
+        {
+            if (await _S3service.FileExistsAsync(mf.OriginalFile, DirectoryName(mf)))
+            {
+                return Path.GetFileNameWithoutExtension(mf.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(mf.OriginalFile);
+            }
+            else
+            {
+                return mf.OriginalFile;
+            }
+        }
+
         public override async Task<Mediafile> CreateAsync(Mediafile entity)
         {
             if (entity.VersionNumber == null) entity.VersionNumber = 1;
@@ -106,7 +118,7 @@ namespace SIL.Transcriber.Services
             if (entity.Transcriptionstate == null) entity.Transcriptionstate = "transcribeReady";
             if (entity.ResourcePassageId == null)
             {
-                entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
+                entity.S3File = await GetNewFileNameAsync(entity);
                 S3Response response = _S3service.SignedUrlForPut(entity.S3File, DirectoryName(entity), entity.ContentType);
                 entity.AudioUrl = response.Message;
                 if (IsVernacularMedia(entity) && entity.PassageId != null)
@@ -168,7 +180,7 @@ namespace SIL.Transcriber.Services
         */
         public async Task<Mediafile> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
         {
-            entity.S3File = Path.GetFileNameWithoutExtension(entity.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(entity.OriginalFile);
+            entity.S3File = await GetNewFileNameAsync(entity);
             S3Response response = await _S3service.UploadFileAsync(FileToUpload, DirectoryName(entity));
             entity.S3File = response.Message;
             entity.Filesize = FileToUpload.Length / 1024;

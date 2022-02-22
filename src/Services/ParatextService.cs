@@ -111,7 +111,7 @@ namespace SIL.Transcriber.Services
         }
         public UserSecret ParatextLogin()
         {
-            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            User currentUser = CurrentUserRepository.GetCurrentUser();
             if (currentUser == null) throw new Exception("Unable to get current user information");
             UserSecret newPTToken = CurrentUserContext.ParatextLogin(GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"), currentUser.Id);
 
@@ -146,7 +146,7 @@ namespace SIL.Transcriber.Services
         }
         private Claim GetClaim(string AccessToken, string claimtype)
         {
-            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            User currentUser = CurrentUserRepository.GetCurrentUser();
             JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
             Claim claim = accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
             System.Console.WriteLine("XXX CLAIM GetClaim {0}", claim != null ? claim.ToString(): "null");
@@ -548,15 +548,24 @@ namespace SIL.Transcriber.Services
             if (err.Length>0) return "ReferenceError:" + err;
             return err;
         }
+        public string GetTranscription(List<Mediafile> mediafiles)
+        {
+            string transcription = "";
+            mediafiles.ForEach(m => transcription += m.Transcription + " ");
+            return transcription;
+        }
 
         public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, int artifactTypeId)
         {
-            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            User currentUser = CurrentUserRepository.GetCurrentUser();
             Plan plan = PlanService.Get(planId);
             string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
             IQueryable<Mediafile> mediafiles = MediafileService.ReadyToSync(planId, artifactTypeId);
             List<Passage> passages = new List<Passage>();
-            mediafiles.ForEach(m => passages.Add(m.Passage));
+            mediafiles.ForEach(m => {
+                if (passages.FindIndex(p => p.Id == m.PassageId) < 0)
+                    passages.Add(m.Passage);
+            });
             string err = VerifyReferences(userSecret, passages, paratextId);
             if (err.Length > 0) throw new Exception(err);
 
@@ -585,20 +594,25 @@ namespace SIL.Transcriber.Services
                         {
                             try
                             {
-                                Mediafile mediafile = mediafiles.Where(m => m.PassageId == passage.Id).LastOrDefault(); 
-                                string transcription = mediafile.Transcription;
+                                List<Mediafile> psgMedia = mediafiles.Where(m => m.PassageId == passage.Id).OrderBy(m => m.DateCreated).ToList(); 
+                                string transcription = GetTranscription(psgMedia);
                                 chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, transcription, addNumbers);
                                 //log it
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, transcription, chapter.NewUSX.ToString()));
-
-                                mediafile.Transcriptionstate = "done";
-                                await PassageStateChangeService.CreateAsync(passage, mediafile.Transcriptionstate, "Paratext -" + passage.LastComment);
+                                for (int ix=0; ix < psgMedia.Count; ix++)
+                                {
+                                    Mediafile mediafile = psgMedia[ix];
+                                    mediafile.Transcriptionstate = "done";
+                                    await MediafileService.UpdateAsync(mediafile.Id, mediafile);
+                                }
+                                await PassageStateChangeService.CreateAsync(passage, "", "Paratext -" + transcription);
                                 passage.LastComment = "";
-                                await MediafileService.UpdateAsync(mediafile.Id, mediafile);
+
                             }
                             catch (Exception ex)
                             {
                                 //log it
+                                transaction.Rollback();
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, ex.Message));
                                 throw ex;
                             }
