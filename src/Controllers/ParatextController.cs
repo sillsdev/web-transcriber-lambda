@@ -200,6 +200,21 @@ namespace SIL.Transcriber.Controllers
             List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(userSecret, projectId, 0);
             return Ok();
         }
+        [HttpPost("project/{projectid}/{type}")]
+        public async Task<ActionResult<List<ParatextChapter>>> PostProjectAsync([FromRoute] int projectId, [FromRoute] int type)
+        {
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
+            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(userSecret, projectId, type);
+            return Ok();
+        }
 
     }
 }

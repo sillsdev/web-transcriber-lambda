@@ -20,6 +20,7 @@ namespace SIL.Transcriber.Data
     public class AppDbContext : BaseDbContext
     {
         public ICurrentUserContext CurrentUserContext { get; }
+        private int _currentUser=-1;
         public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : 
             base(options, httpContextAccessor)
         {
@@ -100,13 +101,16 @@ namespace SIL.Transcriber.Data
         }
         private int CurrentUserId()
         {
-            string auth0Id = this.CurrentUserContext.Auth0Id;
-            if (auth0Id != null)
+            if (_currentUser < 0)
             {
-                User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
-                return userFromResult == null ? -1 : userFromResult.Id;
+                string auth0Id = this.CurrentUserContext.Auth0Id;
+                if (auth0Id != null)
+                {
+                    User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
+                    _currentUser = userFromResult == null ? -1 : userFromResult.Id;
+                }
             }
-            return -1;
+            return _currentUser;
         }
         public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
         {

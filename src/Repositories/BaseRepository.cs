@@ -54,7 +54,7 @@ namespace SIL.Transcriber.Repositories
         }
         public User CurrentUser {
             get {
-                return currentUserRepository.GetCurrentUser().Result;
+                return currentUserRepository.GetCurrentUser();
             }
         }
         public override async Task<TEntity> CreateAsync(TEntity entity)

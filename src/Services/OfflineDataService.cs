@@ -48,7 +48,7 @@ namespace SIL.Transcriber.Services
             _S3service = service;
             this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
-        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser().Result; }
+        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
 
         private void WriteEntry(ZipArchiveEntry entry, string contents)
         {
@@ -1030,7 +1030,7 @@ namespace SIL.Transcriber.Services
                                                 }
                                                 passageVersions[(int)m.PassageId] = (int)m.VersionNumber;
                                             }
-                                            m.S3File = Path.GetFileNameWithoutExtension(m.OriginalFile) + "__" + Guid.NewGuid() + Path.GetExtension(m.OriginalFile);
+                                            m.S3File = await mediaService.GetNewFileNameAsync(m);
                                             m.AudioUrl = _S3service.SignedUrlForPut(m.S3File, mediaService.DirectoryName(m), m.ContentType).Message;
                                             await CopyMediaFile(m, archive);
                                             dbContext.Mediafiles.Add(new Mediafile

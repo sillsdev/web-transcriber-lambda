@@ -99,7 +99,7 @@ namespace SIL.Transcriber.Services
 
         public override async Task<Invitation> UpdateAsync(int id, Invitation entity)
         {
-            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            User currentUser = CurrentUserRepository.GetCurrentUser();
             Invitation oldentity = MyRepository.GetAsync(id).Result;
             //verify current user is logged in with invitation email
             if ((entity.Email ?? oldentity.Email ?? "").ToLower() != currentUser.Email.ToLower())
