@@ -435,17 +435,15 @@ namespace SIL.Transcriber.Services
 
                     if (!CheckAdd(12, dtBail, ref startNext, zipArchive, "sectionresources", sectionresources.ToList(), 'G')) break;
                     if (!CheckAdd(13, dtBail, ref startNext, zipArchive, "sectionresourceusers", sectionresources.Join(dbContext.Sectionresourceusers, r=>r.Id, u=>u.SectionResourceId, (r,u)=>u).Where(x => !x.Archived).ToList(), 'H')) break;
-                    ArtifactType vernacular = dbContext.Artifacttypes.Where(a => a.Typename == "vernacular").FirstOrDefault();
                     //Now I need the media list of just those files to download...
                     //pick just the highest version media per passage (vernacular only)
-                    IQueryable<Mediafile> vernmediafiles = from m in attachedmediafiles where m.ArtifactTypeId == null || m.ArtifactTypeId == vernacular.Id group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                    IQueryable<Mediafile> mediaList = vernmediafiles ;
-                    if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, mediaList.ToList())) break;
-                    mediaList = mediaList.Concat(sourcemediafiles);
+                    IQueryable<Mediafile> vernmediafiles = from m in attachedmediafiles where m.ArtifactTypeId == null group m by m.PassageId into grp select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    List<Mediafile> mediaList = vernmediafiles.ToList();
+                    if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, mediaList)) break;
+                    mediaList = mediaList.Concat(sourcemediafiles).ToList();
                     //this should get comments and uploaded resources - not accounting for edited comments for now...
-                    mediaList = mediaList.Concat(mediafiles.Where(m => m.ArtifactTypeId != null && m.ArtifactTypeId != vernacular.Id));
-                    List<Mediafile> myCopy = mediaList.ToList();
-                    myCopy.ForEach(m =>
+                    mediaList = mediaList.Concat(mediafiles.Where(m => m.ArtifactTypeId != null)).ToList();
+                    mediaList.ForEach(m =>
                     {
                         //S3File has just the filename
                         //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
@@ -454,7 +452,7 @@ namespace SIL.Transcriber.Services
                         m.AudioUrl = "media/" + m.S3File;
                         m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
                     });
-                    if (!CheckAdd(LAST_ADD, dtBail, ref startNext, zipArchive, "attachedmediafiles", myCopy, 'Z')) break;
+                    if (!CheckAdd(LAST_ADD, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
                 } while (false);
             }
             ms.Position = 0;
