@@ -59,6 +59,11 @@ namespace SIL.Transcriber.Models
 
         public bool Archived { get; set; }
 
+        public bool ReadyToSync //backward compatibility
+        {
+            get { return State == "approved" && !Archived; }
+        }
+
         private int startChapter = 0, endChapter = 0, startVerse = 0, endVerse = 0;
         public int StartChapter
         {
