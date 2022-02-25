@@ -852,12 +852,14 @@ namespace SIL.Transcriber.Services
                                 foreach (Passage p in passages)
                                 {
                                     Passage passage = dbContext.Passages.Find(p.Id);
-                                    if (passage != null && !passage.Archived && passage.StepComplete != p.StepComplete)
+                                    if (passage != null && !passage.Archived && 
+                                        (passage.StepComplete != p.StepComplete||passage.State != p.State))
                                     {
                                         if (passage.DateUpdated > sourceDate)
                                         {
                                             report.Add(PassageChangesReport(passage, p));
                                         }
+                                        passage.State = p.State; //backward compatibility
                                         passage.StepComplete = p.StepComplete;
                                         passage.LastModifiedBy = p.LastModifiedBy;
                                         passage.DateUpdated = DateTime.UtcNow;
@@ -869,7 +871,7 @@ namespace SIL.Transcriber.Services
                                             DateUpdated = passage.DateUpdated,
                                             LastModifiedBy = currentuser,
                                             PassageId = passage.Id,
-                                            State = ""
+                                            State = passage.State,
                                         };
                                         dbContext.Passagestatechanges.Add(psc);
                                     }
