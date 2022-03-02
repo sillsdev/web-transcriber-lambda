@@ -60,6 +60,7 @@ namespace SIL.Transcriber
             services.AddScoped<AppDbContextRepository<FileResponse>, FileResponseRepository>();
             services.AddScoped<IEntityRepository<Group>, GroupRepository>();
             services.AddScoped<IEntityRepository<GroupMembership>, GroupMembershipRepository>();
+            services.AddScoped<IEntityRepository<Integration>, IntegrationRepository>();
             services.AddScoped<IEntityRepository<Invitation>, InvitationRepository>();
             services.AddScoped<IEntityRepository<Mediafile>, MediafileRepository>();
             services.AddScoped<IEntityRepository<Organization>, OrganizationRepository>();
@@ -143,6 +144,7 @@ namespace SIL.Transcriber
             services.AddScoped<FileResponseRepository>();
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();
+            services.AddScoped<IntegrationRepository>();
             services.AddScoped<InvitationRepository>();
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationMembershipRepository>();

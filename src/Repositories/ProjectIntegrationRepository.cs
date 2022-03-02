@@ -63,7 +63,7 @@ namespace SIL.Transcriber.Repositories
         }
         public string IntegrationSettings(int projectId, string integration)
         {
-            ProjectIntegration projectIntegration = Get().Where(pi => pi.ProjectId == projectId).Join(dbContext.Integrations.Where(i => i.Name == integration), pi => pi.IntegrationId, i => i.Id, (pi, i) => pi).FirstOrDefault();
+            ProjectIntegration projectIntegration = Get().Where(pi => pi.ProjectId == projectId && !pi.Archived).Join(dbContext.Integrations.Where(i => i.Name == integration), pi => pi.IntegrationId, i => i.Id, (pi, i) => pi).FirstOrDefault();
             if (projectIntegration == null)
                 return "";
             return projectIntegration.Settings;

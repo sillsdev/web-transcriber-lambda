@@ -25,6 +25,7 @@ using System.Net.Http.Headers;
 using System.Security;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
@@ -315,6 +316,7 @@ namespace SIL.Transcriber.Services
         public Task<string> GetChapterTextAsync(UserSecret userSecret, string projectId, string bookId, int chapter)
         {
             VerifyUserSecret(userSecret);
+            Console.WriteLine($"text/{projectId}/{bookId}/{chapter}");
             return CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, $"text/{projectId}/{bookId}/{chapter}");
         }
         /// <summary>Update cloud with new edits in usxText and return the combined result.</summary>
@@ -490,9 +492,10 @@ namespace SIL.Transcriber.Services
         {
             return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct();
         }
-        public async Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId)
+        public async Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId, int typeId)
         {
-            string paratextId = ParatextHelpers.ParatextProject(SectionService.GetProjectId(sectionId), ProjectService);
+            ArtifactType type = dbContext.Artifacttypes.Find(typeId);
+            string paratextId = ParatextHelpers.ParatextProject(SectionService.GetProjectId(sectionId), type != null ? type.Typename : "", ProjectService);
             IQueryable<Passage> passages = PassageService.GetBySection(sectionId);
             return await GetPassageChaptersAsync(userSecret, paratextId, BookChapters(passages));
         }
@@ -501,7 +504,7 @@ namespace SIL.Transcriber.Services
             return MediafileService.ReadyToSync(planId, artifactTypeId).Count();
         }
 
-        public async Task<string> PassageTextAsync(int passageId)
+        public async Task<string> PassageTextAsync(int passageId, int typeId)
         {
             IEnumerable<Passage> passages = PassageService.Get(passageId).ToList();
             Passage passage = passages.FirstOrDefault();
@@ -509,7 +512,9 @@ namespace SIL.Transcriber.Services
             {
                 throw new Exception("Passage not found or user does not have access to passage.");
             }
-            string paratextId = ParatextHelpers.ParatextProject(PassageService.GetProjectId(passage), ProjectService);
+            ArtifactType type = dbContext.Artifacttypes.Find(typeId);
+
+            string paratextId = ParatextHelpers.ParatextProject(PassageService.GetProjectId(passage), type != null ? type.Typename : "", ProjectService);
             UserSecret userSecret = ParatextLogin();
             string err = VerifyReferences(userSecret, passages, paratextId);
             if (err.Length > 0) throw new Exception(err);
@@ -552,14 +557,17 @@ namespace SIL.Transcriber.Services
         {
             string transcription = "";
             mediafiles.ForEach(m => transcription += m.Transcription + " ");
-            return transcription;
+            //remove timestamps
+            string pattern = @"\([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?\)";
+            return Regex.Replace(transcription, pattern, "");
         }
 
         public async Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, int artifactTypeId)
         {
             User currentUser = CurrentUserRepository.GetCurrentUser();
             Plan plan = PlanService.Get(planId);
-            string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, ProjectService);
+            ArtifactType type = dbContext.Artifacttypes.Find(artifactTypeId);
+            string paratextId = ParatextHelpers.ParatextProject(plan.ProjectId, type != null ? type.Typename : "", ProjectService);
             IQueryable<Mediafile> mediafiles = MediafileService.ReadyToSync(planId, artifactTypeId);
             List<Passage> passages = new List<Passage>();
             mediafiles.ForEach(m => {

@@ -19,11 +19,11 @@ namespace SIL.Transcriber.Services
             string revision, string usxText);
         Task<string> GetNotesAsync(UserSecret userSecret, string projectId, string bookId);
         Task<string> UpdateNotesAsync(UserSecret userSecret, string projectId, string notesText);
-        Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId);
+        Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId, int artifactTypeId);
         Task<int> ProjectPassagesToSyncCountAsync(int projectId, int artifactTypeId);
         int PlanPassagesToSyncCount(int planId, int artifactTypeId);
         Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, int artifactTypeId);
         Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId, int artifactTypeId);
-        Task<string> PassageTextAsync(int passageId);
+        Task<string> PassageTextAsync(int passageId, int  type);
     }
 }

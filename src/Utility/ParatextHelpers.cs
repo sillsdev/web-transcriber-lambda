@@ -13,9 +13,9 @@ namespace SIL.Transcriber.Utility
 {
     public class ParatextHelpers
     {
-        public static string ParatextProject(int projectId, ProjectService projectService)
+        public static string ParatextProject(int projectId, string artifactType, ProjectService projectService)
         {
-            var paratextSettings = projectService.IntegrationSettings(projectId, "paratext");
+            var paratextSettings = projectService.IntegrationSettings(projectId, "paratext"+ artifactType);
             if ((paratextSettings ?? "") == "")
             {
                 throw new Exception("No Paratext Integration Settings for this project " + projectId.ToString());

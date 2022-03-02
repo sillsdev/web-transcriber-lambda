@@ -92,9 +92,9 @@ namespace SIL.Transcriber.Services
 
             return project;
         }
-        public string ParatextProject(int projectId)
+        public string ParatextProject(int projectId, string type)
         {
-            var paratextSettings = IntegrationSettings(projectId, "paratext");
+            var paratextSettings = IntegrationSettings(projectId, "paratext"+type);
             if ((paratextSettings ?? "") == "")
             {
                 return "";
@@ -107,9 +107,9 @@ namespace SIL.Transcriber.Services
             return ProjectIntegrationRepository.IntegrationSettings(projectId, integration);
         }
 
-        public bool IsLinkedToParatext(Project p, string ParatextId)
+        public bool IsLinkedToParatext(Project p, string artifactType,  string ParatextId)
         {
-            return ParatextProject(p.Id) == ParatextId;
+            return ParatextProject(p.Id, artifactType) == ParatextId;
         }
         public IEnumerable<Project> LinkedToParatext(string paratextId)
         {
