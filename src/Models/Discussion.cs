@@ -14,6 +14,7 @@ namespace SIL.Transcriber.Models
         [Attr("segments")]
         [Column(TypeName = "jsonb")]
         public string Segments { get; set; }
+        [Attr("resolved")]
         public bool Resolved { get; set; }
         public int? RoleId { get; set; }
         [HasOne("role", Link.None)]
