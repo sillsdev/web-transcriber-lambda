@@ -727,6 +727,68 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
+        private void UpdateDiscussion(Discussion existing, Discussion importing, DateTime sourceDate, List<string> report)
+        {
+            if (!existing.Archived && existing.Subject != importing.Subject ||
+                (existing.MediafileId != importing.MediafileId || existing.ArtifactCategoryId != importing.ArtifactCategoryId || 
+                 existing.Resolved != importing.Resolved || existing.RoleId != importing.RoleId))
+            {
+                if (existing.DateUpdated > sourceDate)
+                    report.Add(DiscussionChangesReport(existing, importing));
+                existing.Subject = importing.Subject;
+                existing.ArtifactCategoryId = importing.ArtifactCategoryId;
+                existing.RoleId = importing.RoleId;
+                existing.Resolved = importing.Resolved;
+                existing.UserId = importing.UserId;
+                existing.MediafileId = importing.MediafileId;
+                existing.OfflineMediafileId = importing.OfflineMediafileId;
+                existing.LastModifiedBy = importing.LastModifiedBy;
+                existing.DateUpdated = DateTime.UtcNow;
+                dbContext.Discussions.Update(existing);
+            }
+        }
+        private void UpdateComment(Comment existing, Comment importing, DateTime sourceDate, List<string> report)
+        {
+            if (existing.CommentText != importing.CommentText || existing.MediafileId != importing.MediafileId)
+            {
+                if (existing.DateUpdated > sourceDate)
+                    report.Add(CommentChangesReport(existing, importing));
+                existing.CommentText = importing.CommentText;
+                existing.MediafileId = importing.MediafileId;
+                existing.OfflineMediafileId = importing.OfflineMediafileId;
+                existing.DateUpdated = DateTime.UtcNow;
+                existing.Archived = false;
+                dbContext.Comments.Update(existing);
+            }
+        }
+        private void UpdateMediafile(Mediafile existing, Mediafile importing, DateTime sourceDate, List<string> report)
+        {
+            if (!existing.Archived && (
+                existing.Transcription != importing.Transcription ||
+                existing.Transcriptionstate != importing.Transcriptionstate ||
+                existing.Segments != importing.Segments ||
+                existing.SourceMediaId != importing.SourceMediaId ||
+                existing.SourceMediaOfflineId != importing.SourceMediaOfflineId ||
+                existing.SourceSegments != importing.SourceSegments ||
+                 existing.Topic != importing.Topic
+                ))
+            {
+                if (existing.DateUpdated > sourceDate)
+                    report.Add(MediafileChangesReport(existing, importing));
+                existing.Link = importing.Link != null ? importing.Link : false;
+                existing.Position = importing.Position;
+                existing.RecordedbyUserId = importing.RecordedbyUserId;
+                existing.Segments = importing.Segments;
+                existing.SourceSegments = importing.SourceSegments;
+                existing.SourceMediaOfflineId = importing.SourceMediaOfflineId;
+                existing.Topic = importing.Topic;
+                existing.Transcription = importing.Transcription;
+                existing.Transcriptionstate = importing.Transcriptionstate;
+                existing.LastModifiedBy = importing.LastModifiedBy;
+                existing.DateUpdated = DateTime.UtcNow;
+                dbContext.Mediafiles.Update(existing);
+            }
+        }
         private async Task<FileResponse> ProcessImportFileAsync(ZipArchive archive, int projectid, string sFile)
         {
             DateTime sourceDate;
@@ -885,21 +947,7 @@ namespace SIL.Transcriber.Services
                                     if (d.Id > 0)
                                     {
                                         Discussion discussion = dbContext.Discussions.Find(d.Id);
-                                        if (!discussion.Archived && (
-                                            discussion.MediafileId != d.MediafileId || discussion.ArtifactCategoryId != d.ArtifactCategoryId || discussion.Resolved != d.Resolved || discussion.RoleId != d.RoleId))
-                                        {
-                                            if (discussion.DateUpdated > sourceDate)
-                                                report.Add(DiscussionChangesReport(discussion, d));
-                                            discussion.ArtifactCategoryId = d.ArtifactCategoryId;
-                                            discussion.RoleId = d.RoleId;
-                                            discussion.Resolved = d.Resolved;
-                                            discussion.UserId = d.UserId;
-                                            discussion.MediafileId = d.MediafileId;
-                                            discussion.OfflineMediafileId = d.OfflineMediafileId;
-                                            discussion.LastModifiedBy = d.LastModifiedBy;
-                                            discussion.DateUpdated = DateTime.UtcNow;
-                                            dbContext.Discussions.Update(discussion);
-                                        }
+                                        if (discussion != null) UpdateDiscussion(discussion, d, sourceDate, report); 
                                     }
                                     else
                                     {
@@ -923,6 +971,9 @@ namespace SIL.Transcriber.Services
                                                 DateCreated = d.DateCreated,
                                                 DateUpdated = DateTime.UtcNow,
                                             });
+                                        } else
+                                        {
+                                            UpdateDiscussion(discussion, d, sourceDate, report);
                                         }
                                     }
                                 }
@@ -935,17 +986,7 @@ namespace SIL.Transcriber.Services
                                     if (c.Id > 0)
                                     {
                                         Comment comment = dbContext.Comments.Find(c.Id);
-                                        if (comment.CommentText != c.CommentText || comment.MediafileId != c.MediafileId)
-                                        {
-                                            if (comment.DateUpdated > sourceDate)
-                                                report.Add(CommentChangesReport(comment, c));
-                                            comment.CommentText = c.CommentText;
-                                            comment.MediafileId = c.MediafileId;
-                                            comment.OfflineMediafileId = c.OfflineMediafileId;
-                                            comment.DateUpdated = DateTime.UtcNow;
-                                            comment.Archived = false;
-                                            dbContext.Comments.Update(comment);
-                                        }
+                                        if (comment != null) UpdateComment(comment, c, sourceDate, report);
                                     }
                                     else
                                     {
@@ -966,7 +1007,7 @@ namespace SIL.Transcriber.Services
                                                 DateUpdated = DateTime.UtcNow,
                                             });
                                             //mediafileid will be updated when mediafiles are processed if 0;
-                                        }
+                                        } else UpdateComment(comment, c, sourceDate, report);
                                     }
                                 }
                                 break;
@@ -981,31 +1022,7 @@ namespace SIL.Transcriber.Services
                                     if (m.Id > 0)
                                     {
                                         mediafile = dbContext.Mediafiles.Find(m.Id);
-                                        if (!mediafile.Archived && (
-                                            mediafile.Transcription != m.Transcription || 
-                                            mediafile.Transcriptionstate != m.Transcriptionstate || 
-                                            mediafile.Segments != m.Segments ||
-                                            mediafile.SourceMediaId != m.SourceMediaId ||
-                                            mediafile.SourceMediaOfflineId != m.SourceMediaOfflineId ||
-                                            mediafile.SourceSegments != m.SourceSegments ||
-                                             mediafile.Topic != m.Topic
-                                            ))
-                                        {
-                                            if (mediafile.DateUpdated > sourceDate)
-                                                report.Add(MediafileChangesReport(mediafile, m));
-                                            mediafile.Link = m.Link != null ? m.Link : false;
-                                            mediafile.Position = m.Position;
-                                            mediafile.RecordedbyUserId = m.RecordedbyUserId;
-                                            mediafile.Segments = m.Segments;
-                                            mediafile.SourceSegments = m.SourceSegments;
-                                            mediafile.SourceMediaOfflineId = m.SourceMediaOfflineId;
-                                            mediafile.Topic = m.Topic;
-                                            mediafile.Transcription = m.Transcription;
-                                            mediafile.Transcriptionstate = m.Transcriptionstate;
-                                            mediafile.LastModifiedBy = m.LastModifiedBy;
-                                            mediafile.DateUpdated = DateTime.UtcNow;
-                                            dbContext.Mediafiles.Update(mediafile);
-                                        }
+                                        if (mediafile != null) UpdateMediafile(mediafile, m, sourceDate, report);
                                     }
                                     else
                                     {
@@ -1067,6 +1084,7 @@ namespace SIL.Transcriber.Services
                                                 DateUpdated = DateTime.UtcNow,
                                             });
                                         }
+                                        else UpdateMediafile(mediafile, m, sourceDate, report);
                                     }
                                 };
                                 break;
