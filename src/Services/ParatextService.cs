@@ -17,6 +17,7 @@ using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
@@ -574,6 +575,15 @@ namespace SIL.Transcriber.Services
                 if (passages.FindIndex(p => p.Id == m.PassageId) < 0)
                     passages.Add(m.Passage);
             });
+
+            if (artifactTypeId == 0)
+            {
+                IQueryable<Passage> backwardCompatibilityPassages = PassageService.ReadyToSync(planId);
+                backwardCompatibilityPassages.ForEach(bc => {
+                    if (passages.FindIndex(p => p.Id == bc.Id) < 0)
+                        passages.Add(bc);
+                });
+            }
             string err = VerifyReferences(userSecret, passages, paratextId);
             if (err.Length > 0) throw new Exception(err);
 
@@ -602,8 +612,12 @@ namespace SIL.Transcriber.Services
                         {
                             try
                             {
-                                List<Mediafile> psgMedia = mediafiles.Where(m => m.PassageId == passage.Id).OrderBy(m => m.DateCreated).ToList(); 
-                                string transcription = GetTranscription(psgMedia);
+                                List<Mediafile> psgMedia = mediafiles.Where(m => m.PassageId == passage.Id).OrderBy(m => m.DateCreated).ToList();
+                                string transcription = "";
+                                if (psgMedia.Count > 0)
+                                    transcription = GetTranscription(psgMedia);
+                                else transcription = PassageService.GetTranscription(passage) ?? "";
+
                                 chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, transcription, addNumbers);
                                 //log it
                                 await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, transcription, chapter.NewUSX.ToString()));
@@ -611,28 +625,26 @@ namespace SIL.Transcriber.Services
                                 {
                                     Mediafile mediafile = psgMedia[ix];
                                     mediafile.Transcriptionstate = "done";
+                                    //Debug.WriteLine("mediafile {0}", mediafile.Id);
                                     await MediafileService.UpdateAsync(mediafile.Id, mediafile);
                                 }
-                                await PassageStateChangeService.CreateAsync(passage, "", "Paratext -" + transcription);
-                                passage.LastComment = "";
-
                             }
                             catch (Exception ex)
                             {
                                 //log it
+                                await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, ex.Message+ex.InnerException.Message));
                                 transaction.Rollback();
-                                await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, ex.Message));
                                 throw ex;
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        transaction.Rollback();
-                        history.Err = ex.Message;
+                        history.Err = ex.Message + ex.InnerException.Message;
                         //log it
                         await ParatextSyncRepository.UpdateAsync(history.Id, history);
                         Logger.LogError("Paratext Error generating Chapter text {0} {1} {2}: {3}", ex.Message, chapter.Book, chapter.Chapter,chapter.OriginalUSX.ToString());
+                        transaction.Rollback();
                         throw ex;
                     }
                 }

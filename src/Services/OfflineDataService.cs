@@ -57,11 +57,13 @@ namespace SIL.Transcriber.Services
                 sw.WriteLine(contents);
             }
         }
-        private DateTime AddCheckEntry(ZipArchive zipArchive)
+        private DateTime AddCheckEntry(ZipArchive zipArchive, int version)
         {
             ZipArchiveEntry entry = zipArchive.CreateEntry("SILTranscriber", CompressionLevel.Fastest);
             DateTime dt = DateTime.UtcNow;
             WriteEntry(entry, dt.ToString("o"));
+            entry = zipArchive.CreateEntry("Version", CompressionLevel.Fastest);
+            WriteEntry(entry, version.ToString());
             return dt;
         }
         private void AddJsonEntry(ZipArchive zipArchive, string table, IList list, char sort)
@@ -342,7 +344,7 @@ namespace SIL.Transcriber.Services
                 {
                     Dictionary<string, string> fonts = new Dictionary<string, string>();
                     fonts.Add("Charis SIL", "");
-                    DateTime exported = AddCheckEntry(zipArchive);
+                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault().SchemaVersion);
                     AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
                     AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
@@ -430,8 +432,8 @@ namespace SIL.Transcriber.Services
                     if (!CheckAdd(8, dtBail, ref startNext, zipArchive, "artifacttypes", dbContext.Artifacttypes.Where(a => (a.OrganizationId == null || a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
                     if (!CheckAdd(9, dtBail, ref startNext, zipArchive, "orgworkflowsteps", dbContext.Orgworkflowsteps.Where(a => (a.OrganizationId == project.OrganizationId) && !a.Archived).ToList(), 'C')) break;
                     IQueryable<Discussion> discussions = dbContext.Discussions.Join(attachedmediafiles, d => d.MediafileId, m => m.Id, (d, m) => d).Where(x => !x.Archived);
-                    if (!CheckAdd(10, dtBail, ref startNext, zipArchive, "discussions", discussions.ToList(), 'D')) break;
-                    if (!CheckAdd(11, dtBail, ref startNext, zipArchive, "comments", dbContext.Comments.Join(discussions, c=>c.DiscussionId, d=>d.Id, (c,d) => c).Where(x => !x.Archived).ToList(), 'E')) break;
+                    if (!CheckAdd(10, dtBail, ref startNext, zipArchive, "discussions", discussions.ToList(), 'I')) break;
+                    if (!CheckAdd(11, dtBail, ref startNext, zipArchive, "comments", dbContext.Comments.Join(discussions, c=>c.DiscussionId, d=>d.Id, (c,d) => c).Where(x => !x.Archived).ToList(), 'J')) break;
 
                     if (!CheckAdd(12, dtBail, ref startNext, zipArchive, "sectionresources", sectionresources.ToList(), 'G')) break;
                     if (!CheckAdd(13, dtBail, ref startNext, zipArchive, "sectionresourceusers", sectionresources.Join(dbContext.Sectionresourceusers, r=>r.Id, u=>u.SectionResourceId, (r,u)=>u).Where(x => !x.Archived).ToList(), 'H')) break;

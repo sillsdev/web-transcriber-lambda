@@ -54,6 +54,11 @@ namespace SIL.Transcriber.Services
             PassageRepository pr = (PassageRepository)MyRepository;
             return pr.ProjectId(passage);
         }
+        public IQueryable<Passage> ReadyToSync(int PlanId)
+        {
+            PassageRepository pr = (PassageRepository)MyRepository;
+            return pr.ReadyToSync(PlanId);
+        }
         public string GetTranscription(Passage passage)
         {
             PassageRepository pr = (PassageRepository)MyRepository;

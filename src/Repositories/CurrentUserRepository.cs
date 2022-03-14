@@ -13,6 +13,9 @@ namespace SIL.Transcriber.Repositories
 {
     public class CurrentUserRepository : DefaultEntityRepository<User>
     {
+        public CurrentUserRepository() :base(null,null) //try to avoid debugging errors
+        {
+        }
         // NOTE: this repository MUST not rely on any other repositories or services
         public CurrentUserRepository(
             ILoggerFactory loggerFactory,

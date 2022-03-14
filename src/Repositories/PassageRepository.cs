@@ -59,6 +59,12 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Section> sections = SectionRepository.ProjectSections(dbContext.Sections, projectid);
             return SectionsPassages(entities, sections);
         }
+        public IQueryable<Passage> ReadyToSync(int PlanId)
+        {
+            IQueryable<Section> sections = dbContext.Sections.Where(s => s.PlanId == PlanId);
+            IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(p => p.ReadyToSync).Include(p => p.Section);
+            return passages;
+        }
         public int ProjectId(Passage passage)
         {
             return dbContext.Sections.Where(s => s.Id == passage.SectionId).Join(dbContext.Plans, s => s.PlanId, p => p.Id, (s, p) => p).FirstOrDefault().ProjectId ;
