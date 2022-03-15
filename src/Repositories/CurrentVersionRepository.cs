@@ -20,7 +20,11 @@ namespace SIL.Transcriber.Repositories
         }
         public CurrentVersion CreateOrUpdate(string version)
         {
-            CurrentVersion cv = Get().FirstOrDefault();
+            CurrentVersion cv;
+            if (version.Contains("beta"))
+                cv = Get().Where(v => v.DesktopVersion.Contains("beta")).FirstOrDefault();
+            else
+                cv = Get().FirstOrDefault();
             if (cv != null)
             {
                 if (cv.DesktopVersion != version)
@@ -41,7 +45,5 @@ namespace SIL.Transcriber.Repositories
             }
             return cv;
         }
-
-
     }
 }
