@@ -61,10 +61,10 @@ namespace SIL.Transcriber.Services
 
             return files.SingleOrDefault(g => g.Id == id);
         }
-        public async Task<Mediafile> GetFromFile(string s3File)
+        public async Task<Mediafile> GetFromFile(int plan, string s3File)
         {
             IEnumerable<Mediafile> files = await base.GetAsync();
-            return files.SingleOrDefault(p => p.S3File == s3File);
+            return files.SingleOrDefault(p => p.S3File == s3File && p.PlanId == plan);
         }
 
         private string DirectoryName(Plan plan)

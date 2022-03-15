@@ -785,7 +785,8 @@ namespace SIL.Transcriber.Services
                 existing.SourceMediaOfflineId = importing.SourceMediaOfflineId;
                 existing.Topic = importing.Topic;
                 existing.Transcription = importing.Transcription;
-                existing.Transcriptionstate = importing.Transcriptionstate;
+                if (importing.Transcriptionstate != null)  //from old desktop
+                    existing.Transcriptionstate = importing.Transcriptionstate;
                 existing.LastModifiedBy = importing.LastModifiedBy;
                 existing.DateUpdated = DateTime.UtcNow;
                 dbContext.Mediafiles.Update(existing);
