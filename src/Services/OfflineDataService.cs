@@ -344,7 +344,7 @@ namespace SIL.Transcriber.Services
                 {
                     Dictionary<string, string> fonts = new Dictionary<string, string>();
                     fonts.Add("Charis SIL", "");
-                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault().SchemaVersion);
+                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault().SchemaVersion ?? 4);
                     AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
                     AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
