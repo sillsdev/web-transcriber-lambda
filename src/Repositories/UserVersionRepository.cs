@@ -3,21 +3,24 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Repositories
 {
     public class UserVersionRepository : BaseRepository<UserVersion>
     {
+        private CurrentVersionService CVService;
         public UserVersionRepository(
             ILoggerFactory loggerFactory,
             IJsonApiContext jsonApiContext,
             CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
+            AppDbContextResolver contextResolver,
+            CurrentVersionService cvService
             ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
         {
+            CVService = cvService;
         }
         public UserVersion CreateOrUpdate(string version, string env)
         {
@@ -41,7 +44,7 @@ namespace SIL.Transcriber.Repositories
                     dbContext.UserVersions.Add(uv);
                 }
                 dbContext.SaveChanges();
-                CurrentVersion cv = dbContext.CurrentVersions.FirstOrDefault();
+                CurrentVersion cv = CVService.GetVersion(version);
                 uv.DesktopVersion = cv.DesktopVersion;
                 uv.DateUpdated = cv.DateUpdated;
                 return uv;
