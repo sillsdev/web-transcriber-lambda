@@ -7,6 +7,9 @@ namespace SIL.Transcriber.Models
     public partial class DataChanges : BaseModel
     {
         [NotMapped]
+        [Attr("startnext")]
+        public int Startnext { get; set; }
+        [NotMapped]
         [Attr("querydate")] 
         public DateTime Querydate { get; set; }
         [NotMapped]

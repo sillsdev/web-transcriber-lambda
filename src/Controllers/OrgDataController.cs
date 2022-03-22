@@ -6,7 +6,7 @@ using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
-namespace TranscriberAPI.Controllers
+namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

@@ -77,12 +77,15 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static bool IsSection(this XNode value)
         {
+            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element) return false;
             return IsPara(value) && ((XElement)value).Attribute("style").Value == "s";
         }
         public static bool IsVerse(this XNode value)
         {
             if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
+            {
                 return false;
+            }
             return ((XElement)value).Name.LocalName == "verse";
         }
         public static bool IsNote(this XNode value)
@@ -160,7 +163,7 @@ namespace TranscriberAPI.Utility.Extensions
             Debug.Assert(IsVerse(value));
             XNode next = HasChildren(value) ? value.FirstNode : value.NextNode ?? value.Parent.NextNode;
             XNode rem, remParent;
-
+            
             while (next != null)
             {
                 rem = null;

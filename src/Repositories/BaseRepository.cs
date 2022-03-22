@@ -54,7 +54,7 @@ namespace SIL.Transcriber.Repositories
         }
         public User CurrentUser {
             get {
-                return currentUserRepository.GetCurrentUser().Result;
+                return currentUserRepository.GetCurrentUser();
             }
         }
         public override async Task<TEntity> CreateAsync(TEntity entity)
@@ -103,6 +103,10 @@ namespace SIL.Transcriber.Repositories
                 string[] idList = filterQuery.Value.Split("|");
                 return entities.Where(e => idList.Any(i => i == e.Id.ToString()));
             }
+
+            if (filterQuery.Has(VERSION))
+                return entities;
+            
             return base.Filter(entities, filterQuery);
         }
     }

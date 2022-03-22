@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using TranscriberAPI.Utility;
 using static SIL.Transcriber.Utility.ServiceExtensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
+using System.Linq;
 
 namespace SIL.Transcriber.Services
 {
@@ -43,7 +44,10 @@ namespace SIL.Transcriber.Services
                 base.GetAsync,
                 JsonApiContext);
         }
-
+        public Invitation Get(int id)
+        {
+            return MyRepository.Get().Where(p => p.Id == id).FirstOrDefault(); ;
+        }
         private string BuildEmailBody(dynamic strings, Invitation entity)
         {
             //localize...
@@ -95,10 +99,10 @@ namespace SIL.Transcriber.Services
 
         public override async Task<Invitation> UpdateAsync(int id, Invitation entity)
         {
-            User currentUser = CurrentUserRepository.GetCurrentUser().Result;
+            User currentUser = CurrentUserRepository.GetCurrentUser();
             Invitation oldentity = MyRepository.GetAsync(id).Result;
             //verify current user is logged in with invitation email
-            if (oldentity.Email.ToLower() != currentUser.Email.ToLower())
+            if ((entity.Email ?? oldentity.Email ?? "").ToLower() != currentUser.Email.ToLower())
             {
                 throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity.Email + "  Currently logged in as " + currentUser.Email);
             }

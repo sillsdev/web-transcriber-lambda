@@ -16,8 +16,7 @@ namespace SIL.Transcriber.Services
         protected IEntityRepository<TResource> MyRepository { get; }
         protected IJsonApiContext JsonApiContext { get; }
         protected ILogger<TResource> Logger { get; set; }
-
-
+        
         public BaseService(
             IJsonApiContext jsonApiContext,
             IEntityRepository<TResource> myRepository,
@@ -48,6 +47,16 @@ namespace SIL.Transcriber.Services
             if (currentuser > 0)
                 return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
             return entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
+        }
+
+        public override async Task<bool> DeleteAsync(int id)
+        {
+            TResource existing = await base.GetAsync(id);
+            if (existing == null)
+            {
+                return true;
+            }
+            return await base.DeleteAsync(id);
         }
     }
 }

@@ -37,7 +37,7 @@ namespace SIL.Transcriber.Models
 
         [HasOne("owner", Link.None)]
         public virtual User Owner { get; set; }
-        public int OwnerId { get; set; }
+        public int? OwnerId { get; set; }
 
         [HasMany("organization-memberships", Link.None)]
         public List<OrganizationMembership> OrganizationMemberships { get; set; }

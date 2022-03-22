@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
 using JsonApiDotNetCore.Internal;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
@@ -35,13 +34,13 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<User> GetAsync(int id)
         {
-            User CurrentUser = CurrentUserRepository.GetCurrentUser().Result;
+            User CurrentUser = CurrentUserRepository.GetCurrentUser();
 
             if (id == 0) id = CurrentUser.Id;
 
             if (CurrentUser.Id == id)
             {
-                return await base.GetAsync(id);
+                return CurrentUser;
             }
 
             IEnumerable<User> users = await GetAsync();
@@ -61,7 +60,7 @@ namespace SIL.Transcriber.Services
 
         public User GetCurrentUser() {
 
-            return CurrentUserRepository.GetCurrentUser().Result;
+            return CurrentUserRepository.GetCurrentUser();
         }
     }
 }

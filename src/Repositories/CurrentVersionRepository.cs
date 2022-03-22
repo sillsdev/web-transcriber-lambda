@@ -41,7 +41,5 @@ namespace SIL.Transcriber.Repositories
             }
             return cv;
         }
-
-
     }
 }

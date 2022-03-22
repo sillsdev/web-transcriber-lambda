@@ -94,20 +94,20 @@ namespace SIL.Transcriber.Controllers
 
         //called from s3 trigger - no auth
         [AllowAnonymous]
-        [HttpGet("fromfile/{s3File}")]
-        public async Task<IActionResult> GetFromFile([FromRoute] string s3File)
+        [HttpGet("fromfile/{plan}/{s3File}")]
+        public async Task<IActionResult> GetFromFile([FromRoute] int plan, [FromRoute] string s3File)
         {
-            Mediafile response = await _service.GetFromFile(s3File);
+            Mediafile response = await _service.GetFromFile(plan,s3File);
             if (response == null)
                 return NotFound();
             return Ok(response);
-
         }
+
         [AllowAnonymous]
         [HttpPatch("{id}/fileinfo/{filesize}/{duration}")]
         public async Task<IActionResult> UpdateFileInformationAsync([FromRoute] int id, [FromRoute] long filesize, [FromRoute] decimal duration)
         {
-            Mediafile mf = await _service.UpdateFileInfo(id, filesize, duration);
+             Mediafile mf = await _service.UpdateFileInfo(id, filesize, duration);
             if (mf == null)
                 return NotFound();
             return Ok(mf);

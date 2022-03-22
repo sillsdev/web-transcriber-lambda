@@ -13,9 +13,9 @@ namespace SIL.Transcriber.Utility
 {
     public class ParatextHelpers
     {
-        public static string ParatextProject(int projectId, ProjectService projectService)
+        public static string ParatextProject(int projectId, string artifactType, ProjectService projectService)
         {
-            var paratextSettings = projectService.IntegrationSettings(projectId, "paratext");
+            var paratextSettings = projectService.IntegrationSettings(projectId, "paratext"+ artifactType);
             if ((paratextSettings ?? "") == "")
             {
                 throw new Exception("No Paratext Integration Settings for this project " + projectId.ToString());
@@ -339,14 +339,14 @@ namespace SIL.Transcriber.Utility
                     {   //add before
                         thisVerse = AddParatextVerse(nextVerse, p.Verses, p.LastComment, true);
                     }
-                } 
+                }
                 if (currentPassage.Sequencenum == 1 && first)
                 {
                     XElement vp = MoveToPara(thisVerse);
                     //add/update the section header
-                    if (vp.PreviousNode.IsSection())
+                    if (vp.PreviousNode?.IsSection()??false)
                     {
-                        ((XText)((XElement)thisVerse.PreviousNode).FirstNode).Value = currentPassage.Section.SectionHeader(addNumbers);
+                        ((XText)((XElement)vp.PreviousNode).FirstNode).Value = currentPassage.Section.SectionHeader(addNumbers);
                     }
                     else
                     {

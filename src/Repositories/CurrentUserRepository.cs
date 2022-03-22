@@ -13,6 +13,9 @@ namespace SIL.Transcriber.Repositories
 {
     public class CurrentUserRepository : DefaultEntityRepository<User>
     {
+        public CurrentUserRepository() :base(null,null) //try to avoid debugging errors
+        {
+        }
         // NOTE: this repository MUST not rely on any other repositories or services
         public CurrentUserRepository(
             ILoggerFactory loggerFactory,
@@ -33,17 +36,16 @@ namespace SIL.Transcriber.Repositories
         // memoize once per local thread,
         // since the current user can't change in a single request
         // this should be ok.
-        public async Task<User> GetCurrentUser(bool checkForUpdate = false)
+        public User GetCurrentUser(bool checkForUpdate = false)
         {
             if (curUser == null)
             {
                 string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
 
-                User currentUser = await Get()
+                User currentUser = Get()
                     .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
                     .Include(user => user.OrganizationMemberships)
-                    .Include(user => user.GroupMemberships)
-                    .FirstOrDefaultAsync();
+                    .Include(user => user.GroupMemberships).FirstOrDefault();
 
                 if (currentUser != null)
                 {

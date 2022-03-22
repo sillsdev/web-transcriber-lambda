@@ -6,5 +6,7 @@ namespace SIL.Transcriber.Models
     {
         [Attr("desktop-version")]
         public string DesktopVersion { get; set; }
+
+        public int? SchemaVersion { get; set; }
     }
 }

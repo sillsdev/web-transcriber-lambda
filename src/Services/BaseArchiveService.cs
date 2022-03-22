@@ -10,6 +10,9 @@ using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
+    public interface IBaseArchiveService<T1, T2> where T1 : BaseModel
+    {
+    }
     public class BaseArchiveService<TResource> : BaseService<TResource>
          where TResource : BaseModel, IArchive
     {

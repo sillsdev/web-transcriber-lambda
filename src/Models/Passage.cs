@@ -15,7 +15,6 @@ namespace SIL.Transcriber.Models
         {
             UpdateFrom(item);
             SectionId = sectionId;
-            State = "noMedia";
         }
         public Passage UpdateFrom(JToken item)
         {
@@ -45,16 +44,26 @@ namespace SIL.Transcriber.Models
 
         [HasOne("section", Link.None)]
         public virtual Section Section { get; set; }
-        
+
+        public int? OrgWorkflowStepId { get; set; }
+
+        [HasOne("org-workflow-step", Link.None)]
+        public virtual OrgWorkflowStep OrgWorkflowStep { get; set; }
+
+        [Attr("step-complete")]
+        [Column(TypeName = "jsonb")]
+        public string StepComplete { get; set; } //json
+
         [HasMany("mediafiles", Link.None)]
         public virtual List<Mediafile> Mediafiles { get; set; }
 
         public bool Archived { get; set; }
 
-        public bool ReadyToSync
+        public bool ReadyToSync //backward compatibility
         {
             get { return State == "approved" && !Archived; }
         }
+
         private int startChapter = 0, endChapter = 0, startVerse = 0, endVerse = 0;
         public int StartChapter
         {

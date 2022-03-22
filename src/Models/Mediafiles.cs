@@ -7,19 +7,25 @@ namespace SIL.Transcriber.Models
     {
         [Attr("passage-id")]
         public int? PassageId { get; set; }
-        [HasOne("passage", Link.None)]
-        public virtual Passage Passage { get; set; }
+        [HasOne("passage", JsonApiDotNetCore.Models.Link.None)]
+        public Passage Passage { get; set; }
 
         [Attr("plan-id")]
         public int PlanId { get; set; }
-        [HasOne("plan", Link.None)]
-        public virtual Plan Plan { get; set; }
+        [HasOne("plan", JsonApiDotNetCore.Models.Link.None)]
+        public Plan Plan { get; set; }
 
+        [Attr("artifact-type-id")]
+        public int? ArtifactTypeId { get; set; }
+        [HasOne("artifact-type", JsonApiDotNetCore.Models.Link.None)]
+        public ArtifactType ArtifactType { get; set; }
+        public int? ArtifactCategoryId { get; set; }
+        [HasOne("artifact-category", JsonApiDotNetCore.Models.Link.None)]
+        public ArtifactCategory ArtifactCategory { get; set; }
 
         [Attr("version-number")]
         public int? VersionNumber { get; set; }
-        [Attr("artifact-type")]
-        public string ArtifactType { get; set; }
+
         [Attr("eaf-url")]
         public string EafUrl { get; set; }
         [Attr("audio-url")]
@@ -43,11 +49,49 @@ namespace SIL.Transcriber.Models
         public long Filesize { get; set; }
         [Attr("position")]
         public double Position { get; set; }
-
+        [Attr("topic")]
+        public string Topic { get; set; }
+        [Attr("transcriptionstate")]
+        public string Transcriptionstate { get; set; }
         public bool Archived { get; set; }
 
         [Attr("segments")]
         [Column(TypeName = "jsonb")]
         public string Segments { get; set; }
+        public int? RecordedbyUserId { get; set; }
+
+        [Attr("languagebcp47")]
+        public string Languagebcp47 { get; set; }
+        
+        [Attr("performed-by")]
+        public string PerformedBy { get; set; }
+        [Attr("ready-to-share")]
+        public bool ReadyToShare { get; set; }
+        [Attr("resource-passage-id")]
+        public int? ResourcePassageId { get; set; }
+        [HasOne("resource-passage", JsonApiDotNetCore.Models.Link.None)]
+        public Passage ResourcePassage { get; set; }
+        [Attr("link")]
+        public bool? Link { get; set; }
+
+        [Attr("offline-id")]
+        public string OfflineId { get; set; }
+        [Attr("source-media-offline-id")]
+        public string SourceMediaOfflineId { get; set; }
+
+        [Attr("source-media-id")]
+        public int? SourceMediaId { get; set; }
+        [HasOne("source-media", JsonApiDotNetCore.Models.Link.None)]
+        public Mediafile SourceMedia { get; set; }
+
+        [Attr("source-segments")]
+        [Column(TypeName = "jsonb")]
+        public string SourceSegments { get; set; }
+
+        public bool ReadyToSync
+        {
+            get { return Transcriptionstate == "approved" && !Archived; }
+        }
+
     }
 }

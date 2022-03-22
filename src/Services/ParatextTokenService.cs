@@ -24,13 +24,15 @@ namespace SIL.Transcriber.Services
             CurrentUserRepository = currentUserRepository;
             TokenRepository = tokenRepository;
         }
-    public override async Task<IEnumerable<ParatextToken>> GetAsync()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        public override async Task<IEnumerable<ParatextToken>> GetAsync()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
-            var currentUser = await CurrentUserRepository.GetCurrentUser();
+            Models.User currentUser = CurrentUserRepository.GetCurrentUser();
             /* this fails since we havent' come from a controller
             ** var tokens = await base.GetAsync();
             */
-            var tokens = TokenRepository.Get();
+            IQueryable<ParatextToken> tokens = TokenRepository.Get();
             return tokens.Where(t => t.UserId == currentUser.Id);
         }
     }

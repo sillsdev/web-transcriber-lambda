@@ -9,6 +9,7 @@ using System.IO;
 using Microsoft.AspNetCore.Http;
 using System.Net;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Services
 {
@@ -16,10 +17,12 @@ namespace SIL.Transcriber.Services
     {
         private string USERFILES_BUCKET;
         private readonly IAmazonS3 _client;
-        public S3Service(IAmazonS3 client)
+        protected ILogger<S3Service> Logger { get; set; }
+        public S3Service(IAmazonS3 client, ILoggerFactory loggerFactory)
         {
             _client = client;
             USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
+            this.Logger = loggerFactory.CreateLogger<S3Service>();
         }
 
         private string ProperFolder(string folder)
@@ -154,32 +157,7 @@ namespace SIL.Transcriber.Services
                     await RemoveFile(fileName, folder);
                 }
                 TransferUtility fileTransferUtility =  new TransferUtility(_client);
-                TransferUtilityUploadRequest fileTransferUtilityRequest = new TransferUtilityUploadRequest
-                {
-                    BucketName = USERFILES_BUCKET,
-                    Key = ProperFolder(folder) + fileName,
-                    InputStream = stream,
-                    ContentType = ContentType,
-                    StorageClass = S3StorageClass.Standard,
-                    CannedACL = S3CannedACL.NoACL
-                };
-                await fileTransferUtility.UploadAsync(fileTransferUtilityRequest);
-
-                /*                PutObjectResponse response = null;
-                                PutObjectRequest request = new PutObjectRequest
-                                {
-                                    BucketName = USERFILES_BUCKET,
-                                    Key = ProperFolder(folder) + fileName,
-                                    InputStream = stream,
-                                    ContentType = ContentType,
-                                    StorageClass = S3StorageClass.Standard,
-                                    CannedACL = S3CannedACL.NoACL
-                                };
-                                //request.Metadata.Add("Book", "Genesis");
-                                //request.Metadata.Add("Reference", "1:1-5");
-                                //request.Metadata.Add("Plan", "Creation");
-                                response = await _client.PutObjectAsync(request);
-                */
+                await fileTransferUtility.UploadAsync(stream, USERFILES_BUCKET, ProperFolder(folder) + fileName);
                 return new S3Response
                 {
                     Message = fileName,

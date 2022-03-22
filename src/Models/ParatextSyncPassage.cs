@@ -18,6 +18,7 @@ namespace SIL.Logging.Models
             ParatextSyncId = paratextSyncId;
             Reference = reference;
             Err = err;
+            Transcription = "";
         }
 
         [Attr("paratext-sync-id")]

@@ -20,6 +20,7 @@ namespace SIL.Transcriber.Data
     public class AppDbContext : BaseDbContext
     {
         public ICurrentUserContext CurrentUserContext { get; }
+        private int _currentUser=-1;
         public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : 
             base(options, httpContextAccessor)
         {
@@ -36,6 +37,8 @@ namespace SIL.Transcriber.Data
             EntityTypeBuilder<GroupMembership> groupMemberEntity = modelBuilder.Entity<GroupMembership>();
             EntityTypeBuilder<Passage> passageEntity = modelBuilder.Entity<Passage>();
             EntityTypeBuilder<Section> sectionEntity = modelBuilder.Entity<Section>();
+            EntityTypeBuilder<SectionResource> sectionResourceEntity = modelBuilder.Entity<SectionResource>();
+            EntityTypeBuilder<OrgWorkflowStep> orgWorkflowStepsEntity = modelBuilder.Entity<OrgWorkflowStep>();
 
             passageEntity.HasMany(p => p.Mediafiles)
                 .WithOne(mf => mf.Passage)
@@ -74,11 +77,21 @@ namespace SIL.Transcriber.Data
 
             orgEntity
                 .Property(o => o.PublicByDefault)
-                .HasDefaultValue(true);
+                .HasDefaultValue(false);
 
             projectEntity
                 .Property(p => p.IsPublic)
-                .HasDefaultValue(true);
+                .HasDefaultValue(false);
+
+            orgWorkflowStepsEntity
+                .HasOne(s => s.Parent)
+                .WithMany()
+                .HasForeignKey(s => s.ParentId);
+
+            sectionResourceEntity
+                .HasMany(r => r.SectionResourceUsers)
+                .WithOne(srow => srow.SectionResource)
+                .HasForeignKey(x => x.SectionResourceId);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -88,9 +101,16 @@ namespace SIL.Transcriber.Data
         }
         private int CurrentUserId()
         {
-            string auth0Id = this.CurrentUserContext.Auth0Id;
-            User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
-            return userFromResult == null ? -1 : userFromResult.Id;
+            if (_currentUser < 0)
+            {
+                string auth0Id = this.CurrentUserContext.Auth0Id;
+                if (auth0Id != null)
+                {
+                    User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
+                    _currentUser = userFromResult == null ? -1 : userFromResult.Id;
+                }
+            }
+            return _currentUser;
         }
         public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -143,17 +163,23 @@ namespace SIL.Transcriber.Data
             }
         }
         public DbSet<Activitystate> Activitystates { get; set; }
+        public DbSet<ArtifactCategory> Artifactcategorys { get; set; }
+        public DbSet<ArtifactType> Artifacttypes { get; set; }
+        public DbSet<Comment> Comments { get; set; }
         public DbSet<CurrentVersion> CurrentVersions { get; set; }
         public DbSet<Dashboard> Dashboards { get; set; }
         public DbSet<DataChanges> DataChanges { get; set; }
+        public DbSet<Discussion> Discussions { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupMembership> Groupmemberships { get; set; }
         public DbSet<Integration> Integrations { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Mediafile> Mediafiles { get; set; }
         public DbSet<Organization> Organizations { get; set; }
+
         public DbSet<OrgData> Orgdatas { get; set; }
         public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
+        public DbSet<OrgWorkflowStep> Orgworkflowsteps { get; set; }
         public DbSet<ParatextToken> Paratexttokens { get; set; }
         public DbSet<Passage> Passages { get; set; }
         public DbSet<PassageStateChange> Passagestatechanges { get; set; }
@@ -163,12 +189,16 @@ namespace SIL.Transcriber.Data
         public DbSet<ProjectIntegration> Projectintegrations { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectType> Projecttypes { get; set; }
+        public DbSet<Resource> Resources { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Section> Sections { get; set; }
         public DbSet<SectionPassage> Sectionpassages { get; set; }
+        public DbSet<SectionResource> Sectionresources { get; set; }
+        public DbSet<SectionResourceUser> Sectionresourceusers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<UserVersion> UserVersions { get; set; }
         public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
+        public DbSet<WorkflowStep> Workflowsteps { get; set; }
 
     }
     public class AppDbContextResolver : IDbContextResolver

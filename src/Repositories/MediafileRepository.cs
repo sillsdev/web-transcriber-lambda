@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using JsonApiDotNetCore.Internal.Query;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,7 @@ using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using static SIL.Transcriber.Utility.IEnumerableExtensions;
 using static SIL.Transcriber.Utility.RepositoryExtensions;
+using Microsoft.EntityFrameworkCore;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -80,6 +82,19 @@ namespace SIL.Transcriber.Repositories
                 return UsersMediafiles(entities, projectid);
             }
             return base.Filter(entities, filterQuery);
+        }
+        public Mediafile GetLatestShared(int passageId)
+        {
+            return Get().Where(p => p.PassageId == passageId && p.ReadyToShare).OrderBy(m => m.VersionNumber).LastOrDefault();
+        }
+        public IQueryable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId = 0)
+        {
+            //this should disqualify media that has a new version that isn't ready...but doesn't (yet)
+            IQueryable<Mediafile> media = dbContext.Mediafiles
+                .Where(m => m.PlanId == PlanId && (artifactTypeId == 0 ? m.ArtifactTypeId == null : m.ArtifactTypeId == artifactTypeId) && m.ReadyToSync)
+                .Include(m => m.Passage).ThenInclude(p => p.Section)
+                .OrderBy(m => m.PassageId).ThenBy(m => m.VersionNumber);
+            return media;
         }
         public Mediafile Get(int id)
         {
