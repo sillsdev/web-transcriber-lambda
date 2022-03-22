@@ -146,10 +146,19 @@ namespace SIL.Transcriber.Services
             DateTime dtNow = DateTime.UtcNow;
             if (!int.TryParse(version, out int dbVersion))
                 dbVersion = 1;
-            DCReturn ret = GetChanges(origin, dtSince, CurrentUser().Id, 0, dbVersion,start);
-            ret.changes.RemoveAll(c => c.ids.Count == 0);
-            ret.deleted.RemoveAll(d => d.ids.Count == 0);
-            return new DataChanges() { Id = 1, Querydate = dtNow, Startnext = ret.startNext, Changes = ret.changes.ToArray(), Deleted = ret.deleted.ToArray() };
+            try
+            {
+                User user = CurrentUser();
+                if (user == null) return null;
+                DCReturn ret = GetChanges(origin, dtSince, user.Id, 0, dbVersion, start);
+                ret.changes.RemoveAll(c => c.ids.Count == 0);
+                ret.deleted.RemoveAll(d => d.ids.Count == 0);
+                return new DataChanges() { Id = 1, Querydate = dtNow, Startnext = ret.startNext, Changes = ret.changes.ToArray(), Deleted = ret.deleted.ToArray() };
+            }
+            catch
+            {
+                return null;
+            }
         }
         private class ArchiveModel : BaseModel, IArchive
         {

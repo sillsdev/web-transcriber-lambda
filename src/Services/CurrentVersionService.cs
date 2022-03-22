@@ -24,10 +24,14 @@ namespace SIL.Transcriber.Services
         public CurrentVersion GetVersion(string version)
         {
             IEnumerable<CurrentVersion> cvs = GetAsync().Result;
-            if (version.Contains("beta") && cvs.Where(v => v.DesktopVersion.Contains("beta")).Any())
-                    return cvs.Where(v => v.DesktopVersion.Contains("beta")).First();
-            else
-                return cvs.FirstOrDefault();
+            CurrentVersion cv = null;
+            if (version.Contains("beta"))
+                cv = cvs.Where(v => v.DesktopVersion.Contains("beta")|| v.DesktopVersion.Contains("rc")).FirstOrDefault();
+            else if (version.Contains("rc"))
+                cv = cvs.Where(v => v.DesktopVersion.Contains("rc")).FirstOrDefault();
+            if (cv != null) return cv;
+            return cvs.FirstOrDefault();
+                
         }
     }
 }

@@ -157,19 +157,23 @@ namespace SIL.Transcriber.Services
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
             VerifyUserSecret(userSecret);
-
+            Console.WriteLine("GetProjectsAsync");
             Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             string username = usernameClaim?.Value;
             string response = await CallApiAsync(_dataAccessClient, userSecret, HttpMethod.Get, "projects");
             XElement reposElem = XElement.Parse(response);
+            if (reposElem == null) return null;
+
             List<ParatextProject> projects = new List<ParatextProject>();
             foreach (XElement repoElem in reposElem.Elements("repo"))
             {
+                Console.WriteLine("GetProjectsAsync repo {0}", repoElem);
                 string projId = (string)repoElem.Element("projid");
                 XElement userElem = repoElem.Element("users")?.Elements("user")
                     ?.FirstOrDefault(ue => (string)ue.Element("name") == username);
                 string role = (string)userElem?.Element("role");
                 IEnumerable<string> projectids = ProjectService.LinkedToParatext(projId).Select(p => p.Id.ToString());
+                Console.WriteLine("GetProjectsAsync projectids {0}", projectids);
 
                 projects.Add(new ParatextProject
                 {
@@ -192,7 +196,8 @@ namespace SIL.Transcriber.Services
 
             foreach (JToken projectObj in projectArray)
             {
-                JToken identificationObj = projectObj["identification_systemId"]
+                Console.WriteLine("GetProjectsAsync projectObj {0}", projectObj);
+                JToken identificationObj = projectObj["identification_systemId"]?
                     .FirstOrDefault(id => (string)id["type"] == "paratext");
                 if (identificationObj == null)
                     continue;
@@ -200,6 +205,7 @@ namespace SIL.Transcriber.Services
                 ParatextProject proj = projects.FirstOrDefault(p => p.ParatextId == paratextId);
                 if (proj == null)
                     continue;
+                Console.WriteLine("GetProjectsAsync identificationObj {0}", identificationObj);
 
                 string name = (string)identificationObj["fullname"];
                 string langName = (string)projectObj["language_iso"];
@@ -210,6 +216,7 @@ namespace SIL.Transcriber.Services
                 proj.LanguageName = langName;
                 proj.LanguageTag = langTag;
             }
+            Console.WriteLine("GetProjectsAsync link bt");
 
             //now go through them again to link BT to base project
             foreach (ParatextProject proj in projects)
@@ -284,13 +291,10 @@ namespace SIL.Transcriber.Services
         }
         public string GetParatextUsername(UserSecret userSecret)
         {
-            System.Console.WriteLine("XXX GetParatextUsername");
-
             VerifyUserSecret(userSecret);
             try
             {
                 Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
-                System.Console.WriteLine("XXX GetClaim service {0}", usernameClaim != null ? usernameClaim.ToString() : "null");
                 return usernameClaim?.Value;
             }
             catch (Exception ex)
@@ -632,7 +636,9 @@ namespace SIL.Transcriber.Services
                             catch (Exception ex)
                             {
                                 //log it
-                                await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, ex.Message+ex.InnerException.Message));
+                                Logger.LogError("Paratext Error passage {0} {1} {2}", ex.Message, passage.Id, passage.Reference);
+
+                                await ParatextSyncPassageRepository.CreateAsync(new ParatextSyncPassage(currentUser.Id, history.Id, passage.Reference, ex.Message+ex.InnerException!= null ? ex.InnerException.Message : ""));
                                 transaction.Rollback();
                                 throw ex;
                             }
@@ -640,7 +646,8 @@ namespace SIL.Transcriber.Services
                     }
                     catch (Exception ex)
                     {
-                        history.Err = ex.Message + ex.InnerException.Message;
+                        Logger.LogError("Paratext Error generating Chapter text {0} {1} {2}: {3} {4}", ex.Message, chapter.Book, chapter.Chapter, chapter.OriginalUSX.ToString(), history);
+                        history.Err = ex.Message + "::" + (ex.InnerException != null ? ex.InnerException.Message : "");
                         //log it
                         await ParatextSyncRepository.UpdateAsync(history.Id, history);
                         Logger.LogError("Paratext Error generating Chapter text {0} {1} {2}: {3}", ex.Message, chapter.Book, chapter.Chapter,chapter.OriginalUSX.ToString());
