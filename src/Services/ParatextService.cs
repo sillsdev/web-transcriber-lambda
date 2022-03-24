@@ -157,7 +157,7 @@ namespace SIL.Transcriber.Services
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
             VerifyUserSecret(userSecret);
-            Console.WriteLine("GetProjectsAsync");
+            //Console.WriteLine("GetProjectsAsync");
             Claim usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             string username = usernameClaim?.Value;
             Logger.LogInformation($"TTY A: {DateTime.Now} {username}");
@@ -169,14 +169,12 @@ namespace SIL.Transcriber.Services
             Logger.LogInformation($"TTY B: {DateTime.Now} {reposElem}");
             foreach (XElement repoElem in reposElem.Elements("repo"))
             {
-                Console.WriteLine("GetProjectsAsync repo {0}", repoElem);
                 string projId = (string)repoElem.Element("projid");
                 XElement userElem = repoElem.Element("users")?.Elements("user")
                     ?.FirstOrDefault(ue => (string)ue.Element("name") == username);
                 string role = (string)userElem?.Element("role");
                 IEnumerable<string> projectids = ProjectService.LinkedToParatext(projId).Select(p => p.Id.ToString());
-                Console.WriteLine("GetProjectsAsync projectids {0}", projectids);
-
+                
                 projects.Add(new ParatextProject
                 {
                     ParatextId = projId,
@@ -199,7 +197,6 @@ namespace SIL.Transcriber.Services
 
             foreach (JToken projectObj in projectArray)
             {
-                Console.WriteLine("GetProjectsAsync projectObj {0}", projectObj);
                 JToken identificationObj = projectObj["identification_systemId"]?
                     .FirstOrDefault(id => (string)id["type"] == "paratext");
                 if (identificationObj == null)
@@ -208,9 +205,8 @@ namespace SIL.Transcriber.Services
                 ParatextProject proj = projects.FirstOrDefault(p => p.ParatextId == paratextId);
                 if (proj == null)
                     continue;
-                Console.WriteLine("GetProjectsAsync identificationObj {0}", identificationObj);
-
-                string name = (string)identificationObj["fullname"];
+                
+                string name = (string)identificationObj["fullname"]??(string)identificationObj["name"];
                 string langName = (string)projectObj["language_iso"];
                 string langTag = (string)projectObj["language_ldml"];
                 //if (StandardSubtags.TryGetLanguageFromIso3Code(langName, out LanguageSubtag subtag))
