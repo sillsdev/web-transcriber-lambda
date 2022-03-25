@@ -31,6 +31,10 @@ namespace SIL.Transcriber.Models
         [Attr("public-by-default")]
         public bool? PublicByDefault { get; set; } = true;
 
+        [Attr("default-params")]
+        [Column(TypeName = "jsonb")]
+        public string DefaultParams { get; set; } 
+
         [NotMapped]
         [Attr("all-users-name")]
         public string AllUsersName { get; set; }

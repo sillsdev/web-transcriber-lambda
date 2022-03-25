@@ -20,6 +20,8 @@ namespace SIL.Transcriber.Models
         public string OfflineDiscussionId { get; set; }
         [Attr("offline-mediafile-id")]
         public string OfflineMediafileId { get; set; }
+        [Attr("hidden")]
+        public bool Hidden { get; set; }
         public bool Archived { get; set; }
     }
 }
