@@ -8,6 +8,7 @@ namespace SIL.Transcriber.Services
     public interface IParatextService
     {
         UserSecret ParatextLogin();
+        Task<IReadOnlyList<ParatextOrg>> GetOrgsAsync(UserSecret userSecret);
         Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret);
         Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret, string languageTag);
         string GetParatextUsername(UserSecret userSecret);

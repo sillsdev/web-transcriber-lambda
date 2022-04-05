@@ -1,10 +1,8 @@
 ﻿using IdentityModel;
-using JsonApiDotNetCore.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Linq;
 using SIL.Logging.Models;
@@ -17,7 +15,6 @@ using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Utility;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
@@ -153,6 +150,37 @@ namespace SIL.Transcriber.Services
             Claim claim = accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
             System.Console.WriteLine("XXX CLAIM GetClaim {0}", claim != null ? claim.ToString(): "null");
             return claim;
+        }
+        public async Task<IReadOnlyList<ParatextOrg>> GetOrgsAsync(UserSecret userSecret)
+        {
+            VerifyUserSecret(userSecret);
+            string response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "orgs");
+            JArray orgArray = JArray.Parse(response);
+            List<ParatextOrg> orgs = new List<ParatextOrg>();
+            orgArray.ForEach(o => {
+                List<string> domains = new List<string>();
+                if (o["domains"] != null)
+                    o["domains"].ForEach(d => domains.Add((string)d));
+                orgs.Add(new ParatextOrg
+                {
+                    Id = (string)o["id"],
+                    Name = (string)o["name"],
+                    NameLocal = (string) o["nameLocal"] ?? "",
+                    Url = (string)o["url"],
+                    Abbr = (string)o["abbr"],
+                    Parent = (string)o["parent"],
+                    Location = (string)o["location"] ?? "",
+                    Area = (string)o["area"] ?? "",
+                    Public = (bool) (o["public"] ?? false),
+                    Active = (bool) (o["active"] ?? false),
+                    InDbl = (bool) (o["in_dbl"] ?? false),
+                    AuthorizedForParatext = (bool) (o["authorizedForParatext"] ?? false),
+                    ShareBasicProgressInfo = (bool) (o["shareBasicProgressInfo"] ?? false),
+                    CountryISO = (string)o["country_iso"],
+                    Domains = domains,
+                }); ;
+            }); 
+            return orgs;
         }
         public async Task<IReadOnlyList<ParatextProject>> GetProjectsAsync(UserSecret userSecret)
         {
