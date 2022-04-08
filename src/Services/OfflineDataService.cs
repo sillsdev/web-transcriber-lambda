@@ -10,10 +10,13 @@ using System.Collections.Generic;
 using System.Collections;
 using System;
 using JsonApiDotNetCore.Serialization;
-
+using static SIL.Transcriber.Utility.ResourceHelpers;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Repositories;
+using System.Dynamic;
+using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace SIL.Transcriber.Services
 {
@@ -28,8 +31,7 @@ namespace SIL.Transcriber.Services
         private IS3Service _S3service;
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
-        const string ContentType = "application/ptf";
-        const int LAST_ADD= 15;
+
         protected ILogger<OfflineDataService> Logger { get; set; }
 
         public OfflineDataService(AppDbContextResolver contextResolver,
@@ -141,7 +143,7 @@ namespace SIL.Transcriber.Services
             if (completed <= check)
             {
                 foreach (Mediafile m in media)
-                   AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
+                    AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
                 completed++;
             }
             return true;
@@ -257,9 +259,9 @@ namespace SIL.Transcriber.Services
             }
             return true;
         }
-        private FileResponse CheckProgress(int projectid, string fileName)
+        private FileResponse CheckProgress(int projectid, string fileName, int lastAdd, string ext)
         {
-            int startNext =0;
+            int startNext;
             string err = "";
             try
             {
@@ -271,13 +273,13 @@ namespace SIL.Transcriber.Services
                     err = data.Substring(data.IndexOf("|") + 1);
                     data = data.Substring(0, data.IndexOf("|"));
                 }
-                int.TryParse(data, out startNext);
+                if (!int.TryParse(data, out startNext)) startNext = 0;
             }
             catch
             {
                 //it's not there yet...
                 Logger.LogInformation("status file not available");
-                startNext = LAST_ADD+1;
+                startNext = lastAdd + 1;
             }
             if (startNext < 0)
             {
@@ -289,42 +291,28 @@ namespace SIL.Transcriber.Services
                 catch { };
             }
             else
-                startNext = Math.Max(startNext, LAST_ADD+1);
-
+                startNext = Math.Max(startNext, lastAdd + 1);
+            string contentType = "application/zip";
             return new FileResponse()
             {
-                Message = startNext == -2 ? err : fileName +".ptf",
+                Message = startNext == -2 ? err : fileName,
                 //get a signedurl for it if we're done
-                FileURL = startNext == -1 ? _S3service.SignedUrlForGet(fileName + ".ptf", ExportFolder, ContentType).Message : "",
+                FileURL = startNext == -1 ? _S3service.SignedUrlForGet(fileName, ExportFolder, contentType).Message : "",
                 Status = startNext == -1 ? System.Net.HttpStatusCode.OK : startNext == -2 ? System.Net.HttpStatusCode.RequestEntityTooLarge : System.Net.HttpStatusCode.PartialContent,
-                ContentType = ContentType,
+                ContentType = contentType,
                 Id = startNext,
             };
         }
         private Stream OpenFile(string fileName)
         {
-            S3Response s3response  = _S3service.ReadObjectDataAsync(fileName, ExportFolder).Result;
+            S3Response s3response = _S3service.ReadObjectDataAsync(fileName, ExportFolder).Result;
             if (s3response.FileStream == null)
                 throw (new Exception("Export in progress " + fileName + "not found."));
             return s3response.FileStream;
         }
-
-        public FileResponse ExportProject(int projectid, int start)
+        private Stream GetMemoryStream(int start, string fileName, string ext)
         {
-            int startNext = start;
-            Logger.LogInformation($"{DateTime.Now}");
-            //give myself 15 seconds to get as much as I can...
-            DateTime dtBail = DateTime.Now.AddSeconds(15);
-
-            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
-            Project project = projects.First();
-            string fileName = string.Format("Transcriber{0}_{1}_{2}" , CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser().Id) ;
-
-            S3Response s3response;
             Stream ms;
-            if (start > LAST_ADD)
-                return CheckProgress(projectid, fileName);
-
             if (start == 0)
             {
                 ms = new MemoryStream();
@@ -336,8 +324,208 @@ namespace SIL.Transcriber.Services
             }
             else
             {
-                ms = OpenFile(fileName + ".ptf");
+                ms = OpenFile(fileName + ext);
             }
+            return ms;
+        }
+        private FileResponse WriteMemoryStream(Stream ms, string fileName, int startNext, int lastAdd, string ext)
+        {
+            S3Response s3response;
+            string contentType = "application/zip";
+            ms.Position = 0;
+            fileName += ext + (startNext == lastAdd + 1 ? ".tmp" : ""); //tmp signals the trigger to add mediafiles
+            s3response = _S3service.UploadFileAsync(ms, true, contentType, fileName, ExportFolder).Result;
+            if (s3response.Status == HttpStatusCode.OK)
+            {
+                return new FileResponse()
+                {
+                    Message = fileName,
+                    FileURL = "",
+                    Status = HttpStatusCode.PartialContent,
+                    ContentType = contentType,
+                    Id = startNext,
+                };
+            }
+            else
+            {
+                throw new Exception(s3response.Message);
+            }
+        }
+
+        private void AddBurritoMeta(ZipArchive zipArchive, Project project, List<Mediafile> mediafiles)
+        {
+            Dictionary<string, string> mimeMap = new Dictionary<string, string>
+            {
+                {"mp3","audio/mpeg"},
+                {"webm", "audio/webm;codecs=opus"},
+                {"mka", "audio/webm;codecs=pcm"},
+                {"wav", "audio/wav"},
+                {"m4a", "audio/x-m4a"},
+                {"ogg", "audio/ogg;codecs=opus"},
+                {"itf", "application/itf"},
+                {"ptf", "application/ptf"},
+                {"jpg", "image/jpeg"},
+                {"svg", "image/svg+xml"},
+                {"png", "image/png"},
+            };
+
+            ZipArchiveEntry entry = zipArchive.CreateEntry("metadata.json", CompressionLevel.Fastest);
+            string metastr = LoadResource("burritometa.json");
+            Dictionary<string, List<string>> scopes = new Dictionary<string, List<string>>();
+            List<string> formats = new List<string>();
+
+            dynamic root = Newtonsoft.Json.JsonConvert.DeserializeObject(metastr);
+            dynamic meta = root.meta;
+            meta.version = "0.3.1";
+            meta.category = "source";
+            meta.generator.softwareName = "SIL Transcriber";
+            meta.generator.softwareVersion = dbContext.CurrentVersions.FirstOrDefault().DesktopVersion;
+            meta.generator.userName = CurrentUser().Name;
+            meta.defaultLanguage = project.Language;
+            meta.dateCreated = DateTime.Now.ToString("o");
+            root.identification.name.en = project.Name;
+            root.identification.description.en = project.Description;
+            root.languages[0].tag = project.Language;
+            root.languages[0].name.en = project.LanguageName;
+            
+            mediafiles.ForEach(m =>
+            {
+                //get stored book and ref out of audioquality
+                string book = m.AudioQuality.Split("|")[0];
+                string reference = m.AudioQuality.Split("|")[1];
+                if (!scopes.ContainsKey(book))
+                    scopes.Add(book, new List<string>());
+                scopes[book].Add(reference);
+                string ext = Path.GetExtension(m.AudioUrl).TrimStart('.');
+                if (!formats.Contains(ext))
+                    formats.Add(ext);
+                root.ingredients[m.AudioUrl] = new JObject();
+                if (mimeMap.ContainsKey(ext))
+                    root.ingredients[m.AudioUrl].mimeType = mimeMap[ext];
+                root.ingredients[m.AudioUrl].size = m.Filesize;
+                string scopestr = string.Format("{{[{0}]:[{1}]}}", book, reference);
+                root.ingredients[m.AudioUrl].scope = new JObject();
+                root.ingredients[m.AudioUrl].scope[book] = JToken.FromObject(new string[] { reference });
+            }); 
+            for (int n = 0; n < formats.Count; n++)
+            {
+                string name = "format" + (n+1).ToString();
+                root.type.flavorType.flavor.formats[name] = new JObject();
+                root.type.flavorType.flavor.formats[name].compression = formats[n];
+            }
+            foreach (KeyValuePair<string, List<string>> item in scopes)
+            {
+                root.type.flavorType.currentScope[item.Key] = JToken.FromObject(item.Value.ToArray());
+            }
+            WriteEntry(entry, Newtonsoft.Json.JsonConvert.SerializeObject(root, Formatting.Indented));  
+        }
+        private string ScriptureFullPath(string language, Passage passage, Mediafile m)
+        {
+            return "release/audio/" + passage.Book + "/" + string.Format("{0}-{1}-{2}-{3}-{4}v{5}{6}",
+                        language, passage.Book, passage.StartChapter.ToString().PadLeft(3, '0'), 
+                        passage.StartVerse.ToString().PadLeft(3, '0'), passage.EndVerse.ToString().PadLeft(3, '0'),
+                        m.VersionNumber, Path.GetExtension(m.S3File));
+        }
+
+        private List<Mediafile> AddBurritoMedia(ZipArchive zipArchive, Project project, List<Mediafile> mediafiles)
+        {
+            mediafiles.ForEach(m =>
+            {
+
+                Passage passage = dbContext.Passages.Where(p => p.Id == m.PassageId).FirstOrDefault();
+                //S3File has just the filename
+                //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
+                //change the audioUrl to have the offline path + filename
+                //change the s3File to have the onlinepath + filename
+                m.AudioQuality = passage.Book + "|" + passage.Reference; //store these here temporarily
+                m.AudioUrl = ScriptureFullPath(project.Language, passage, m);
+                m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
+            });
+            AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles, 'Z');
+            return mediafiles;
+        }
+        private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles)
+        {
+            mediafiles.ForEach(m =>
+            {
+                //S3File has just the filename
+                //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
+                //change the audioUrl to have the offline path + filename
+                //change the s3File to have the onlinepath + filename
+                m.AudioUrl = "media/" + m.S3File;
+                m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
+            });
+            AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles, 'Z');
+        }
+        public FileResponse ExportProjectAudio(int projectid, string artifactType, string idList, int start)
+        {
+            int LAST_ADD = 0;
+            const string ext = ".audio";
+            int startNext = start;
+           
+            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
+            Project project = projects.First();
+            string fileName = string.Format("Audio{0}_{1}_{2}", CoerceValidFileName(project.Name+artifactType), project.Id.ToString(), CurrentUser().Id);
+            if (start > LAST_ADD)
+                return CheckProgress(projectid, fileName+ext, LAST_ADD, ext);
+
+            Stream ms = GetMemoryStream(start, fileName, ext);
+            using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Update, true))
+            {
+                if (start == 0)
+                {
+                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault().SchemaVersion ?? 4);
+                    List<Mediafile> mediafiles = dbContext.Mediafiles.Where(x => idList.Contains("," + x.Id.ToString() + ",")).ToList();
+                    AddJsonEntry(zipArchive, "mediafiles", mediafiles, 'H');
+                    AddMediaEaf(0, DateTime.Now.AddSeconds(15), ref startNext, zipArchive, mediafiles);
+                    AddAttachedMedia(zipArchive, mediafiles);
+                    startNext = 1;
+                }
+            }
+            return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
+        }
+        public FileResponse ExportBurrito(int projectid, string idList, int start)
+        {
+            int LAST_ADD = 0;
+            const string ext = ".burrito";
+            int startNext = start;
+
+            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
+            Project project = projects.First();
+            string fileName = string.Format("{0}_{1}_{2}", CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser().Id);
+
+            if (start > LAST_ADD)
+                return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
+
+            Stream ms = GetMemoryStream(start, fileName, ext);
+            using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Update, true))
+            {
+                if (start == 0)
+                {
+                    List<Mediafile> mediaList = dbContext.Mediafiles.Where(x => idList.Contains("," + x.Id.ToString() + ",")).ToList();
+                    mediaList = AddBurritoMedia(zipArchive, project, mediaList);
+                    AddBurritoMeta(zipArchive, project, mediaList);
+                    startNext = 1;
+                }
+            }
+            return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
+        }
+        public FileResponse ExportProjectPTF(int projectid, int start)
+        {
+            const int LAST_ADD = 15;
+            const string ext = ".ptf";
+            int startNext = start;
+            //give myself 15 seconds to get as much as I can...
+            DateTime dtBail = DateTime.Now.AddSeconds(15);
+
+            IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
+            Project project = projects.First();
+            string fileName = string.Format("Transcriber{0}_{1}_{2}" , CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser().Id) ;
+
+            if (start > LAST_ADD)
+                return CheckProgress(projectid, fileName+ext, LAST_ADD, ext);
+
+            Stream ms = GetMemoryStream(start, fileName, ext);
             using (ZipArchive zipArchive = new ZipArchive(ms,  ZipArchiveMode.Update, true))
             {
                 if (start == 0)
@@ -445,37 +633,12 @@ namespace SIL.Transcriber.Services
                     mediaList = mediaList.Concat(sourcemediafiles).ToList();
                     //this should get comments and uploaded resources - not accounting for edited comments for now...
                     mediaList = mediaList.Concat(mediafiles.Where(m => m.ArtifactTypeId != null)).ToList();
-                    mediaList.ForEach(m =>
-                    {
-                        //S3File has just the filename
-                        //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
-                        //change the audioUrl to have the offline path + filename
-                        //change the s3File to have the onlinepath + filename
-                        m.AudioUrl = "media/" + m.S3File;
-                        m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
-                    });
-                    if (!CheckAdd(LAST_ADD, dtBail, ref startNext, zipArchive, "attachedmediafiles", mediaList, 'Z')) break;
+                    AddAttachedMedia(zipArchive, mediaList);
+                    startNext++;                 
                 } while (false);
             }
-            ms.Position = 0;
-            fileName += (startNext == LAST_ADD+1 ? ".tmp" : ".ptf"); //tmp signals the trigger to add mediafiles
-            s3response = _S3service.UploadFileAsync(ms, true, ContentType, fileName, ExportFolder).Result;
-            if (s3response.Status == HttpStatusCode.OK)
-            {
-                Logger.LogInformation($"{DateTime.Now}, {startNext}");
-                return new FileResponse()
-                {
-                    Message = fileName,
-                    FileURL = "",
-                    Status = HttpStatusCode.PartialContent,
-                    ContentType = ContentType,
-                    Id = startNext,
-                };
-            }
-            else
-            {
-                throw new Exception(s3response.Message);
-            }
+
+            return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
         }
         public FileResponse ImportFileURL(string sFile)
         {
@@ -638,7 +801,6 @@ namespace SIL.Transcriber.Services
                         s.CopyTo(ms);
                         ms.Position = 0; // rewind
                         S3Response response = await _S3service.UploadFileAsync(ms, true, m.ContentType, m.S3File, mediaService.DirectoryName(m));
-                        Logger.LogInformation($"CopyMediaFiles {response.Message} {m.S3File} {m.OriginalFile} {m.ContentType}");
                         m.AudioUrl = _S3service.SignedUrlForGet(m.S3File, mediaService.DirectoryName(m), m.ContentType).Message;
                     }
                 }
@@ -936,7 +1098,7 @@ namespace SIL.Transcriber.Services
                                             DateUpdated = passage.DateUpdated,
                                             LastModifiedBy = currentuser,
                                             PassageId = passage.Id,
-                                            State = passage.State,
+                                            State = passage.State ?? "",
                                         };
                                         dbContext.Passagestatechanges.Add(psc);
                                     }
@@ -1148,7 +1310,7 @@ namespace SIL.Transcriber.Services
                     Message = "[" + string.Join(",", report) + "]",
                     FileURL = sFile,
                     Status =HttpStatusCode.OK,
-                    ContentType = ContentType,
+                    ContentType = "application/ptf",
                 };
             }
             catch (Exception ex)

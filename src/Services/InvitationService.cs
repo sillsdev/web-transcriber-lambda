@@ -7,7 +7,6 @@ using SIL.Transcriber.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TranscriberAPI.Utility;
 using static SIL.Transcriber.Utility.ServiceExtensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 using System.Linq;

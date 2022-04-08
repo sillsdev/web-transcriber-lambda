@@ -5,7 +5,9 @@ namespace SIL.Transcriber.Services
 {
     public interface IOfflineDataService
     {
-        FileResponse ExportProject(int id, int start);
+        FileResponse ExportProjectPTF(int id, int start);
+        FileResponse ExportProjectAudio(int projectid, string artifactType, string ids, int start);
+        FileResponse ExportBurrito(int projectid, string ids, int start);
         FileResponse ImportFileURL(string sFile);
         Task<FileResponse> ImportFileAsync(int projectid, string filename);
         Task<FileResponse> ImportFileAsync(string filename);

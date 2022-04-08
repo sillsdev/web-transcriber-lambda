@@ -14,5 +14,39 @@ namespace SIL.Transcriber.Models
         public string FileURL { get; set; }
         [Attr("contenttype")]
         public string ContentType { get; set; }
+
+        public JsonedFileResponse Twiddle() {
+            return new JsonedFileResponse
+            {
+                data = new JFRData
+                {
+                    attributes = new JFRAttributes
+                    {
+                        message = Message,
+                        fileurl = FileURL,
+                        contenttype = ContentType,
+                    },
+                    id = Id,
+                }
+            };
+        }
     }
+#pragma warning disable IDE1006 // Naming Styles
+    public class JFRData
+    {
+        public JFRAttributes attributes { get; set; }
+        public string type { get; set; }
+        public int id { get; set; }
+    }
+    public class JFRAttributes
+    {
+        public string message {get; set;}
+        public string fileurl { get; set; }
+        public string contenttype { get; set; }
+    }
+    public class JsonedFileResponse
+    {
+        public JFRData data;
+    }
+#pragma warning restore IDE1006 // Naming Styles
 }

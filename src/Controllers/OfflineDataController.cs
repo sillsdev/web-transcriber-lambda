@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
@@ -32,8 +33,32 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("project/export/{id}/{start}")]
         public ActionResult<FileResponse> Export([FromRoute] int id, int start)
         {
-            FileResponse response = _service.ExportProject(id, start);
+            FileResponse response = _service.ExportProjectPTF(id, start);
             return Ok(response);
+        }
+        [HttpPost("project/export/{exporttype}/{id}/{start}")]
+        public ActionResult<JsonedFileResponse> Export([FromRoute] string exportType, int id, int start, [FromForm] string ids, [FromForm] string artifactType)
+        {
+            FileResponse response;
+            Debug.WriteLine(exportType, artifactType, ids);
+            switch (exportType)
+            {
+                case "ptf":
+                    response = _service.ExportProjectPTF(id, start);
+                    break;
+                case "audio":
+                    response = _service.ExportProjectAudio(id, artifactType??"",  ids, start);
+                    break;
+                case "burrito":
+                    response = _service.ExportBurrito(id, ids, start);
+                    break;
+                default:
+                    response = _service.ExportProjectPTF(id, start);
+                    break;
+            }
+            //morph this into what we got from the get
+
+            return Ok(response.Twiddle());
         }
         [HttpGet("project/import/{filename}")]
         public ActionResult<FileResponse> ImportFileUpload([FromRoute] string filename)
