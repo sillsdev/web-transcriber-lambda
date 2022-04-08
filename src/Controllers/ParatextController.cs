@@ -24,7 +24,28 @@ namespace SIL.Transcriber.Controllers
             _paratextService = paratextService;
             this.Logger = loggerFactory.CreateLogger<ParatextController>();
         }
-
+        [HttpGet("orgs")]
+        public async Task<ActionResult<IEnumerable<ParatextOrg>>> GetOrgsAsync()
+        {
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
+            try
+            {
+                IReadOnlyList<ParatextOrg> orgs = await _paratextService.GetOrgsAsync(userSecret);
+                return Ok(orgs);
+            }
+            catch (SecurityException)
+            {
+                return NoContent();
+            }
+        }
         [HttpGet("projects")]
         public async Task<ActionResult<IEnumerable<ParatextProject>>> GetAsync()
         {

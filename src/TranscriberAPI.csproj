@@ -29,6 +29,7 @@
     <Compile Remove="Data\IRepository.cs" />
     <Compile Remove="Data\IUpdateBuilder.cs" />
     <Compile Remove="Models\Chapter.cs" />
+    <Compile Remove="Models\IBurritoMeta.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ParatextVerse.cs" />
     <Compile Remove="Models\PassageSection.cs" />
@@ -80,11 +81,13 @@
   <ItemGroup>
     <None Remove="resources\EafTemplate.xml" />
     <None Remove="resources\invitation.html" />
+    <None Remove="resources\burritometa.json" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="resources\EafTemplate.xml" />
     <EmbeddedResource Include="resources\invitation.html" />
+    <EmbeddedResource Include="resources\burritometa.json" />
   </ItemGroup>
 
   <ItemGroup>
