@@ -91,7 +91,7 @@ namespace SIL.Transcriber.Repositories
         {
             //this should disqualify media that has a new version that isn't ready...but doesn't (yet)
             IQueryable<Mediafile> media = dbContext.Mediafiles
-                .Where(m => m.PlanId == PlanId && (artifactTypeId == 0 ? m.ArtifactTypeId == null : m.ArtifactTypeId == artifactTypeId) && m.ReadyToSync)
+                .Where(m => m.PlanId == PlanId && (artifactTypeId == 0 ? m.ArtifactTypeId == null : m.ArtifactTypeId == artifactTypeId) && m.ReadyToSync && m.PassageId != null)
                 .Include(m => m.Passage).ThenInclude(p => p.Section)
                 .OrderBy(m => m.PassageId).ThenBy(m => m.VersionNumber);
             return media;
