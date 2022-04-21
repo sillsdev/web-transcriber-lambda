@@ -14,7 +14,7 @@ using Xunit;
 using JsonApiDotNetCore.Models;
 using TranscriberAPI.Tests.Utilities;
 using System.Net.Http.Formatting;
-using Microsoft.AspNetCore.Http.Internal;
+//using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 using Moq;

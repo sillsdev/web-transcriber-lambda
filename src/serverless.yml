@@ -11,11 +11,11 @@ custom:
 
 service: transcriberAPI
 variablesResolutionMode: 20210326
-configValidationMode: error
+configValidationMode: warn
 
 provider:
   name: aws
-  runtime: dotnetcore2.1
+  runtime: dotnetcore3.1
   region: us-east-1
   stage: qa     #cli build params will override this!!
   profile: transcriber  #aws credentials file 
@@ -43,7 +43,7 @@ provider:
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
 
 package:
-  artifact: bin/release/netcoreapp2.1/deploy-package_${self:custom.myStage}.zip
+  artifact: bin/release/netcoreapp3.1/deploy-package_${self:custom.myStage}.zip
 
 functions:
   api:

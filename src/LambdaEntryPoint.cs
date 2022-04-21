@@ -9,7 +9,7 @@ using Amazon.Lambda.AspNetCoreServer;
 
 namespace SIL.Transcriber
 {
-    public class LambdaEntryPoint : Amazon.Lambda.AspNetCoreServer.APIGatewayProxyFunction
+    public class LambdaEntryPoint : APIGatewayProxyFunction
     {
         protected override void Init(IWebHostBuilder builder)
         {

@@ -1,16 +1,18 @@
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+
 //using UnitTests;
 
 namespace TranscriberAPI.Tests
 {
     public class TestStartup : Startup
     {
-        public TestStartup(IHostingEnvironment env) : base(
+        public TestStartup(IWebHostEnvironment env) : base(
                     new ConfigurationBuilder()
                     .SetBasePath(env.ContentRootPath)
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
