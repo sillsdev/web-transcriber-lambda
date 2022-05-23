@@ -255,10 +255,8 @@ namespace SIL.Transcriber
         }
 
         private static string GetConnectionString()
-        { //TODO!! 5/12
-            return
-            "Host=transcriberdev.c3ruqs5ucpmi.us-east-1.rds.amazonaws.com;Port=5432;Database=transcriberdb;User Id=transcriber;Password=SILtrans2019";
-            //return GetVarOrDefault("SIL_TR_CONNECTIONSTRING","");
+        {
+            return GetVarOrDefault("SIL_TR_CONNECTIONSTRING","");
         }
     }
 }
