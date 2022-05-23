@@ -1,16 +1,22 @@
 ﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
 using SIL.Logging.Models;
-using SIL.Transcriber.Repositories;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
+
 
 namespace SIL.Transcriber.Services
 {
-    public class ParatextSyncPassageService : EntityResourceService<ParatextSyncPassage>
+    public class ParatextSyncPassageService : JsonApiResourceService<ParatextSyncPassage, int>
     {
-        public ParatextSyncPassageService(IJsonApiContext jsonApiContext,
-            ParatextSyncPassageRepository tokenRepository,
-        ILoggerFactory loggerFactory)
-    : base(jsonApiContext, tokenRepository, loggerFactory)
+        public ParatextSyncPassageService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<ParatextSyncPassage> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor)
+    : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor
+)
         {
         }
     }

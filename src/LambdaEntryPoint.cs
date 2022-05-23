@@ -20,7 +20,7 @@ namespace SIL.Transcriber
             //haha you wish...this doesn't work...
             RegisterResponseContentEncodingForContentType("audio/*", ResponseContentEncoding.Base64);
 
-            builder.UseStartup<Startup>();
+//TODO            builder.UseStartup<Startup>();
         }
     }
 }

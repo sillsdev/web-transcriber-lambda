@@ -1,43 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
+
 
 namespace SIL.Transcriber.Services
 {
     public class OrganizationMembershipService : BaseArchiveService<OrganizationMembership>
     {
         public OrganizationMembershipService(
-            IJsonApiContext jsonApiContext,
-            UserRepository userRepository,
-            ICurrentUserContext currentUserContext,
-            OrganizationMembershipRepository organizationMembershipRepository,
-            RoleRepository roleRepository,
-            ILoggerFactory loggerFactory
-        ) : base(jsonApiContext, organizationMembershipRepository, loggerFactory)
+            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<OrganizationMembership> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor) 
+            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
         {
-            UserRepository = userRepository;
-            OrganizationMembershipRepository = organizationMembershipRepository;
-            RoleRepository = roleRepository;
-
         }
-        private UserRepository UserRepository { get; set; }
-        private OrganizationMembershipRepository OrganizationMembershipRepository { get; set; }
-        private RoleRepository RoleRepository { get; }
-
-        public override async Task<IEnumerable<OrganizationMembership>> GetAsync()
-        {
-            return await GetScopedToCurrentUser(
-                base.GetAsync,
-                JsonApiContext);
-        }
-
     }
 }

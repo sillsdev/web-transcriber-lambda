@@ -1,6 +1,4 @@
-﻿
-
-using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Logging.Models
 {
@@ -11,33 +9,33 @@ namespace SIL.Logging.Models
         }
         public ParatextSync(int userid, int planid, string paratextproject, string bookchapter, string beforesync) : base(userid)
         {
-            PlanId = PlanId;
+            PlanId = planid;
             ParatextProject = paratextproject;
             BookChapter = bookchapter;
             BeforeSync = beforesync;
         }
         public ParatextSync(int userid, int planid, string paratextproject, string bookchapter, string aftersync, string err) : base(userid)
         {
-            PlanId = PlanId;
+            PlanId = planid;
             ParatextProject = paratextproject;
             BookChapter = bookchapter;
             BeforeSync = aftersync;
             Err = err;
         }
 
-        [Attr("plan-id")]
+        [Attr(PublicName="plan-id")]
         public int PlanId { get; set; }
 
-        [Attr("paratext-project")]
-        public string ParatextProject { get; set; }
+        [Attr(PublicName="paratext-project")]
+        public string? ParatextProject { get; set; }
 
-        [Attr("book-chapter")]
-        public string BookChapter { get; set; }
+        [Attr(PublicName="book-chapter")]
+        public string? BookChapter { get; set; }
 
-        [Attr("before-sync")]
-        public string BeforeSync { get; set; }
+        [Attr(PublicName="before-sync")]
+        public string? BeforeSync { get; set; }
 
-        [Attr("err")]
-        public string Err { get; set; }
+        [Attr(PublicName="err")]
+        public string? Err { get; set; }
     }
 }

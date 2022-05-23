@@ -2,38 +2,32 @@ using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using JsonApiDotNetCore.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Threading;
 
 namespace SIL.Transcriber.Controllers
 {
     public class OrganizationsController : BaseController<Organization>
     {
          public OrganizationsController(
-             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-                IResourceService<Organization> resourceService,
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Organization,int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
             UserService userService)
-          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+          : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext,  userService)
         { }
 
         [HttpPost]
-        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Organization entity)
+        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Organization entity, CancellationToken cancelled)
         {
-            //make sure SIL Auth knows about this org
-
-            if (!organizationService.VerifyOrg(currentUserContext, entity))
-            {
-                throw new System.Exception("Organization does not exist in SIL Repository.");
-            }
-
             if (entity.Owner == null)
             {
                 entity.Owner = CurrentUser;
             }
-
-            return await base.PostAsync(entity);
+            return await base.PostAsync(entity, cancelled);
         }
     }
 

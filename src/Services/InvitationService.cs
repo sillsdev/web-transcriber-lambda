@@ -1,53 +1,40 @@
-﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using static SIL.Transcriber.Utility.ServiceExtensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
-using System.Linq;
 
 namespace SIL.Transcriber.Services
 {
     public class InvitationService : BaseService<Invitation>
     {
-        private ILoggerFactory LoggerFactory;
-        private OrganizationService OrganizationService;
-        private UserRepository UserRepository;
-        private GroupMembershipRepository GroupMembershipRepository;
+        readonly private OrganizationService OrganizationService;
+        readonly private GroupMembershipRepository GroupMembershipRepository;
+        readonly private UserRepository UserRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
 
         public InvitationService(
-            IJsonApiContext jsonApiContext,
-            InvitationRepository invitationRepository,
-            OrganizationService organizationService,
-            UserRepository userRepository,
+            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<Invitation> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             GroupMembershipRepository groupMembershipRepository,
             CurrentUserRepository currentUserRepository,
-            ILoggerFactory loggerFactory
-        ) : base(jsonApiContext, invitationRepository, loggerFactory)
+            OrganizationService organizationService,
+            UserRepository userRepository
+        ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
         {
-            LoggerFactory = loggerFactory;
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
             UserRepository = userRepository;
             GroupMembershipRepository = groupMembershipRepository;
         }
-        public override async Task<IEnumerable<Invitation>> GetAsync()
-        {
-            return await GetScopedToCurrentUser(
-                base.GetAsync,
-                JsonApiContext);
-        }
-        public Invitation Get(int id)
-        {
-            return MyRepository.Get().Where(p => p.Id == id).FirstOrDefault(); ;
-        }
-        private string BuildEmailBody(dynamic strings, Invitation entity)
+
+        private static string BuildEmailBody(dynamic strings, Invitation entity)
         {
             //localize...
             string app = strings["App"] ?? "missing App: SIL Transcriber";
@@ -71,66 +58,50 @@ namespace SIL.Transcriber.Services
                         .Replace("{{SIL}}", SILorg);
         }
 
-        public override async Task<Invitation> CreateAsync(Invitation entity)
+        public override async Task<Invitation?> CreateAsync(Invitation entity, CancellationToken cancellationToken)
         {
             //call the Identity api and receive an invitation id
-            Organization org = await OrganizationService.GetAsync(entity.OrganizationId);
+            Organization org = await OrganizationService.GetAsync(entity.OrganizationId,cancellationToken);
             entity.Organization = org;
-            //entity.SilId = SendInvitation(entity);
-            entity = await base.CreateAsync(entity);
-            entity.SilId = entity.Id;
-            await base.UpdateAsync(entity.Id, entity);
             try
             {
-                dynamic strings = JObject.Parse(entity.Strings);
+                dynamic strings = JObject.Parse(entity.Strings??"");
                 string subject = strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
                 await TranscriberAPI.Utility.Email.SendEmailAsync(entity.Email, subject, BuildEmailBody(strings, entity));
-                return entity;
+                return await base.CreateAsync(entity, cancellationToken);
             }
             catch (Exception ex)
             {
-                await base.DeleteAsync(entity.Id); 
                 Console.WriteLine("The email was not sent so invitation was deleted.");
                 Console.WriteLine("Error message: " + ex.Message);
-                throw ex;
+                throw new Exception("The email was not sent so invitation was deleted.\n" + ex.Message);
             }
         }
 
-        public override async Task<Invitation> UpdateAsync(int id, Invitation entity)
+        public override async Task<Invitation?> UpdateAsync(int id, Invitation entity, CancellationToken cancellationToken)
         {
-            User currentUser = CurrentUserRepository.GetCurrentUser();
-            Invitation oldentity = MyRepository.GetAsync(id).Result;
+            User? currentUser = CurrentUserRepository.GetCurrentUser();
+            Invitation oldentity = GetAsync(id, cancellationToken).Result;
             //verify current user is logged in with invitation email
-            if ((entity.Email ?? oldentity.Email ?? "").ToLower() != currentUser.Email.ToLower())
+            if ((entity.Email ?? oldentity.Email ?? "").ToLower() != (currentUser?.Email ?? "").ToLower())
             {
-                throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity.Email + "  Currently logged in as " + currentUser.Email);
+                throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity.Email + "  Currently logged in as " + currentUser?.Email);
             }
-            if (entity.Accepted && !oldentity.Accepted)
+            if (currentUser != null && entity.Accepted && !oldentity.Accepted)
             {
                 //add the user to the org
-                Organization org = await OrganizationService.GetAsync(oldentity.OrganizationId);
+                Organization org = await OrganizationService.GetAsync(oldentity.OrganizationId, new CancellationToken());
                 OrganizationService.JoinOrg(org, currentUser, (RoleName)oldentity.RoleId, (RoleName)oldentity.AllUsersRoleId);
                 if (oldentity.GroupId != null)
                 {
                     if (oldentity.GroupRoleId == null)
                         oldentity.GroupRoleId = (int)RoleName.Transcriber;
-                    GroupMembershipRepository.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
+                    await GroupMembershipRepository.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
                 }
                 //update the user so all other users in the new org get the user downloaded with the next datachange
                 UserRepository.Refresh( currentUser);
             }
-            return await base.UpdateAsync(id, entity);
+            return await base.UpdateAsync(id, entity, cancellationToken);
         }
-        /*
-        public int SendInvitation(Invitation entity)
-        {
-            User current = CurrentUserRepository.GetCurrentUser().Result;
-            if (entity.Organization == null || entity.Organization.SilId == 0)
-            {
-                throw new Exception("Organization does not exist in SIL Identity.");
-            }
-            return SILIdentity.CreateInvite(entity.Email, entity.Organization.Name, entity.Organization.SilId,current.SilUserid ?? 1);
-        }
-        */
     }
 }

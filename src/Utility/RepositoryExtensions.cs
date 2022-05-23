@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using JsonApiDotNetCore.Internal.Query;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Services;
@@ -11,29 +10,6 @@ namespace SIL.Transcriber.Utility
     public static class RepositoryExtensions
     {
         //FilterByOrganization can only be used by tables with organizationid
-        [Obsolete("OptionallyFilterOnQueryParam is deprecated, please use FilterByOrganization instead.")]
-        public static IQueryable<T> OptionallyFilterOnQueryParam<T>(
-            this IQueryable<T> query,
-            FilterQuery filterQuery,
-            string param,
-            UserRepository userRepository,
-            ICurrentUserContext currentUserContext,
-            Func<IQueryable<T>, string, UserRepository, ICurrentUserContext, 
-                 Func<IQueryable<T>, IEnumerable<int>, IQueryable<T>>, Func<IQueryable<T>, IEnumerable<int>, IQueryable<T>>, IQueryable<T>> getMethod,
-            Func<IQueryable<T>, FilterQuery, IQueryable<T>> exitFilter,
-            Func<IQueryable<T>, IEnumerable<int>, IQueryable<T>> getAllQuery,
-            Func<IQueryable<T>, IEnumerable<int>, IQueryable<T>> getFilteredQuery)
-        {
-            var attribute = filterQuery.Attribute;
-            var value = filterQuery.Value;
-            var isTargetParam = attribute.Equals(param, StringComparison.OrdinalIgnoreCase);
-
-            if (isTargetParam)
-            {
-                return getMethod(query, value, userRepository, currentUserContext, getAllQuery, getFilteredQuery);
-            }
-            return exitFilter(query, filterQuery);
-        }
 
         public static IQueryable<T> GetAllInOrganizationIds<T>(this IQueryable<T> query, IEnumerable<int> orgIds) where T : IBelongsToOrganization, new()
         {
@@ -44,6 +20,8 @@ namespace SIL.Transcriber.Utility
             return query.Where(p => p.OrganizationId == organizationId);
         }
 
+//TODO
+/*
         public static IQueryable<T> FilterByOrganization<T>(
             this IQueryable<T> query, 
             FilterQuery filterQuery,
@@ -61,7 +39,6 @@ namespace SIL.Transcriber.Utility
             
             return query.GetAllInOrganizationIds(allowedOrganizationIds);
         }
-
+*/
     }
-
 }

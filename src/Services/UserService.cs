@@ -1,65 +1,57 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Internal;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
+﻿using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Serialization.Objects;
+using JsonApiDotNetCore.Errors;
+using JsonApiDotNetCore.Configuration;
 
 namespace SIL.Transcriber.Services
 {
     public class UserService : BaseArchiveService<User>
     {
-        private ICurrentUserContext CurrentUserContext { get; }
         private CurrentUserRepository CurrentUserRepository { get; }
 
         public UserService(
-            IJsonApiContext jsonApiContext,
-            ICurrentUserContext currentUserContext,
-            UserRepository userRepository,
-            CurrentUserRepository currentUserRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, userRepository, loggerFactory)
+            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<User> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+            ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
+                resourceChangeTracker, resourceDefinitionAccessor)
         {
-            CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;
         }
 
-        public override async Task<IEnumerable<User>> GetAsync()
+        public override async Task<User> GetAsync(int id, CancellationToken cancellationToken)
         {
-            return await GetScopedToCurrentUser<User>(base.GetAsync,
-                                   JsonApiContext);
+            User? CurrentUser = CurrentUserRepository.GetCurrentUser();
+            if (id == 0 && CurrentUser != null) 
+                id = CurrentUser.Id;
 
-        }
-        public override async Task<User> GetAsync(int id)
-        {
-            User CurrentUser = CurrentUserRepository.GetCurrentUser();
-
-            if (id == 0) id = CurrentUser.Id;
-
-            if (CurrentUser.Id == id)
+            if (CurrentUser?.Id == id)
             {
                 return CurrentUser;
             }
 
-            IEnumerable<User> users = await GetAsync();
-
-            return users.SingleOrDefault(u => u.Id == id);
+            return await base.GetAsync(id, cancellationToken);
         }
 
-        public override async Task<User> UpdateAsync(int id, User resource)
+        public override async Task<User?> UpdateAsync(int id, User resource, CancellationToken cancellationToken)
         {
-            User user = await GetAsync(id);
+            User? user = await GetAsync(id, cancellationToken);
             if (user == null)
             {
-                throw new JsonApiException(404, $"User Id '{id}' not found."); ;
+                throw new JsonApiException(new ErrorObject(System.Net.HttpStatusCode.NotFound), new Exception($"User Id '{id}' not found.")); ;
             }
-            return await base.UpdateAsync(id, resource);
+            return await base.UpdateAsync(id, resource, cancellationToken);
         }
 
-        public User GetCurrentUser() {
-
+        public User? GetCurrentUser()
+        {
             return CurrentUserRepository.GetCurrentUser();
         }
     }

@@ -1,20 +1,18 @@
-﻿using System.Collections.Generic;
-using JsonApiDotNetCore.Models;
-
+﻿using JsonApiDotNetCore.Resources.Annotations;
 namespace SIL.Transcriber.Models
 {
     public partial class PassageSection : BaseModel, IArchive
     {
-        [Attr("passage-id")]
+        [Attr(PublicName="passage-id")]
         public int PassageId { get; set; }
-        [HasOne("passage")]
-        public virtual Passage Passage { get; set; }
+        [HasOne(PublicName = "passage")]
+        public virtual Passage? Passage { get; set; }
 
-        [Attr("section-id")]
+        [Attr(PublicName = "section-id")]
         public int SectionId { get; set; }
 
-        [HasOne("section")]
-        public virtual Section Section { get; set; }
+        [HasOne(PublicName = "section")]
+        public virtual Section? Section { get; set; }
 
         public bool Archived { get; set; }
     }

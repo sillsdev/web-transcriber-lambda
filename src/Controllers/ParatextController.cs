@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Services;
+using System.Threading;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -47,7 +48,9 @@ namespace SIL.Transcriber.Controllers
             }
         }
         [HttpGet("projects")]
-        public async Task<ActionResult<IEnumerable<ParatextProject>>> GetAsync()
+#pragma warning disable IDE0060 // Remove unused parameter
+        public async Task<ActionResult<IEnumerable<ParatextProject>>> GetAsync(CancellationToken cancellationToken)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             UserSecret userSecret;
             try
@@ -60,7 +63,7 @@ namespace SIL.Transcriber.Controllers
             }
             try
             {
-                IReadOnlyList<ParatextProject> projects = await _paratextService.GetProjectsAsync(userSecret);
+                IReadOnlyList<ParatextProject>? projects = await _paratextService.GetProjectsAsync(userSecret);
                 return Ok(projects);
             }
             catch (SecurityException)
@@ -82,7 +85,7 @@ namespace SIL.Transcriber.Controllers
             }
             try
             {
-                IReadOnlyList<ParatextProject> projects = await _paratextService.GetProjectsAsync(userSecret, languageTag);
+                IReadOnlyList<ParatextProject>? projects = await _paratextService.GetProjectsAsync(userSecret, languageTag);
                 return Ok(projects);
             }
             catch (Exception ex)
@@ -94,7 +97,7 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("username")]
-        public ActionResult<string> Username()
+        public ActionResult<string?> Username()
         {
             UserSecret userSecret;
             try
@@ -106,7 +109,7 @@ namespace SIL.Transcriber.Controllers
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
 
-            string username = _paratextService.GetParatextUsername(userSecret);
+            string? username = _paratextService.GetParatextUsername(userSecret);
             return Ok(username);
         }
         [HttpGet("useremail/{inviteId}")]
@@ -122,7 +125,7 @@ namespace SIL.Transcriber.Controllers
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
 
-            Utility.Attempt<string> x = _paratextService.TryGetUserEmailsAsync(userSecret, inviteId).Result;
+            Utility.Attempt<string?> x = _paratextService.TryGetUserEmailsAsync(userSecret, inviteId).Result;
             return Ok(x.Result);
         }
 
@@ -170,13 +173,13 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("passage/{passageid}")]
         public async Task<ActionResult<string>> PassageTextAsync([FromRoute] int passageid)
         {
-            string text = await _paratextService.PassageTextAsync(passageid, 0);
+            string text = await _paratextService.PassageTextAsync(passageid, 0) ??"";
             return Ok(text);
         }
         [HttpGet("passage/{passageid}/{type}")]
         public async Task<ActionResult<string>> PassageTextAsync([FromRoute] int passageid, [FromRoute] int type)
         {
-            string text = await _paratextService.PassageTextAsync(passageid, type);
+            string text = await _paratextService.PassageTextAsync(passageid, type) ?? "";
             return Ok(text);
         }
         [HttpPost("plan/{planid}")]

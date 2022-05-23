@@ -1,28 +1,28 @@
 
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
+    //[HttpReadOnly]
     [Route("api/[controller]")]
     [ApiController]
-    public class OrgdatasController : BaseController<OrgData>
+    public class OrgdatasController : BaseController<Orgdata>
     {
-        private readonly OrgDataService _service;
         public OrgdatasController(
              ILoggerFactory loggerFactory,
-             IJsonApiContext jsonApiContext,
-             IResourceService<OrgData> resourceService,
+             IJsonApiOptions options,
+             IResourceGraph resourceGraph,
+             IResourceService<Orgdata,int> resourceService,
              ICurrentUserContext currentUserContext,
-             OrganizationService organizationService,
-             UserService userService, OrgDataService service)
-            : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+   
+             UserService userService)
+            : base(loggerFactory, options, resourceGraph,resourceService, currentUserContext,  userService)
         {
-            _service = service;
         }
     }
 }

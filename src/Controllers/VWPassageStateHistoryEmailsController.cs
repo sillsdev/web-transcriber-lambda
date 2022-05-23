@@ -1,15 +1,16 @@
-﻿    using JsonApiDotNetCore.Services;
-    using Microsoft.AspNetCore.Mvc;
-    using SIL.Transcriber.Models;
-    using SIL.Transcriber.Services;
-    using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Mvc;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Internal;
+using JsonApiDotNetCore.Configuration;
 using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
-using System.Linq;
-using SIL.Transcriber.Repositories;
+using System.Threading;
+using JsonApiDotNetCore.Errors;
+using JsonApiDotNetCore.Serialization.Objects;
+using JsonApiDotNetCore.Controllers.Annotations;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -26,19 +27,21 @@ namespace SIL.Transcriber.Controllers
         public DateTime StateUpdated { get; set; }
         public string Email { get; set; }
     }
+    //HttpReadOnly]
     [Route("api/[controller]")]
     [ApiController]
     public class StatehistoryController :BaseController<VwPassageStateHistoryEmail>
     {
-        private VwPassageStateHistoryEmailService myService;
+        readonly private VwPassageStateHistoryEmailService myService;
         public StatehistoryController(
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
             VwPassageStateHistoryEmailService resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
+  
             UserService userService)
-            : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+            : base(loggerFactory, options, resourceGraph,resourceService, currentUserContext,  userService)
         {
             myService = (VwPassageStateHistoryEmailService)resourceService;
         }
@@ -46,37 +49,13 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("since/{since}")]
         public ActionResult<List<StateChange>> GetSince([FromRoute] string since)
         {
-            DateTime dateValue;
-            if (DateTime.TryParse(since, out dateValue))
+            if (DateTime.TryParse(since, out DateTime dateValue))
             {
                 return Ok(myService.GetHistorySince(dateValue));
             }
             else
-                throw new JsonApiException(400, $"Invalid Date");
+                throw new JsonApiException(new ErrorObject(System.Net.HttpStatusCode.BadRequest), new Exception($"Invalid Date"));
         }
-        
-#pragma warning disable 1998
-        [HttpPost]
-        public override async Task<IActionResult> PostAsync([FromBody] VwPassageStateHistoryEmail entity)
-        {
-            throw new JsonApiException(405, $"Not implemented for State History.");
-        }
-#pragma warning restore 1998
-
-#pragma warning disable 1998
-        [HttpPatch("{id}")]
-        public override async Task<IActionResult> PatchAsync(int id, [FromBody] VwPassageStateHistoryEmail entity)
-        {
-            throw new JsonApiException(405, $"Not implemented for State History.");
-        }
-#pragma warning restore 1998
-#pragma warning disable 1998
-        [HttpDelete("{id}")]
-        public override async Task<IActionResult> DeleteAsync(int id)
-        {
-            throw new JsonApiException(405, $"Not implemented for State History.");
-        }
-#pragma warning restore 1998
     
     }
 

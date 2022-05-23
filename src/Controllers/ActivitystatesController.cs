@@ -1,3 +1,4 @@
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
@@ -9,12 +10,11 @@ namespace SIL.Transcriber.Controllers
     {
          public ActivitystatesController(
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-                IResourceService<Activitystate> resourceService,
+            IJsonApiOptions options,
+            IResourceService<Activitystate> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
             UserService userService)
-          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+          : base(loggerFactory, options, resourceService, currentUserContext, userService)
         { }
     }
 }

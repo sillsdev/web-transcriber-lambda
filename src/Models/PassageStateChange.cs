@@ -1,18 +1,24 @@
-﻿using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class PassageStateChange : BaseModel
+     [Table("passagestatechanges")]
+     public partial class PassageStateChange : BaseModel
     {
-        [Attr("passage-id")]
+        public PassageStateChange():base()
+        {
+            Passage = new();
+        }
+        [Attr(PublicName="passage-id")]
         public int PassageId { get; set; }
-        [HasOne("passage", Link.None)]
+        [HasOne(PublicName="passage")]
         public virtual Passage Passage { get; set; }
 
-        [Attr("state")]
-        public string State { get; set; }
-        [Attr("comments")]
-        public string Comments { get; set; }
+        [Attr(PublicName="state")]
+        public string? State { get; set; }
+        [Attr(PublicName="comments")]
+        public string? Comments { get; set; }
 
     }
 }

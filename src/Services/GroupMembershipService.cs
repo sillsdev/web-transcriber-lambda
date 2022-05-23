@@ -1,60 +1,38 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Internal;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
     public class GroupMembershipService : BaseArchiveService<GroupMembership>
     {
         public GroupMembershipService(
-            IJsonApiContext jsonApiContext,
-            UserRepository userRepository,
-            ProjectRepository projectRepository,
-            ICurrentUserContext currentUserContext,
-            IEntityRepository<GroupMembership> groupMembershipRepository,
-            ILoggerFactory loggerFactory
-        ) : base(jsonApiContext, groupMembershipRepository, loggerFactory)
+            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<GroupMembership> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor
+        ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
         {
-            UserRepository = userRepository;
-            ProjectRepository = projectRepository;
-            CurrentUserContext = currentUserContext;
-            GroupMembershipRepository = (GroupMembershipRepository) groupMembershipRepository;
         }
 
-        public UserRepository UserRepository { get; }
-        public ProjectRepository ProjectRepository { get; }
-        public ICurrentUserContext CurrentUserContext { get; }
-        public GroupMembershipRepository GroupMembershipRepository { get; }
-
-
-        public override async Task<IEnumerable<GroupMembership>> GetAsync()
+        public override async Task<GroupMembership?> CreateAsync(GroupMembership entity, CancellationToken cancellationToken)
         {
-            var gms = await base.GetAsync();
-            return GroupMembershipRepository.UsersGroupMemberships(gms.AsQueryable());
-        }
-        public override async Task<GroupMembership> CreateAsync(GroupMembership entity)
-        {
-            GroupMembership newEntity = GroupMembershipRepository.Get().Where(gm => gm.GroupId == entity.GroupId && gm.UserId == entity.UserId).FirstOrDefault();
+            GroupMembership? newEntity =((IEnumerable<GroupMembership>)GetAsync(cancellationToken)).Where(gm => gm.GroupId == entity.GroupId && gm.UserId == entity.UserId).FirstOrDefault();
             if (newEntity == null)
-               newEntity = await base.CreateAsync(entity);
+               newEntity = await base.CreateAsync(entity, cancellationToken);
             else
             {
                 if (newEntity.Archived)
                 {
                     newEntity.Archived = false;
-                    newEntity = base.UpdateAsync(newEntity.Id, newEntity).Result;
+                    newEntity = base.UpdateAsync(newEntity.Id, newEntity, cancellationToken).Result;
                 }
 
             }
             return newEntity;
         }
-
     }
 }

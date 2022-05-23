@@ -1,11 +1,14 @@
-﻿using JsonApiDotNetCore.Models;
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
+
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using System;
 using System.Collections.Generic;
-using TranscriberAPI;
 
 namespace SIL.Transcriber.Services
 {
@@ -17,7 +20,6 @@ namespace SIL.Transcriber.Services
     public class DataChangeService : BaseService<DataChanges>
     {
         public ICurrentUserContext CurrentUserContext { get; }
-
         private readonly ArtifactCategoryService ArtifactCategoryService;
         private readonly ArtifactTypeService ArtifactTypeService;
         private readonly CommentService CommentService;
@@ -43,8 +45,10 @@ namespace SIL.Transcriber.Services
         List<OrbitId> changes = new List<OrbitId>();
         List<OrbitId> deleted = new List<OrbitId>();
 
-        public DataChangeService(
-            IJsonApiContext jsonApiContext,
+        public DataChangeService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<DataChanges> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             ICurrentUserContext currentUserContext,
             DataChangesRepository repository,
             ArtifactCategoryService artifactCategoryService,
@@ -68,8 +72,8 @@ namespace SIL.Transcriber.Services
             SectionResourceUserService sectionResourceUserService,
             UserService userService,
             WorkflowStepService workflowStepService,
-            CurrentUserRepository currentUserRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, repository, loggerFactory)
+            CurrentUserRepository currentUserRepository) 
+            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
         {
             CurrentUserContext = currentUserContext;
             ArtifactCategoryService = artifactCategoryService;
@@ -95,65 +99,70 @@ namespace SIL.Transcriber.Services
             WorkflowStepService = workflowStepService;
             CurrentUserRepository = currentUserRepository;
         }
-        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
+        private User? CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
 
-        private void BuildList(IEnumerable<BaseModel> recs, string type, List<OrbitId> addTo, bool toEnd = true)
+        private static void BuildList(IEnumerable<BaseModel> recs, string type, List<OrbitId> addTo, bool toEnd = true)
         {
             OrbitId tblList = new OrbitId(type);
             foreach (BaseModel m in recs)
             {
-                tblList.ids.Add(m.Id);
+                tblList.Ids.Add(m.Id);
             }
             if (toEnd)
                 addTo.Add(tblList);
             else
                addTo.Insert(0, tblList);
         }
-        private void AddNewChanges(List<OrbitId> newCh, List<OrbitId> master)
+        private static void AddNewChanges(List<OrbitId> newCh, List<OrbitId> master)
         {
             newCh.ForEach(t =>
             {
-                OrbitId list = master.Find(c => c.type == t.type);
+                OrbitId? list = master.Find(c => c.Type == t.Type);
                 if (list == null)
                     master.Add(t);
                 else
-                    list.AddUnique(t.ids);
+                    list.AddUnique(t.Ids);
             });
         }
 
-        public DataChanges GetProjectChanges(string origin, ProjDate[] projects, string version = "1", int start = 0)
+        public DataChanges GetProjectChanges(string origin, ProjDate?[] projects, string version = "1", int start = 0)
         {
             DateTime dtNow = DateTime.UtcNow;
             if (!int.TryParse(version, out int dbVersion))
                 dbVersion = 1;
-            List<OrbitId> changes = new List<OrbitId>();
-            List < OrbitId > deleted = new List<OrbitId>();
-            DCReturn ret=null;
+            List<OrbitId> changes = new();
+            List<OrbitId> deleted = new();
+            DCReturn? ret=null;
             //we don't pass in an array anymore but backward compatibility
-            foreach (ProjDate pd in projects)
+            foreach (ProjDate? pd in projects)
             {
-                ret = GetChanges(origin, pd.since, 0, pd.id, dbVersion, start);
-                AddNewChanges(ret.changes, changes);
-                AddNewChanges(ret.deleted, deleted);
+                if (pd != null)
+                {
+                    ret = GetChanges(origin, pd.since, 0, pd.id, dbVersion, start);
+                    AddNewChanges(ret.changes, changes);
+                    AddNewChanges(ret.deleted, deleted);
+                }
             }
-            changes.RemoveAll(c => c.ids.Count == 0);
-            deleted.RemoveAll(d => d.ids.Count == 0);
-            
-            return new DataChanges() { Id = 1, Querydate = dtNow, Startnext=ret != null ? ret.startNext : -1, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
+            changes.RemoveAll(c => c.Ids.Count == 0);
+            deleted.RemoveAll(d => d.Ids.Count == 0);
+            return new DataChanges() { Id = 1, Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
         }
-        public DataChanges GetUserChanges(string origin, DateTime dtSince, string version="1", int start = 0)
+        public DataChanges? GetUserChanges(string origin, DateTime dtSince, string version="1", int start = 0)
         {
             DateTime dtNow = DateTime.UtcNow;
             if (!int.TryParse(version, out int dbVersion))
                 dbVersion = 1;
             try
             {
-                User user = CurrentUser();
+                User? user = CurrentUser();
                 if (user == null) return null;
-                DCReturn ret = GetChanges(origin, dtSince, user.Id, 0, dbVersion, start);
-                ret.changes.RemoveAll(c => c.ids.Count == 0);
-                ret.deleted.RemoveAll(d => d.ids.Count == 0);
-                return new DataChanges() { Id = 1, Querydate = dtNow, Startnext = ret.startNext, Changes = ret.changes.ToArray(), Deleted = ret.deleted.ToArray() };
+                DCReturn? ret = null;
+                ret = GetChanges(origin, dtSince, user.Id, 0, dbVersion, start);
+                AddNewChanges(ret.changes, changes);
+                AddNewChanges(ret.deleted, deleted);
+                changes.RemoveAll(c => c.Ids.Count == 0);
+                deleted.RemoveAll(d => d.Ids.Count == 0);
+                return new DataChanges() { Id = 1, Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
             }
             catch
             {
@@ -179,7 +188,7 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        private int CheckStart(int check, DateTime dtBail, int completed)
+        private static int CheckStart(int check, DateTime dtBail, int completed)
         {
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail) return 1000;

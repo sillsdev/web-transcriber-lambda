@@ -1,38 +1,42 @@
-﻿using System.Linq;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using static SIL.Transcriber.Utility.RepositoryExtensions;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using Microsoft.AspNetCore.Http;
 using SIL.Transcriber.Data;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Repositories
 {
     public class GroupMembershipRepository : BaseRepository<GroupMembership>
     {
-        GroupRepository GroupRepository;
-        private HttpContext HttpContext;
+        readonly GroupRepository GroupRepository;
+        readonly private HttpContext? HttpContext;
+        readonly GroupMembershipService GMService;
+        IResourceGraph ResourceGraph;
         public GroupMembershipRepository(
-            IHttpContextAccessor httpContextAccessor,
-          ILoggerFactory loggerFactory,
-          IJsonApiContext jsonApiContext,
-          CurrentUserRepository currentUserRepository,
-          AppDbContextResolver contextResolver,
-          GroupRepository groupRepository
-      ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IHttpContextAccessor  httpContextAccessor,
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository,
+            GroupRepository  groupRepository,
+            GroupMembershipService gmService
+      ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
+          loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
             HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
+            GMService = gmService;
+            ResourceGraph = resourceGraph;
         }
         public IQueryable<GroupMembership> GroupsGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups)
         {
             return entities.Join(groups, gm => gm.GroupId, g => g.Id, (gm, g) => gm);
         }
-        public IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
+        public IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group>? groups = null)
         {
             if (groups == null)
             {
@@ -45,53 +49,45 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Group> groups = GroupRepository.ProjectGroups(dbContext.Groups, project);
             return GroupsGroupMemberships(entities, groups);
         }
-        #region Overrides
-        public override IQueryable<GroupMembership> Filter(IQueryable<GroupMembership> entities, FilterQuery filterQuery)
+        public IQueryable<GroupMembership> GetMine()
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    IQueryable<Group> groups =dbContext.Groups.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-                    return UsersGroupMemberships(entities, groups);
-                }
-                return UsersGroupMemberships(entities);
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersGroupMemberships(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectGroupMemberships(entities, filterQuery.Value);
-            }
-            if (filterQuery.Has(DATA_START_INDEX)) //ignore
-            {
-                return entities;
-            }
-            return base.Filter(entities, filterQuery);
+            return FromCurrentUser();
+        }
+        #region Overrides
+        protected override IQueryable<GroupMembership> GetAll()
+        {
+            return FromCurrentUser();
+        }
+        protected override IQueryable<GroupMembership> FromCurrentUser(QueryLayer? layer = null)
+        {
+            return UsersGroupMemberships(base.GetAll());
+        }
+        protected override IQueryable<GroupMembership> FromProjectList(QueryLayer layer, string idList)
+        {
+            return ProjectGroupMemberships(base.GetAll(), idList);
         }
         #endregion
 
-        public GroupMembership JoinGroup(int UserId, int groupId, RoleName groupRole)
+        public async Task<GroupMembership?>  JoinGroup(int UserId, int groupId, RoleName groupRole)
         {
-            Group group = dbContext.Groups.Find(groupId);
-            if (group.Archived) return null;
-            GroupMembership groupmembership = Get().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
+            Group? group = dbContext.Groups.Find(groupId);
+            if (group?.Archived??true) return null;
+            GroupMembership? groupmembership = GetAll().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
+            CancellationToken ct = new();
             if (groupmembership == null)
             {
-                HttpContext.SetFP("api");
+                HttpContext?.SetFP("api");
                 groupmembership = new GroupMembership
                 {
                     GroupId = groupId,
                     UserId = UserId,
                     RoleId = (int)groupRole,
                 };
-                groupmembership = CreateAsync(groupmembership).Result;
+                await GMService.CreateAsync(groupmembership, ct);
             } else if (groupmembership.Archived)
             {
                 groupmembership.Archived = false;
-                groupmembership = UpdateAsync(groupmembership.Id, groupmembership).Result;
+                groupmembership = GMService.UpdateAsync(groupmembership.Id, groupmembership, ct).Result;
             }
             return groupmembership;
         }

@@ -1,17 +1,23 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
+using JsonApiDotNetCore.Configuration;
+
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Services;
 
 namespace SIL.Transcriber.Services
 {
-    public class FileResponseService : EntityResourceService<FileResponse>
+    public class FileResponseService : JsonApiResourceService<FileResponse, int>
     {
              public FileResponseService(
-                IJsonApiContext jsonApiContext,
-                FileResponseRepository repository,
-                ILoggerFactory loggerFactory
-            ) : base(jsonApiContext,repository, loggerFactory)
+                IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<FileResponse> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor
+            ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
             {
             }
         }

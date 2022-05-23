@@ -1,10 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using SIL.Transcriber.Services;
+
 
 namespace SIL.Transcriber.Utility.Extensions
 {

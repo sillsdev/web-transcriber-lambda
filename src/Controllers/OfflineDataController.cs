@@ -1,10 +1,10 @@
-using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.Diagnostics;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Services;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
@@ -19,13 +19,13 @@ namespace SIL.Transcriber.Controllers
 
         public OfflinedataController(
            ILoggerFactory loggerFactory,
-           IJsonApiContext jsonApiContext,
-           FileResponseService frService,
+           IJsonApiOptions options,
+           IResourceGraph resourceGraph,
+           JsonApiResourceService<FileResponse, int> frService,
            ICurrentUserContext currentUserContext,
-           OrganizationService organizationService,
            UserService userService,
            IOfflineDataService service)
-        :base(loggerFactory, jsonApiContext, frService, currentUserContext, organizationService, userService)
+        :base(loggerFactory, options, resourceGraph,frService, currentUserContext,  userService)
         {
             _service = service;
         }

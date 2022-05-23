@@ -2,7 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using JsonApiDotNetCore.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -10,22 +13,23 @@ namespace SIL.Transcriber.Controllers
     {
         public PlansController(
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            IResourceService<Plan> resourceService,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Plan,int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
+  
             UserService userService)
-         : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+         : base(loggerFactory, options, resourceGraph, resourceService, currentUserContext,  userService)
         { }
 
         [HttpPost]
-        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Plan entity)
+        public override async Task<IActionResult> PostAsync([FromBody] Plan entity, CancellationToken cancelled)
         {
-            if (entity.OwnerId == 0)
+            if ((entity.OwnerId??0) == 0)
             {
-                entity.OwnerId = CurrentUser.Id;
+                entity.OwnerId = CurrentUser?.Id;
             }
-            return await base.PostAsync(entity);
+            return await base.PostAsync(entity, cancelled);
         }
     }
 }

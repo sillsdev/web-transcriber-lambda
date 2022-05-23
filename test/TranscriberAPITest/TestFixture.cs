@@ -1,18 +1,11 @@
 using System;
 using System.Net.Http;
-using JsonApiDotNetCore.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using SIL.Transcriber.Data;
-using Microsoft.AspNetCore.TestHost;
-using JsonApiDotNetCore.Services;
-using JsonApiDotNetCore.Data;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using SIL.Transcriber.Models;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using System.Text;
 using SIL.Transcriber.Repositories;
@@ -40,9 +33,7 @@ namespace TranscriberAPI.Tests
             Client.DefaultRequestHeaders.Add("Authorization", "Bearer " + token); 
             WebClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + token);
             Context = GetService<IDbContextResolver>().GetContext() as AppDbContext;
-            DeSerializer = GetService<IJsonApiDeSerializer>();
-            Serializer = GetService<IJsonApiSerializer>();
-            JsonApiContext = GetService<IJsonApiContext>();
+            options = GetService<IJsonApiOptions>();
             DeleteTestData = GetVarOrDefault("DeleteTestData", "true").Equals("true");
             CurrentUser = getCurrentUser(); 
         }
@@ -50,9 +41,7 @@ namespace TranscriberAPI.Tests
         public HttpClient Client { get; set; }
         public HttpClient WebClient { get; set; }
         public AppDbContext Context { get; private set; }
-        public IJsonApiDeSerializer DeSerializer { get; private set; }
-        public IJsonApiSerializer Serializer { get; private set; }
-        public IJsonApiContext JsonApiContext { get; private set; }
+        public IJsonApiOptions options { get; private set; }
         public T GetService<T>() => (T)_services.GetService(typeof(T));
         public User CurrentUser { get; private set; }
         public bool DeleteTestData;
@@ -71,7 +60,7 @@ namespace TranscriberAPI.Tests
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 string body = await response.Content.ReadAsStringAsync();
-                return DeSerializer.Deserialize<User>(body);
+                //TODO return JsonSerializer.Deserialize(body) as User;
             }
             throw new Exception("Unable to get Current User " + response.StatusCode);
         }
@@ -104,7 +93,7 @@ namespace TranscriberAPI.Tests
         {
             HttpResponseMessage response = await SendAsync(method, route, data);
             string json = await response.Content.ReadAsStringAsync();
-            T obj = (T)DeSerializer.Deserialize(json);
+            var obj = (T)JsonSerializer.Deserialize<T>(json);
             return (response, obj);
         }
         private bool disposedValue = false;

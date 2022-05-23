@@ -1,31 +1,32 @@
-﻿using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
+﻿using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using System.Linq;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
 using SIL.Transcriber.Data;
-using System.Collections.Generic;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgWorkflowStepRepository : BaseRepository<OrgWorkflowStep>
+    public class OrgWorkflowStepRepository : BaseRepository<OrgWorkflowstep>
     {
-        private OrganizationRepository OrganizationRepository;
+        private readonly OrganizationRepository OrganizationRepository;
         public OrgWorkflowStepRepository(
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            OrganizationRepository organizationRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            OrganizationRepository organizationRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
+                loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
             OrganizationRepository = organizationRepository;
         }
-        public IQueryable<OrgWorkflowStep> UsersOrgWorkflowSteps(IQueryable<OrgWorkflowStep> entities)
+        public IQueryable<OrgWorkflowstep> UsersOrgWorkflowSteps(IQueryable<OrgWorkflowstep> entities)
         {
+            if (CurrentUser == null) return entities.Where(e => e.Id == -1);
+
             IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
@@ -34,34 +35,20 @@ namespace SIL.Transcriber.Repositories
             }
             return entities;
         }
-        public IQueryable<OrgWorkflowStep> ProjectOrgWorkflowSteps(IQueryable<OrgWorkflowStep> entities, string projectid)
+        public IQueryable<OrgWorkflowstep> ProjectOrgWorkflowSteps(IQueryable<OrgWorkflowstep> entities, string projectid)
         {
             IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(dbContext.Organizations, projectid);
             return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
         }
 
         #region Overrides
-        public override IQueryable<OrgWorkflowStep> Filter(IQueryable<OrgWorkflowStep> entities, FilterQuery filterQuery)
+        protected override IQueryable<OrgWorkflowstep> FromProjectList(QueryLayer layer, string idList)
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    int specifiedOrgId;
-                    bool hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
-                    return UsersOrgWorkflowSteps(entities).Where(om => om.Id == specifiedOrgId);
-                }
-                return UsersOrgWorkflowSteps(entities);
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersOrgWorkflowSteps(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectOrgWorkflowSteps(entities, filterQuery.Value);
-            }
-            return base.Filter(entities, filterQuery);
+            return ProjectOrgWorkflowSteps(base.GetAll(), idList);
+        }
+        protected override IQueryable<OrgWorkflowstep> FromCurrentUser(QueryLayer layer)
+        {
+            return UsersOrgWorkflowSteps(base.GetAll());
         }
         #endregion
     }

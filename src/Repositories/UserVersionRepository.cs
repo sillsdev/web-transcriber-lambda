@@ -1,33 +1,39 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Http;
+﻿using JsonApiDotNetCore.Configuration;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System;
 using System.Linq;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using System.Collections.Generic;
+using JsonApiDotNetCore.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
     public class UserVersionRepository : BaseRepository<UserVersion>
     {
-        private CurrentVersionService CVService;
+        private readonly CurrentVersionService CVService;
         public UserVersionRepository(
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver,
             CurrentVersionService cvService
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+                constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
             CVService = cvService;
         }
         public UserVersion CreateOrUpdate(string version, string env)
         {
-            string fp = dbContext.GetFingerprint();
-            try
-            {
-                UserVersion uv = Get().Where(x => x.LastModifiedOrigin == fp).FirstOrDefault();
+            try {
+                string fp = dbContext.Fingerprint();
+            
+                UserVersion? uv = GetAll()?.Where(x => x.LastModifiedOrigin == fp).FirstOrDefault();
                 if (uv != null)
                 {
                     uv.DesktopVersion = version;
@@ -59,6 +65,14 @@ namespace SIL.Transcriber.Repositories
                 };
             }
 
+        }
+        protected override IQueryable<UserVersion> FromCurrentUser(QueryLayer? layer = null)
+        {
+            return base.GetAll();
+        }
+        protected override IQueryable<UserVersion> FromProjectList(QueryLayer layer, string idList)
+        {
+            return base.GetAll();
         }
     }
 }

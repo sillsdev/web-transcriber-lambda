@@ -1,16 +1,16 @@
-﻿using JsonApiDotNetCore.Models;
-using System;
+﻿using System;
+using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
     public class SectionPassage : BaseModel
     {
-        [Attr("data")]
-        public string Data { get; set; }
-        [Attr("plan-id")]
+        [Attr(PublicName="data")]
+        public string? Data { get; set; }
+        [Attr(PublicName="plan-id")]
         public int PlanId { get; set; }
-        [Attr("uuid")]
-        public Guid uuid { get; set; }
+        [Attr(PublicName="uuid")]
+        public Guid Uuid { get; set; }
 
         public bool Complete { get; set; }
     }

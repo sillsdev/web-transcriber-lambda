@@ -1,18 +1,20 @@
-﻿using JsonApiDotNetCore.Models;
-using System.Collections.Generic;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
+    [Table("plantypes")]
     public partial class PlanType : BaseModel
     {
-        [Attr("name")]
+        public PlanType():base()
+        {
+            Name = "";
+        }
+        [Attr(PublicName="name")]
         public string Name { get; set; }
 
-        [Attr("description")]
-        public string Description { get; set; }
-
-        [HasMany("Plans", Link.None)]
-        public virtual List<Plan> Plans { get; set; }
+        [Attr(PublicName="description")]
+        public string? Description { get; set; }
 
     }
 }

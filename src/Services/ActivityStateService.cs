@@ -1,10 +1,10 @@
-﻿
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
-using SIL.Transcriber.Data;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 
 namespace SIL.Transcriber.Services
 {
@@ -12,9 +12,11 @@ namespace SIL.Transcriber.Services
         {
 
             public ActivitystateService(
-                IJsonApiContext jsonApiContext,
-                AppDbContextRepository<Activitystate> myRepository,
-                ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
+                IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+                IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+                IJsonApiRequest request, IResourceChangeTracker<Activitystate> resourceChangeTracker,
+                IResourceDefinitionAccessor resourceDefinitionAccessor) 
+            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
             {
             }   
         }

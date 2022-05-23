@@ -1,33 +1,35 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Data;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using JsonApiDotNetCore.Internal.Query;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using static SIL.Transcriber.Utility.RepositoryExtensions;
 using System.Linq;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using System.Collections.Generic;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class WorkflowStepRepository : BaseRepository<WorkflowStep>
+    public class WorkflowStepRepository : BaseRepository<Workflowstep>
     {
         public WorkflowStepRepository(
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
+                loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
         #region Overrides
-        public override IQueryable<WorkflowStep> Filter(IQueryable<WorkflowStep> entities, FilterQuery filterQuery)
+        protected override IQueryable<Workflowstep> FromProjectList(QueryLayer layer, string idList)
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER) || filterQuery.Has(ALLOWED_CURRENTUSER) || filterQuery.Has(PROJECT_LIST))
-            {
-                return entities;
-            }
-            return base.Filter(entities, filterQuery);
+            return base.GetAll();
+        }
+        protected override IQueryable<Workflowstep> FromCurrentUser(QueryLayer layer)
+        {
+            return base.GetAll();
         }
         #endregion
     }

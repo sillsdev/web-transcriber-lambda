@@ -2,19 +2,19 @@
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using Microsoft.Extensions.Logging;
+using JsonApiDotNetCore.Configuration;
 
 namespace SIL.Transcriber.Controllers
 {
     public class CommentsController : BaseController<Comment>
     {
         public CommentsController(
-             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            IResourceService<Comment> resourceService,
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph, IResourceService<Comment,int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
             UserService userService)
-          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+          : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext, userService)
         { }
     }
 }

@@ -1,6 +1,7 @@
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using JsonApiDotNetCore.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
@@ -8,13 +9,14 @@ namespace SIL.Transcriber.Controllers
     public class PlantypesController : BaseController<PlanType>
     {
          public PlantypesController(
-             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-                IResourceService<PlanType> resourceService,
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<PlanType,int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
+  
             UserService userService)
-          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+          : base(loggerFactory, options, resourceGraph, resourceService, currentUserContext,  userService)
         { }
     }
 }

@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
 
@@ -29,7 +24,7 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("resend")]
-        public Task GetAsync()
+        public Task Resend()
         {
             return service.ResendVerification(currentUserContext.Auth0Id);
         }

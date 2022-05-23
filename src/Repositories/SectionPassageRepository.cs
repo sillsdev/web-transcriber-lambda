@@ -1,38 +1,30 @@
 ﻿
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+using JsonApiDotNetCore.Configuration;
 using SIL.Transcriber.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using SIL.Transcriber.Data;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 
 namespace SIL.Transcriber.Repositories
 {
     public class SectionPassageRepository : BaseRepository<SectionPassage>
     {
-        protected IJsonApiContext JsonApiContext { get; }
-
         public SectionPassageRepository(
+        ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+                constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
-            JsonApiContext = jsonApiContext;
+
         }
-        public override async Task<SectionPassage> GetAsync(int id)
+
+        public SectionPassage? GetByUUID(Guid uuid)
         {
-            SectionPassage entity = await base.GetAsync(id); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
-            if (entity != null && entity.Complete)
-                return entity;
-            return null;
-        }
-        public SectionPassage GetByUUID(Guid uuid)
-        {
-            return dbContext.Sectionpassages.Where(e => e.uuid == uuid).FirstOrDefault();
+            return dbContext.Sectionpassages.Where(e => e.Uuid == uuid).FirstOrDefault();
         }
  
 
@@ -60,19 +52,25 @@ namespace SIL.Transcriber.Repositories
             dbContext.SaveChanges();
             return passages;
         }
-        public Section UpdateSectionModified(int sectionId)
+        public Section? UpdateSectionModified(int sectionId)
         {
-            Section section = dbContext.Sections.Find(sectionId);
-            dbContext.Sections.Update(section);
-            dbContext.SaveChanges();
+            Section? section = dbContext.Sections.Find(sectionId);
+            if (section != null)
+            {
+                dbContext.Sections.Update(section);
+                dbContext.SaveChanges();
+            }
             return section;
         }
-        public Plan UpdatePlanModified(int planId)
+        public Plan? UpdatePlanModified(int planId)
         {
-            Plan plan = dbContext.Plans.Find(planId);
-            plan.SectionCount = dbContext.Sections.Where(s => s.PlanId == planId && !s.Archived).Count();
-            dbContext.Plans.Update(plan);
-            dbContext.SaveChanges();
+            Plan? plan = dbContext.Plans.Find(planId);
+            if (plan != null)
+            {
+                plan.SectionCount = dbContext.Sections.Where(s => s.PlanId == planId && !s.Archived).Count();
+                dbContext.Plans.Update(plan);
+                dbContext.SaveChanges();
+            }
             return plan;
         }
         public Passage GetPassage(int id)
@@ -82,6 +80,14 @@ namespace SIL.Transcriber.Repositories
         public Section GetSection(int id)
         {
             return dbContext.Sections.First(p => p.Id == id);
+        }
+        protected override IQueryable<SectionPassage> FromCurrentUser(QueryLayer? layer = null)
+        {
+            return base.GetAll();
+        }
+        protected override IQueryable<SectionPassage> FromProjectList(QueryLayer layer, string idList)
+        {
+            return base.GetAll();
         }
     }
 }

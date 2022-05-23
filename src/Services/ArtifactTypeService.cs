@@ -1,36 +1,21 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class ArtifactTypeService : BaseArchiveService<ArtifactType>
+    public class ArtifactTypeService : BaseArchiveService<Artifacttype>
     {
-        public ArtifactTypeService(
-            IJsonApiContext jsonApiContext,
-
-            ArtifactTypeRepository ArtifactTypeRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, ArtifactTypeRepository, loggerFactory)
+        public ArtifactTypeService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<Artifacttype> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
+                resourceChangeTracker, resourceDefinitionAccessor)
         {
 
-        }
-        public override async Task<IEnumerable<ArtifactType>> GetAsync()
-        {
-            return await GetScopedToCurrentUser(
-              base.GetAsync,
-              JsonApiContext);
-        }
-
-        public override async Task<ArtifactType> GetAsync(int id)
-        {
-            IEnumerable<ArtifactType> Workflows = await GetAsync();
-
-            return Workflows.SingleOrDefault(g => g.Id == id);
         }
     }
 }

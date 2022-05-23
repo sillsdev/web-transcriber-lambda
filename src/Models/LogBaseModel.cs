@@ -1,9 +1,7 @@
 ﻿
-using JsonApiDotNetCore.Models;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SIL.Transcriber.Models;
-using System;
 using System.ComponentModel.DataAnnotations.Schema;
+using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Logging.Models
 {
@@ -17,7 +15,7 @@ namespace SIL.Logging.Models
             UserId = userid;
         }
         [NotMapped]
-        [Attr("userid")]
+        [Attr(PublicName="userid")]
         public int UserId { get; set; }
 
     }

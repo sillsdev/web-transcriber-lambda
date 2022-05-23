@@ -1,11 +1,6 @@
-﻿using JsonApiDotNetCore.Controllers;
-using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
-using System.Linq;
-using System.Threading.Tasks;
+
 
 namespace SIL.Transcriber.Controllers
 {
@@ -20,4 +15,4 @@ namespace SIL.Transcriber.Controllers
             return Ok(true);
         }
     }
-}
+} 

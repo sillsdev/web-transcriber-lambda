@@ -6,17 +6,17 @@ namespace SIL.Transcriber.Models
     {
         public OrbitId(string mytype)
         {
-            type = mytype;
-            ids = new List<int>();
+            Type = mytype;
+            Ids = new List<int>();
         }
-        public string type { get; set; }
-        public List<int> ids { get; set; }
+        public string Type { get; set; }
+        public List<int> Ids { get; set; }
 
         public void AddUnique(List<int> newIds)
         {
             newIds.ForEach(i =>
             {
-                if (!ids.Exists(id => id == i)) ids.Add(i);
+                if (!Ids.Exists(id => id == i)) Ids.Add(i);
             });
         }
     }

@@ -1,25 +1,28 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Data;
 using System.Linq;
 using System.Collections.Generic;
-using SIL.Transcriber.Utility;
-using JsonApiDotNetCore.Internal.Query;
 using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
 
 namespace SIL.Transcriber.Repositories
 {
     public class CommentRepository : BaseRepository<Comment>
     {
-        private PlanRepository PlanRepository;
+        private readonly PlanRepository PlanRepository;
         public CommentRepository(
-          ILoggerFactory loggerFactory,
-          IJsonApiContext jsonApiContext,
-          CurrentUserRepository currentUserRepository,
-          AppDbContextResolver contextResolver,
-          PlanRepository planRepository
-      ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository,
+            PlanRepository  planRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
+                loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
             PlanRepository = planRepository;
         }
@@ -43,7 +46,7 @@ namespace SIL.Transcriber.Repositories
             return entities.Join(discussions, c => c.DiscussionId, d => d.Id, (c,d) => c);
         }
 
-        private IQueryable<Comment> UsersComments(IQueryable<Comment> entities, IQueryable<Plan> plans = null)
+        private IQueryable<Comment> UsersComments(IQueryable<Comment> entities, IQueryable<Plan>? plans = null)
         {
             if (plans == null)
                 plans = PlanRepository.UsersPlans(dbContext.Plans);
@@ -55,17 +58,15 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans = PlanRepository.ProjectPlans(dbContext.Plans, projectid);
             return PlansComments(entities, plans);
         }
-        public override IQueryable<Comment> Filter(IQueryable<Comment> entities, FilterQuery filterQuery)
+        #region overrides
+        protected override IQueryable<Comment> FromProjectList(QueryLayer layer, string idList)
         {
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersComments(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectsComments(entities, filterQuery.Value);
-            }
-            return base.Filter(entities, filterQuery);
+            return ProjectsComments(base.GetAll(), idList);
         }
+        protected override IQueryable<Comment> FromCurrentUser(QueryLayer layer)
+        {
+            return UsersComments(base.GetAll());
+        }
+        #endregion
     }
 }

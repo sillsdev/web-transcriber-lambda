@@ -1,30 +1,28 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using static SIL.Transcriber.Utility.RepositoryExtensions;
+
 
 namespace SIL.Transcriber.Repositories
 {
     public class ProjectIntegrationRepository : BaseRepository<ProjectIntegration>
     {
 
-        private ProjectRepository ProjectRepository;
+        readonly private ProjectRepository ProjectRepository;
 
         public ProjectIntegrationRepository(
+
+        ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            ProjectRepository projectRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            ProjectRepository projectRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+                constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
             ProjectRepository = projectRepository;
         }
@@ -32,7 +30,7 @@ namespace SIL.Transcriber.Repositories
         {
             return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);          
         }
-        public IQueryable<ProjectIntegration> UsersProjectIntegrations(IQueryable<ProjectIntegration> entities, IQueryable<Project> projects = null)
+        public IQueryable<ProjectIntegration> UsersProjectIntegrations(IQueryable<ProjectIntegration> entities, IQueryable<Project>? projects = null)
         {
             if (projects == null)
                 projects = ProjectRepository.UsersProjects(dbContext.Projects);
@@ -42,31 +40,22 @@ namespace SIL.Transcriber.Repositories
         {
             return ProjectProjectIntegrations(entities, ProjectRepository.ProjectProjects(dbContext.Projects, projectid));
         }
-
-        public override IQueryable<ProjectIntegration> Filter(IQueryable<ProjectIntegration> entities, FilterQuery filterQuery)
+        protected override IQueryable<ProjectIntegration> GetAll()
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                IQueryable<Project> projects = ProjectRepository.Get().FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-                return UsersProjectIntegrations(entities); //, projects);
-            }
-
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersProjectIntegrations(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectProjectIntegrations(entities, filterQuery.Value);
-            }
-            return base.Filter(entities, filterQuery);
+            return FromCurrentUser();
+        }
+        protected override IQueryable<ProjectIntegration> FromCurrentUser(QueryLayer? layer = null)
+        {
+            return UsersProjectIntegrations(base.GetAll());
+        }
+        protected override IQueryable<ProjectIntegration> FromProjectList(QueryLayer layer, string idList)
+        {
+            return ProjectProjectIntegrations(base.GetAll(), idList);
         }
         public string IntegrationSettings(int projectId, string integration)
         {
-            ProjectIntegration projectIntegration = Get().Where(pi => pi.ProjectId == projectId && !pi.Archived).Join(dbContext.Integrations.Where(i => i.Name == integration), pi => pi.IntegrationId, i => i.Id, (pi, i) => pi).FirstOrDefault();
-            if (projectIntegration == null)
-                return "";
-            return projectIntegration.Settings;
+            ProjectIntegration? projectIntegration = GetAll().Where(pi => pi.ProjectId == projectId).Join(dbContext.Integrations.Where(i => i.Name == integration), pi => pi.IntegrationId, i => i.Id, (pi, i) => pi).FirstOrDefault();
+            return projectIntegration?.Settings??"";
         }
 
     }

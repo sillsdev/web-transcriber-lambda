@@ -10,12 +10,12 @@ namespace TranscriberAPI.Utility.Extensions
 {
     public static class XElementExtensions
     {
-        public static string Verses(this XElement value)
+        public static string? Verses(this XElement value)
         {
             Debug.Assert(IsVerse(value));
             if (!IsVerse(value))
                 return null;
-            return value.Attribute("number").Value;
+            return value.Attribute("number")?.Value;
         }
         public static string SortableVerses(this XElement value)
         {
@@ -27,7 +27,10 @@ namespace TranscriberAPI.Utility.Extensions
         public static void SetReference(this XElement value, string reference)
         {
             Debug.Assert(IsVerse(value));
-            value.Attribute("number").Value = reference;
+            if (value.Attribute("number") != null)
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+                value.Attribute("number").Value = reference;
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
         }
         public static int StartVerse(this XElement value)
         {
@@ -47,10 +50,12 @@ namespace TranscriberAPI.Utility.Extensions
             ParseReference(value.Verses(), out startVerse, out endVerse);
             return endVerse;
         }
-        private static bool ParseReference(string reference, out int startVerse, out int endVerse)
+        private static bool ParseReference(string? reference, out int startVerse, out int endVerse)
         {
-            bool OK = true;
+            bool OK;
             startVerse = 0; endVerse = 0;
+            if (string.IsNullOrEmpty(reference)) return false;
+            
             if (reference.Contains("-"))  //TODO do other languages use something besides - ???
             {
                 OK = int.TryParse(reference.Substring(0, reference.IndexOf('-')), out startVerse);
@@ -62,25 +67,26 @@ namespace TranscriberAPI.Utility.Extensions
                 OK = int.TryParse(reference, out startVerse);
                 endVerse = startVerse;
             }
+            
             return OK;
         }
-        public static bool IsText(this XNode value)
+        public static bool IsText(this XNode? value)
         {
             if (value is null) return false;
             return value.NodeType == System.Xml.XmlNodeType.Text;
         }
-        public static bool IsPara(this XNode value)
+        public static bool IsPara(this XNode? value)
         {
             if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
                 return false;
             return ((XElement)value).Name == "para";
         }
-        public static bool IsSection(this XNode value)
+        public static bool IsSection(this XNode? value)
         {
             if (value == null || value.NodeType != System.Xml.XmlNodeType.Element) return false;
-            return IsPara(value) && ((XElement)value).Attribute("style").Value == "s";
+            return IsPara(value) && ((XElement)value).Attribute("style")?.Value == "s";
         }
-        public static bool IsVerse(this XNode value)
+        public static bool IsVerse(this XNode? value)
         {
             if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
             {
@@ -88,13 +94,13 @@ namespace TranscriberAPI.Utility.Extensions
             }
             return ((XElement)value).Name.LocalName == "verse";
         }
-        public static bool IsNote(this XNode value)
+        public static bool IsNote(this XNode? value)
         {
             if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
                 return false;
             return ((XElement)value).Name.LocalName == "note" || ((XElement)value).Name.LocalName == "rem";
         }
-        public static bool HasChildren(this XNode value)
+        public static bool HasChildren(this XNode? value)
         {
             if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
                 return false;
@@ -105,7 +111,7 @@ namespace TranscriberAPI.Utility.Extensions
         {
             if (!IsText(section.FirstNode))
                 return "";
-            return ((XText)section.FirstNode).Value;
+            return ((XText?)section.FirstNode)?.Value??"";
         }
         public static bool IncludesVerse(this XElement value, int number)
         {
@@ -123,7 +129,7 @@ namespace TranscriberAPI.Utility.Extensions
                 return "";
             //ignore cross ref, notes, etc
             string text = value.FirstNode?.NextNode?.IsText() ?? false ? ((XText)value.FirstNode.NextNode).Value  : "";
-            XNode next = value.NextNode;
+            XNode? next = value.NextNode;
             while (next != null)
             {
                 if (next.IsVerse() || next.IsSection())
@@ -131,7 +137,7 @@ namespace TranscriberAPI.Utility.Extensions
                 else if (next.IsText())
                 {
                     text += ((XText)next).Value;
-                    next = next.NextNode ?? next.Parent.NextNode;
+                    next = next.NextNode ?? next.Parent?.NextNode;
                 }
                 else if (next.IsPara() && !next.IsSection())
                 {
@@ -148,7 +154,8 @@ namespace TranscriberAPI.Utility.Extensions
             Debug.Assert(IsVerse(value));
             if (!IsText(value.NextNode))
                 value.AddAfterSelf(new XText(""));
-            ((XText)value.NextNode).Value = scripture;
+            if (value.NextNode != null)
+                ((XText)value.NextNode).Value = scripture;
         }
 
         public static void RemoveSection(this XElement value)
@@ -156,13 +163,13 @@ namespace TranscriberAPI.Utility.Extensions
             Debug.Assert(IsSection(value));
             value.Remove();
         }
-        public static void RemoveText(this XElement value)
+        public static void RemoveText(this XElement? value)
         {
             if (IsPara(value))
-                value = (XElement)value.FirstNode;
+                value = (XElement?)value?.FirstNode;
             Debug.Assert(IsVerse(value));
-            XNode next = HasChildren(value) ? value.FirstNode : value.NextNode ?? value.Parent.NextNode;
-            XNode rem, remParent;
+            XNode? next = HasChildren(value) ? value?.FirstNode : value?.NextNode ?? value?.Parent?.NextNode;
+            XNode? rem, remParent;
             
             while (next != null)
             {
@@ -174,11 +181,11 @@ namespace TranscriberAPI.Utility.Extensions
                     rem = next;
                 }
                 if (next != null) {
-                    next = HasChildren(next) ? ((XElement)next).FirstNode : next.NextNode ?? next.Parent.NextNode;
+                    next = HasChildren(next) ? ((XElement)next).FirstNode : next.NextNode ?? next.Parent?.NextNode;
                 }
                 if (rem != null)
                 {
-                    remParent = rem.Parent.DescendantNodes().Count() == 1 ? rem.Parent : null;
+                    remParent = rem.Parent?.DescendantNodes().Count() == 1 ? rem.Parent : null;
                     rem.Remove();
                     if (remParent != null) remParent.Remove();
                 }
@@ -188,11 +195,11 @@ namespace TranscriberAPI.Utility.Extensions
         public static bool RemoveVerse(this XElement value)
         {
             Debug.Assert(IsVerse(value));
-            XElement removeParent = value.Parent.IsPara() && value.Parent.GetElements("verse").Count() == 1 ? value.Parent : null;
+            XElement? removeParent = (value.Parent?.IsPara()??false) && (value.Parent?.GetElements("verse").Count()??0) == 1 ? value?.Parent : null;
             RemoveText(value);
             if (!value.HasChildren())
             {
-                value.Remove();
+                if (value != null) value.Remove();
                 if (removeParent != null)
                     removeParent.Remove();
                 return true;
@@ -206,9 +213,9 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static IEnumerable<XElement> GetElementsWithAttribute(this XElement root, string name, string attributeValue)
         {
-            return root.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == name && n.FirstAttribute.Value == attributeValue);
+            return root.Descendants().Where(n => n.NodeType == System.Xml.XmlNodeType.Element && ((XElement)n).Name.LocalName == name && n.FirstAttribute?.Value == attributeValue);
         }
-        public static XElement GetElement(this XElement root, string name)
+        public static XElement? GetElement(this XElement root, string name)
         {
             return root.GetElements(name).FirstOrDefault();
         }

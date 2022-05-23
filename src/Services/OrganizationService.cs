@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
+using JsonApiDotNetCore.Configuration;
+
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SIL.Auth.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Utility;
@@ -16,77 +21,43 @@ namespace SIL.Transcriber.Services
 {
     public class OrganizationService : BaseArchiveService<Organization>
     {
-        public OrganizationMembershipRepository OrganizationMembershipRepository { get; }
+        public OrganizationMembershipService OrganizationMembershipService { get; }
         public CurrentUserRepository CurrentUserRepository { get; }
         public GroupRepository GroupRepository { get; }
         public GroupMembershipRepository GroupMembershipRepository { get; }
-        private HttpContext HttpContext;
+        readonly private HttpContext? HttpContext;
 
-        public OrganizationService(
-            IHttpContextAccessor httpContextAccessor,
-            IJsonApiContext jsonApiContext,
-            IEntityRepository<Organization> organizationRepository,
-            OrganizationMembershipRepository organizationMembershipRepository,
+        public OrganizationService(IHttpContextAccessor httpContextAccessor,
+            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<Organization> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository, 
             GroupRepository groupRepository,
             GroupMembershipRepository groupMembershipRepository,
-            CurrentUserRepository currentUserRepository,
-           ILoggerFactory loggerFactory) : base(jsonApiContext, organizationRepository, loggerFactory)
+            OrganizationMembershipService organizationMembershipService) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
         {
             HttpContext = httpContextAccessor.HttpContext;
-            OrganizationMembershipRepository = organizationMembershipRepository;
+            OrganizationMembershipService = organizationMembershipService;
             CurrentUserRepository = currentUserRepository;
             GroupMembershipRepository = groupMembershipRepository;
             GroupRepository = groupRepository;
         }
-        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
-
-        public override async Task<IEnumerable<Organization>> GetAsync()
-        {
-            //scope to user, unless user is super admin
-            var isScopeToUser = !CurrentUser().HasOrgRole(RoleName.SuperAdmin, 0);
-            IEnumerable<Organization> entities = await base.GetAsync();
-            if (isScopeToUser)
-            {
-                var orgIds = CurrentUser().OrganizationIds.OrEmpty();
-
-                var scopedToUser = entities.Where(organization => orgIds.Contains(organization.Id));
-
-                // return base.Filter(scopedToUser, filterQuery);
-                return scopedToUser;
-            }
-
-            return entities;
-        }
-
-        /*public override async Task<Organization> CreateAsync(Organization entity)
-        {
-            var newEntity = await base.CreateAsync(entity);
-
-            HttpContext.SetFP("api");
-            //create an "all org group" and add the current user
-            var group = new Group
-            {
-                Name = entity.AllUsersName ?? "All Users",
-                Abbreviation = (newEntity.Name.Length > 3 ? newEntity.Name.Substring(0, 3) : newEntity.Name) + "All",
-                Owner = newEntity,
-                AllUsers = true,
-            };
-            var newGroup = await GroupRepository.CreateAsync(group);
-
-            JoinOrg(newEntity, newEntity.Owner, RoleName.Admin, RoleName.Admin);
-            return newEntity;
-        } 
-        */
+        private User? CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
 
         public void JoinOrg(Organization entity, User user, RoleName orgRole, RoleName groupRole)
         {
-            Group allGroup = GroupRepository.Get().Where(g => g.AllUsers && g.OrganizationId == entity.Id).FirstOrDefault();
+            Group? allGroup = GroupRepository.Get().Where(g => g.AllUsers && g.OrganizationId == entity.Id).FirstOrDefault();
 
             if (user.OrganizationMemberships == null || user.GroupMemberships == null)
-                user = CurrentUserRepository.Get().Include(o => o.OrganizationMemberships).Include(o => o.GroupMemberships).Where(e => e.Id == user.Id).SingleOrDefault();
-
-            HttpContext.SetFP("api");
-            OrganizationMembership membership = user.OrganizationMemberships.Where(om => om.OrganizationId == entity.Id).ToList().FirstOrDefault();
+            { 
+                User? cu = CurrentUser();
+                if (cu != null)
+                    user = cu;
+            }
+            if (HttpContext != null) HttpContext.SetFP("api");
+            OrganizationMembership? membership = user?.OrganizationMemberships?.Where(om => om.OrganizationId == entity.Id).ToList().FirstOrDefault();
+            if (user == null) return;
             if (membership == null)
             {
                 membership = new OrganizationMembership
@@ -97,7 +68,7 @@ namespace SIL.Transcriber.Services
                     OrganizationId = entity.Id,
                     RoleId = (int)orgRole
                 };
-                OrganizationMembership om = OrganizationMembershipRepository.CreateAsync(membership).Result;
+                OrganizationMembership? om = OrganizationMembershipService.CreateAsync(membership, new CancellationToken()).Result;
             }
             else
             {
@@ -105,79 +76,13 @@ namespace SIL.Transcriber.Services
                 {
                     membership.RoleId = (int)orgRole;
                     membership.Archived = false;
-                    OrganizationMembership om = OrganizationMembershipRepository.UpdateAsync(membership.Id, membership).Result;
+                    OrganizationMembership? om = OrganizationMembershipService.UpdateAsync(membership.Id, membership, new CancellationToken()).Result;
                 }
             }
             if (allGroup != null)
             {
-                GroupMembershipRepository.JoinGroup(user.Id, allGroup.Id, groupRole);
+                _ = GroupMembershipRepository.JoinGroup(user.Id, allGroup.Id, groupRole).Result;
             }
-        }
-        public bool VerifyOrg(ICurrentUserContext currentUserContext, Organization newOrg)
-        {
-            return true;
-
-            /* ask the sil auth if this user has any orgs */
-            /*
-             * List<SILAuth_Organization> orgs = currentUserContext.SILOrganizations;
-             * var silOrg = orgs.Find(o =>o.id == newOrg.SilId);
-             * if (silOrg != null)
-             * {
-             *     /* merge the info *
-             * newOrg = SILIdentity.OrgFromSILAuth(newOrg, silOrg);
-             *     return true;
-             *  }
-             * return false;
-            */
-        }
-
-        /*
-
-        public bool JoinOrgs(List<SILAuth_Organization> orgs, User user, RoleName role)
-        {
-            orgs.ForEach(o => JoinOrg(o, user, role));
-            return true;
-        }
-
-        private Organization JoinOrg(SILAuth_Organization entity, User user, RoleName orgRole)
-        {
-            try
-            {
-                //see if this org exists
-                Organization org = FindByNameOrDefault(entity.name);
-                if (org == null)
-                {
-                    //will be added as owner
-                    HttpContext.SetOrigin("api");
-                    org = CreateAsync(entity, user).Result;
-                }
-                else 
-                {
-                    JoinOrg(org, user, orgRole, RoleName.Transcriber);
-                }
-                return org;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
-        public async Task<Organization> CreateAsync(SILAuth_Organization entity, User owner)
-        {
-            Organization newEntity = SILIdentity.OrgFromSILAuth(entity);
-            newEntity.Owner = owner;
-            return await CreateAsync(newEntity);
-        }
-        */
-        public Organization FindByNameOrDefault(string name)
-        {
-            return MyRepository.Get().Include(o => o.OrganizationMemberships).Where(e => e.Name == name).SingleOrDefault();
-        }
-        public async Task<Organization> FindByIdOrDefaultAsync(int id)
-        {
-            return await MyRepository.Get()
-                                        .Where(e => e.Id == id)
-                                        .FirstOrDefaultAsync();
         }
     }
 }

@@ -1,46 +1,45 @@
-﻿using System.Collections.Generic;
+﻿using System.Threading;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
+using JsonApiDotNetCore.Configuration;
+
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Queries.Expressions;
+using JsonApiDotNetCore.Resources.Annotations;
+using JsonApiDotNetCore.Queries.Internal;
 
 namespace SIL.Transcriber.Services
 {
     public class PlanService : BaseArchiveService<Plan>
     {
-
+        private readonly PlanRepository MyRepository;
+        private readonly IResourceRepositoryAccessor RepositoryAccessor;
+        private readonly IEnumerable<IQueryConstraintProvider> ConstraintProviders;
         public PlanService(
-            IJsonApiContext jsonApiContext,
-            PlanRepository planRepository,
-           ILoggerFactory loggerFactory) : base(jsonApiContext, planRepository, loggerFactory)
+            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
+            IJsonApiRequest request, IResourceChangeTracker<Plan> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor, PlanRepository myRepository,
+            IEnumerable<IQueryConstraintProvider> constraintProviders
+)           : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
+                resourceChangeTracker, resourceDefinitionAccessor)
         {
+            RepositoryAccessor = repositoryAccessor;
+            MyRepository = myRepository;
+            ConstraintProviders = constraintProviders;
         }
-        public override async Task<IEnumerable<Plan>> GetAsync()
-        {
-            return await GetScopedToCurrentUser(
-                base.GetAsync,
-                JsonApiContext);
-
-
-        }
+        
         public Plan Get(int id)
         {
-            return MyRepository.Get().Where(p => p.Id == id).FirstOrDefault();
-        }
-        public Plan GetWithSections(int id)
-        {
-            return MyRepository.Get().Where(p => p.Id == id).Include(p => p.Sections).ThenInclude(s=> s.Passages).FirstOrDefault();
-        }
-        public override async Task<Plan> GetAsync(int id)
-        {
-            var plans = await GetAsync();
-
-            return plans.SingleOrDefault(g => g.Id == id);
+            return GetAsync(id, new CancellationToken()).Result;
         }
 
     }

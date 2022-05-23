@@ -1,19 +1,26 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
+using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
+    [Table("groupmemberships")]
     public partial class GroupMembership : BaseModel, IArchive
     {
-        [HasOne("user", Link.None)]
+        public GroupMembership():base()
+        {
+            User = new User();
+            Group = new Group();
+            Role = new Role();
+        }
+        [HasOne(PublicName="user")]
         public virtual User User { get; set; }
         public int UserId { get; set; }
 
-        [HasOne("group", Link.None)]
+        [HasOne(PublicName="group")]
         public virtual Group Group { get; set; }
         public int GroupId { get; set; }
 
-        [HasOne("role", Link.None)]
+        [HasOne(PublicName="role")]
         public virtual Role Role { get; set; }
         public int RoleId { get; set; }
 
@@ -22,11 +29,11 @@ namespace SIL.Transcriber.Models
         {
             get { return Role == null ? RoleName.Transcriber : Role.Rolename; }
         }
-        [Attr("font")]
-        public string Font { get; set; }
+        [Attr(PublicName="font")]
+        public string? Font { get; set; }
 
-        [Attr("font-size")]
-        public string FontSize { get; set; }
+        [Attr(PublicName="font-size")]
+        public string? FontSize { get; set; }
 
         public bool Archived { get; set; }
     }

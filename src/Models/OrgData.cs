@@ -1,19 +1,21 @@
-﻿using JsonApiDotNetCore.Models;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
-    public class OrgData : BaseModel
+    [NotMapped]
+    public class Orgdata : BaseModel
     {
-        public OrgData()
+        public Orgdata()
         {
             Id = 1;
+            Json = "{}";
         }
-        [NotMapped]
-        [Attr("json")]
+        [Attr(PublicName="json")]
         public string Json { get; set; }
-        [NotMapped]
-        [Attr("startnext")]
-        public int Startnext { get; set; }
+        [Attr(PublicName="start-index")]
+        public int StartIndex { get; set; }
+
     }
 }

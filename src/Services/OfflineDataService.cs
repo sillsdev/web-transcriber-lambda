@@ -1,58 +1,52 @@
-﻿using JsonApiDotNetCore.Data;
-using SIL.Transcriber.Data;
+﻿using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections;
 using System;
-using JsonApiDotNetCore.Serialization;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Repositories;
-using System.Dynamic;
 using Newtonsoft.Json.Linq;
-using System.Diagnostics;
+using System.Net.Http;
+using System.Text.Json;
 
 namespace SIL.Transcriber.Services
 {
     public class OfflineDataService : IOfflineDataService
     {
         protected readonly AppDbContext dbContext;
-        protected readonly IJsonApiSerializer jsonApiSerializer;
-        protected readonly IJsonApiDeSerializer jsonApiDeSerializer;
         protected readonly MediafileService mediaService;
         protected CurrentUserRepository CurrentUserRepository { get; }
 
-        private IS3Service _S3service;
+        readonly private IS3Service _S3service;
         const string ImportFolder = "imports";
         const string ExportFolder = "exports";
-
+        protected readonly JsonSerializerOptions Options = new JsonSerializerOptions
+        {
+            WriteIndented = true
+        };
         protected ILogger<OfflineDataService> Logger { get; set; }
 
         public OfflineDataService(AppDbContextResolver contextResolver,
-                IJsonApiSerializer jsonSer,
-                IJsonApiDeSerializer jsonDeser,
                 MediafileService MediaService,
                 CurrentUserRepository currentUserRepository,
                 IS3Service service,
                 ILoggerFactory loggerFactory)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
-            jsonApiSerializer = jsonSer;
-            jsonApiDeSerializer = jsonDeser;
             mediaService = MediaService;
             CurrentUserRepository = currentUserRepository;
             _S3service = service;
             this.Logger = loggerFactory.CreateLogger<OfflineDataService>();
         }
-        private User CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
+        private User? CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
 
-        private void WriteEntry(ZipArchiveEntry entry, string contents)
+        private static void WriteEntry(ZipArchiveEntry entry, string contents)
         {
             using (StreamWriter sw = new StreamWriter(entry.Open()))
             {
@@ -71,7 +65,7 @@ namespace SIL.Transcriber.Services
         private void AddJsonEntry(ZipArchive zipArchive, string table, IList list, char sort)
         {
             ZipArchiveEntry entry = zipArchive.CreateEntry("data/" + sort + "_" + table + ".json", CompressionLevel.Fastest);
-            WriteEntry(entry, jsonApiSerializer.Serialize(list));
+            WriteEntry(entry, JsonSerializer.Serialize(list));
         }
         private void AddEafEntry(ZipArchive zipArchive, string name, string eafxml)
         {
@@ -97,21 +91,30 @@ namespace SIL.Transcriber.Services
         }
         private bool AddStreamEntry(ZipArchive zipArchive, string url, string dir, string newName)
         {
-            return AddStreamEntry(zipArchive, GetStreamFromUrl(url), dir, newName);
+            Stream? s = GetStreamFromUrlAsync(url).Result;
+            if (s != null)
+                return AddStreamEntry(zipArchive, s, dir, newName);
+            return false;
         }
-        private static Stream GetStreamFromUrl(string url)
+        private static async Task<Stream?> GetStreamFromUrlAsync(string url)
         {
-            byte[] imageData = null;
+            byte[]? imageData = null;
             try
             {
-                using (WebClient wc = new System.Net.WebClient())
-                    imageData = wc.DownloadData(url);
+                using HttpClient client = new HttpClient();
+                using HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                using Stream streamToReadFrom = await response.Content.ReadAsStreamAsync();
+                string fileToWriteTo = Path.GetTempFileName();
+                using (Stream streamToWriteTo = File.Open(fileToWriteTo, FileMode.Create))
+                {
+                    await streamToReadFrom.CopyToAsync(streamToWriteTo);
+                }
             }
             catch
             {
                 return null;
             }
-            return new MemoryStream(imageData);
+            return imageData == null ? null : new MemoryStream(imageData);
         }
         private void AddOrgLogos(ZipArchive zipArchive, List<Organization> orgs)
         {
@@ -130,10 +133,10 @@ namespace SIL.Transcriber.Services
         {
             users.ForEach(u =>
             {
-                if (!string.IsNullOrEmpty(u.avatarurl))
+                if (!string.IsNullOrEmpty(u.AvatarUrl))
                 {
-                    AddStreamEntry(zipArchive, u.avatarurl, "avatars/", u.Id.ToString() + u.FamilyName + ".png");
-                    //u.avatarurl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
+                    AddStreamEntry(zipArchive, u.AvatarUrl, "avatars/", u.Id.ToString() + u.FamilyName + ".png");
+                    //u.AvatarUrl = "avatars/" + u.Id.ToString() + u.FamilyName + ".png";
                 }
             });
         }
@@ -143,7 +146,7 @@ namespace SIL.Transcriber.Services
             if (completed <= check)
             {
                 foreach (Mediafile m in media)
-                    AddEafEntry(zipArchive, m.S3File, mediaService.EAF(m));
+                    AddEafEntry(zipArchive, m.S3File??"", mediaService.EAF(m));
                 completed++;
             }
             return true;
@@ -170,14 +173,16 @@ namespace SIL.Transcriber.Services
             return true;
         }
         */
-        private void AddFont(ZipArchive zipArchive, WebClient client, string cssfile)
+        private void AddFont(ZipArchive zipArchive, HttpClient client, string cssfile)
         {
             string bucket = "https://s3.amazonaws.com/fonts.siltranscriber.org/";
             try
             {
                 /* read the css file */
                 string url = bucket + cssfile;
-                string css = client.DownloadString(url);
+                HttpResponseMessage? response = client.GetAsync(url).Result;
+                string css = response.Content.ReadAsStringAsync().Result;
+                
                 // example: /* CharisSIL.css */
                 /*
                 @font - face {
@@ -192,14 +197,16 @@ namespace SIL.Transcriber.Services
                 {
 
                     int end = css.IndexOf("')", start);
-                    url = css.Substring(start, end - start);
-                    string fontfile = url.Substring(url.LastIndexOf("/") + 1);
+                    url = css[start..end];
+                    string fontfile = url[(url.LastIndexOf("/") + 1)..];
                     url = bucket + fontfile;
                     AddStreamEntry(zipArchive, url, "fonts/", fontfile);
-                    css = css.Substring(0, start + 1) + fontfile + css.Substring(end);
+                    css = css.Substring(0, start + 1) + fontfile + css[end..];
                 }
                 ZipArchiveEntry entry = zipArchive.CreateEntry("fonts/" + cssfile, CompressionLevel.Fastest);
                 WriteEntry(entry, css);
+                
+                
             }
             catch (Exception ex)
             {
@@ -209,7 +216,7 @@ namespace SIL.Transcriber.Services
         }
         private void AddFonts(ZipArchive zipArchive, IEnumerable<string> fonts)
         {
-            using (WebClient client = new WebClient())
+            using (HttpClient client = new HttpClient())
             {
                 foreach (string f in fonts)
                 {
@@ -270,7 +277,7 @@ namespace SIL.Transcriber.Services
                 string data = reader.ReadToEnd();
                 if (data.IndexOf("|") > 0)
                 {
-                    err = data.Substring(data.IndexOf("|") + 1);
+                    err = data[(data.IndexOf("|") + 1)..];
                     data = data.Substring(0, data.IndexOf("|"));
                 }
                 if (!int.TryParse(data, out startNext)) startNext = 0;
@@ -374,15 +381,15 @@ namespace SIL.Transcriber.Services
             Dictionary<string, List<string>> scopes = new Dictionary<string, List<string>>();
             List<string> formats = new List<string>();
 
-            dynamic root = Newtonsoft.Json.JsonConvert.DeserializeObject(metastr);
-            dynamic meta = root.meta;
-            meta.version = "0.3.1";
-            meta.category = "source";
-            meta.generator.softwareName = "SIL Transcriber";
-            meta.generator.softwareVersion = dbContext.CurrentVersions.FirstOrDefault().DesktopVersion;
-            meta.generator.userName = CurrentUser().Name;
-            meta.defaultLanguage = project.Language;
-            meta.dateCreated = DateTime.Now.ToString("o");
+            dynamic? root = Newtonsoft.Json.JsonConvert.DeserializeObject(metastr);
+            if (root == null) throw new Exception("Bad Meta" + metastr);
+            root.meta.version = "0.3.1";
+            root.meta.meta.category = "source";
+            root.meta.generator.softwareName = "SIL Transcriber";
+            root.meta.generator.softwareVersion = dbContext.CurrentVersions.FirstOrDefault()?.DesktopVersion??"unknown";
+            root.meta.generator.userName = CurrentUser()?.Name??"unknown";
+            root.meta.defaultLanguage = project.Language;
+            root.meta.dateCreated = DateTime.Now.ToString("o");
             root.identification.name.en = project.Name;
             root.identification.description.en = project.Description;
             root.languages[0].tag = project.Language;
@@ -391,12 +398,13 @@ namespace SIL.Transcriber.Services
             mediafiles.ForEach(m =>
             {
                 //get stored book and ref out of audioquality
-                string book = m.AudioQuality.Split("|")[0];
-                string reference = m.AudioQuality.Split("|")[1];
+                string[] split = (m.AudioQuality??"|").Split("|");
+                string book = split[0];
+                string reference = split[1];
                 if (!scopes.ContainsKey(book))
                     scopes.Add(book, new List<string>());
                 scopes[book].Add(reference);
-                string ext = Path.GetExtension(m.AudioUrl).TrimStart('.');
+                string ext = Path.GetExtension(m.AudioUrl??"").TrimStart('.');
                 if (!formats.Contains(ext))
                     formats.Add(ext);
                 root.ingredients[m.AudioUrl] = new JObject();
@@ -417,10 +425,12 @@ namespace SIL.Transcriber.Services
             {
                 root.type.flavorType.currentScope[item.Key] = JToken.FromObject(item.Value.ToArray());
             }
-            WriteEntry(entry, Newtonsoft.Json.JsonConvert.SerializeObject(root, Formatting.Indented));  
+            WriteEntry(entry, Newtonsoft.Json.JsonConvert.SerializeObject(root, Newtonsoft.Json.Formatting.Indented));  
         }
-        private string ScriptureFullPath(string language, Passage passage, Mediafile m)
+        private static string ScriptureFullPath(string? language, Passage? passage, Mediafile m)
         {
+            if (passage == null || language == null) return "";
+
             return "release/audio/" + passage.Book + "/" + string.Format("{0}-{1}-{2}-{3}-{4}v{5}{6}",
                         language, passage.Book, passage.StartChapter.ToString().PadLeft(3, '0'), 
                         passage.StartVerse.ToString().PadLeft(3, '0'), passage.EndVerse.ToString().PadLeft(3, '0'),
@@ -432,13 +442,13 @@ namespace SIL.Transcriber.Services
             mediafiles.ForEach(m =>
             {
 
-                Passage passage = dbContext.Passages.Where(p => p.Id == m.PassageId).FirstOrDefault();
+                Passage? passage = dbContext.Passages.Where(p => p.Id == m.PassageId).FirstOrDefault();
                 //S3File has just the filename
                 //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
                 //change the audioUrl to have the offline path + filename
                 //change the s3File to have the onlinepath + filename
-                m.AudioQuality = passage.Book + "|" + passage.Reference; //store these here temporarily
-                m.AudioUrl = ScriptureFullPath(project.Language, passage, m);
+                m.AudioQuality = passage?.Book + "|" + passage?.Reference; //store these here temporarily
+                m.AudioUrl = ScriptureFullPath(project?.Language, passage, m);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles, 'Z');
@@ -465,7 +475,7 @@ namespace SIL.Transcriber.Services
            
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
-            string fileName = string.Format("Audio{0}_{1}_{2}", CoerceValidFileName(project.Name+artifactType), project.Id.ToString(), CurrentUser().Id);
+            string fileName = string.Format("Audio{0}_{1}_{2}", CoerceValidFileName(project.Name+artifactType), project.Id.ToString(), CurrentUser()?.Id);
             if (start > LAST_ADD)
                 return CheckProgress(projectid, fileName+ext, LAST_ADD, ext);
 
@@ -474,7 +484,7 @@ namespace SIL.Transcriber.Services
             {
                 if (start == 0)
                 {
-                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault().SchemaVersion ?? 4);
+                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault()?.SchemaVersion ?? 4);
                     List<Mediafile> mediafiles = dbContext.Mediafiles.Where(x => idList.Contains("," + x.Id.ToString() + ",")).ToList();
                     AddJsonEntry(zipArchive, "mediafiles", mediafiles, 'H');
                     AddMediaEaf(0, DateTime.Now.AddSeconds(15), ref startNext, zipArchive, mediafiles);
@@ -492,7 +502,7 @@ namespace SIL.Transcriber.Services
 
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
-            string fileName = string.Format("{0}_{1}_{2}", CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser().Id);
+            string fileName = string.Format("{0}_{1}_{2}", CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser()?.Id);
 
             if (start > LAST_ADD)
                 return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
@@ -520,7 +530,7 @@ namespace SIL.Transcriber.Services
 
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
-            string fileName = string.Format("Transcriber{0}_{1}_{2}" , CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser().Id) ;
+            string fileName = string.Format("Transcriber{0}_{1}_{2}" , CoerceValidFileName(project.Name), project.Id.ToString(), CurrentUser()?.Id) ;
 
             if (start > LAST_ADD)
                 return CheckProgress(projectid, fileName+ext, LAST_ADD, ext);
@@ -532,7 +542,7 @@ namespace SIL.Transcriber.Services
                 {
                     Dictionary<string, string> fonts = new Dictionary<string, string>();
                     fonts.Add("Charis SIL", "");
-                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault().SchemaVersion ?? 4);
+                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault()?.SchemaVersion ?? 4);
                     AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
                     AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
@@ -552,13 +562,13 @@ namespace SIL.Transcriber.Services
                     List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
                     IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
 
-                    foreach (string font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
+                    foreach (string? font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
                     {
-                        fonts[font] = ""; //add it if it's not there
+                        if (font != null) fonts[font] = ""; //add it if it's not there
                     }
-                    foreach (string font in projects.Where(p => p.DefaultFont != null).Select(p => p.DefaultFont))
+                    foreach (string? font in projects.Where(p => p.DefaultFont != null).Select(p => p.DefaultFont))
                     {
-                        fonts[font] = ""; //add it if it's not there
+                        if (font != null) fonts[font] = ""; //add it if it's not there
                     }
                     AddFonts(zipArchive, fonts.Keys);
                     //users
@@ -610,8 +620,8 @@ namespace SIL.Transcriber.Services
                     
                     foreach (Mediafile mf in resourcemediafiles.Where(m => m.ResourcePassageId != null))
                     { //make sure we have the latest
-                        Mediafile res = sourcemediafiles.Where(s => s.PassageId == mf.ResourcePassageId).FirstOrDefault();
-                        mf.AudioUrl = _S3service.SignedUrlForGet(res.S3File, mediaService.DirectoryName(res), res.ContentType).Message;
+                        Mediafile? res = sourcemediafiles.Where(s => s.PassageId == mf.ResourcePassageId).FirstOrDefault();
+                        if (res?.S3File != null) mf.AudioUrl = _S3service.SignedUrlForGet(res.S3File, mediaService.DirectoryName(res), res.ContentType??"").Message;
                         dbContext.Mediafiles.Update(mf);
                     }
                     if (!CheckAdd(6, dtBail, ref startNext, zipArchive, "mediafiles", mediafiles.OrderBy(m => m.Id).ToList(), 'H')) break;
@@ -657,7 +667,7 @@ namespace SIL.Transcriber.Services
         }
         private string ProjectDeletedReport(Project project)
         {
-            return ChangesReport("project", "\"deleted\"", jsonApiSerializer.Serialize(project));
+            return ChangesReport("project", "\"deleted\"", JsonSerializer.Serialize(project));
         }
         private string ChangesReport(string type, string online, string imported)
         {
@@ -665,17 +675,15 @@ namespace SIL.Transcriber.Services
         }
         private string UserChangesReport(User online, User imported)
         {
-            return ChangesReport("user",  jsonApiSerializer.Serialize(online),  jsonApiSerializer.Serialize(imported));
+            return ChangesReport("user",  JsonSerializer.Serialize(online),  JsonSerializer.Serialize(imported));
         }
         private string SectionChangesReport(Section online, Section imported)
         {
-            Dictionary<string, string> changes = new Dictionary<string, string>();
-
             if ((online.EditorId != imported.EditorId && online.EditorId != null) || 
                 (online.TranscriberId != imported.TranscriberId && online.TranscriberId != null) || 
                 online.State != imported.State )
             {
-                return ChangesReport( "section",  jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+                return ChangesReport( "section",  JsonSerializer.Serialize(online, Options), JsonSerializer.Serialize(imported));
             }
             return "";
        }
@@ -683,7 +691,7 @@ namespace SIL.Transcriber.Services
         {
             if (online.StepComplete != imported.StepComplete)
             {
-                return ChangesReport("passage", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+                return ChangesReport("passage",  JsonSerializer.Serialize(online), JsonSerializer.Serialize(imported));
             }
             return "";
         }
@@ -693,7 +701,7 @@ namespace SIL.Transcriber.Services
             {
                 Mediafile copy = (Mediafile) online.ShallowCopy();
                 copy.AudioUrl = "";
-                return ChangesReport("mediafile", jsonApiSerializer.Serialize(copy), jsonApiSerializer.Serialize(imported));
+                return ChangesReport("mediafile", JsonSerializer.Serialize(copy), JsonSerializer.Serialize(imported));
             }            
             return "";
         }
@@ -701,7 +709,7 @@ namespace SIL.Transcriber.Services
         {
             if (online.ArtifactCategoryId != imported.ArtifactCategoryId || online.RoleId != imported.RoleId || online.Resolved != imported.Resolved)
             {
-                return ChangesReport("discussion", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+                return ChangesReport("discussion", JsonSerializer.Serialize(online), JsonSerializer.Serialize(imported));
             }
             return "";
         }
@@ -709,7 +717,7 @@ namespace SIL.Transcriber.Services
         {
             if (online.CommentText != imported.CommentText || online.MediafileId != imported.MediafileId)
             {
-                return ChangesReport("comment", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+                return ChangesReport("comment", JsonSerializer.Serialize(online), JsonSerializer.Serialize(imported));
             }
             return "";
         }
@@ -717,19 +725,26 @@ namespace SIL.Transcriber.Services
         {
             if (online.FontSize != imported.FontSize)
             {
-                return ChangesReport("groupmembership", jsonApiSerializer.Serialize(online), jsonApiSerializer.Serialize(imported));
+                return ChangesReport("groupmembership", JsonSerializer.Serialize(online), JsonSerializer.Serialize(imported));
             }
             return "";
         }
         public async Task<FileResponse> ImportFileAsync(string sFile)
         {
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
-            ZipArchive archive = new ZipArchive(response.FileStream);
-            List<string> report = new List<string>();
-            List<string> errors = new List<string>();
+            if (response.FileStream == null) return new FileResponse()
+            {
+                Message = "File not found",
+                FileURL = sFile,
+                Status = HttpStatusCode.NotFound,
+                ContentType = "application/itf",
+            };
+            ZipArchive archive = new (response.FileStream);
+            List<string> report = new ();
+            List<string> errors = new ();
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
-                ZipArchive zipentry = new ZipArchive(entry.Open());
+                ZipArchive zipentry = new(entry.Open());
                 FileResponse fr = await ProcessImportFileAsync(zipentry, 0, entry.Name);
                 if (fr.Status == HttpStatusCode.OK)
                 {   //remove beginning and ending brackets
@@ -738,13 +753,13 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
-                    errors.Add(JsonConvert.SerializeObject(fr));
+                    errors.Add(JsonSerializer.Serialize(fr));
                 }
             }
             report.RemoveAll(s => s.Length == 0);
             errors.RemoveAll(s => s.Length == 0);
-            if (errors.Count() > 0)
-                return errorResponse("{\"errors\": [" + string.Join(",", errors) + "], \"report\": [" + string.Join(", ", report) + "]}", sFile);
+            if (errors.Count > 0)
+                return ErrorResponse("{\"errors\": [" + string.Join(",", errors) + "], \"report\": [" + string.Join(", ", report) + "]}", sFile);
 
             return new FileResponse()
             {
@@ -757,18 +772,25 @@ namespace SIL.Transcriber.Services
         public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
         {
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
-            ZipArchive archive = new ZipArchive(response.FileStream);
+            if (response.FileStream == null) return new FileResponse()
+            {
+                Message = "File not found",
+                FileURL = sFile,
+                Status = HttpStatusCode.NotFound,
+                ContentType = "application/itf",
+            };
+            ZipArchive archive = new (response.FileStream);
             return await ProcessImportFileAsync(archive, projectid, sFile);
         }
-        private FileResponse projectDeletedResponse(string msg, string sFile)
+        private FileResponse ProjectDeletedResponse(string msg, string sFile)
         {
-            return errorResponse(msg, sFile, System.Net.HttpStatusCode.MovedPermanently);
+            return ErrorResponse(msg, sFile, System.Net.HttpStatusCode.MovedPermanently);
         }
         private FileResponse NotCurrentProjectResponse(string msg, string sFile)
         {
-            return errorResponse(msg, sFile, System.Net.HttpStatusCode.NotAcceptable);
+            return ErrorResponse(msg, sFile, System.Net.HttpStatusCode.NotAcceptable);
         }
-        private FileResponse errorResponse(string msg, string sFile, HttpStatusCode status = System.Net.HttpStatusCode.UnprocessableEntity)
+        private FileResponse ErrorResponse(string msg, string sFile, HttpStatusCode status = System.Net.HttpStatusCode.UnprocessableEntity)
         {
             const string ContentType = "application/itf";
             return new FileResponse()
@@ -791,19 +813,15 @@ namespace SIL.Transcriber.Services
         }
         private async Task CopyMediaFile(Mediafile m, ZipArchive archive)
         {
-            ZipArchiveEntry f = archive.Entries.Where(e => e.Name == m.OriginalFile).FirstOrDefault();
-            if (f != null)
+            ZipArchiveEntry? f = archive.Entries.Where(e => e.Name == m.OriginalFile).FirstOrDefault();
+            if (f != null && m.S3File != null)
             {
-                using (Stream s = f.Open())
-                {
-                    using (MemoryStream ms = new MemoryStream())
-                    {
-                        s.CopyTo(ms);
-                        ms.Position = 0; // rewind
-                        S3Response response = await _S3service.UploadFileAsync(ms, true, m.ContentType, m.S3File, mediaService.DirectoryName(m));
-                        m.AudioUrl = _S3service.SignedUrlForGet(m.S3File, mediaService.DirectoryName(m), m.ContentType).Message;
-                    }
-                }
+                using Stream s = f.Open();
+                using MemoryStream ms = new();
+                s.CopyTo(ms);
+                ms.Position = 0; // rewind
+                S3Response response = await _S3service.UploadFileAsync(ms, true, m.ContentType ?? "", m.S3File ?? "", mediaService.DirectoryName(m));
+                m.AudioUrl = _S3service.SignedUrlForGet(m.S3File??"", mediaService.DirectoryName(m), m.ContentType ?? "").Message;
             }
         }
         private void UpdateOfflineIds()
@@ -812,7 +830,7 @@ namespace SIL.Transcriber.Services
             IQueryable<Comment> comments = dbContext.Comments.Where(c => c.OfflineMediafileId != null);
             foreach (Comment c in comments)
             {
-                Mediafile mediafile = dbContext.Mediafiles.Where(m => m.OfflineId == c.OfflineMediafileId).FirstOrDefault();
+                Mediafile? mediafile = dbContext.Mediafiles.Where(m => m.OfflineId == c.OfflineMediafileId).FirstOrDefault();
                 if (mediafile != null)
                 {
                     c.OfflineMediafileId = null;
@@ -825,7 +843,7 @@ namespace SIL.Transcriber.Services
             comments = dbContext.Comments.Where(c => c.DiscussionId == null && c.OfflineDiscussionId != null);
             foreach (Comment c in comments)
             {
-                Discussion discussion = dbContext.Discussions.Where(m => m.OfflineId == c.OfflineDiscussionId).FirstOrDefault();
+                Discussion? discussion = dbContext.Discussions.Where(m => m.OfflineId == c.OfflineDiscussionId).FirstOrDefault();
                 if (discussion != null)
                 {
                     c.DiscussionId = discussion.Id;
@@ -838,7 +856,7 @@ namespace SIL.Transcriber.Services
             IQueryable<Discussion> discussions = dbContext.Discussions.Where(d => d.MediafileId == null && d.OfflineMediafileId != null);
             foreach (Discussion d in discussions)
             {
-                Mediafile mediafile = dbContext.Mediafiles.Where(m => m.OfflineId == d.OfflineMediafileId).FirstOrDefault();
+                Mediafile? mediafile = dbContext.Mediafiles.Where(m => m.OfflineId == d.OfflineMediafileId).FirstOrDefault();
                 if (mediafile != null)
                 {
                     d.MediafileId = mediafile.Id;
@@ -851,7 +869,7 @@ namespace SIL.Transcriber.Services
             IQueryable<Mediafile> mediafiles = dbContext.Mediafiles.Where(c => c.SourceMediaId == null && c.SourceMediaOfflineId != null);
             foreach (Mediafile m in mediafiles)
             {
-                Mediafile sourcemedia = dbContext.Mediafiles.Where(sm => m.OfflineId == m.SourceMediaOfflineId).FirstOrDefault();
+                Mediafile? sourcemedia = dbContext.Mediafiles.Where(sm => m.OfflineId == m.SourceMediaOfflineId).FirstOrDefault();
                 if (sourcemedia != null)
                 {
                     m.SourceMediaId = sourcemedia.Id;
@@ -877,7 +895,7 @@ namespace SIL.Transcriber.Services
                     if (mediaService.IsVernacularMedia(a))
                     {
                         if (mediaService.IsVernacularMedia(b))
-                            return (int)(a.VersionNumber - b.VersionNumber);  //both vernacular so use version number
+                            return (int)(a.VersionNumber??0 - b.VersionNumber??0);  //both vernacular so use version number
                         else
                             return -1;
                     }
@@ -961,49 +979,52 @@ namespace SIL.Transcriber.Services
             List<string> deleted = new List<string>();
             try
             {
-                ZipArchiveEntry checkEntry = archive.GetEntry("SILTranscriberOffline");
+                ZipArchiveEntry? checkEntry = archive.GetEntry("SILTranscriberOffline");
                 //var exportTime = new StreamReader(checkEntry.Open()).ReadToEnd();
             }
             catch
             {
-                return errorResponse("SILTranscriberOffline not present", sFile);
+                return ErrorResponse("SILTranscriberOffline not present", sFile);
             }
             try
             {
-                ZipArchiveEntry sourceEntry = archive.GetEntry("SILTranscriber");
+                ZipArchiveEntry? sourceEntry = archive.GetEntry("SILTranscriber");
+                if (sourceEntry == null) return ErrorResponse("SILTranscriber not present", sFile);
                 sourceDate = Convert.ToDateTime(new StreamReader(sourceEntry.Open()).ReadToEnd());
             }
             catch
             {
-                return errorResponse("SILTranscriber not present", sFile);
+                return ErrorResponse("SILTranscriber not present", sFile);
             }
             //check project if provided
-            Project project;
+            Project? project;
             try
             {
-                ZipArchiveEntry projectsEntry = archive.GetEntry("data/D_projects.json");
+                ZipArchiveEntry? projectsEntry = archive.GetEntry("data/D_projects.json");
                 if (projectsEntry == null)
-                    return errorResponse("Project data not present", sFile);
+                    return ErrorResponse("Project data not present", sFile);
                 string json = new StreamReader(projectsEntry.Open()).ReadToEnd();
-                List<Project> projects = jsonApiDeSerializer.DeserializeList<Project>(json);
+                List<Project>? projects = JsonSerializer.Deserialize<List<Project>>(json); //TODO Used to be deserializeList
+                if (projects == null || projects.Count == 0)
+                    return ErrorResponse("Project data not present", sFile);
                 project = dbContext.Projects.Find(projects[0].Id);
                 if (projectid > 0)
                 {
-                    if (projectid != project.Id)
+                    if (project == null || projectid != project.Id)
                     {
-                        return NotCurrentProjectResponse(project.Name, sFile);
+                        return NotCurrentProjectResponse(project?.Name??"project not found", sFile);
                     }
                     if (project.Archived)
-                        return projectDeletedResponse(project.Name, sFile);
+                        return ProjectDeletedResponse(project.Name, sFile);
                 } 
                 if (project==null)
-                    return projectDeletedResponse(projects[0].Name, sFile);
+                    return ProjectDeletedResponse(projects[0].Name, sFile);
 
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                return errorResponse("Invalid ITF File - error finding project -" + ex.Message, sFile);
+                return ErrorResponse("Invalid ITF File - error finding project -" + ex.Message, sFile);
             }
            
             try
@@ -1014,261 +1035,265 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
-                    List<Mediafile> mediafiles = null;
+                    List<Mediafile>? mediafiles = null;
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
                         if (!entry.FullName.StartsWith("data"))
                             continue;
                         string data = new StreamReader(entry.Open()).ReadToEnd();
-                        string name = Path.GetFileNameWithoutExtension(entry.Name.Substring(2));
+                        string name = Path.GetFileNameWithoutExtension(entry.Name[2..]);
                         switch (name)
                         {
                             case "users":
-                                List<User> users = jsonApiDeSerializer.DeserializeList<User>(data);
-                                foreach (User u in users)
-                                {
-                                    User user = dbContext.Users.Find(u.Id);
-                                    if (!user.Archived && user.DateUpdated != u.DateUpdated)
+                                List<User>? users = JsonSerializer.Deserialize<List<User>>(data); //TODO?
+                                if (users != null)
+                                    foreach (User u in users)
                                     {
-                                        if (user.DateUpdated > sourceDate && user.DateUpdated != u.DateUpdated)
-                                            report.Add(UserChangesReport(user, u));
+                                        User? user = dbContext.Users.Find(u.Id);
+                                        if (user != null && !user.Archived && user.DateUpdated != u.DateUpdated)
+                                        {
+                                            if (user.DateUpdated > sourceDate && user.DateUpdated != u.DateUpdated)
+                                                report.Add(UserChangesReport(user, u));
 
-                                        user.DigestPreference = u.DigestPreference;
-                                        user.FamilyName = u.FamilyName;
-                                        user.GivenName = u.GivenName;
-                                        user.Locale = u.Locale;
-                                        user.Name = u.Name;
-                                        user.NewsPreference = u.NewsPreference;
-                                        user.Phone = u.Phone;
-                                        user.playbackspeed = u.playbackspeed;
-                                        user.progressbartypeid = u.progressbartypeid;
-                                        user.timercountup = u.timercountup;
-                                        user.Timezone = u.Timezone;
-                                        user.uilanguagebcp47 = u.uilanguagebcp47;
-                                        user.LastModifiedBy = u.LastModifiedBy;
-                                        user.DateUpdated = DateTime.UtcNow;
-                                        /* TODO: figure out if the avatar needs uploading */
-                                        dbContext.Users.Update(user);
-                                    }
-                                };
+                                            user.DigestPreference = u.DigestPreference;
+                                            user.FamilyName = u.FamilyName;
+                                            user.GivenName = u.GivenName;
+                                            user.Locale = u.Locale;
+                                            user.Name = u.Name;
+                                            user.NewsPreference = u.NewsPreference;
+                                            user.Phone = u.Phone;
+                                            user.Timezone = u.Timezone;
+                                            user.UILanguageBCP47 = u.UILanguageBCP47;
+                                            user.LastModifiedBy = u.LastModifiedBy;
+                                            user.DateUpdated = DateTime.UtcNow;
+                                            /* TODO: figure out if the avatar needs uploading */
+                                            dbContext.Users.Update(user);
+                                        }
+                                    };
                                 break;
 
                             case "sections":
-                                List<Section> sections = jsonApiDeSerializer.DeserializeList<Section>(data);
-                                foreach (Section s in sections)
-                                {
-                                    Section section = dbContext.Sections.Find(s.Id);
-                                    if (!section.Archived)
+                                List<Section>? sections = JsonSerializer.Deserialize<List<Section>>(data);
+                                if (sections != null)
+                                    foreach (Section s in sections)
                                     {
-                                        if (section.DateUpdated > sourceDate)
-                                            report.Add(SectionChangesReport(section, s));
+                                        Section? section = dbContext.Sections.Find(s.Id);
+                                        if (section != null && !section.Archived)
+                                        {
+                                            if (section.DateUpdated > sourceDate)
+                                                report.Add(SectionChangesReport(section, s));
 
-                                        section.EditorId = s.EditorId;
-                                        section.TranscriberId = s.TranscriberId;
-                                        section.State = s.State;
-                                        section.LastModifiedBy = s.LastModifiedBy;
-                                        section.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Sections.Update(section);
-                                    }
-                                };
+                                            section.EditorId = s.EditorId;
+                                            section.TranscriberId = s.TranscriberId;
+                                            section.State = s.State;
+                                            section.LastModifiedBy = s.LastModifiedBy;
+                                            section.DateUpdated = DateTime.UtcNow;
+                                            dbContext.Sections.Update(section);
+                                        }
+                                    };
                                 break;
 
                             case "passages":
-                                List<Passage> passages = jsonApiDeSerializer.DeserializeList<Passage>(data);
-                                int currentuser = CurrentUser().Id;
-                                foreach (Passage p in passages)
-                                {
-                                    Passage passage = dbContext.Passages.Find(p.Id);
-                                    if (passage != null && !passage.Archived && 
-                                        (passage.StepComplete != p.StepComplete||passage.State != p.State))
+                                List<Passage>? passages = JsonSerializer.Deserialize<List<Passage>>(data);
+                                int? currentuser = CurrentUser()?.Id;
+                                if (passages != null)
+                                    foreach (Passage p in passages)
                                     {
-                                        if (passage.DateUpdated > sourceDate)
+                                        Passage? passage = dbContext.Passages.Find(p.Id);
+                                        if (passage != null && !passage.Archived && 
+                                            (passage.StepComplete != p.StepComplete||passage.State != p.State))
                                         {
-                                            report.Add(PassageChangesReport(passage, p));
+                                            if (passage.DateUpdated > sourceDate)
+                                            {
+                                                report.Add(PassageChangesReport(passage, p));
+                                            }
+                                            passage.State = p.State; //backward compatibility
+                                            passage.StepComplete = p.StepComplete;
+                                            passage.LastModifiedBy = p.LastModifiedBy;
+                                            passage.DateUpdated = DateTime.UtcNow;
+                                            dbContext.Passages.Update(passage);
+                                            PassageStateChange psc = new PassageStateChange
+                                            {
+                                                Comments = "Imported",  //TODO Localize
+                                                DateCreated = passage.DateUpdated,
+                                                DateUpdated = passage.DateUpdated,
+                                                LastModifiedBy = currentuser,
+                                                PassageId = passage.Id,
+                                                State = passage.State ?? "",
+                                            };
+                                            dbContext.Passagestatechanges.Add(psc);
                                         }
-                                        passage.State = p.State; //backward compatibility
-                                        passage.StepComplete = p.StepComplete;
-                                        passage.LastModifiedBy = p.LastModifiedBy;
-                                        passage.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Passages.Update(passage);
-                                        PassageStateChange psc = new PassageStateChange
-                                        {
-                                            Comments = "Imported",  //TODO Localize
-                                            DateCreated = passage.DateUpdated,
-                                            DateUpdated = passage.DateUpdated,
-                                            LastModifiedBy = currentuser,
-                                            PassageId = passage.Id,
-                                            State = passage.State ?? "",
-                                        };
-                                        dbContext.Passagestatechanges.Add(psc);
-                                    }
-                                };
+                                    };
                                 break;
 
                             case "discussions":
-                                List<Discussion> discussions = jsonApiDeSerializer.DeserializeList<Discussion>(data);
-                                foreach (Discussion d in discussions)
-                                {
-                                    if (d.Id > 0)
+                                List<Discussion>? discussions = JsonSerializer.Deserialize<List<Discussion>>(data);//TODO Used to be deserializeList
+                                if (discussions != null)
+                                    foreach (Discussion d in discussions)
                                     {
-                                        Discussion discussion = dbContext.Discussions.Find(d.Id);
-                                        if (discussion != null) UpdateDiscussion(discussion, d, sourceDate, report); 
-                                    }
-                                    else
-                                    {
-                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
-                                        Discussion discussion = dbContext.Discussions.Where(x => x.OfflineId == d.OfflineId).FirstOrDefault();
-                                        if (discussion == null)
+                                        if (d.Id > 0)
                                         {
-                                            dbContext.Discussions.Add(new Discussion
+                                            Discussion? discussion = dbContext.Discussions.Find(d.Id);
+                                            if (discussion != null) UpdateDiscussion(discussion, d, sourceDate, report); 
+                                        }
+                                        else
+                                        {
+                                            //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                            Discussion? discussion = dbContext.Discussions.Where(x => x.OfflineId == d.OfflineId).FirstOrDefault();
+                                            if (discussion == null)
                                             {
-                                                ArtifactCategoryId = d.ArtifactCategoryId,
-                                                MediafileId = d.MediafileId,
-                                                OfflineId = d.OfflineId,
-                                                OfflineMediafileId = d.OfflineMediafileId,
-                                                OrgWorkflowStepId = d.OrgWorkflowStepId,
-                                                RoleId = d.RoleId,
-                                                Resolved = d.Resolved,
-                                                Segments = d.Segments,
-                                                Subject = d.Subject,
-                                                UserId = d.UserId,
-                                                LastModifiedBy = d.LastModifiedBy,
-                                                DateCreated = d.DateCreated,
-                                                DateUpdated = DateTime.UtcNow,
-                                            });
-                                        } else
-                                        {
-                                            UpdateDiscussion(discussion, d, sourceDate, report);
+                                                dbContext.Discussions.Add(new Discussion
+                                                {
+                                                    ArtifactCategoryId = d.ArtifactCategoryId,
+                                                    MediafileId = d.MediafileId,
+                                                    OfflineId = d.OfflineId,
+                                                    OfflineMediafileId = d.OfflineMediafileId,
+                                                    OrgWorkflowStepId = d.OrgWorkflowStepId,
+                                                    RoleId = d.RoleId,
+                                                    Resolved = d.Resolved,
+                                                    Segments = d.Segments,
+                                                    Subject = d.Subject,
+                                                    UserId = d.UserId,
+                                                    LastModifiedBy = d.LastModifiedBy,
+                                                    DateCreated = d.DateCreated,
+                                                    DateUpdated = DateTime.UtcNow,
+                                                });
+                                            } else
+                                            {
+                                                UpdateDiscussion(discussion, d, sourceDate, report);
+                                            }
                                         }
                                     }
-                                }
                                 break;
 
                             case "comments":
-                                List<Comment> comments = jsonApiDeSerializer.DeserializeList<Comment>(data);
-                                foreach (Comment c in comments)
-                                {
-                                    if (c.Id > 0)
+                                List<Comment>? comments =   JsonSerializer.Deserialize<List<Comment>>(data);
+                                if (comments != null)
+                                    foreach (Comment c in comments)
                                     {
-                                        Comment comment = dbContext.Comments.Find(c.Id);
-                                        if (comment != null) UpdateComment(comment, c, sourceDate, report);
-                                    }
-                                    else
-                                    {
-                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
-                                        Comment comment = dbContext.Comments.Where(x => x.OfflineId == c.OfflineId).FirstOrDefault();
-                                        if (comment == null)
+                                        if (c.Id > 0)
                                         {
-                                            dbContext.Comments.Add(new Comment
+                                            Comment? comment = dbContext.Comments.Find(c.Id);
+                                            if (comment != null) UpdateComment(comment, c, sourceDate, report);
+                                        }
+                                        else
+                                        {
+                                            //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                            Comment? comment = dbContext.Comments.Where(x => x.OfflineId == c.OfflineId).FirstOrDefault();
+                                            if (comment == null)
                                             {
-                                                OfflineId = c.OfflineId,
-                                                OfflineMediafileId = c.OfflineMediafileId,
-                                                OfflineDiscussionId = c.OfflineDiscussionId,
-                                                DiscussionId = c.DiscussionId == 0 ? null : c.DiscussionId,
-                                                CommentText = c.CommentText,
-                                                MediafileId = c.MediafileId,
-                                                LastModifiedBy = c.LastModifiedBy,
-                                                DateCreated = c.DateCreated,
-                                                DateUpdated = DateTime.UtcNow,
-                                            });
-                                            //mediafileid will be updated when mediafiles are processed if 0;
-                                        } else UpdateComment(comment, c, sourceDate, report);
+                                                dbContext.Comments.Add(new Comment
+                                                {
+                                                    OfflineId = c.OfflineId,
+                                                    OfflineMediafileId = c.OfflineMediafileId,
+                                                    OfflineDiscussionId = c.OfflineDiscussionId,
+                                                    DiscussionId = c.DiscussionId == 0 ? null : c.DiscussionId,
+                                                    CommentText = c.CommentText,
+                                                    MediafileId = c.MediafileId,
+                                                    LastModifiedBy = c.LastModifiedBy,
+                                                    DateCreated = c.DateCreated,
+                                                    DateUpdated = DateTime.UtcNow,
+                                                });
+                                                //mediafileid will be updated when mediafiles are processed if 0;
+                                            } else UpdateComment(comment, c, sourceDate, report);
+                                        }
                                     }
-                                }
                                 break;
+                                
 
                             case "mediafiles":
-                                mediafiles = jsonApiDeSerializer.DeserializeList<Mediafile>(data);
-                                mediafiles.Sort(CompareMediafilesByArtifactTypeVersionDesc);
+                                mediafiles = JsonSerializer.Deserialize<List<Mediafile>>(data);
+                                mediafiles?.Sort(CompareMediafilesByArtifactTypeVersionDesc);
                                 Dictionary<int, int> passageVersions = new Dictionary<int, int>();
-                                foreach (Mediafile m in mediafiles)
-                                {
-                                    Mediafile mediafile;
-                                    if (m.Id > 0)
+                                if (mediafiles != null)
+                                    foreach (Mediafile m in mediafiles)
                                     {
-                                        mediafile = dbContext.Mediafiles.Find(m.Id);
-                                        if (mediafile != null) UpdateMediafile(mediafile, m, sourceDate, report);
-                                    }
-                                    else
-                                    {
-                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
-                                        mediafile = dbContext.Mediafiles.Where(x => x.OfflineId == m.OfflineId).FirstOrDefault();
-                                        if (mediafile == null)
+                                        Mediafile? mediafile;
+                                        if (m.Id > 0)
                                         {
-                                            if (!Convert.ToBoolean(m.VersionNumber)) m.VersionNumber = 1;
-
-                                            /* check the artifacttype */
-                                            if (m.PassageId != null && mediaService.IsVernacularMedia(m))
-                                            {
-                                                int existingVersion;
-                                                if (passageVersions.TryGetValue((int)m.PassageId, out existingVersion))
-                                                {
-                                                    m.VersionNumber = existingVersion+1;
-                                                }
-                                                else
-                                                {
-                                                    mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived && mediaService.IsVernacularMedia(p)).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
-                                                    if (mediafile != null) m.VersionNumber = mediafile.VersionNumber + 1;
-                                                }
-                                                passageVersions[(int)m.PassageId] = (int)m.VersionNumber;
-                                            }
-                                            m.S3File = await mediaService.GetNewFileNameAsync(m);
-                                            m.AudioUrl = _S3service.SignedUrlForPut(m.S3File, mediaService.DirectoryName(m), m.ContentType).Message;
-                                            await CopyMediaFile(m, archive);
-                                            dbContext.Mediafiles.Add(new Mediafile
-                                            {
-                                                ArtifactTypeId = m.ArtifactTypeId,
-                                                ArtifactCategoryId = m.ArtifactCategoryId,
-                                                AudioUrl = m.AudioUrl,
-                                                ContentType = m.ContentType,
-                                                Duration = m.Duration,
-                                                Filesize = m.Filesize,
-                                                OriginalFile = m.OriginalFile,
-                                                Languagebcp47 = m.Languagebcp47,
-                                                LastModifiedByUserId = m.LastModifiedByUserId,
-                                                Link = m.Link != null ? m.Link : false,
-                                                OfflineId = m.OfflineId,
-                                                PassageId = m.PassageId,
-                                                PerformedBy = m.PerformedBy,
-                                                PlanId = m.PlanId,
-                                                Position = m.Position,
-                                                ReadyToShare = m.ReadyToShare,
-                                                RecordedbyUserId = m.RecordedbyUserId,
-                                                ResourcePassageId = m.ResourcePassageId,
-                                                S3File = m.S3File,
-                                                Segments = m.Segments,
-                                                Topic = m.Topic,
-                                                Transcription = m.Transcription,
-                                                Transcriptionstate = m.Transcriptionstate,
-                                                VersionNumber = m.VersionNumber,
-                                                SourceMediaId = m.SourceMediaId,
-                                                SourceMediaOfflineId = m.SourceMediaOfflineId,
-                                                SourceSegments = m.SourceSegments,
-                                                LastModifiedBy = m.LastModifiedBy,
-                                                DateCreated = m.DateCreated,
-                                                DateUpdated = DateTime.UtcNow,
-                                            });
+                                            mediafile = dbContext.Mediafiles.Find(m.Id);
+                                            if (mediafile != null) UpdateMediafile(mediafile, m, sourceDate, report);
                                         }
-                                        else UpdateMediafile(mediafile, m, sourceDate, report);
-                                    }
-                                };
+                                        else
+                                        {
+                                            //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                            mediafile = dbContext.Mediafiles.Where(x => x.OfflineId == m.OfflineId).FirstOrDefault();
+                                            if (mediafile == null)
+                                            {
+                                                if (!Convert.ToBoolean(m.VersionNumber)) m.VersionNumber = 1;
+
+                                                /* check the artifacttype */
+                                                if (m.PassageId != null && mediaService.IsVernacularMedia(m))
+                                                {
+                                                    if (passageVersions.TryGetValue((int)m.PassageId, out int existingVersion))
+                                                    {
+                                                        m.VersionNumber = existingVersion+1;
+                                                    }
+                                                    else
+                                                    {
+                                                        mediafile = dbContext.Mediafiles.Where(p => p.PassageId == m.PassageId && !p.Archived && mediaService.IsVernacularMedia(p)).OrderByDescending(p => p.VersionNumber).FirstOrDefault();
+                                                        if (mediafile != null) m.VersionNumber = mediafile.VersionNumber + 1;
+                                                    }
+                                                    passageVersions[(int)m.PassageId] = m.VersionNumber??1;
+                                                }
+                                                m.S3File = await mediaService.GetNewFileNameAsync(m);
+                                                m.AudioUrl = _S3service.SignedUrlForPut(m.S3File, mediaService.DirectoryName(m), m.ContentType??"").Message;
+                                                await CopyMediaFile(m, archive);
+                                                dbContext.Mediafiles.Add(new Mediafile
+                                                {
+                                                    ArtifactTypeId = m.ArtifactTypeId,
+                                                    ArtifactCategoryId = m.ArtifactCategoryId,
+                                                    AudioUrl = m.AudioUrl,
+                                                    ContentType = m.ContentType,
+                                                    Duration = m.Duration,
+                                                    Filesize = m.Filesize,
+                                                    OriginalFile = m.OriginalFile,
+                                                    Languagebcp47 = m.Languagebcp47,
+                                                    //LastModifiedByUserId = m.LastModifiedByUserId,
+                                                    Link = m.Link != null ? m.Link : false,
+                                                    OfflineId = m.OfflineId,
+                                                    PassageId = m.PassageId,
+                                                    PerformedBy = m.PerformedBy,
+                                                    PlanId = m.PlanId,
+                                                    Position = m.Position,
+                                                    ReadyToShare = m.ReadyToShare,
+                                                    RecordedbyUserId = m.RecordedbyUserId,
+                                                    ResourcePassageId = m.ResourcePassageId,
+                                                    S3File = m.S3File,
+                                                    Segments = m.Segments,
+                                                    Topic = m.Topic,
+                                                    Transcription = m.Transcription,
+                                                    Transcriptionstate = m.Transcriptionstate,
+                                                    VersionNumber = m.VersionNumber,
+                                                    SourceMediaId = m.SourceMediaId,
+                                                    SourceMediaOfflineId = m.SourceMediaOfflineId,
+                                                    SourceSegments = m.SourceSegments,
+                                                    LastModifiedBy = m.LastModifiedBy,
+                                                    DateCreated = m.DateCreated,
+                                                    DateUpdated = DateTime.UtcNow,
+                                                });
+                                            }
+                                            else UpdateMediafile(mediafile, m, sourceDate, report);
+                                        }
+                                    };
                                 break;
 
                             case "groupmemberships":
-                                List<GroupMembership> grpmems = jsonApiDeSerializer.DeserializeList<GroupMembership>(data);
-                                foreach (GroupMembership gm in grpmems)
-                                {
-                                    GroupMembership grpmem = dbContext.Groupmemberships.Find(gm.Id);
-                                    if (!grpmem.Archived && grpmem.FontSize != gm.FontSize)
+                                List<GroupMembership>? grpmems = JsonSerializer.Deserialize<List<GroupMembership>>(data);
+                                if (grpmems != null)
+                                    foreach (GroupMembership gm in grpmems)
                                     {
-                                        if (grpmem.DateUpdated > sourceDate)
-                                            report.Add(GrpMemChangesReport(grpmem, gm));
-                                        grpmem.FontSize = gm.FontSize;
-                                        grpmem.LastModifiedBy = gm.LastModifiedBy;
-                                        grpmem.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Groupmemberships.Update(grpmem);
-                                    }
-                                };
+                                        GroupMembership? grpmem = dbContext.Groupmemberships.Find(gm.Id);
+                                        if (grpmem != null && !grpmem.Archived && grpmem.FontSize != gm.FontSize)
+                                        {
+                                            if (grpmem.DateUpdated > sourceDate)
+                                                report.Add(GrpMemChangesReport(grpmem, gm));
+                                            grpmem.FontSize = gm.FontSize;
+                                            grpmem.LastModifiedBy = gm.LastModifiedBy;
+                                            grpmem.DateUpdated = DateTime.UtcNow;
+                                            dbContext.Groupmemberships.Update(grpmem);
+                                        }
+                                    };
                                 break;
 
                             /*  Local changes to project integrations should just stay local
@@ -1278,24 +1303,25 @@ namespace SIL.Transcriber.Services
                             */
 
                             case "passagestatechanges":
-                                List<PassageStateChange> pscs = jsonApiDeSerializer.DeserializeList<PassageStateChange>(data);
-                                foreach (PassageStateChange psc in pscs)
-                                {
-                                    //see if it's already there...
-                                    IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
-                                    if (dups.Count() == 0)
-                                    {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
-                                        dbContext.Passagestatechanges.Add(new PassageStateChange
-                                        {
-                                            PassageId = psc.PassageId,
-                                            State = psc.State,
-                                            DateCreated = psc.DateCreated,
-                                            Comments = psc.Comments,
-                                            LastModifiedBy = psc.LastModifiedBy,
-                                            DateUpdated = DateTime.UtcNow,
-                                        });
+                                List<PassageStateChange>? pscs = JsonSerializer.Deserialize<List<PassageStateChange>>(data);
+                                if (pscs != null)
+                                    foreach (PassageStateChange psc in pscs)
+                                    {
+                                        //see if it's already there...
+                                        IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
+                                        if (dups.Count() == 0)
+                                        {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
+                                            dbContext.Passagestatechanges.Add(new PassageStateChange
+                                            {
+                                                PassageId = psc.PassageId,
+                                                State = psc.State,
+                                                DateCreated = psc.DateCreated,
+                                                Comments = psc.Comments,
+                                                LastModifiedBy = psc.LastModifiedBy,
+                                                DateUpdated = DateTime.UtcNow,
+                                            });
+                                        };
                                     };
-                                };
                                 break;
                         }
                     }
@@ -1315,7 +1341,7 @@ namespace SIL.Transcriber.Services
             }
             catch (Exception ex)
             {
-                return errorResponse(ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""), sFile);
+                return ErrorResponse(ex.Message + (ex.InnerException != null && ex.InnerException.Message != "" ? "=>" + ex.InnerException.Message : ""), sFile);
             }
         }
     }

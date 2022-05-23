@@ -2,14 +2,10 @@
 using Amazon.S3.Transfer;
 using Amazon.S3.Model;
 using Amazon.S3.Util;
-using System;
-using System.Threading.Tasks;
 using SIL.Transcriber.Models;
-using System.IO;
-using Microsoft.AspNetCore.Http;
 using System.Net;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using Microsoft.Extensions.Logging;
+
 
 namespace SIL.Transcriber.Services
 {
@@ -32,7 +28,7 @@ namespace SIL.Transcriber.Services
                 folder += "/";
             return folder;
         }
-        private S3Response S3Response(string message, HttpStatusCode code, Stream fileStream = null, string contentType = "")
+        private S3Response S3Response(string message, HttpStatusCode code, Stream? fileStream = null, string contentType = "")
         {
             return new S3Response
             {
@@ -67,7 +63,7 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                if (await AmazonS3Util.DoesS3BucketExistAsync(_client, bucketName) == false)
+                if (await AmazonS3Util.DoesS3BucketExistV2Async(_client, bucketName) == false)
                 {
                     PutBucketRequest putBucketRequest = new PutBucketRequest
                     {

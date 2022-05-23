@@ -1,17 +1,8 @@
-using System;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Security;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Auth0.ManagementApi;
 using Auth0.ManagementApi.Models;
 using Newtonsoft.Json.Linq;
-using RestSharp;
-using SIL.ObjectModel;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services
@@ -19,12 +10,12 @@ namespace SIL.Transcriber.Services
     /// <summary>
     /// This service provides methods for accessing the Auth0 Management API.
     /// </summary>
-    public class AuthService : DisposableBase, IAuthService
+    public class AuthService : IAuthService
     {
         private readonly HttpClient _httpClient;
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
         private string _accessToken;
-        private ManagementApiClient managementApiClient;
+        private ManagementApiClient? managementApiClient;
 
 
         public AuthService()
@@ -35,6 +26,7 @@ namespace SIL.Transcriber.Services
             {
                 BaseAddress =new Uri(domain)
             };
+            _accessToken = "";
         }
 
         public bool ValidateWebhookCredentials(string username, string password)
@@ -110,11 +102,6 @@ namespace SIL.Transcriber.Services
             JwtSecurityToken accessToken = new JwtSecurityToken(_accessToken);
             DateTime now = DateTime.UtcNow;
             return now < accessToken.ValidFrom || now > accessToken.ValidTo;
-        }
-
-        protected override void DisposeManagedResources()
-        {
-            _httpClient.Dispose();
         }
     }
 }

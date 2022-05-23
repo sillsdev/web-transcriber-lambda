@@ -1,32 +1,31 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
+﻿using SIL.Transcriber.Models;
 using SIL.Transcriber.Data;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using JsonApiDotNetCore.Internal.Query;
-using System.Linq;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 
 namespace SIL.Transcriber.Repositories
 {
     public class IntegrationRepository : BaseRepository<Integration>
     {
         public IntegrationRepository(
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+                constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        #region Overrides
-        public override IQueryable<Integration> Filter(IQueryable<Integration> entities, FilterQuery filterQuery)
+        protected override IQueryable<Integration> FromCurrentUser(QueryLayer? layer = null)
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER) || filterQuery.Has(ALLOWED_CURRENTUSER) || filterQuery.Has(PROJECT_LIST))
-            {
-                return entities;
-            }
-            return base.Filter(entities, filterQuery);
+            return GetAll();
         }
-        #endregion
+        protected override IQueryable<Integration> FromProjectList(QueryLayer layer, string idList)
+        {
+            return GetAll();
+        }
     }
 }

@@ -1,11 +1,11 @@
-﻿using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
     public class Version : BaseModel
     {
-        [Attr("desktop-version")]
-        public string DesktopVersion { get; set; }
+        [Attr(PublicName="desktopVersion")]
+        public string? DesktopVersion { get; set; }
 
         public int? SchemaVersion { get; set; }
     }

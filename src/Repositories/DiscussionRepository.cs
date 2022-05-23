@@ -1,12 +1,8 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
+﻿using SIL.Transcriber.Models;
 using SIL.Transcriber.Data;
-using System.Linq;
-using System.Collections.Generic;
-using SIL.Transcriber.Utility;
-using JsonApiDotNetCore.Internal.Query;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -14,12 +10,15 @@ namespace SIL.Transcriber.Repositories
     {
         private readonly PlanRepository PlanRepository;
         public DiscussionRepository(
-          ILoggerFactory loggerFactory,
-          IJsonApiContext jsonApiContext,
-          CurrentUserRepository currentUserRepository,
-          AppDbContextResolver contextResolver,
-          PlanRepository planRepository
-      ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository,
+            PlanRepository planRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
+                loggerFactory,resourceDefinitionAccessor, currentUserRepository)
         {
             PlanRepository = planRepository;
         }
@@ -42,7 +41,7 @@ namespace SIL.Transcriber.Repositories
             return dbContext.Discussions.Join(mediafiles, (d => d.MediafileId), m => m.Id, (d, m) => d);
         }
 
-        private IQueryable<Discussion> UsersDiscussions(IQueryable<Discussion> entities, IQueryable<Plan> plans = null)
+        private IQueryable<Discussion> UsersDiscussions(IQueryable<Discussion> entities, IQueryable<Plan>? plans = null)
         {
             if (plans == null)
                 plans = PlanRepository.UsersPlans(dbContext.Plans);
@@ -53,17 +52,15 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans = PlanRepository.ProjectPlans(dbContext.Plans, projectid);
             return PlansDiscussions(entities, plans);
         }
-        public override IQueryable<Discussion> Filter(IQueryable<Discussion> entities, FilterQuery filterQuery)
+        #region overrides
+        protected override IQueryable<Discussion> FromProjectList(QueryLayer layer, string idList)
         {
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersDiscussions(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectsDiscussions(entities, filterQuery.Value);
-            }
-            return base.Filter(entities, filterQuery);
+            return ProjectsDiscussions(base.GetAll(), idList);
         }
+        protected override IQueryable<Discussion> FromCurrentUser(QueryLayer layer)
+        {
+            return UsersDiscussions(base.GetAll());
+        }
+        #endregion
     }
 }

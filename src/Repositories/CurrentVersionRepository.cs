@@ -1,26 +1,27 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
+﻿using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using System.Linq;
-using System.Threading.Tasks;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 
 namespace SIL.Transcriber.Repositories
 {
     public class CurrentVersionRepository : BaseRepository<CurrentVersion>
     {
          public CurrentVersionRepository(
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+                constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
         public CurrentVersion CreateOrUpdate(string version)
         {
-            CurrentVersion cv = Get().FirstOrDefault();
+            CurrentVersion? cv = GetAll().FirstOrDefault();
             if (cv != null)
             {
                 if (cv.DesktopVersion != version)
@@ -41,5 +42,15 @@ namespace SIL.Transcriber.Repositories
             }
             return cv;
         }
+        protected override IQueryable<CurrentVersion> FromCurrentUser(QueryLayer layer) 
+        { 
+            return base.GetAll(); 
+        }
+        protected override IQueryable<CurrentVersion> FromProjectList(QueryLayer layer, string idList) 
+        { 
+            return base.GetAll(); 
+        }
+
+
     }
 }

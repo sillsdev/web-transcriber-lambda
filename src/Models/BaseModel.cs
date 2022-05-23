@@ -1,40 +1,36 @@
-﻿using System;
-using JsonApiDotNetCore.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Resources.Annotations;
+using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    public class BaseModel : Identifiable<int>, ITrackDate, ILastModified
-    {
-        [Attr("date-created")]
-        public DateTime? DateCreated { get; set; }
-        [Attr("date-updated")]
-        public DateTime? DateUpdated { get; set; }
-        [Attr("last-modified-by")]
-        public int? LastModifiedBy { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-        [HasOne("last-modified-by-user", Link.None)]
-        public User LastModifiedByUser { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-        public int? LastModifiedByUserId
+        public partial class BaseModel : Identifiable<int>, ITrackDate, ILastModified
         {
-            get
+            [NotMapped]
+            [Attr(PublicName = "id-list")]
+            public string? IdList { get; set; }
+
+            [Attr(PublicName = "date-created")]
+            public DateTime? DateCreated { get; set; }
+            [Attr(PublicName = "date-updated")]
+            public DateTime? DateUpdated { get; set; }
+
+            [Attr(PublicName = "last-modified-by")]
+            public int? LastModifiedBy { get; set; }
+
+            [HasOne(PublicName = "last-modified-by-user")]
+        [JsonIgnore]
+        virtual public User? LastModifiedByUser { get; set; }
+
+        [Attr(PublicName = "last-modified-origin")]
+        public string LastModifiedOrigin { get; set; } = "";
+            public object ShallowCopy()
             {
-                return LastModifiedBy;
-            }
-            set
-            {
-                LastModifiedBy = value;
+                return this.MemberwiseClone();
             }
         }
-        [Attr("last-modified-origin")]
-        public string LastModifiedOrigin { get; set; }
-        public object ShallowCopy()
-        {
-            return this.MemberwiseClone();
-        }
-    }
+
 
 
 }

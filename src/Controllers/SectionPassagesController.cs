@@ -1,9 +1,11 @@
-﻿using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Threading;
 using System.Threading.Tasks;
 
 
@@ -17,19 +19,19 @@ namespace SIL.Transcriber.Controllers
 
         public SectionpassagesController(
              ILoggerFactory loggerFactory,
-             IJsonApiContext jsonApiContext,
-             IResourceService<SectionPassage> resourceService,
+             IJsonApiOptions options,
+             IResourceGraph resourceGraph,
+             IResourceService<SectionPassage,int> resourceService,
              ICurrentUserContext currentUserContext,
-             OrganizationService organizationService,
              UserService userService,
              SectionPassageService service)
-            : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+            : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext,  userService)
         {
             _service = service;
         }
 
         [HttpPost]
-        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] SectionPassage entity)
+        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] SectionPassage entity, CancellationToken cancelled)
         {
             return Ok(await _service.PostAsync(entity));
 
