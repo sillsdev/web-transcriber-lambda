@@ -19,9 +19,9 @@ namespace SIL.Transcriber.Services
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<User> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository
+            CurrentUserRepository currentUserRepository, UserRepository repository
             ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
-                resourceChangeTracker, resourceDefinitionAccessor)
+                resourceChangeTracker, resourceDefinitionAccessor, repository)
         {
             CurrentUserRepository = currentUserRepository;
         }

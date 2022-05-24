@@ -4,6 +4,7 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
@@ -13,8 +14,9 @@ namespace SIL.Transcriber.Services
             IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<PassageStateChange> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+            IResourceDefinitionAccessor resourceDefinitionAccessor, PassageStateChangeRepository repository) 
+            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, 
+                  resourceChangeTracker, resourceDefinitionAccessor, repository)
         {
         }
         public Task<PassageStateChange?> CreateAsync(Passage passage, string state, string comment)

@@ -53,13 +53,13 @@ namespace SIL.Transcriber.Repositories
             return PlansDiscussions(entities, plans);
         }
         #region overrides
-        protected override IQueryable<Discussion> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Discussion> FromProjectList(IQueryable<Discussion>? entities, string idList)
         {
-            return ProjectsDiscussions(base.GetAll(), idList);
+            return ProjectsDiscussions(entities ??GetAll(), idList);
         }
-        protected override IQueryable<Discussion> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<Discussion> FromCurrentUser(IQueryable<Discussion>? entities = null)
         {
-            return UsersDiscussions(base.GetAll());
+            return UsersDiscussions(entities ?? GetAll());
         }
         #endregion
     }

@@ -23,13 +23,13 @@ namespace SIL.Transcriber.Repositories
         {
         }
         #region Overrides
-        protected override IQueryable<Workflowstep> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Workflowstep> FromProjectList(IQueryable<Workflowstep>? entities, string idList)
         {
-            return base.GetAll();
+            return entities ?? GetAll();
         }
-        protected override IQueryable<Workflowstep> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<Workflowstep> FromCurrentUser(IQueryable<Workflowstep>? entities = null)
         {
-            return base.GetAll();
+            return entities ?? GetAll();
         }
         #endregion
     }

@@ -39,13 +39,13 @@ namespace SIL.Transcriber.Repositories
         }
 
         #region Overrides
-        protected override IQueryable<SectionResource> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<SectionResource> FromProjectList(IQueryable<SectionResource>? entities, string idList)
         {
-            return ProjectSectionResources(base.GetAll(), idList);
+            return ProjectSectionResources(entities ?? GetAll(), idList);
         }
-        protected override IQueryable<SectionResource> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<SectionResource> FromCurrentUser(IQueryable<SectionResource>? entities = null)
         {
-            return UsersSectionResources(base.GetAll());
+            return UsersSectionResources(entities ?? GetAll());
         }
         #endregion
 

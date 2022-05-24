@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Repositories
         }
         private IQueryable<Mediafile> ProjectsMediafiles(IQueryable<Mediafile> entities, string idlist)
         {
-            IQueryable<Project> projects = ProjectRepository.FromIdList(idlist);
+            IQueryable<Project> projects = ProjectRepository.FromIdList(dbContext.Projects, idlist);
             IQueryable<Plan> plans = PlanRepository.ProjectPlans(dbContext.Plans, projects);
             return PlansMediafiles(entities, plans);
         }
@@ -82,18 +82,14 @@ namespace SIL.Transcriber.Repositories
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
             return media;
         }
-        protected override IQueryable<Mediafile> GetAll()
+        public override IQueryable<Mediafile> FromCurrentUser(IQueryable<Mediafile>? entities = null)
         {
-            return FromCurrentUser();
-        }
-        protected override IQueryable<Mediafile> FromCurrentUser(QueryLayer? layer = null)
-        {
-            return UsersMediafiles(base.GetAll());
+            return UsersMediafiles(entities ?? GetAll());
         }
         //handles PROJECT_SEARCH_TERM and PROJECT_LIST
-        protected override IQueryable<Mediafile> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Mediafile> FromProjectList(IQueryable<Mediafile>? entities, string idList)
         {
-            return ProjectsMediafiles(base.GetAll(), idList);
+            return ProjectsMediafiles(entities??GetAll(), idList);
         }
         public Mediafile? Get(int id)
         {

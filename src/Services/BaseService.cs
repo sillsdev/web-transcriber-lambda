@@ -6,7 +6,7 @@ using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Models;
-
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
@@ -16,23 +16,32 @@ namespace SIL.Transcriber.Services
         protected IResourceRepositoryAccessor RepositoryAssessor { get; }
         protected IJsonApiOptions Options { get; }
         protected ILogger<TResource> Logger { get; set; }
-
+        protected readonly BaseRepository<TResource> Repo;
 
         public BaseService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<TResource> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            BaseRepository<TResource> baseRepo) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
                 resourceChangeTracker, resourceDefinitionAccessor)
         {
             Options = options;
             Logger = loggerFactory.CreateLogger<TResource>();
             RepositoryAssessor = repositoryAccessor;
+            Repo = baseRepo;   
         }
-        public virtual IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since, int project)
+#pragma warning disable CS8609 // Nullability of reference types in return type doesn't match overridden member.
+        public override async Task<TResource?> GetAsync(int id, CancellationToken cancellationToken)
+#pragma warning restore CS8609 // Nullability of reference types in return type doesn't match overridden member.
+        {
+            return (await base.GetAsync(cancellationToken)).SingleOrDefault(g => g.Id == id);
+        }
+
+        public virtual IEnumerable<TResource> GetChanges(IQueryable<TResource> entities, int currentuser, string origin, DateTime since, int project)
         {
             if (currentuser > 0)
             {
-                return GetChanges(GetAsync(new CancellationToken(false)).Result, currentuser, origin, since);
+                return GetChanges(Repo.FromCurrentUser(entities), currentuser, origin, since);
             }
             else
             {
@@ -41,7 +50,7 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        public IEnumerable<TResource> GetChanges(IReadOnlyCollection<TResource> entities, int currentuser, string origin, DateTime since)
+        public IEnumerable<TResource> GetChanges(IQueryable<TResource> entities, int currentuser, string origin, DateTime since)
         {
             if (entities == null) return new List<TResource>();
             if (currentuser > 0)

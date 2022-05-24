@@ -112,19 +112,12 @@ namespace SIL.Transcriber.Repositories
             filterVersion = 0;
             filterProject = "";
         }
-        protected override IQueryable<ProjData> FromStartIndex(QueryLayer layer, string startIndex, string version="", string projectid = "")
+        protected override IQueryable<ProjData> FromStartIndex(IQueryable<ProjData>? entities, string startIndex, string version="", string projectid = "")
         {
             filterStart = startIndex;
-            /*            if (filterVersion == 0 && jsonApiContext.QuerySet.Filters.Find(f => f.Attribute.ToLower() == VERSION) == null)
-            {
-                filterVersion = 1;
-            }*/
             if (filterVersion > 0)
             {
-                IQueryable<ProjData> result = GetData(GetAll(),projectid, filterStart,filterVersion);
-                filterStart = "";
-                filterVersion = 0;
-                return result;
+                return GetData(entities??GetAll(), projectid, filterStart,filterVersion);
             }
             return GetAll();
         }
@@ -144,10 +137,10 @@ namespace SIL.Transcriber.Repositories
             return GetAll();
         }
         */
-        protected override IQueryable<ProjData> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<ProjData> FromProjectList(IQueryable<ProjData>? entities, string idList)
         {
             filterProject = idList;
-            IQueryable<ProjData> result = GetData(GetAll(), filterProject, filterStart, filterVersion);
+            IQueryable<ProjData> result = GetData(entities??GetAll(), filterProject, filterStart, filterVersion);
             ResetFilters();
             return result;
         }
@@ -159,7 +152,7 @@ namespace SIL.Transcriber.Repositories
             };
             return entities.AsAsyncQueryable();
         }
-        protected override IQueryable<ProjData> FromCurrentUser(QueryLayer? layer = null)
+        public override IQueryable<ProjData> FromCurrentUser(IQueryable<ProjData>? entities = null)
         {
             return GetAll();
         }

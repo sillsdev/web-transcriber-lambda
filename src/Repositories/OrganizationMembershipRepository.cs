@@ -48,17 +48,13 @@ namespace SIL.Transcriber.Repositories
         }
 
         #region overrides
-        protected override IQueryable<OrganizationMembership> GetAll()
+        public override IQueryable<OrganizationMembership> FromCurrentUser(IQueryable<OrganizationMembership>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersOrganizationMemberships(entities ?? GetAll());
         }
-        protected override IQueryable<OrganizationMembership> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<OrganizationMembership> FromProjectList(IQueryable<OrganizationMembership>? entities, string idList)
         {
-            return UsersOrganizationMemberships(base.GetAll());
-        }
-        protected override IQueryable<OrganizationMembership> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectOrganizationMemberships(base.GetAll(), idList);
+            return ProjectOrganizationMemberships(entities??GetAll(), idList);
         }
         #endregion
     }

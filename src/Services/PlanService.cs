@@ -30,7 +30,7 @@ namespace SIL.Transcriber.Services
             IResourceDefinitionAccessor resourceDefinitionAccessor, PlanRepository myRepository,
             IEnumerable<IQueryConstraintProvider> constraintProviders
 )           : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
-                resourceChangeTracker, resourceDefinitionAccessor)
+                resourceChangeTracker, resourceDefinitionAccessor, myRepository)
         {
             RepositoryAccessor = repositoryAccessor;
             MyRepository = myRepository;

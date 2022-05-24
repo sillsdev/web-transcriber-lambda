@@ -49,10 +49,6 @@ namespace SIL.Transcriber.Repositories
             return entities;
         }
 
-        protected override IQueryable<Project> GetAll()
-        {
-            return FromCurrentUser();
-        }
         public IQueryable<Project> Get()
         {
             return GetAll();
@@ -74,14 +70,14 @@ namespace SIL.Transcriber.Repositories
             }
 */
         }
-    
-        protected override IQueryable<Project> FromCurrentUser(QueryLayer? layer = null)
+
+        public override IQueryable<Project> FromCurrentUser(IQueryable<Project>? entities = null)
         {
-            return UsersProjects(base.GetAll()); 
+            return UsersProjects(entities ?? GetAll()); 
         }
-        protected override IQueryable<Project> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Project> FromProjectList(IQueryable<Project>? entities, string idList)
         {
-            return ProjectProjects(base.GetAll(), idList);
+            return ProjectProjects(entities ?? GetAll(), idList);
         }
         private static string SettingOrDefault(string json, string settingName)
         {

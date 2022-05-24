@@ -46,13 +46,13 @@ namespace SIL.Transcriber.Repositories
         }
 
         #region Overrides
-        protected override IQueryable<Artifacttype> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Artifacttype> FromProjectList(IQueryable<Artifacttype>? entities, string idList)
         {
-            return ProjectArtifactTypes(base.GetAll(), idList);
+            return ProjectArtifactTypes(entities??GetAll(), idList);
         }
-        protected override IQueryable<Artifacttype> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<Artifacttype> FromCurrentUser(IQueryable<Artifacttype>? entities = null)
         {
-            return UsersArtifactTypes(base.GetAll());
+            return UsersArtifactTypes(entities ?? GetAll());
         }
         #endregion
     }

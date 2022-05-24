@@ -59,13 +59,13 @@ namespace SIL.Transcriber.Repositories
             return PlansComments(entities, plans);
         }
         #region overrides
-        protected override IQueryable<Comment> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Comment> FromProjectList(IQueryable<Comment>? entities, string idList)
         {
-            return ProjectsComments(base.GetAll(), idList);
+            return ProjectsComments(entities??GetAll(), idList);
         }
-        protected override IQueryable<Comment> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<Comment> FromCurrentUser(IQueryable<Comment>? entities = null)
         {
-            return UsersComments(base.GetAll());
+            return UsersComments(entities ?? GetAll());
         }
         #endregion
     }

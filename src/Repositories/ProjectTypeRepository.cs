@@ -19,13 +19,13 @@ namespace SIL.Transcriber.Repositories
                 constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        protected override IQueryable<ProjectType> FromCurrentUser(QueryLayer? layer = null)
+        public override IQueryable<ProjectType> FromCurrentUser(IQueryable<ProjectType>? entities = null)
         {
-            return GetAll();
+            return entities ?? GetAll();
         }
-        protected override IQueryable<ProjectType> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<ProjectType> FromProjectList(IQueryable<ProjectType>? entities, string idList)
         {
-            return GetAll();
+            return entities ?? GetAll();
         }
     }
 }

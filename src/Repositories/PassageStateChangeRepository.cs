@@ -49,17 +49,14 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Section> sections = SectionRepository.ProjectSections(dbContext.Sections, projectid);
             return SectionsPassageStateChanges(entities, sections);
         }
-        protected override IQueryable<PassageStateChange> GetAll()
+
+        public override IQueryable<PassageStateChange> FromCurrentUser(IQueryable<PassageStateChange>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersPassageStateChanges(entities ?? GetAll());
         }
-        protected override IQueryable<PassageStateChange> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<PassageStateChange> FromProjectList(IQueryable<PassageStateChange>? entities, string idList)
         {
-            return UsersPassageStateChanges(base.GetAll());
-        }
-        protected override IQueryable<PassageStateChange> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectPassageStateChanges(base.GetAll(), idList);
+            return ProjectPassageStateChanges(entities ?? GetAll(), idList);
         }
     }
 }

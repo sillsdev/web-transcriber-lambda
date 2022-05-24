@@ -17,8 +17,9 @@ namespace SIL.Transcriber.Services
             IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<CurrentVersion> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, CurrentVersionRepository cvRepo, AppDbContextResolver contextResolver) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+            IResourceDefinitionAccessor resourceDefinitionAccessor, CurrentVersionRepository cvRepo, 
+            AppDbContextResolver contextResolver) 
+            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, cvRepo)
         {
             CurrentVersionRepository = cvRepo;
             dbContext = (AppDbContext)contextResolver.GetContext();

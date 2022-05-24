@@ -24,23 +24,24 @@ namespace SIL.Transcriber.Services
         public OrganizationMembershipService OrganizationMembershipService { get; }
         public CurrentUserRepository CurrentUserRepository { get; }
         public GroupRepository GroupRepository { get; }
-        public GroupMembershipRepository GroupMembershipRepository { get; }
+        public GroupMembershipService GroupMembershipService { get; }
         readonly private HttpContext? HttpContext;
-
         public OrganizationService(IHttpContextAccessor httpContextAccessor,
-            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
+            IResourceRepositoryAccessor repositoryAccessor, 
+            IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<Organization> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository, 
             GroupRepository groupRepository,
-            GroupMembershipRepository groupMembershipRepository,
-            OrganizationMembershipService organizationMembershipService) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+            GroupMembershipService groupMembershipService,
+            OrganizationMembershipService organizationMembershipService,
+            OrganizationRepository repository) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor,repository)
         {
             HttpContext = httpContextAccessor.HttpContext;
             OrganizationMembershipService = organizationMembershipService;
             CurrentUserRepository = currentUserRepository;
-            GroupMembershipRepository = groupMembershipRepository;
+            GroupMembershipService = groupMembershipService;
             GroupRepository = groupRepository;
         }
         private User? CurrentUser() { return CurrentUserRepository.GetCurrentUser(); }
@@ -81,7 +82,7 @@ namespace SIL.Transcriber.Services
             }
             if (allGroup != null)
             {
-                _ = GroupMembershipRepository.JoinGroup(user.Id, allGroup.Id, groupRole).Result;
+                _ = GroupMembershipService.JoinGroup(user.Id, allGroup.Id, groupRole).Result;
             }
         }
     }

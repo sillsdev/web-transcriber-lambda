@@ -23,13 +23,13 @@ namespace SIL.Transcriber.Repositories
         constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        protected override IQueryable<VwPassageStateHistoryEmail> FromCurrentUser(QueryLayer? layer = null)
+        public override IQueryable<VwPassageStateHistoryEmail> FromCurrentUser(IQueryable<VwPassageStateHistoryEmail>? entities = null)
         {
-            return base.GetAll();
+            return entities ?? GetAll();
         }
-        protected override IQueryable<VwPassageStateHistoryEmail> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<VwPassageStateHistoryEmail> FromProjectList(IQueryable<VwPassageStateHistoryEmail>? entities, string idList)
         {
-            return base.GetAll();
+            return entities ?? GetAll();
         }
     }
 }

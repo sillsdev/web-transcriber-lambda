@@ -131,21 +131,21 @@ namespace SIL.Transcriber.Repositories
             };
             return entities.AsAsyncQueryable();
         }
-        protected override IQueryable<Orgdata> FromCurrentUser(QueryLayer? layer = null)
+        public override IQueryable<Orgdata> FromCurrentUser(IQueryable<Orgdata>? entities = null)
         {
             return GetAll();
         }
-        protected override IQueryable<Orgdata> FromProjectList(QueryLayer layer, string idList)
-        {
-            return GetAll();
-        }
-        protected override IQueryable<Orgdata> FromStartIndex(QueryLayer layer, string startIndex, string version ="", string projectid = "")
+        protected override IQueryable<Orgdata> FromStartIndex(IQueryable<Orgdata>? entities, string startIndex, string version ="", string projectid = "")
         {
             dynamic? x = JsonConvert.DeserializeObject(version);
             int filterVersion = x?.version ?? 1;
 
-            IQueryable<Orgdata> result = GetData(GetAll(), startIndex, new CancellationToken(), filterVersion);
+            IQueryable<Orgdata> result = GetData(entities??GetAll(), startIndex, new CancellationToken(), filterVersion);
             return result;
+        }
+        protected override IQueryable<Orgdata> FromProjectList(IQueryable<Orgdata>? entities, string idList)
+        {
+            return entities ?? GetAll();
         }
         /*
         protected override IQueryable<Orgdata> FromVersion(QueryLayer layer, string version, string projectid = "")

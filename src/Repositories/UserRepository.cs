@@ -41,7 +41,7 @@ namespace SIL.Transcriber.Repositories
         {
             var mems =  entities.Join(orgmems, u => u.Id, om => om.UserId, (u, om) => u);
             //add groupby and select because once we join with om, we duplicate users
-            return mems.ToList().GroupBy(u => u.Id).Select(g => g.First()).AsAsyncQueryable();
+            return mems.ToList().GroupBy(u => u.Id).Select(g => g.First()).AsQueryable();
         }
         
         public IQueryable<User> UsersUsers(IQueryable<User> entities)
@@ -62,21 +62,16 @@ namespace SIL.Transcriber.Repositories
             IQueryable<OrganizationMembership> orgmems = OrgMemRepository.ProjectOrganizationMemberships(dbContext.Organizationmemberships, projectid);
             return OrgMemUsers(entities, orgmems);
         }
-        
+
         #region Overrides
-        protected override IQueryable<User> GetAll()
+        public override IQueryable<User> FromCurrentUser(IQueryable<User>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersUsers((entities ?? GetAll()).Where(u => !u.Archived));
         }
 
-        protected override IQueryable<User> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<User> FromProjectList(IQueryable<User>? entities, string idList)
         {
-            return UsersUsers(base.GetAll().Where(u => !u.Archived));
-        }
-
-        protected override IQueryable<User> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectUsers(base.GetAll(), idList);
+            return ProjectUsers(entities ?? GetAll(), idList);
         }
 
         #endregion

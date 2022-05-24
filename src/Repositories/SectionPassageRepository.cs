@@ -81,13 +81,13 @@ namespace SIL.Transcriber.Repositories
         {
             return dbContext.Sections.First(p => p.Id == id);
         }
-        protected override IQueryable<SectionPassage> FromCurrentUser(QueryLayer? layer = null)
+        public override IQueryable<SectionPassage> FromCurrentUser(IQueryable<SectionPassage>? entities = null)
         {
-            return base.GetAll();
+            return entities ?? GetAll();
         }
-        protected override IQueryable<SectionPassage> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<SectionPassage> FromProjectList(IQueryable<SectionPassage>? entities, string idList)
         {
-            return base.GetAll();
+            return entities ?? GetAll();
         }
     }
 }

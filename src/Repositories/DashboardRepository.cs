@@ -69,7 +69,7 @@ namespace SIL.Transcriber.Repositories
         }
         public new IQueryable<Dashboard> GetAll()
         {
-            List<Dashboard> entities = new List<Dashboard>();
+            List<Dashboard> entities = new();
             IQueryable<BaseModel> projects = Projects();
             IQueryable<BaseModel> training = TrainingProjects();
             IQueryable<BaseModel> plans = Plans();
@@ -77,7 +77,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<BaseModel> passages = Passages();
             IQueryable<BaseModel> transcriptions = Transcriptions();
             IQueryable<BaseModel> paratext = Paratext();
-            Dashboard d = new Dashboard
+            Dashboard d = new()
             {
                 Id = 1,
                 Projects = new DashboardDetail { Total = projects.Count(), Month = GetMonthCount(projects), Week = GetWeekCount(projects), StringId = "Projects" },

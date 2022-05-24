@@ -21,7 +21,7 @@ namespace SIL.Transcriber.Services
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             IHttpContextAccessor httpContextAccessor,
             PassageRepository myRepository, MediafileRepository mediafileRepo) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor,myRepository)
         {
             HttpContext = httpContextAccessor.HttpContext;
             MyRepository = myRepository;

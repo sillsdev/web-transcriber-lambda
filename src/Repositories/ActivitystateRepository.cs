@@ -1,14 +1,15 @@
 ﻿using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
 using SIL.Transcriber.Data;
+using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Configuration;
-using JsonApiDotNetCore.Queries;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class ResourceRepository : BaseRepository<Resource>
+    public class ActivitystateRepository : BaseRepository<Activitystate>
     {
-        public ResourceRepository(
+        public ActivitystateRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph, IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
@@ -19,13 +20,15 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        protected override IQueryable<Resource> FromProjectList(IQueryable<Resource>? entities, string idList)
+        #region Overrides
+        protected override IQueryable<Activitystate> FromProjectList(IQueryable<Activitystate>? entities, string idList)
         {
             return entities ?? GetAll();
         }
-        public override IQueryable<Resource> FromCurrentUser(IQueryable<Resource>? entities = null)
+        public override IQueryable<Activitystate> FromCurrentUser(IQueryable<Activitystate>? entities = null)
         {
             return entities ?? GetAll();
         }
+        #endregion
     }
 }

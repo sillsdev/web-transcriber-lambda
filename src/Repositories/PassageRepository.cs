@@ -73,17 +73,13 @@ namespace SIL.Transcriber.Repositories
         {
             return base.GetAll();
         }
-        protected override IQueryable<Passage> GetAll()
+        public override IQueryable<Passage> FromCurrentUser(IQueryable<Passage>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersPassages(entities ?? GetAll());
         }
-        protected override IQueryable<Passage> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<Passage> FromProjectList(IQueryable<Passage>? entities, string idList)
         {
-            return UsersPassages(base.GetAll());
-        }
-        protected override IQueryable<Passage> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectPassages(base.GetAll(), idList);
+            return ProjectPassages(entities??GetAll(), idList);
         }
         protected override IQueryable<Passage> FromPlan(QueryLayer layer, string planid)
         {

@@ -22,13 +22,13 @@ namespace SIL.Transcriber.Repositories
             ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
                 constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         { }
-        protected override IQueryable<Role> FromCurrentUser(QueryLayer? layer = null)
+        public override IQueryable<Role> FromCurrentUser(IQueryable<Role>? entities = null)
         {
-            return GetAll();
+            return entities ?? GetAll();
         }
-        protected override IQueryable<Role> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Role> FromProjectList(IQueryable<Role>? entities, string idList)
         {
-            return GetAll();
+            return entities ?? GetAll();
         }
     }
 }

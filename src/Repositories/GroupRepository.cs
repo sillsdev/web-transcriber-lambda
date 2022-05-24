@@ -47,21 +47,17 @@ namespace SIL.Transcriber.Repositories
             return entities.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
         }
 
-        protected override IQueryable<Group> GetAll()
-        {
-            return FromCurrentUser();
-        }
         public IQueryable<Group> Get()
         {
             return dbContext.Groups;
         }
-        protected override IQueryable<Group> FromCurrentUser(QueryLayer? layer = null)
+        public override IQueryable<Group> FromCurrentUser(IQueryable<Group>? entities = null)
         {
-            return UsersGroups(base.GetAll()); 
+            return UsersGroups(entities ?? GetAll()); 
         }
-        protected override IQueryable<Group> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Group> FromProjectList(IQueryable<Group>? entities, string idList)
         {
-            return ProjectGroups(base.GetAll(), idList);
+            return ProjectGroups(entities??GetAll(), idList);
         }
     }
 }

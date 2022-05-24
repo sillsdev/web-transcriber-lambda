@@ -98,16 +98,16 @@ namespace SIL.Transcriber.Repositories
         #endregion
 
         #region filters
-        public IQueryable<TEntity> FromIdList(string idList)
+        public IQueryable<TEntity> FromIdList(IQueryable<TEntity> entities, string idList)
         {
             string[] ids = idList.Replace("'", "").Split("|");
-            return base.GetAll().Where(e => ids.Any(i => i == e.Id.ToString()));
+            return entities.Where(e => ids.Any(i => i == e.Id.ToString()));
         }
-        protected abstract IQueryable<TEntity> FromCurrentUser(QueryLayer layer); //force this one
-        protected abstract IQueryable<TEntity> FromProjectList(QueryLayer layer, string idList);
-        protected virtual IQueryable<TEntity> FromStartIndex(QueryLayer layer, string startIndex, string version = "", string projectid = "")
+        public abstract IQueryable<TEntity> FromCurrentUser(IQueryable<TEntity>? entities); //force this one
+        protected abstract IQueryable<TEntity> FromProjectList(IQueryable<TEntity>? entities, string idList);
+        protected virtual IQueryable<TEntity> FromStartIndex(IQueryable<TEntity>? entities, string startIndex, string version = "", string projectid = "")
         {
-            return base.ApplyQueryLayer(layer);
+            return entities;
         }
         protected virtual IQueryable<TEntity> FromPlan(QueryLayer layer, string planId)
         {
@@ -124,7 +124,11 @@ namespace SIL.Transcriber.Repositories
             ExpressionInScope[] expressions = ConstraintProviders
                                         .SelectMany(provider => provider.GetConstraints())
                                         .Where(expressionInScope => expressionInScope.Scope == null).ToArray();
-            foreach(ExpressionInScope ex in expressions)
+
+            if (layer.Filter?.Has(FilterConstants.ID)??false) //internal call after insert...if external, we caught it in GetAsync
+                return base.ApplyQueryLayer(layer);
+
+            foreach (ExpressionInScope ex in expressions)
             {
                 /* multiple filters on the request will be or'd together */
                 /* note this is not an all purpose solution, but one very specific to our case
@@ -144,54 +148,26 @@ namespace SIL.Transcriber.Repositories
                             version = term.Value().Replace("'", "");
                     }
                     if (startid != "")
-                        return FromStartIndex(layer,startid,version, projectid);
+                    {
+                        layer.Filter = null;
+                        return FromStartIndex(base.ApplyQueryLayer(layer), startid, version, projectid);
+                    }
                 }
                 else
                     switch (ex.Field())
                     {
                         case FilterConstants.IDLIST:
-                            return FromIdList(ex.Value());
-                        case FilterConstants.ALLOWED_CURRENTUSER:
-                            return FromCurrentUser(layer);
+                            layer.Filter = null;
+                            return FromIdList(base.ApplyQueryLayer(layer), ex.Value());
                         case FilterConstants.PROJECT_LIST:
-                            return FromProjectList(layer, ex.Value().Replace("'", ""));
-                        case FilterConstants.PROJECT_SEARCH_TERM:
-                            return FromProjectList(layer, ex.Value().Replace("'", ""));
-                        case FilterConstants.DATA_START_INDEX:
-                            return FromStartIndex(layer, ex.Value().Replace("'", ""), "");
-                        case FilterConstants.PLANID:
-                            return FromPlan(layer, ex.Value().Replace("'", ""));
-
-                    }
+                            layer.Filter = null;
+                            return FromProjectList(base.ApplyQueryLayer(layer), ex.Value());
+                    };
             }
-            return base.ApplyQueryLayer(layer);
+            return FromCurrentUser(base.ApplyQueryLayer(layer));
         }
         #endregion
 
-        public IEnumerable<TEntity> GetChanges(IQueryable<TEntity> entities, int currentuser, string origin, DateTime since)
-        {
-            if (entities == null) return new List<TEntity>();
-            if (currentuser > 0)
-                return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
-            return entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
-        }
-        public virtual IEnumerable<TEntity> GetChanges(int currentuser, string origin, DateTime since, int project)
-        {
-            IQueryable<TEntity>? entities = base.GetAll();
-            if (typeof(IArchive).IsAssignableFrom(typeof(TEntity)))
-            {
-                entities = entities.Where(t => !((IArchive)t).Archived);
-            }
-            if (currentuser > 0)
-            {
-                return GetChanges(entities, currentuser, origin, since);
-            }
-            else
-            {
-                throw new Exception("I thought this wasn't used");
-                //return GetChanges(GetByProjAsync(project).Result, currentuser, origin, since);
-            }
-        }
         /*
         public override Task CreateAsync(TEntity resourceFromRequest, TEntity resourceForDatabase, CancellationToken cancellationToken)
         {

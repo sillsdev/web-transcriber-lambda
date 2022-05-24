@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Services
     public class InvitationService : BaseService<Invitation>
     {
         readonly private OrganizationService OrganizationService;
-        readonly private GroupMembershipRepository GroupMembershipRepository;
+        readonly private GroupMembershipService GroupMembershipService;
         readonly private UserRepository UserRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
 
@@ -22,16 +22,17 @@ namespace SIL.Transcriber.Services
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<Invitation> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
-            GroupMembershipRepository groupMembershipRepository,
+            GroupMembershipService groupMembershipService,
             CurrentUserRepository currentUserRepository,
             OrganizationService organizationService,
-            UserRepository userRepository
-        ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+            UserRepository userRepository,
+            InvitationRepository repository
+        ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, repository)
         {
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
             UserRepository = userRepository;
-            GroupMembershipRepository = groupMembershipRepository;
+            GroupMembershipService = groupMembershipService;
         }
 
         private static string BuildEmailBody(dynamic strings, Invitation entity)
@@ -61,7 +62,7 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation?> CreateAsync(Invitation entity, CancellationToken cancellationToken)
         {
             //call the Identity api and receive an invitation id
-            Organization org = await OrganizationService.GetAsync(entity.OrganizationId,cancellationToken);
+            Organization? org = await OrganizationService.GetAsync(entity.OrganizationId,cancellationToken);
             entity.Organization = org;
             try
             {
@@ -81,13 +82,13 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation?> UpdateAsync(int id, Invitation entity, CancellationToken cancellationToken)
         {
             User? currentUser = CurrentUserRepository.GetCurrentUser();
-            Invitation oldentity = GetAsync(id, cancellationToken).Result;
+            Invitation? oldentity = GetAsync(id, cancellationToken).Result;
             //verify current user is logged in with invitation email
-            if ((entity.Email ?? oldentity.Email ?? "").ToLower() != (currentUser?.Email ?? "").ToLower())
+            if ((entity.Email ?? oldentity?.Email ?? "").ToLower() != (currentUser?.Email ?? "").ToLower())
             {
-                throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity.Email + "  Currently logged in as " + currentUser?.Email);
+                throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity?.Email + "  Currently logged in as " + currentUser?.Email);
             }
-            if (currentUser != null && entity.Accepted && !oldentity.Accepted)
+            if (currentUser != null && entity.Accepted && !(oldentity?.Accepted??false))
             {
                 //add the user to the org
                 Organization org = await OrganizationService.GetAsync(oldentity.OrganizationId, new CancellationToken());
@@ -96,7 +97,7 @@ namespace SIL.Transcriber.Services
                 {
                     if (oldentity.GroupRoleId == null)
                         oldentity.GroupRoleId = (int)RoleName.Transcriber;
-                    await GroupMembershipRepository.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
+                    await GroupMembershipService.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
                 }
                 //update the user so all other users in the new org get the user downloaded with the next datachange
                 UserRepository.Refresh( currentUser);

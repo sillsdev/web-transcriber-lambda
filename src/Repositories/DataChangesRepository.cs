@@ -23,13 +23,13 @@ namespace SIL.Transcriber.Repositories
                 constraintProviders, loggerFactory,resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        protected override IQueryable<DataChanges> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<DataChanges> FromCurrentUser(IQueryable<DataChanges>? entities = null)
         {
-            return base.GetAll();
+            return entities ?? GetAll();
         }
-        protected override IQueryable<DataChanges> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<DataChanges> FromProjectList(IQueryable<DataChanges>? entities, string idList)
         {
-            return base.GetAll();
+            return entities??GetAll();
         }
     }
 }

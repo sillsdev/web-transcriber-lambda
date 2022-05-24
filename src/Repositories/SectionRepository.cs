@@ -73,18 +73,13 @@ namespace SIL.Transcriber.Repositories
         }
 
         #region Overrides
-
-        protected override IQueryable<Section> GetAll()
+        public override IQueryable<Section> FromCurrentUser(IQueryable<Section>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersSections(entities ?? GetAll());
         }
-        protected override IQueryable<Section> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<Section> FromProjectList(IQueryable<Section>? entities, string idList)
         {
-            return UsersSections(base.GetAll());
-        }
-        protected override IQueryable<Section> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectSections(base.GetAll(), idList);
+            return ProjectSections(entities ?? GetAll(), idList);
         }
         #endregion
         #region ParatextSync

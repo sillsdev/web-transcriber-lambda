@@ -46,17 +46,13 @@ namespace SIL.Transcriber.Repositories
             entities = entities.Join(groups, i => i.GroupId, g => g.Id, (i,g)=> i);
             return entities;
         }
-        protected override IQueryable<Invitation> GetAll()
+        public override IQueryable<Invitation> FromCurrentUser(IQueryable<Invitation>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersInvitations(entities ?? GetAll());
         }
-        protected override IQueryable<Invitation> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<Invitation> FromProjectList(IQueryable<Invitation>? entities, string idList)
         {
-            return UsersInvitations(base.GetAll());
-        }
-        protected override IQueryable<Invitation> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectsInvitations(base.GetAll(), idList);
+            return ProjectsInvitations(entities??GetAll(), idList);
         }
         /* //TODO???
             if (filterQuery.Has("email"))

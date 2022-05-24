@@ -40,17 +40,14 @@ namespace SIL.Transcriber.Repositories
         {
             return ProjectProjectIntegrations(entities, ProjectRepository.ProjectProjects(dbContext.Projects, projectid));
         }
-        protected override IQueryable<ProjectIntegration> GetAll()
+
+        public override IQueryable<ProjectIntegration> FromCurrentUser(IQueryable<ProjectIntegration>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersProjectIntegrations(entities ?? GetAll());
         }
-        protected override IQueryable<ProjectIntegration> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<ProjectIntegration> FromProjectList(IQueryable<ProjectIntegration>? entities, string idList)
         {
-            return UsersProjectIntegrations(base.GetAll());
-        }
-        protected override IQueryable<ProjectIntegration> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectProjectIntegrations(base.GetAll(), idList);
+            return ProjectProjectIntegrations(entities ?? GetAll(), idList);
         }
         public string IntegrationSettings(int projectId, string integration)
         {

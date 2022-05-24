@@ -12,7 +12,6 @@ namespace SIL.Transcriber.Repositories
     {
         readonly GroupRepository GroupRepository;
         readonly private HttpContext? HttpContext;
-        readonly GroupMembershipService GMService;
         IResourceGraph ResourceGraph;
         public GroupMembershipRepository(
             IHttpContextAccessor  httpContextAccessor,
@@ -22,14 +21,12 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            GroupRepository  groupRepository,
-            GroupMembershipService gmService
+            GroupRepository  groupRepository
       ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
           loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
             HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
-            GMService = gmService;
             ResourceGraph = resourceGraph;
         }
         public IQueryable<GroupMembership> GroupsGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups)
@@ -54,42 +51,15 @@ namespace SIL.Transcriber.Repositories
             return FromCurrentUser();
         }
         #region Overrides
-        protected override IQueryable<GroupMembership> GetAll()
+        public override IQueryable<GroupMembership> FromCurrentUser(IQueryable<GroupMembership>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersGroupMemberships(entities ?? GetAll());
         }
-        protected override IQueryable<GroupMembership> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<GroupMembership> FromProjectList(IQueryable<GroupMembership>? entities, string idList)
         {
-            return UsersGroupMemberships(base.GetAll());
-        }
-        protected override IQueryable<GroupMembership> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectGroupMemberships(base.GetAll(), idList);
+            return ProjectGroupMemberships(entities ?? GetAll(), idList);
         }
         #endregion
 
-        public async Task<GroupMembership?>  JoinGroup(int UserId, int groupId, RoleName groupRole)
-        {
-            Group? group = dbContext.Groups.Find(groupId);
-            if (group?.Archived??true) return null;
-            GroupMembership? groupmembership = GetAll().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
-            CancellationToken ct = new();
-            if (groupmembership == null)
-            {
-                HttpContext?.SetFP("api");
-                groupmembership = new GroupMembership
-                {
-                    GroupId = groupId,
-                    UserId = UserId,
-                    RoleId = (int)groupRole,
-                };
-                await GMService.CreateAsync(groupmembership, ct);
-            } else if (groupmembership.Archived)
-            {
-                groupmembership.Archived = false;
-                groupmembership = GMService.UpdateAsync(groupmembership.Id, groupmembership, ct).Result;
-            }
-            return groupmembership;
-        }
     }
 }

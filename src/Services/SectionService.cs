@@ -11,15 +11,15 @@ namespace SIL.Transcriber.Services
 {
     public class SectionService : BaseArchiveService<Section>
     {
-        private readonly SectionRepository MyRepository;
+        SectionRepository MyRepository;
         public SectionService(
            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<Section> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, SectionRepository myRepository) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+            IResourceDefinitionAccessor resourceDefinitionAccessor, SectionRepository repository) 
+            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, repository)
         {
-            MyRepository = myRepository;
+            MyRepository = repository;
         }
 
         public int? GetProjectId(int sectionId)

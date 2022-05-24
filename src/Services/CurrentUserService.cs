@@ -15,14 +15,13 @@ namespace SIL.Transcriber.Services
 {
     public class CurrentUserService : BaseService<CurrentUser>
     {
-        private readonly CurrentUserRepository CurrentUserRepository;
-
+        CurrentUserRepository CurrentUserRepository;
         public CurrentUserService(
             IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<CurrentUser> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor, CurrentUserRepository currentUserRepository)
-        : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+        : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, currentUserRepository)
         {
             CurrentUserRepository = currentUserRepository;
         }

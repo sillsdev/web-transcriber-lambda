@@ -44,17 +44,14 @@ namespace SIL.Transcriber.Repositories
             return GetAll();
         }
         #region overrides
-        protected override IQueryable<Plan> GetAll()
+
+        public override IQueryable<Plan> FromCurrentUser(IQueryable<Plan>? entities = null)
         {
-            return FromCurrentUser();
+            return UsersPlans(entities ?? GetAll());
         }
-        protected override IQueryable<Plan> FromCurrentUser(QueryLayer? layer = null)
+        protected override IQueryable<Plan> FromProjectList(IQueryable<Plan>? entities, string idList)
         {
-            return UsersPlans(base.GetAll());
-        }
-        protected override IQueryable<Plan> FromProjectList(QueryLayer layer, string idList)
-        {
-            return ProjectPlans(base.GetAll(), idList);
+            return ProjectPlans(entities ?? GetAll(), idList);
         }
         #endregion
         public IQueryable<Plan> UsersPlans(IQueryable<Plan> entities, IQueryable<Project>? projects = null)

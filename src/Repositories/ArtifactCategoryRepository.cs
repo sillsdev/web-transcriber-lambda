@@ -1,9 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
+﻿using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
-using System.Linq;
 using SIL.Transcriber.Data;
-using System.Collections.Generic;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Configuration;
@@ -46,13 +43,13 @@ namespace SIL.Transcriber.Repositories
         }
 
         #region Overrides
-        protected override IQueryable<Artifactcategory> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<Artifactcategory> FromProjectList(IQueryable<Artifactcategory>? entities, string idList)
         {
-            return ProjectArtifactCategorys(base.GetAll(), idList);
+            return ProjectArtifactCategorys(entities??GetAll(), idList);
         }
-        protected override IQueryable<Artifactcategory> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<Artifactcategory> FromCurrentUser(IQueryable<Artifactcategory>? entities=null)
         {
-            return UsersArtifactCategorys(base.GetAll());
+            return UsersArtifactCategorys(entities??GetAll());
         }
         #endregion
     }

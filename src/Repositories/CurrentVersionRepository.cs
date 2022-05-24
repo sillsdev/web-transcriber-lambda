@@ -42,13 +42,13 @@ namespace SIL.Transcriber.Repositories
             }
             return cv;
         }
-        protected override IQueryable<CurrentVersion> FromCurrentUser(QueryLayer layer) 
+        public override IQueryable<CurrentVersion> FromCurrentUser(IQueryable<CurrentVersion>? entities = null) 
         { 
-            return base.GetAll(); 
+            return entities ?? GetAll(); 
         }
-        protected override IQueryable<CurrentVersion> FromProjectList(QueryLayer layer, string idList) 
+        protected override IQueryable<CurrentVersion> FromProjectList(IQueryable<CurrentVersion>? entities, string idList) 
         { 
-            return base.GetAll(); 
+            return entities??GetAll(); 
         }
 
 

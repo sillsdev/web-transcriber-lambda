@@ -21,7 +21,7 @@ namespace SIL.Transcriber.Services
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             ProjectIntegrationRepository projectIntegrationRepository, ProjectRepository myRepository) 
             : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
-                resourceChangeTracker, resourceDefinitionAccessor)
+                resourceChangeTracker, resourceDefinitionAccessor, myRepository)
         {
             ProjectIntegrationRepository= projectIntegrationRepository;
             MyRepository = myRepository;

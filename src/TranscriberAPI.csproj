@@ -34,6 +34,7 @@
     <Compile Remove="Controllers\UserrolesController.cs" />
     <Compile Remove="Data\IRepository.cs" />
     <Compile Remove="Data\IUpdateBuilder.cs" />
+    <Compile Remove="Definitions\FIlterQueryStringParameterReader.cs" />
     <Compile Remove="Models\Chapter.cs" />
     <Compile Remove="Models\IBurritoMeta.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
@@ -80,6 +81,7 @@
     <Compile Remove="Serializers\MyResponseResourceObjectBuilder.cs" />
     <Compile Remove="Serializers\TranscriberSerializer.cs" />
     <Compile Remove="Services\Auth0ManagementApiTokenService.cs" />
+    <Compile Remove="Services\CurrentUserService.cs" />
     <Compile Remove="Services\PassageSectionService.cs" />
     <Compile Remove="Services\PlantypeService.cs" />
     <Compile Remove="Services\ProjecttypeService.cs" />
@@ -109,11 +111,13 @@
     <PackageReference Include="AWSSDK.S3" Version="3.7.9.2" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.158" />
     <PackageReference Include="IdentityModel" Version="6.0.0" />
-    <PackageReference Include="JsonApiDotNetCore" Version="5.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.5" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\externalrepos\JsonApiDotNetCore\src\JsonApiDotNetCore\JsonApiDotNetCore.csproj" />
+  </ItemGroup>
 
 </Project>

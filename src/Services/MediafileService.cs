@@ -29,7 +29,7 @@ namespace SIL.Transcriber.Services
             PassageStateChangeRepository pscService,
             PlanRepository planRepository,
             IS3Service service,
-            MediafileRepository MyRepository) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor)
+            MediafileRepository MyRepository) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, MyRepository)
         {
             _S3service = service;
             PlanRepository = planRepository;

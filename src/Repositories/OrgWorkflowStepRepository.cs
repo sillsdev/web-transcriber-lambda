@@ -42,13 +42,13 @@ namespace SIL.Transcriber.Repositories
         }
 
         #region Overrides
-        protected override IQueryable<OrgWorkflowstep> FromProjectList(QueryLayer layer, string idList)
+        protected override IQueryable<OrgWorkflowstep> FromProjectList(IQueryable<OrgWorkflowstep>? entities, string idList)
         {
-            return ProjectOrgWorkflowSteps(base.GetAll(), idList);
+            return ProjectOrgWorkflowSteps(entities??GetAll(), idList);
         }
-        protected override IQueryable<OrgWorkflowstep> FromCurrentUser(QueryLayer layer)
+        public override IQueryable<OrgWorkflowstep> FromCurrentUser(IQueryable<OrgWorkflowstep>? entities = null)
         {
-            return UsersOrgWorkflowSteps(base.GetAll());
+            return UsersOrgWorkflowSteps(entities ?? GetAll());
         }
         #endregion
     }

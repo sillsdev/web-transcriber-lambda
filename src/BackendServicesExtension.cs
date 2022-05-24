@@ -122,6 +122,7 @@ namespace SIL.Transcriber
         }
         public static void RegisterRepositories(this IServiceCollection services)
         {
+            services.AddScoped<ActivitystateRepository>();
             services.AddScoped<ArtifactCategoryRepository>();
             services.AddScoped<ArtifactTypeRepository>();
             services.AddScoped<CommentRepository>();
