@@ -266,7 +266,7 @@ namespace SIL.Transcriber.Services
             }
             return true;
         }
-        private FileResponse CheckProgress(int projectid, string fileName, int lastAdd, string ext)
+        private Fileresponse CheckProgress(int projectid, string fileName, int lastAdd, string ext)
         {
             int startNext;
             string err = "";
@@ -300,7 +300,7 @@ namespace SIL.Transcriber.Services
             else
                 startNext = Math.Max(startNext, lastAdd + 1);
             string contentType = "application/zip";
-            return new FileResponse()
+            return new Fileresponse()
             {
                 Message = startNext == -2 ? err : fileName,
                 //get a signedurl for it if we're done
@@ -335,7 +335,7 @@ namespace SIL.Transcriber.Services
             }
             return ms;
         }
-        private FileResponse WriteMemoryStream(Stream ms, string fileName, int startNext, int lastAdd, string ext)
+        private Fileresponse WriteMemoryStream(Stream ms, string fileName, int startNext, int lastAdd, string ext)
         {
             S3Response s3response;
             string contentType = "application/zip";
@@ -344,7 +344,7 @@ namespace SIL.Transcriber.Services
             s3response = _S3service.UploadFileAsync(ms, true, contentType, fileName, ExportFolder).Result;
             if (s3response.Status == HttpStatusCode.OK)
             {
-                return new FileResponse()
+                return new Fileresponse()
                 {
                     Message = fileName,
                     FileURL = "",
@@ -386,7 +386,7 @@ namespace SIL.Transcriber.Services
             root.meta.version = "0.3.1";
             root.meta.meta.category = "source";
             root.meta.generator.softwareName = "SIL Transcriber";
-            root.meta.generator.softwareVersion = dbContext.CurrentVersions.FirstOrDefault()?.DesktopVersion??"unknown";
+            root.meta.generator.softwareVersion = dbContext.Currentversions.FirstOrDefault()?.DesktopVersion??"unknown";
             root.meta.generator.userName = CurrentUser()?.Name??"unknown";
             root.meta.defaultLanguage = project.Language;
             root.meta.dateCreated = DateTime.Now.ToString("o");
@@ -467,7 +467,7 @@ namespace SIL.Transcriber.Services
             });
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles, 'Z');
         }
-        public FileResponse ExportProjectAudio(int projectid, string artifactType, string idList, int start)
+        public Fileresponse ExportProjectAudio(int projectid, string artifactType, string idList, int start)
         {
             int LAST_ADD = 0;
             const string ext = ".audio";
@@ -484,7 +484,7 @@ namespace SIL.Transcriber.Services
             {
                 if (start == 0)
                 {
-                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault()?.SchemaVersion ?? 4);
+                    DateTime exported = AddCheckEntry(zipArchive, dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 4);
                     List<Mediafile> mediafiles = dbContext.Mediafiles.Where(x => idList.Contains("," + x.Id.ToString() + ",")).ToList();
                     AddJsonEntry(zipArchive, "mediafiles", mediafiles, 'H');
                     AddMediaEaf(0, DateTime.Now.AddSeconds(15), ref startNext, zipArchive, mediafiles);
@@ -494,7 +494,7 @@ namespace SIL.Transcriber.Services
             }
             return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
         }
-        public FileResponse ExportBurrito(int projectid, string idList, int start)
+        public Fileresponse ExportBurrito(int projectid, string idList, int start)
         {
             int LAST_ADD = 0;
             const string ext = ".burrito";
@@ -520,7 +520,7 @@ namespace SIL.Transcriber.Services
             }
             return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
         }
-        public FileResponse ExportProjectPTF(int projectid, int start)
+        public Fileresponse ExportProjectPTF(int projectid, int start)
         {
             const int LAST_ADD = 15;
             const string ext = ".ptf";
@@ -542,7 +542,7 @@ namespace SIL.Transcriber.Services
                 {
                     Dictionary<string, string> fonts = new Dictionary<string, string>();
                     fonts.Add("Charis SIL", "");
-                    DateTime exported = AddCheckEntry(zipArchive, dbContext.CurrentVersions.FirstOrDefault()?.SchemaVersion ?? 4);
+                    DateTime exported = AddCheckEntry(zipArchive, dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 4);
                     AddJsonEntry(zipArchive, "activitystates", dbContext.Activitystates.ToList(), 'B');
                     AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
                     AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
@@ -559,7 +559,7 @@ namespace SIL.Transcriber.Services
 
                     //groups
                     IQueryable<Group> groups = dbContext.Groups.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
-                    List<GroupMembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
+                    List<Groupmembership> gms = groups.Join(dbContext.Groupmemberships, g => g.Id, gm => gm.GroupId, (g, gm) => gm).Where(gm => !gm.Archived).ToList();
                     IEnumerable<User> users = gms.Join(dbContext.Users, gm => gm.UserId, u => u.Id, (gm, u) => u).Where(x => !x.Archived);
 
                     foreach (string? font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
@@ -581,7 +581,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "users", userList, 'A');
 
                     //organizationmemberships
-                    IEnumerable<OrganizationMembership> orgmems = users.Join(dbContext.Organizationmemberships, u => u.Id, om => om.UserId, (u, om) => om).Where(om => om.OrganizationId == project.OrganizationId && !om.Archived);
+                    IEnumerable<Organizationmembership> orgmems = users.Join(dbContext.Organizationmemberships, u => u.Id, om => om.UserId, (u, om) => om).Where(om => om.OrganizationId == project.OrganizationId && !om.Archived);
                     AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
                     //projects
@@ -601,14 +601,14 @@ namespace SIL.Transcriber.Services
                     IQueryable<Passage> passages = sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(x => !x.Archived);
                     if (!CheckAdd(4, dtBail,  ref startNext, zipArchive, "passages", passages.ToList(), 'G')) break;
                     //passagestatechange
-                    IQueryable<PassageStateChange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
+                    IQueryable<Passagestatechange> passagestatechanges = passages.Join(dbContext.Passagestatechanges, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
                     if (!CheckAdd(5, dtBail, ref startNext, zipArchive, "passagestatechanges", passagestatechanges.ToList(), 'H')) break;
                     //mediafiles
                     IQueryable<Mediafile> mediafiles = plans.Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m).Where(x => !x.Archived);
                     IQueryable<Mediafile> attachedmediafiles = passages.Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m).Where(x => x.ResourcePassageId == null && !x.Archived);
 
                     //I need my mediafiles plus any shared resource mediafiles
-                    IQueryable<SectionResource> sectionresources = dbContext.Sectionresources.Join(sections, r => r.SectionId, s => s.Id, (r, s) => r).Where(x => !x.Archived);
+                    IQueryable<Sectionresource> sectionresources = dbContext.Sectionresources.Join(sections, r => r.SectionId, s => s.Id, (r, s) => r).Where(x => !x.Archived);
               
                     //get the mediafiles associated with section resources
                     IQueryable<Mediafile> resourcemediafiles = dbContext.Mediafiles.Join(sectionresources, m => m.Id, r => r.MediafileId, (m, r) => m).Where(x => !x.Archived);
@@ -650,14 +650,14 @@ namespace SIL.Transcriber.Services
 
             return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
         }
-        public FileResponse ImportFileURL(string sFile)
+        public Fileresponse ImportFileURL(string sFile)
         {
             string extension = Path.GetExtension(sFile);
             string ContentType = "application/" + extension;
             // Project project = dbContext.Projects.Where(p => p.Id == id).First();
             string fileName = string.Format("{0}_{1}.{2}", Path.GetFileNameWithoutExtension(sFile), DateTime.Now.Ticks, extension);
             //get a signedurl for it now
-            return new FileResponse()
+            return new Fileresponse()
             {
                 Message = fileName,
                 FileURL = _S3service.SignedUrlForPut(fileName, ImportFolder, ContentType).Message,
@@ -707,7 +707,7 @@ namespace SIL.Transcriber.Services
         }
         private string DiscussionChangesReport(Discussion online, Discussion imported)
         {
-            if (online.ArtifactCategoryId != imported.ArtifactCategoryId || online.RoleId != imported.RoleId || online.Resolved != imported.Resolved)
+            if (online.ArtifactCategoryId != imported.ArtifactCategoryId || online.GroupId != imported.GroupId || online.Resolved != imported.Resolved)
             {
                 return ChangesReport("discussion", JsonSerializer.Serialize(online), JsonSerializer.Serialize(imported));
             }
@@ -721,7 +721,7 @@ namespace SIL.Transcriber.Services
             }
             return "";
         }
-        private string GrpMemChangesReport(GroupMembership online, GroupMembership imported)
+        private string GrpMemChangesReport(Groupmembership online, Groupmembership imported)
         {
             if (online.FontSize != imported.FontSize)
             {
@@ -729,10 +729,10 @@ namespace SIL.Transcriber.Services
             }
             return "";
         }
-        public async Task<FileResponse> ImportFileAsync(string sFile)
+        public async Task<Fileresponse> ImportFileAsync(string sFile)
         {
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
-            if (response.FileStream == null) return new FileResponse()
+            if (response.FileStream == null) return new Fileresponse()
             {
                 Message = "File not found",
                 FileURL = sFile,
@@ -745,7 +745,7 @@ namespace SIL.Transcriber.Services
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
                 ZipArchive zipentry = new(entry.Open());
-                FileResponse fr = await ProcessImportFileAsync(zipentry, 0, entry.Name);
+                Fileresponse fr = await ProcessImportFileAsync(zipentry, 0, entry.Name);
                 if (fr.Status == HttpStatusCode.OK)
                 {   //remove beginning and ending brackets
                     string msg = fr.Message.StartsWith("[") ?  fr.Message.Substring(1, fr.Message.Length - 2) : fr.Message;
@@ -761,7 +761,7 @@ namespace SIL.Transcriber.Services
             if (errors.Count > 0)
                 return ErrorResponse("{\"errors\": [" + string.Join(",", errors) + "], \"report\": [" + string.Join(", ", report) + "]}", sFile);
 
-            return new FileResponse()
+            return new Fileresponse()
             {
                 Message = "[" + string.Join(",", report) + "]",
                 FileURL = sFile,
@@ -769,10 +769,10 @@ namespace SIL.Transcriber.Services
                 ContentType = "application/itf",
             };
         }
-        public async Task<FileResponse> ImportFileAsync(int projectid, string sFile)
+        public async Task<Fileresponse> ImportFileAsync(int projectid, string sFile)
         {
             S3Response response = await _S3service.ReadObjectDataAsync(sFile, "imports");
-            if (response.FileStream == null) return new FileResponse()
+            if (response.FileStream == null) return new Fileresponse()
             {
                 Message = "File not found",
                 FileURL = sFile,
@@ -782,18 +782,18 @@ namespace SIL.Transcriber.Services
             ZipArchive archive = new (response.FileStream);
             return await ProcessImportFileAsync(archive, projectid, sFile);
         }
-        private FileResponse ProjectDeletedResponse(string msg, string sFile)
+        private Fileresponse ProjectDeletedResponse(string msg, string sFile)
         {
             return ErrorResponse(msg, sFile, System.Net.HttpStatusCode.MovedPermanently);
         }
-        private FileResponse NotCurrentProjectResponse(string msg, string sFile)
+        private Fileresponse NotCurrentProjectResponse(string msg, string sFile)
         {
             return ErrorResponse(msg, sFile, System.Net.HttpStatusCode.NotAcceptable);
         }
-        private FileResponse ErrorResponse(string msg, string sFile, HttpStatusCode status = System.Net.HttpStatusCode.UnprocessableEntity)
+        private Fileresponse ErrorResponse(string msg, string sFile, HttpStatusCode status = System.Net.HttpStatusCode.UnprocessableEntity)
         {
             const string ContentType = "application/itf";
-            return new FileResponse()
+            return new Fileresponse()
             {
                 Message = msg,
                 FileURL = sFile,
@@ -913,13 +913,13 @@ namespace SIL.Transcriber.Services
         {
             if (!existing.Archived && existing.Subject != importing.Subject ||
                 (existing.MediafileId != importing.MediafileId || existing.ArtifactCategoryId != importing.ArtifactCategoryId || 
-                 existing.Resolved != importing.Resolved || existing.RoleId != importing.RoleId))
+                 existing.Resolved != importing.Resolved || existing.GroupId != importing.GroupId))
             {
                 if (existing.DateUpdated > sourceDate)
                     report.Add(DiscussionChangesReport(existing, importing));
                 existing.Subject = importing.Subject;
                 existing.ArtifactCategoryId = importing.ArtifactCategoryId;
-                existing.RoleId = importing.RoleId;
+                existing.GroupId = importing.GroupId;
                 existing.Resolved = importing.Resolved;
                 existing.UserId = importing.UserId;
                 existing.MediafileId = importing.MediafileId;
@@ -972,7 +972,7 @@ namespace SIL.Transcriber.Services
                 dbContext.Mediafiles.Update(existing);
             }
         }
-        private async Task<FileResponse> ProcessImportFileAsync(ZipArchive archive, int projectid, string sFile)
+        private async Task<Fileresponse> ProcessImportFileAsync(ZipArchive archive, int projectid, string sFile)
         {
             DateTime sourceDate;
             List<string> report = new List<string>();
@@ -1112,7 +1112,7 @@ namespace SIL.Transcriber.Services
                                             passage.LastModifiedBy = p.LastModifiedBy;
                                             passage.DateUpdated = DateTime.UtcNow;
                                             dbContext.Passages.Update(passage);
-                                            PassageStateChange psc = new PassageStateChange
+                                            Passagestatechange psc = new Passagestatechange
                                             {
                                                 Comments = "Imported",  //TODO Localize
                                                 DateCreated = passage.DateUpdated,
@@ -1149,7 +1149,7 @@ namespace SIL.Transcriber.Services
                                                     OfflineId = d.OfflineId,
                                                     OfflineMediafileId = d.OfflineMediafileId,
                                                     OrgWorkflowStepId = d.OrgWorkflowStepId,
-                                                    RoleId = d.RoleId,
+                                                    GroupId = d.GroupId,
                                                     Resolved = d.Resolved,
                                                     Segments = d.Segments,
                                                     Subject = d.Subject,
@@ -1279,11 +1279,11 @@ namespace SIL.Transcriber.Services
                                 break;
 
                             case "groupmemberships":
-                                List<GroupMembership>? grpmems = JsonSerializer.Deserialize<List<GroupMembership>>(data);
+                                List<Groupmembership>? grpmems = JsonSerializer.Deserialize<List<Groupmembership>>(data);
                                 if (grpmems != null)
-                                    foreach (GroupMembership gm in grpmems)
+                                    foreach (Groupmembership gm in grpmems)
                                     {
-                                        GroupMembership? grpmem = dbContext.Groupmemberships.Find(gm.Id);
+                                        Groupmembership? grpmem = dbContext.Groupmemberships.Find(gm.Id);
                                         if (grpmem != null && !grpmem.Archived && grpmem.FontSize != gm.FontSize)
                                         {
                                             if (grpmem.DateUpdated > sourceDate)
@@ -1303,15 +1303,15 @@ namespace SIL.Transcriber.Services
                             */
 
                             case "passagestatechanges":
-                                List<PassageStateChange>? pscs = JsonSerializer.Deserialize<List<PassageStateChange>>(data);
+                                List<Passagestatechange>? pscs = JsonSerializer.Deserialize<List<Passagestatechange>>(data);
                                 if (pscs != null)
-                                    foreach (PassageStateChange psc in pscs)
+                                    foreach (Passagestatechange psc in pscs)
                                     {
                                         //see if it's already there...
-                                        IQueryable<PassageStateChange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
+                                        IQueryable<Passagestatechange> dups = dbContext.Passagestatechanges.Where(c => c.PassageId == psc.PassageId && c.DateCreated == psc.DateCreated && c.State == psc.State);
                                         if (dups.Count() == 0)
                                         {   /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
-                                            dbContext.Passagestatechanges.Add(new PassageStateChange
+                                            dbContext.Passagestatechanges.Add(new Passagestatechange
                                             {
                                                 PassageId = psc.PassageId,
                                                 State = psc.State,
@@ -1331,7 +1331,7 @@ namespace SIL.Transcriber.Services
                 }
                 report.RemoveAll(s => s.Length == 0);
                 
-                return new FileResponse()
+                return new Fileresponse()
                 {
                     Message = "[" + string.Join(",", report) + "]",
                     FileURL = sFile,

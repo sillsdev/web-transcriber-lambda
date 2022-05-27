@@ -36,12 +36,14 @@
     <Compile Remove="Data\IUpdateBuilder.cs" />
     <Compile Remove="Definitions\FIlterQueryStringParameterReader.cs" />
     <Compile Remove="Models\Chapter.cs" />
+    <Compile Remove="Models\ErrorViewModel.cs" />
     <Compile Remove="Models\IBurritoMeta.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ParatextVerse.cs" />
     <Compile Remove="Models\PassageSection.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\SFProject.cs" />
+    <Compile Remove="Models\SILAuthModels.cs" />
     <Compile Remove="Models\TextInfo.cs" />
     <Compile Remove="Models\transcriberContext.cs" />
     <Compile Remove="Models\UserRole.cs" />
@@ -78,7 +80,11 @@
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
     <Compile Remove="Repositories\PassageSectionRepository.cs" />
+    <Compile Remove="Serializers\JsonInvalidAttributeInfo.cs" />
     <Compile Remove="Serializers\MyResponseResourceObjectBuilder.cs" />
+    <Compile Remove="Serializers\ResourceObjectConverter.cs" />
+    <Compile Remove="Serializers\SingleOrManyDataConverterFactory.cs" />
+    <Compile Remove="Serializers\TranscriberConverter.cs" />
     <Compile Remove="Serializers\TranscriberSerializer.cs" />
     <Compile Remove="Services\Auth0ManagementApiTokenService.cs" />
     <Compile Remove="Services\CurrentUserService.cs" />
@@ -111,6 +117,7 @@
     <PackageReference Include="AWSSDK.S3" Version="3.7.9.2" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.158" />
     <PackageReference Include="IdentityModel" Version="6.0.0" />
+    <PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.5" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />

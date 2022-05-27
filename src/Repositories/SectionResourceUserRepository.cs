@@ -6,7 +6,7 @@ using JsonApiDotNetCore.Queries;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class SectionResourceUserRepository : BaseRepository<SectionResourceUser>
+    public class SectionResourceUserRepository : BaseRepository<Sectionresourceuser>
     {
         SectionResourceRepository SectionResourceRepository;
         public SectionResourceUserRepository(
@@ -24,25 +24,25 @@ namespace SIL.Transcriber.Repositories
         }
         #region ScopeToUser
         //get my sections in these projects
-        public IQueryable<SectionResourceUser> UsersSectionResourceUsers(IQueryable<SectionResourceUser> entities, IQueryable<Project>? projects = null)
+        public IQueryable<Sectionresourceuser> UsersSectionResourceUsers(IQueryable<Sectionresourceuser> entities, IQueryable<Project>? projects = null)
         {
-            IQueryable<SectionResource> sectionresources = SectionResourceRepository.UsersSectionResources(dbContext.Sectionresources, projects);
+            IQueryable<Sectionresource> sectionresources = SectionResourceRepository.UsersSectionResources(dbContext.Sectionresources, projects);
             return entities.Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u);
         }
 
         #endregion
-        public IQueryable<SectionResourceUser> ProjectSectionResourceUsers(IQueryable<SectionResourceUser> entities, string projectid)
+        public IQueryable<Sectionresourceuser> ProjectSectionResourceUsers(IQueryable<Sectionresourceuser> entities, string projectid)
         {
 
             return UsersSectionResourceUsers(entities, dbContext.Projects.Where(p => p.Id.ToString() == projectid));
         }
 
         #region Overrides
-        protected override IQueryable<SectionResourceUser> FromProjectList(IQueryable<SectionResourceUser>? entities, string idList)
+        protected override IQueryable<Sectionresourceuser> FromProjectList(IQueryable<Sectionresourceuser>? entities, string idList)
         {
             return ProjectSectionResourceUsers(entities ?? GetAll(), idList);
         }
-        public override IQueryable<SectionResourceUser> FromCurrentUser(IQueryable<SectionResourceUser>? entities = null)
+        public override IQueryable<Sectionresourceuser> FromCurrentUser(IQueryable<Sectionresourceuser>? entities = null)
         {
             return UsersSectionResourceUsers(entities ?? GetAll());
         }

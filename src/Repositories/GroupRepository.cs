@@ -47,10 +47,6 @@ namespace SIL.Transcriber.Repositories
             return entities.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
         }
 
-        public IQueryable<Group> Get()
-        {
-            return dbContext.Groups;
-        }
         public override IQueryable<Group> FromCurrentUser(IQueryable<Group>? entities = null)
         {
             return UsersGroups(entities ?? GetAll()); 

@@ -47,7 +47,7 @@ namespace SIL.Transcriber.Repositories
         }
         public IQueryable<Organization> GetMine()
         {
-            return FromCurrentUser();
+            return FromCurrentUser().Include(o => o.Owner);
         }
         #region Overrides
         public override IQueryable<Organization> FromCurrentUser(IQueryable<Organization>? entities = null)
@@ -59,5 +59,6 @@ namespace SIL.Transcriber.Repositories
             return ProjectOrganizations(entities??GetAll(), idList);
         }
         #endregion
+
     }
 }

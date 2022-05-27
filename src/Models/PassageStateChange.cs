@@ -4,16 +4,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace SIL.Transcriber.Models
 {
      [Table("passagestatechanges")]
-     public partial class PassageStateChange : BaseModel
+     public partial class Passagestatechange : BaseModel
     {
-        public PassageStateChange():base()
-        {
-            Passage = new();
-        }
+
         [Attr(PublicName="passage-id")]
         public int PassageId { get; set; }
-        [HasOne(PublicName="passage")]
-        public virtual Passage Passage { get; set; }
+        [HasOne(PublicName = "passage")]
+        public Passage Passage { get; set; } = null!;
 
         [Attr(PublicName="state")]
         public string? State { get; set; }

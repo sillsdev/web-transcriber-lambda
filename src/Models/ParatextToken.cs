@@ -9,17 +9,11 @@ namespace SIL.Paratext.Models
     [Table("paratexttokens")]
     public class ParatextToken : Identifiable<int>
     {
-        public ParatextToken():base()
-        {
-            AccessToken = "";
-            RefreshToken = "";
-            OriginalRefreshToken = "";
-        }
-        public string AccessToken { get; set; }
-        public string RefreshToken { get; set; }
+        public string AccessToken { get; set; } = "";
+        public string RefreshToken { get; set; } = "";
         public int UserId { get; set; }
         [NotMapped]
-        public string OriginalRefreshToken { get; set; }
+        public string OriginalRefreshToken { get; set; } = "";
 
         [NotMapped]
         public DateTime IssuedAt

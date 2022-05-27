@@ -95,4 +95,10 @@ namespace SIL.Transcriber.Models
         }
 
     }
+    [Table("mediafiles")]
+    public partial class SourceMediafile : Mediafile
+    {
+
+    }
+
 }

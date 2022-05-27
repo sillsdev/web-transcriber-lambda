@@ -6,9 +6,9 @@ using JsonApiDotNetCore.Resources;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class CurrentVersionRepository : BaseRepository<CurrentVersion>
+    public class CurrentversionRepository : BaseRepository<Currentversion>
     {
-         public CurrentVersionRepository(
+         public CurrentversionRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph, IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
@@ -19,9 +19,9 @@ namespace SIL.Transcriber.Repositories
                 constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        public CurrentVersion CreateOrUpdate(string version)
+        public Currentversion CreateOrUpdate(string version)
         {
-            CurrentVersion? cv = GetAll().FirstOrDefault();
+            Currentversion? cv = GetAll().FirstOrDefault();
             if (cv != null)
             {
                 if (cv.DesktopVersion != version)
@@ -33,20 +33,20 @@ namespace SIL.Transcriber.Repositories
             }
             else
             {
-                cv = new CurrentVersion
+                cv = new Currentversion
                 {
                     DesktopVersion = version
                 };
-                dbContext.CurrentVersions.Add(cv);
+                dbContext.Currentversions.Add(cv);
                 dbContext.SaveChanges();
             }
             return cv;
         }
-        public override IQueryable<CurrentVersion> FromCurrentUser(IQueryable<CurrentVersion>? entities = null) 
+        public override IQueryable<Currentversion> FromCurrentUser(IQueryable<Currentversion>? entities = null) 
         { 
             return entities ?? GetAll(); 
         }
-        protected override IQueryable<CurrentVersion> FromProjectList(IQueryable<CurrentVersion>? entities, string idList) 
+        protected override IQueryable<Currentversion> FromProjectList(IQueryable<Currentversion>? entities, string idList) 
         { 
             return entities??GetAll(); 
         }

@@ -10,13 +10,13 @@ namespace SIL.Transcriber.Controllers
     //[HttpReadOnly]
     [Route("api/[controller]")]
     [ApiController]
-    public class ProjdatasController : BaseController<ProjData>
+    public class ProjdatasController : BaseController<Projdata>
     {
         public ProjdatasController(
              ILoggerFactory loggerFactory,
              IJsonApiOptions options,
              IResourceGraph resourceGraph,
-             IResourceService<ProjData,int> resourceService,
+             IResourceService<Projdata,int> resourceService,
              ICurrentUserContext currentUserContext,
    
              UserService userService)

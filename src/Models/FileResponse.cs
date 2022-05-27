@@ -4,9 +4,9 @@ using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 { /* This is an Identifiable only so that we can pass it back without JsonApiDotNetCore puking on it */
-    public class FileResponse : Identifiable<int>
+    public class Fileresponse : Identifiable<int>
     {
-        public FileResponse() : base()
+        public Fileresponse() : base()
         {
             Message = "";
             FileURL = "";
@@ -20,26 +20,26 @@ namespace SIL.Transcriber.Models
         public string FileURL { get; set; }
         [Attr(PublicName = "contenttype")]
         public string ContentType { get; set; }
-    
-    public JsonedFileResponse Twiddle()
-    {
-        return new JsonedFileResponse
+
+        public JsonedFileresponse Twiddle()
         {
-            data = new JFRData
+            return new JsonedFileresponse
             {
-                attributes = new JFRAttributes
+                data = new JFRData
                 {
-                    message = Message,
-                    fileurl = FileURL,
-                    contenttype = ContentType,
-                },
-                id = Id,
-            }
-        };
+                    attributes = new JFRAttributes
+                    {
+                        message = Message,
+                        fileurl = FileURL,
+                        contenttype = ContentType,
+                    },
+                    id = Id,
+                }
+            };
+        }
     }
-}
 #pragma warning disable IDE1006 // Naming Styles
-public class JFRData
+    public class JFRData
 {
         public JFRData():base()
         {
@@ -62,9 +62,9 @@ public class JFRAttributes
     public string fileurl { get; set; }
     public string contenttype { get; set; }
 }
-public class JsonedFileResponse
+public class JsonedFileresponse
 {
-        public JsonedFileResponse():base()
+        public JsonedFileresponse():base()
         {
             data = new();
         }

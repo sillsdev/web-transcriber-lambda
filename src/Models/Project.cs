@@ -12,11 +12,8 @@ namespace SIL.Transcriber.Models
         {
             Name = "";
             IsPublic = false;
-            Organization= new Organization();
-            Group = new Group();
             Plans = new List<Plan>();
-            ProjectIntegrations = new List<ProjectIntegration>();
-            Projecttype = new ProjectType();
+            ProjectIntegrations = new List<Projectintegration>();
         }
         [Attr(PublicName="name")]
         public string Name { get; set; }
@@ -25,7 +22,7 @@ namespace SIL.Transcriber.Models
         public string? Slug { get; set; }
 
         [HasOne(PublicName="projecttype")]
-        public virtual ProjectType Projecttype { get; set; }
+        public virtual Projecttype Projecttype { get; set; } = null!;
         [Attr(PublicName="projecttype-id")]
         public int ProjecttypeId { get; set; }
 
@@ -38,12 +35,12 @@ namespace SIL.Transcriber.Models
         public int? OwnerId { get; set; }
 
         [HasOne(PublicName="organization")]
-        public virtual Organization Organization { get; set; }
+        public virtual Organization Organization { get; set; } = null!;
         [Attr(PublicName="organization-id")]
         public int OrganizationId { get; set; }
 
         [HasOne(PublicName="group")]
-        public virtual Group Group { get; set; }
+        public virtual Group Group { get; set; } = null!;
         [Attr(PublicName="group-id")]
         public int GroupId { get; set; }
 
@@ -81,7 +78,7 @@ namespace SIL.Transcriber.Models
 
         [JsonIgnore]
         [HasMany(PublicName="project-integrations")]
-        public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
+        public virtual List<Projectintegration> ProjectIntegrations { get; set; }
         //[HasManyThrough(nameof(ProjectIntegrations))]
         //public virtual List<Integration> Integrations { get; set; }
 

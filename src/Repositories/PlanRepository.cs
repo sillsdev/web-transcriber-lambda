@@ -39,10 +39,6 @@ namespace SIL.Transcriber.Repositories
             return ProjectsPlans(entities, projects);
         }
 
-        internal IQueryable<Plan> Get()
-        {
-            return GetAll();
-        }
         #region overrides
 
         public override IQueryable<Plan> FromCurrentUser(IQueryable<Plan>? entities = null)

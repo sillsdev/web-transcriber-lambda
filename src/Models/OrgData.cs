@@ -16,6 +16,5 @@ namespace SIL.Transcriber.Models
         public string Json { get; set; }
         [Attr(PublicName="start-index")]
         public int StartIndex { get; set; }
-
     }
 }

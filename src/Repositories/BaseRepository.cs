@@ -1,21 +1,22 @@
-﻿using JsonApiDotNetCore.Resources;
+﻿using System.Collections.Immutable;
+using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Configuration;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using JsonApiDotNetCore.Queries;
-//using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using JsonApiDotNetCore.Queries.Expressions;
 using System.Text.Json;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using JsonApiDotNetCore.Serialization.Response;
-using JsonApiDotNetCore.Serialization.Objects;
 using JsonApiDotNetCore.Serialization.JsonConverters;
+using SIL.Transcriber.Serialization;
+using JsonApiDotNetCore.Serialization.Response;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Serialization.Objects;
 
 namespace SIL.Transcriber.Repositories
 {
     public abstract class BaseRepository<TEntity> : BaseRepository<TEntity, int> where TEntity: BaseModel
     {
-
         public BaseRepository(ITargetedFields targetedFields, AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph, IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
@@ -32,6 +33,8 @@ namespace SIL.Transcriber.Repositories
     public abstract class BaseRepository<TEntity, TId> : AppDbContextRepository<TEntity>
         where TEntity : BaseModel, IIdentifiable<TId>
     {
+        protected readonly IResourceDefinitionAccessor ResourceDefinitionAccessor;
+        protected readonly IResourceGraph ResourceGraph;
         protected readonly CurrentUserRepository CurrentUserRepository;
         protected readonly AppDbContext dbContext;
         protected ILogger<TEntity> Logger { get; set; }
@@ -56,6 +59,10 @@ namespace SIL.Transcriber.Repositories
             Logger = loggerFactory.CreateLogger<TEntity>();
             ConstraintProviders = constraintProviders;
             Options.Converters.Add(new ResourceObjectConverter(resourceGraph));
+            Options.Converters.Add(new WriteOnlyRelationshipObjectConverter());
+            Options.Converters.Add(new SingleOrManyDataConverterFactory());
+            ResourceDefinitionAccessor = resourceDefinitionAccessor;
+            ResourceGraph = resourceGraph;
         }
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {
@@ -67,35 +74,59 @@ namespace SIL.Transcriber.Repositories
             }
         }
         #region MultipleData //orgdata, projdata
-        protected string InitData()
+        protected string InitData(bool withBracket = true)
         {
-            return "{\"data\":[";
+            return "{\"data\":" + (withBracket ? "[" : "");
         }
-        protected string FinishData()
+        protected string FinishData(bool withBracket = true)
         {
-            return "]}";
+            return (withBracket ? "]" : "") + "}";
         }
-        protected bool CheckAdd(int check, IEnumerable<object> entities, DateTime dtBail,  ref int start, ref string data)
+        protected string SerializeIt(IEnumerable<IIdentifiable> resources, MyResponseModelAdapter ResponseModelAdapter)
+        {
+            SingleOrManyData<ResourceObject> returnResources = new();
+            if (!resources.Any()) return "[]";
+            
+            ResourceType? resourceType = ResourceGraph.FindResourceType(resources.First().GetType());
+            if (resourceType != null)
+            {
+
+                IImmutableSet<IncludeElementExpression> includeElements = SerializerHelpers.GetSingleIncludes(resourceType);
+                ResourceObjectTreeNode? rootNode = ResourceObjectTreeNode.CreateRoot();
+
+                foreach (IIdentifiable resource in resources)
+                {
+                    ResponseModelAdapter.TraverseResource(resource, resourceType, EndpointKind.Primary, includeElements, rootNode, null);
+                }
+
+                ResponseModelAdapter.PopulateRelationshipsInTree(rootNode, EndpointKind.Primary);
+
+                IReadOnlyList<ResourceObject> resourceObjects = rootNode.GetResponseData();
+                returnResources = new(resourceObjects);
+            }
+            
+            return JsonSerializer.Serialize(returnResources, Options);
+        }
+ 
+        protected bool CheckAdd(int check, string thisData, DateTime dtBail, ref int start, ref string data)
         {
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail) return false;
-            string test = JsonSerializer.Serialize(new Orgdata { StartIndex = 4, DateCreated = DateTime.Now.ToUniversalTime() }, Options);
             if (start <= check)
             {
-                string thisdata = InitData();
-                foreach(object entity in entities)
-                {
-                    thisdata += JsonSerializer.Serialize(entity, Options);
-                }
-
-                if (data.Length + thisdata.Length > (1000000 * 4))
+                if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
-                data += (data.Length > 0 ? "," : InitData()) + thisdata;
+                data += (data.Length > 0 ? "," : InitData()) + (InitData(false) + thisData  + FinishData(false));
                 start++;
             }
             return true;
         }
         #endregion
+
+        public IQueryable<TEntity> Get()
+        {
+            return GetAll();
+        }
 
         #region filters
         public IQueryable<TEntity> FromIdList(IQueryable<TEntity> entities, string idList)
@@ -107,18 +138,12 @@ namespace SIL.Transcriber.Repositories
         protected abstract IQueryable<TEntity> FromProjectList(IQueryable<TEntity>? entities, string idList);
         protected virtual IQueryable<TEntity> FromStartIndex(IQueryable<TEntity>? entities, string startIndex, string version = "", string projectid = "")
         {
-            return entities;
+            return entities ?? Enumerable.Empty<TEntity>().AsQueryable();
         }
         protected virtual IQueryable<TEntity> FromPlan(QueryLayer layer, string planId)
         {
             return base.ApplyQueryLayer(layer);
         }
-        /*
-        protected virtual IQueryable<TEntity> FromVersion(QueryLayer layer, string version, string projectid = "")
-        {
-            return base.ApplyQueryLayer(layer);
-        }
-        */
         protected override IQueryable<TEntity> ApplyQueryLayer(QueryLayer layer)
         {
             ExpressionInScope[] expressions = ConstraintProviders
@@ -179,17 +204,5 @@ namespace SIL.Transcriber.Repositories
             return x as Task; //?? what should this be??
         }
         */
-    }
-    public class CamelToDashNamingPolicy : JsonNamingPolicy
-    {
-        public override string ConvertName(string name) {
-            IEnumerable<string> parts = name.Select((x,index) =>
-            {
-                if (char.IsUpper(x)) return (index > 0 ? "-": "") + char.ToLower(x);
-                return x.ToString();
-            });
-            return string.Join("", parts);
-            //slow return Regex.Replace(name, @"([a-z])([A-Z])", "$1-$2").ToLower();
-        }
     }
 }

@@ -12,9 +12,9 @@ using JsonApiDotNetCore.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class UserVersionRepository : BaseRepository<UserVersion>
+    public class UserVersionRepository : BaseRepository<Userversion>
     {
-        private readonly CurrentVersionService CVService;
+        private readonly CurrentversionService CVService;
         public UserVersionRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph, IResourceFactory resourceFactory,
@@ -22,18 +22,18 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            CurrentVersionService cvService
+            CurrentversionService cvService
             ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
                 constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
             CVService = cvService;
         }
-        public UserVersion CreateOrUpdate(string version, string env)
+        public Userversion CreateOrUpdate(string version, string env)
         {
             try {
                 string fp = dbContext.Fingerprint();
             
-                UserVersion? uv = GetAll()?.Where(x => x.LastModifiedOrigin == fp).FirstOrDefault();
+                Userversion? uv = GetAll()?.Where(x => x.LastModifiedOrigin == fp).FirstOrDefault();
                 if (uv != null)
                 {
                     uv.DesktopVersion = version;
@@ -42,7 +42,7 @@ namespace SIL.Transcriber.Repositories
                 }
                 else
                 {
-                    uv = new UserVersion
+                    uv = new Userversion
                     {
                         DesktopVersion = version,
                         Environment = env,
@@ -50,14 +50,14 @@ namespace SIL.Transcriber.Repositories
                     dbContext.UserVersions.Add(uv);
                 }
                 dbContext.SaveChanges();
-                CurrentVersion cv = CVService.GetVersion(version);
+                Currentversion cv = CVService.GetVersion(version);
                 uv.DesktopVersion = cv.DesktopVersion;
                 uv.DateUpdated = cv.DateUpdated;
                 return uv;
             } catch (Exception ex)
             {
                 Logger.LogError(ex, "userversion get");
-                return new UserVersion
+                return new Userversion
                 {
                     DesktopVersion = "1",
                     Environment = env,
@@ -66,11 +66,11 @@ namespace SIL.Transcriber.Repositories
             }
 
         }
-        public override IQueryable<UserVersion> FromCurrentUser(IQueryable<UserVersion>? entities = null)
+        public override IQueryable<Userversion> FromCurrentUser(IQueryable<Userversion>? entities = null)
         {
             return base.GetAll();
         }
-        protected override IQueryable<UserVersion> FromProjectList(IQueryable<UserVersion>? entities, string idList)
+        protected override IQueryable<Userversion> FromProjectList(IQueryable<Userversion>? entities, string idList)
         {
             return entities ?? GetAll();
         }

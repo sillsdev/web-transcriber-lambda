@@ -7,14 +7,8 @@ namespace SIL.Transcriber.Models
 
     public partial class Plan : BaseModel, IArchive
     {
-        public Plan():base()
-        {
-            Name = "";
-            Project = new Project();
-            Plantype = new PlanType();
-        }
         [Attr(PublicName="name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
 
         [Attr(PublicName="slug")]
         public string? Slug { get; set; }
@@ -35,8 +29,8 @@ namespace SIL.Transcriber.Models
        // [Attr(PublicName = "project-id")]
         public int ProjectId { get; set; }
 
-        [HasOne(PublicName="project")]
-        public Project Project { get; set; }
+        [HasOne(PublicName = "project")]
+        public Project Project { get; set; } = null!;
 
         [Attr(PublicName="owner-id")]
         public int? OwnerId { get; set; }
@@ -48,7 +42,7 @@ namespace SIL.Transcriber.Models
         public int PlantypeId { get; set; }
 
         [HasOne(PublicName = "plantype")]
-        public PlanType Plantype { get; set; }
+        public Plantype Plantype { get; set; } = null!;
 
         [HasMany(PublicName = "sections")]
         public List<Section>? Sections { get; set; }

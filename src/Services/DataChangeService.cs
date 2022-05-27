@@ -18,7 +18,7 @@ namespace SIL.Transcriber.Services
         public int id;
         public DateTime since;
     }
-    public class DataChangeService : BaseService<DataChanges>
+    public class DataChangeService : BaseService<Datachanges>
     {
         public ICurrentUserContext CurrentUserContext { get; }
         private readonly ArtifactCategoryService ArtifactCategoryService;
@@ -50,10 +50,10 @@ namespace SIL.Transcriber.Services
         public DataChangeService(IResourceRepositoryAccessor repositoryAccessor, 
             IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<DataChanges> resourceChangeTracker,
+            IJsonApiRequest request, IResourceChangeTracker<Datachanges> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             ICurrentUserContext currentUserContext,
-            DataChangesRepository repository,
+            DatachangesRepository repository,
             ArtifactCategoryService artifactCategoryService,
             ArtifactTypeService artifactTypeService,
             CommentService commentService,
@@ -132,7 +132,7 @@ namespace SIL.Transcriber.Services
             });
         }
 
-        public DataChanges GetProjectChanges(string origin, ProjDate?[] projects, string version = "1", int start = 0)
+        public Datachanges GetProjectChanges(string origin, ProjDate?[] projects, string version = "1", int start = 0)
         {
             DateTime dtNow = DateTime.UtcNow;
             if (!int.TryParse(version, out int dbVersion))
@@ -152,9 +152,9 @@ namespace SIL.Transcriber.Services
             }
             changes.RemoveAll(c => c.Ids.Count == 0);
             deleted.RemoveAll(d => d.Ids.Count == 0);
-            return new DataChanges() { Id = 1, Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
+            return new Datachanges() { Id = 1, Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
         }
-        public DataChanges? GetUserChanges(string origin, DateTime dtSince, string version="1", int start = 0)
+        public Datachanges? GetUserChanges(string origin, DateTime dtSince, string version="1", int start = 0)
         {
             DateTime dtNow = DateTime.UtcNow;
             if (!int.TryParse(version, out int dbVersion))
@@ -169,7 +169,7 @@ namespace SIL.Transcriber.Services
                 AddNewChanges(ret.deleted, deleted);
                 changes.RemoveAll(c => c.Ids.Count == 0);
                 deleted.RemoveAll(d => d.Ids.Count == 0);
-                return new DataChanges() { Id = 1, Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
+                return new Datachanges() { Id = 1, Querydate = dtNow, Changes = changes.ToArray(), Deleted = deleted.ToArray() };
             }
             catch
             {

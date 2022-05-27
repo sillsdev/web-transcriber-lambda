@@ -20,9 +20,6 @@ namespace SIL.Transcriber.Services
 {
     public class PlanService : BaseArchiveService<Plan>
     {
-        private readonly PlanRepository MyRepository;
-        private readonly IResourceRepositoryAccessor RepositoryAccessor;
-        private readonly IEnumerable<IQueryConstraintProvider> ConstraintProviders;
         public PlanService(
             IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
@@ -32,12 +29,9 @@ namespace SIL.Transcriber.Services
 )           : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
                 resourceChangeTracker, resourceDefinitionAccessor, myRepository)
         {
-            RepositoryAccessor = repositoryAccessor;
-            MyRepository = myRepository;
-            ConstraintProviders = constraintProviders;
         }
         
-        public Plan Get(int id)
+        public Plan? Get(int id)
         {
             return GetAsync(id, new CancellationToken()).Result;
         }

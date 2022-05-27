@@ -11,6 +11,7 @@ using static SIL.Transcriber.Utility.ResourceHelpers;
 using System.Xml.Linq;
 using System.Web;
 using TranscriberAPI.Utility.Extensions;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Services
 {
@@ -18,23 +19,21 @@ namespace SIL.Transcriber.Services
     {
         private IS3Service _S3service { get; }
         private PlanRepository PlanRepository { get; set; }
-        private MediafileRepository MediafileRepository { get; set; }
-       private PassageStateChangeRepository PSCService { get; set; }
-        
+        private MediafileRepository MyRepository { get; set; }
+        private readonly AppDbContext dbContext;
         public MediafileService(
             IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<Mediafile> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
-            PassageStateChangeRepository pscService,
             PlanRepository planRepository,
             IS3Service service,
-            MediafileRepository MyRepository) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, MyRepository)
+            MediafileRepository myRepository, AppDbContextResolver contextResolver) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, myRepository)
         {
             _S3service = service;
             PlanRepository = planRepository;
-             PSCService = pscService;
-           MediafileRepository = MyRepository; 
+            MyRepository = myRepository;
+            dbContext = (AppDbContext)contextResolver.GetContext();
         }
 
         public async Task<Mediafile?> GetFromFile(int plan, string s3File)
@@ -85,7 +84,7 @@ namespace SIL.Transcriber.Services
                 entity.AudioUrl = response.Message;
                 if (IsVernacularMedia(entity) && entity.PassageId != null)
                 {
-                    Mediafile? mfs = MediafileRepository.Get().Where(mf => mf.PassageId == entity.PassageId && IsVernacularMedia(mf) && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
+                    Mediafile? mfs = MyRepository.Get().ToList().Where(mf => mf.PassageId == entity.PassageId && IsVernacularMedia(mf) && !mf.Archived).OrderBy(m => m.VersionNumber).LastOrDefault();
                     if (mfs != null)
                     {
                         entity.VersionNumber = mfs.VersionNumber + 1;
@@ -94,20 +93,22 @@ namespace SIL.Transcriber.Services
             } else
             {
                 //pick the highest version media of the resource per passage
-                Mediafile? sourcemediafile = MediafileRepository.Get().Where(x => x.PassageId == entity.ResourcePassageId && x.ReadyToShare && !x.Archived).OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                Mediafile? sourcemediafile = MyRepository.Get().Where(x => x.PassageId == entity.ResourcePassageId && x.ReadyToShare && !x.Archived).OrderByDescending(m => m.VersionNumber).FirstOrDefault();
                 entity.AudioUrl = sourcemediafile?.AudioUrl;
                 entity.S3File = sourcemediafile?.S3File;
             }
             if (entity.PassageId != null && entity.EafUrl != null)
             {
                 //create a passage state change with this info
-                PassageStateChange psc = new PassageStateChange
+                Passagestatechange psc = new ()
                 {
                     PassageId = (int)entity.PassageId,
                     State = "",
                     Comments = entity.EafUrl
                 };
-                await PSCService.CreateAsync(psc,psc, new CancellationToken());
+
+                dbContext.Passagestatechanges.Add(psc);
+                dbContext.SaveChanges();
                 entity.EafUrl = "";
             }
             return await base.CreateAsync(entity, cancellationToken);
@@ -115,7 +116,7 @@ namespace SIL.Transcriber.Services
 
         public IQueryable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId)
         {
-             return MediafileRepository.ReadyToSync(PlanId, artifactTypeId);
+             return MyRepository.ReadyToSync(PlanId, artifactTypeId);
         }
 
         public async Task<Mediafile?> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
@@ -131,11 +132,11 @@ namespace SIL.Transcriber.Services
 
         public async Task<Mediafile?> GetFileSignedUrlAsync(int id)
         {
-            Mediafile? mf = MediafileRepository.Get(id);
+            Mediafile? mf = MyRepository.Get(id);
             if (mf == null) return null;
             if (mf.ResourcePassageId != null)
             {
-                Mediafile? res = MediafileRepository.GetLatestShared((int)mf.ResourcePassageId);
+                Mediafile? res = MyRepository.GetLatestShared((int)mf.ResourcePassageId);
                 if (res != null && res.S3File != null)
                     mf.AudioUrl = _S3service.SignedUrlForGet(res.S3File, DirectoryName(res), res.ContentType ?? "").Message;
             }
@@ -149,7 +150,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<S3Response> GetFile(int id)
         {
-            Mediafile? mf = MediafileRepository.Get(id);
+            Mediafile? mf = MyRepository.Get(id);
             if (mf == null || mf.S3File == null)
             {
                 return new S3Response
@@ -173,7 +174,7 @@ namespace SIL.Transcriber.Services
         public async Task<S3Response> DeleteFile(int id)
         {
             //delete the s3 file 
-            Mediafile? mf = MediafileRepository.Get(id);
+            Mediafile? mf = MyRepository.Get(id);
             if (mf == null||mf.S3File == null)
             {
                 return new S3Response
@@ -188,7 +189,7 @@ namespace SIL.Transcriber.Services
         }
         public Mediafile? GetLatest(int passageId)
         {
-            return MediafileRepository.Get().Where(mf => mf.PassageId == passageId).OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
+            return MyRepository.Get().Where(mf => mf.PassageId == passageId).OrderByDescending(mf => mf.VersionNumber).FirstOrDefault();
         }
         public string EAF(Mediafile mf)
         {
@@ -223,7 +224,7 @@ namespace SIL.Transcriber.Services
         public async Task<Mediafile?> UpdateFileInfoAsync(int id, long filesize, decimal duration)
         {
             //where did you go?
-            Mediafile? p = MediafileRepository.Get(id);
+            Mediafile? p = MyRepository.Get(id);
             if (p == null) return null;
             p.Filesize = filesize;
             p.Duration = (int)duration;

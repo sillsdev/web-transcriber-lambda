@@ -6,7 +6,7 @@ using JsonApiDotNetCore.Resources;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class PlanTypeRepository : BaseRepository<PlanType>
+    public class PlanTypeRepository : BaseRepository<Plantype>
     {
         public PlanTypeRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
@@ -19,11 +19,11 @@ namespace SIL.Transcriber.Repositories
                 constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        public override IQueryable<PlanType> FromCurrentUser(IQueryable<PlanType>? entities = null)
+        public override IQueryable<Plantype> FromCurrentUser(IQueryable<Plantype>? entities = null)
         {
             return entities ?? GetAll();
         }
-        protected override IQueryable<PlanType> FromProjectList(IQueryable<PlanType>? entities, string idList)
+        protected override IQueryable<Plantype> FromProjectList(IQueryable<Plantype>? entities, string idList)
         {
             return entities ?? GetAll();
         }

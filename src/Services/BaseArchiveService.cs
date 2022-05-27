@@ -14,7 +14,7 @@ namespace SIL.Transcriber.Services
     public class BaseArchiveService<TResource> : BaseService<TResource>
          where TResource : BaseModel, IArchive
     {
-        private readonly BaseRepository<TResource> repo;
+
         public BaseArchiveService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<TResource> resourceChangeTracker,
@@ -31,7 +31,7 @@ namespace SIL.Transcriber.Services
 
         public IEnumerable<TResource> GetDeletedSince(IQueryable<TResource> entities, int currentuser, string origin, DateTime since)
         {
-            return base.GetChanges(Repo.FromCurrentUser(entities), currentuser, origin, since).Where(t => t.Archived); ;
+            return base.GetChanges(entities, currentuser, origin, since).Where(t => t.Archived); ;
         }
         public override async Task<IReadOnlyCollection<TResource>> GetAsync(CancellationToken cancellationToken)
         {
@@ -43,11 +43,15 @@ namespace SIL.Transcriber.Services
             }
             return entities;
         }
+        public async Task<TResource?> UpdateArchivedAsync(int id, TResource entity, CancellationToken cancellationToken)
+        {
+            return await base.UpdateAsync(id, entity, cancellationToken);
+        }
         public override async Task<TResource?> UpdateAsync(int id, TResource entity, CancellationToken cancellationToken)
         {
             //return unarchived
             TResource? existing = await base.GetAsync(id, new CancellationToken());
-            if (existing?.Archived??true)
+            if (existing?.Archived??true && !entity.Archived)
             {
                 throw new Exception("Entity has been deleted. Unable to update.");
             }

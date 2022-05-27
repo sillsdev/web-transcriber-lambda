@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Resources.Annotations;
 namespace SIL.Transcriber.Models
 {
     [Table("projecttypes")]
-    public partial class ProjectType : BaseModel
+    public partial class Projecttype : BaseModel
     {
         [Attr(PublicName="name")]
         public string? Name { get; set; }

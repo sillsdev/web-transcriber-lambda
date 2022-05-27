@@ -2,19 +2,19 @@
 
 namespace SIL.Logging.Models
 {
-    public partial class ParatextSync : LogBaseModel
+    public partial class Paratextsync : LogBaseModel
     {
-        public ParatextSync() : base()
+        public Paratextsync() : base()
         {
         }
-        public ParatextSync(int userid, int planid, string paratextproject, string bookchapter, string beforesync) : base(userid)
+        public Paratextsync(int userid, int planid, string paratextproject, string bookchapter, string beforesync) : base(userid)
         {
             PlanId = planid;
             ParatextProject = paratextproject;
             BookChapter = bookchapter;
             BeforeSync = beforesync;
         }
-        public ParatextSync(int userid, int planid, string paratextproject, string bookchapter, string aftersync, string err) : base(userid)
+        public Paratextsync(int userid, int planid, string paratextproject, string bookchapter, string aftersync, string err) : base(userid)
         {
             PlanId = planid;
             ParatextProject = paratextproject;

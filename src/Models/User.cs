@@ -10,8 +10,8 @@ namespace SIL.Transcriber.Models
         {
         public User(): base()
         {
-            OrganizationMemberships = new List<OrganizationMembership>();
-            GroupMemberships = new List<GroupMembership>();
+            OrganizationMemberships = new List<Organizationmembership>();
+            GroupMemberships = new List<Groupmembership>();
         }
         // Full Name of User
         // Comes from Auth0 (trusting that they handle correct order)
@@ -79,17 +79,17 @@ namespace SIL.Transcriber.Models
             [JsonIgnore]
             [NotMapped]
             [HasMany]
-            public ICollection<OrganizationMembership> OrganizationMemberships { get; set; }
+            public ICollection<Organizationmembership> OrganizationMemberships { get; set; }
 
             [JsonIgnore]
             [NotMapped]
             [HasMany]
-            public ICollection<GroupMembership> GroupMemberships { get; set; }
+            public ICollection<Groupmembership> GroupMemberships { get; set; }
 
        
             public bool HasOrgRole(RoleName role, int orgId)
             {
-                OrganizationMembership? omSuper = OrganizationMemberships?.Where(r => r.RoleName == RoleName.SuperAdmin).FirstOrDefault();
+            Organizationmembership? omSuper = OrganizationMemberships?.Where(r => r.RoleName == RoleName.SuperAdmin).FirstOrDefault();
 
                 if (omSuper != null)
                     return true; //they have all the roles
@@ -98,7 +98,7 @@ namespace SIL.Transcriber.Models
             }
             public bool HasGroupRole(RoleName role, int groupid)
             {
-                OrganizationMembership? omSuper = this
+            Organizationmembership? omSuper = this
                 .OrganizationMemberships?
                 .Where(r => r.RoleName == RoleName.SuperAdmin)
                 .FirstOrDefault();

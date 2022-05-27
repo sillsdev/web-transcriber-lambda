@@ -6,13 +6,13 @@ using JsonApiDotNetCore.Configuration;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class ProjectintegrationsController : BaseController<ProjectIntegration>
+    public class ProjectintegrationsController : BaseController<Projectintegration>
     {
          public ProjectintegrationsController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<ProjectIntegration,int> resourceService,
+            IResourceService<Projectintegration,int> resourceService,
             ICurrentUserContext currentUserContext,
   
             UserService userService)

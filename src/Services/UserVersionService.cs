@@ -8,21 +8,21 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class UserVersionService : BaseService<UserVersion>
+    public class UserVersionService : BaseService<Userversion>
     {
         public UserVersionService(
             IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<UserVersion> resourceChangeTracker,
+            IJsonApiRequest request, IResourceChangeTracker<Userversion> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor, UserVersionRepository repository) 
             : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, repository)
         {
         }
-        public UserVersion StoreVersion(string version)
+        public Userversion StoreVersion(string version)
         {
             return StoreVersion(version, "unknown");
         }
-        public UserVersion StoreVersion(string version, string env)
+        public Userversion StoreVersion(string version, string env)
         {
             return ((UserVersionRepository)Repo).CreateOrUpdate(version, env);
         }

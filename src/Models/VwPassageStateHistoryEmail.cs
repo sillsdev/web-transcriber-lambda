@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace SIL.Transcriber.Models
 {
     [Table("vwpassagestatehistoryemails")]
-    public partial class VwPassageStateHistoryEmail : BaseModel
+    public partial class Vwpassagestatehistoryemail : BaseModel
     {
         [Attr(PublicName="projectid")]
         public int ProjectId { get; set; }

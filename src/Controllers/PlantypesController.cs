@@ -6,13 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class PlantypesController : BaseController<PlanType>
+    public class PlantypesController : BaseController<Plantype>
     {
          public PlantypesController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<PlanType,int> resourceService,
+            IResourceService<Plantype,int> resourceService,
             ICurrentUserContext currentUserContext,
   
             UserService userService)

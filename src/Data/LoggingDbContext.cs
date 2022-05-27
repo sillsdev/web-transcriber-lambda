@@ -26,15 +26,15 @@ namespace SIL.Transcriber.Data
 
         private void DefineLastModifiedByUser(ModelBuilder builder)
         {
-            builder.Entity<ParatextSync>()
+            builder.Entity<Paratextsync>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<ParatextSyncPassage>()
+            builder.Entity<Paratextsyncpassage>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<ParatextTokenHistory>()
+            builder.Entity<Paratexttokenhistory>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -106,9 +106,9 @@ namespace SIL.Transcriber.Data
             AddTimestamps(this, HttpContext, userid);
             return await base.SaveChangesAsync(cancellationToken);
         }
-        public DbSet<ParatextSync> Paratextsyncs => Set<ParatextSync>();
-        public DbSet<ParatextSyncPassage> Paratextsyncpassages => Set<ParatextSyncPassage>();
-        public DbSet<ParatextTokenHistory> Paratexttokenhistory => Set<ParatextTokenHistory>();
+        public DbSet<Paratextsync> Paratextsyncs => Set<Paratextsync>();
+        public DbSet<Paratextsyncpassage> Paratextsyncpassages => Set<Paratextsyncpassage>();
+        public DbSet<Paratexttokenhistory> Paratexttokenhistory => Set<Paratexttokenhistory>();
     }
     public class LoggingDbContextResolver : IDbContextResolver
     {

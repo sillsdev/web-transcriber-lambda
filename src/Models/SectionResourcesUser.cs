@@ -2,11 +2,11 @@
 
 namespace SIL.Transcriber.Models
 {
-    public partial class SectionResourceUser : BaseModel, IArchive
+    public partial class Sectionresourceuser : BaseModel, IArchive
     {
 
         [HasOne(PublicName = "sectionresource")]
-        public virtual SectionResource? SectionResource { get; set; }
+        public virtual Sectionresource? SectionResource { get; set; }
 
         //[Attr("section-resource-id")]
         public int SectionResourceId { get; set; }

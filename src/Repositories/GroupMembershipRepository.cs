@@ -1,18 +1,16 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using SIL.Transcriber.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class GroupMembershipRepository : BaseRepository<GroupMembership>
+    public class GroupMembershipRepository : BaseRepository<Groupmembership>
     {
         readonly GroupRepository GroupRepository;
         readonly private HttpContext? HttpContext;
-        IResourceGraph ResourceGraph;
         public GroupMembershipRepository(
             IHttpContextAccessor  httpContextAccessor,
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
@@ -27,13 +25,12 @@ namespace SIL.Transcriber.Repositories
         {
             HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
-            ResourceGraph = resourceGraph;
         }
-        public IQueryable<GroupMembership> GroupsGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups)
+        public IQueryable<Groupmembership> GroupsGroupMemberships(IQueryable<Groupmembership> entities, IQueryable<Group> groups)
         {
             return entities.Join(groups, gm => gm.GroupId, g => g.Id, (gm, g) => gm);
         }
-        public IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group>? groups = null)
+        public IQueryable<Groupmembership> UsersGroupMemberships(IQueryable<Groupmembership> entities, IQueryable<Group>? groups = null)
         {
             if (groups == null)
             {
@@ -41,21 +38,21 @@ namespace SIL.Transcriber.Repositories
             }
             return GroupsGroupMemberships(entities, groups);
         }
-        public IQueryable<GroupMembership> ProjectGroupMemberships(IQueryable<GroupMembership> entities, string project)
+        public IQueryable<Groupmembership> ProjectGroupMemberships(IQueryable<Groupmembership> entities, string project)
         {
             IQueryable<Group> groups = GroupRepository.ProjectGroups(dbContext.Groups, project);
             return GroupsGroupMemberships(entities, groups);
         }
-        public IQueryable<GroupMembership> GetMine()
+        public IQueryable<Groupmembership> GetMine()
         {
-            return FromCurrentUser();
+            return FromCurrentUser().Include(gm => gm.Group).Include(gm => gm.User).Include(gm=>gm.Role);
         }
         #region Overrides
-        public override IQueryable<GroupMembership> FromCurrentUser(IQueryable<GroupMembership>? entities = null)
+        public override IQueryable<Groupmembership> FromCurrentUser(IQueryable<Groupmembership>? entities = null)
         {
             return UsersGroupMemberships(entities ?? GetAll());
         }
-        protected override IQueryable<GroupMembership> FromProjectList(IQueryable<GroupMembership>? entities, string idList)
+        protected override IQueryable<Groupmembership> FromProjectList(IQueryable<Groupmembership>? entities, string idList)
         {
             return ProjectGroupMemberships(entities ?? GetAll(), idList);
         }

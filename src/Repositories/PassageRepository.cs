@@ -69,10 +69,7 @@ namespace SIL.Transcriber.Repositories
         {
             return dbContext.Sections.Where(s => s.Id == passage.SectionId).Join(dbContext.Plans, s => s.PlanId, p => p.Id, (s, p) => p).FirstOrDefault()?.ProjectId ;
         }
-        public  IQueryable<Passage> Get()
-        {
-            return base.GetAll();
-        }
+
         public override IQueryable<Passage> FromCurrentUser(IQueryable<Passage>? entities = null)
         {
             return UsersPassages(entities ?? GetAll());

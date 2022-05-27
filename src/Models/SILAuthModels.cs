@@ -20,8 +20,8 @@ namespace SIL.Auth.Models
         public string uniquekey { get; set; }
         public int code { get; set; }
         public string name { get; set; }
-        public string description { get; set; }
-        public string logo { get; set; }
+        public string? description { get; set; }
+        public string? logo { get; set; }
         public string websiteurl { get; set; }
         public bool verified { get; set; }
         public string verifiedby { get; set; }

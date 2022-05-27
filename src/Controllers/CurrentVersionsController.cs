@@ -13,12 +13,12 @@ namespace SIL.Transcriber.Controllers
     //[NoHttpPatch]
     [Route("api/[controller]")]
     [ApiController]
-    public class CurrentversionsController : BaseController<CurrentVersion>
+    public class CurrentversionsController : BaseController<Currentversion>
     {
         public CurrentversionsController(
            ILoggerFactory loggerFactory,
            IJsonApiOptions options,
-           IResourceGraph resourceGraph, IResourceService<CurrentVersion,int> resourceService,
+           IResourceGraph resourceGraph, IResourceService<Currentversion,int> resourceService,
            ICurrentUserContext currentUserContext,
            UserService userService)
          : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext, userService)
@@ -28,7 +28,7 @@ namespace SIL.Transcriber.Controllers
         [HttpPost("{version}")]
         public IActionResult PostVersionAsync([FromRoute] string version)
         {
-            return Ok( ((CurrentVersionService)service).StoreVersion(version));
+            return Ok( ((CurrentversionService)service).StoreVersion(version));
         }
     }
 }

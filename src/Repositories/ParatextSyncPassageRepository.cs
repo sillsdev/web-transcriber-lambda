@@ -5,7 +5,7 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 namespace SIL.Transcriber.Repositories
 {
-    public class ParatextSyncPassageRepository : LoggingDbContextRepository<ParatextSyncPassage>
+    public class ParatextSyncPassageRepository : LoggingDbContextRepository<Paratextsyncpassage>
     {
         public ParatextSyncPassageRepository(
             ITargetedFields targetedFields, LoggingDbContextResolver contextResolver,

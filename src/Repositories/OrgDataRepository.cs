@@ -9,9 +9,20 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using JsonApiDotNetCore.Serialization.Response;
+using JsonApiDotNetCore.Serialization.JsonConverters;
 using System.Text.Json;
-using SIL.Transcriber.Serializers;
+using JsonApiDotNetCore.Serialization.Response;
+using JsonApiDotNetCore.Serialization.Objects;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Utility.Extensions;
+using System.Text.Json.Serialization;
+using JsonApiDotNetCore.Resources.Internal;
+using SIL.Transcriber.Utility;
+using SIL.Transcriber.Serialization;
+using JsonApiDotNetCore.Queries.Expressions;
+using System.Collections.Immutable;
+using SIL.Transcriber.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -22,14 +33,10 @@ namespace SIL.Transcriber.Repositories
         protected readonly IResourceGraph _resourceGraph;
         protected readonly IResourceFactory _resourceFactory;
         protected readonly IEnumerable<IQueryConstraintProvider> _constraintProviders;
-        //protected readonly JsonApiWriter _JsonApiWriter;
-        //protected readonly IResponseModelAdapter _JsonApiWriter;
-        //readonly private HttpContext? HttpContext;
-        protected readonly JsonSerializerOptions Options = new()
-        {
-            // WriteIndented = true,
-            //PropertyNamingPolicy = new CamelToDashNamingPolicy(),
-        };
+        protected readonly MyResponseModelAdapter ResponseModelAdapter;
+        protected readonly IJsonApiOptions _options;
+        IResourceDefinitionAccessor _resourceDefinitionAccessor;
+        IMetaBuilder _metaBuilder;
         public OrgDataRepository(
             IHttpContextAccessor httpContextAccessor,
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
@@ -39,8 +46,10 @@ namespace SIL.Transcriber.Repositories
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
             OrganizationRepository orgRepository,
-            GroupMembershipRepository grpMemRepository
-            //IResponseModelAdapter jsonapiWriter
+            GroupMembershipRepository grpMemRepository,
+             MyResponseModelAdapter responseModelAdapter,
+             IMetaBuilder metaBuilder,
+              IJsonApiOptions options
           ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
               constraintProviders, loggerFactory,resourceDefinitionAccessor, currentUserRepository)
         {
@@ -49,12 +58,11 @@ namespace SIL.Transcriber.Repositories
             _resourceGraph = resourceGraph;
             _resourceFactory = resourceFactory;
             _constraintProviders = constraintProviders;
-            //_JsonApiWriter = jsonapiWriter;
-            //HttpContext = httpContextAccessor.HttpContext;
-            //Options.Converters.Add(new ResourceObjectConverter(resourceGraph));
-            Options.Converters.Add(new TranscriberConverter());
+            ResponseModelAdapter = responseModelAdapter;
+            _options = options;
+            _resourceDefinitionAccessor = resourceDefinitionAccessor;
+            _metaBuilder = metaBuilder;
         }
-
         private IQueryable<Orgdata> GetData(IQueryable<Orgdata> entities, string start, CancellationToken cancellationToken, int version = 1)
         {
             Orgdata orgData = entities.First();
@@ -68,56 +76,55 @@ namespace SIL.Transcriber.Repositories
             DateTime dtBail = DateTime.Now.AddSeconds(20);
             do
             {
-                IQueryable<Organization> orgs = organizationRepository.GetMine(); // await organizationService.GetAsync(cancellationToken); //this limits to current use
 
-                //var test = _JsonApiWriter.Convert(new Orgdata { StartIndex = 4});
-                var test2 = System.Text.Json.JsonSerializer.Serialize(new Organization { Name = "test"}, Options);
+                if (!CheckAdd(0, SerializeIt(dbContext.Activitystates, ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(1, SerializeIt(dbContext.Projecttypes, ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(2, SerializeIt(dbContext.Plantypes, ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(3, SerializeIt(dbContext.Roles, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                if (!CheckAdd(4, SerializeIt(dbContext.Integrations, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
 
-                if (!CheckAdd(0, dbContext.Activitystates.ToList(), dtBail, ref iStartNext, ref data)) break;
-                if (!CheckAdd(1, dbContext.Projecttypes.ToList(), dtBail, ref iStartNext, ref data)) break;
-                if (!CheckAdd(2, dbContext.Plantypes.ToList(), dtBail, ref iStartNext, ref data)) break;
-                if (!CheckAdd(3, dbContext.Roles.ToList(), dtBail,  ref iStartNext, ref data)) break;
-                if (!CheckAdd(4, dbContext.Integrations.ToList(), dtBail,  ref iStartNext, ref data)) break;
+                IQueryable<Organization> orgs = organizationRepository.GetMine(); //this limits to current user
+                string x = SerializerHelpers.ResourcesToJson<Organization>(orgs, ResourceGraph, _options, _resourceDefinitionAccessor, _metaBuilder);
 
-                if (!CheckAdd(6, orgs.ToList(), dtBail,  ref iStartNext, ref data)) break;
-                IQueryable<GroupMembership> gms = gmRepository.GetMine();
-                if (!CheckAdd(7, gms.ToList(), dtBail,  ref iStartNext, ref data)) break;
+                if (!CheckAdd(6, SerializeIt(orgs, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                IQueryable<Groupmembership> gms = gmRepository.GetMine();
+                if (!CheckAdd(7, SerializeIt(gms, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
                 //invitations
-                if (!CheckAdd(8, dbContext.Invitations.Join(orgs, i => i.OrganizationId, o => o.Id, (i, o) => i).ToList(), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(8, SerializeIt(dbContext.InvitationsData.Join(orgs, i => i.OrganizationId, o => o.Id, (i, o) => i), ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
                 //groups
-                if (!CheckAdd(9, dbContext.Groups.Join(gms, g => g.Id, gm => gm.GroupId, (g, gm) => g).ToList(), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(9, SerializeIt(dbContext.GroupsData.Join(gms, g => g.Id, gm => gm.GroupId, (g, gm) => g), ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
                 //orgmems
-                IQueryable<OrganizationMembership> oms = dbContext.Organizationmemberships.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om).Where(x => !x.Archived);
-                if (!CheckAdd(10, oms.ToList(), dtBail,  ref iStartNext, ref data)) break;
+                IQueryable<Organizationmembership> oms = dbContext.OrganizationmembershipsData.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om).Where(x => !x.Archived);
+                if (!CheckAdd(10, SerializeIt(oms, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
                 int userid = CurrentUser?.Id ?? -1;
                 //users
-                if (!CheckAdd(11, oms.Any() ?
-                                            dbContext.Users.Join(oms, u => u.Id, om => om.UserId, (u, om) => u).Where(x => !x.Archived).ToList() :
-                                            dbContext.Users.Where(x => x.Id == userid).ToList(), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(11, SerializeIt(oms.Any() ?
+                                            dbContext.Users.Join(oms, u => u.Id, om => om.UserId, (u, om) => u).Where(x => !x.Archived) :
+                                            dbContext.Users.Where(x => x.Id == userid), ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
 
                 //projects
-                IEnumerable<Project> projects = dbContext.Projects.Join(gms, p => p.GroupId, gm => gm.GroupId, (p, gm) => p).Where(x => !x.Archived);
-                if (!CheckAdd(12, projects.ToList(), dtBail,  ref iStartNext, ref data)) break;
+                IEnumerable<Project> projects = dbContext.ProjectsData.Join(gms, p => p.GroupId, gm => gm.GroupId, (p, gm) => p).Where(x => !x.Archived);
+                if (!CheckAdd(12, SerializeIt(projects, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
                 //projectintegrations
-                if (!CheckAdd(13, dbContext.Projectintegrations.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived).ToList(), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(13, SerializeIt(dbContext.ProjectintegrationsData.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived), ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
                 //plans
-                if (!CheckAdd(14, dbContext.Plans.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived).ToList(), dtBail, ref iStartNext, ref data)) break;
+                if (!CheckAdd(14, SerializeIt(dbContext.PlansData.Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl).Where(x => !x.Archived), ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
 
                 if (version > 3)
                 {
-                    if (!CheckAdd(15, dbContext.Workflowsteps.Where(x => !x.Archived).ToList(), dtBail,  ref iStartNext, ref data)) break;
+                    if (!CheckAdd(15, SerializeIt(dbContext.Workflowsteps.Where(x => !x.Archived), ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
                     IEnumerable<int> ids = orgs.Select(o => o.Id);
-                    IQueryable<Artifactcategory> cats = dbContext.Artifactcategorys.Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
-                    if (!CheckAdd(16, cats.ToList(), dtBail,  ref iStartNext, ref data)) break;
-                    IQueryable<Artifacttype> typs = dbContext.Artifacttypes.Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
-                    if (!CheckAdd(17, typs.ToList(), dtBail,  ref iStartNext, ref data)) break;
-                    if (!CheckAdd(18, dbContext.Orgworkflowsteps.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c).Where(x => !x.Archived).ToList(), dtBail, ref iStartNext, ref data)) break;
+                    IQueryable<Artifactcategory> cats = dbContext.ArtifactcategoriesData.Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
+                    if (!CheckAdd(16, SerializeIt(cats, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                    IQueryable<Artifacttype> typs = dbContext.ArtifacttypesData.Include(c => c.Organization).Where(c => (c.OrganizationId == null || ids.Contains((int)c.OrganizationId)) && !c.Archived);
+                    if (!CheckAdd(17, SerializeIt(typs, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                    if (!CheckAdd(18, SerializeIt(dbContext.OrgworkflowstepsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c).Where(x => !x.Archived), ResponseModelAdapter), dtBail, ref iStartNext, ref data)) break;
                 }
                 iStartNext = -1; //Done!
             } while (false); //do it once
-            if (iStart == iStartNext)
+             if (iStart == iStartNext)
                 throw new System.Exception("Single table is too large to return data");
-
+            
             orgData.Json = data + FinishData();
             orgData.StartIndex = iStartNext;
             return entities;

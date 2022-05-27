@@ -2,7 +2,7 @@
 
 namespace SIL.Transcriber.Models
 {
-    public class CurrentVersion : Version
+    public class Currentversion : Version
     {
     }
 }

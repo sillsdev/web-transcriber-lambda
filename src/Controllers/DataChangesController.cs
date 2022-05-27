@@ -17,7 +17,7 @@ namespace SIL.Transcriber.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class DatachangesController : JsonApiController<DataChanges, int>
+    public class DatachangesController : JsonApiController<Datachanges, int>
     {
         readonly DataChangeService service;
 
@@ -25,13 +25,13 @@ namespace SIL.Transcriber.Controllers
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<DataChanges,int> resourceService)
+            IResourceService<Datachanges,int> resourceService)
          : base(options, resourceGraph, loggerFactory, resourceService)
         {
             service = (DataChangeService)resourceService;
         }
         [HttpGet("since/{since}")]
-        public ActionResult GetDataChanges([FromRoute] string since, string origin)
+        public ActionResult GetDatachanges([FromRoute] string since, string origin)
         {
             if (!DateTime.TryParse(since, out DateTime dtSince))
                 return new UnprocessableEntityResult();
@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("projects/{origin}")]
-        public IActionResult GetProjectDataChanges([FromRoute] string origin, string projList)
+        public IActionResult GetProjectDatachanges([FromRoute] string origin, string projList)
         {
             ProjDate[]? x = JsonConvert.DeserializeObject<ProjDate[]>(projList);
             if (x != null)
@@ -48,7 +48,7 @@ namespace SIL.Transcriber.Controllers
             return BadRequest();
         }
         [HttpGet("v{version}/{start}/since/{since}")]
-        public ActionResult GetDataChangesVersion([FromRoute] string version,int start, string since, string origin)
+        public ActionResult GetDatachangesVersion([FromRoute] string version,int start, string since, string origin)
         {
             if (!DateTime.TryParse(since, out DateTime dtSince))
                 return new UnprocessableEntityResult();
@@ -57,7 +57,7 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("v{version}/{start}/project/{origin}")]
-        public IActionResult GetProjectDataChangesVersion([FromRoute] string version,int start,string origin, string projList)
+        public IActionResult GetProjectDatachangesVersion([FromRoute] string version,int start,string origin, string projList)
         {
             ProjDate? x = JsonConvert.DeserializeObject<ProjDate>(projList);
             ProjDate?[] pd ={ x };

@@ -3,7 +3,7 @@
 namespace SIL.Transcriber.Models
 {
     [Table("userversions")]
-    public class UserVersion : Version
+    public class Userversion : Version
     {
         public string? Environment { get; set; }
     }

@@ -10,7 +10,7 @@ using JsonApiDotNetCore.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class VwPassageStateHistoryEmailRepository : BaseRepository<VwPassageStateHistoryEmail>
+    public class VwPassageStateHistoryEmailRepository : BaseRepository<Vwpassagestatehistoryemail>
     {
         public VwPassageStateHistoryEmailRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
@@ -23,11 +23,11 @@ namespace SIL.Transcriber.Repositories
         constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        public override IQueryable<VwPassageStateHistoryEmail> FromCurrentUser(IQueryable<VwPassageStateHistoryEmail>? entities = null)
+        public override IQueryable<Vwpassagestatehistoryemail> FromCurrentUser(IQueryable<Vwpassagestatehistoryemail>? entities = null)
         {
             return entities ?? GetAll();
         }
-        protected override IQueryable<VwPassageStateHistoryEmail> FromProjectList(IQueryable<VwPassageStateHistoryEmail>? entities, string idList)
+        protected override IQueryable<Vwpassagestatehistoryemail> FromProjectList(IQueryable<Vwpassagestatehistoryemail>? entities, string idList)
         {
             return entities ?? GetAll();
         }

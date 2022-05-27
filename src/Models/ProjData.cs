@@ -4,10 +4,10 @@ using JsonApiDotNetCore.Resources.Annotations;
 namespace SIL.Transcriber.Models
 {
 
-    public class ProjData : BaseModel
+    public class Projdata : BaseModel
     {
 
-           public ProjData()
+           public Projdata()
             {
                 Id = 1;
                 Json = "{}";

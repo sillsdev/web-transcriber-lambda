@@ -12,12 +12,13 @@ namespace SIL.Transcriber.Models
         {
             Hold = false;
         }
+        /*
         public Passage(JToken item, int sectionId) : base()
         {
             UpdateFrom(item);
             SectionId = sectionId;
         }
-
+        */
         public Passage UpdateFrom(JToken item)
         {
             Book = item["book"]?.ToString() ?? "";
@@ -63,7 +64,7 @@ namespace SIL.Transcriber.Models
         public int? OrgWorkflowStepId { get; set; }
 
         [HasOne(PublicName="org-workflow-step")]
-        public OrgWorkflowstep? OrgWorkflowStep { get; set; }
+        public Orgworkflowstep? OrgWorkflowStep { get; set; }
 
         [Attr(PublicName="step-complete")]
         [Column(TypeName = "jsonb")]

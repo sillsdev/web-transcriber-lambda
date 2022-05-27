@@ -6,10 +6,6 @@ namespace SIL.Transcriber.Models
     [Table("invitations")]
     public partial class Invitation : BaseModel, IBelongsToOrganization
     {
-        public Invitation():base()
-        {
-            Organization = new();
-        }
         [Attr(PublicName="email")]
         public string? Email { get; set; }
         [Attr(PublicName="accepted")]
@@ -25,7 +21,7 @@ namespace SIL.Transcriber.Models
 
 
         [HasOne(PublicName="organization")]
-        public virtual Organization Organization { get; set; }
+        public virtual Organization Organization { get; set; } = null!;
         public int OrganizationId { get; set; }
 
         [HasOne(PublicName="role")]

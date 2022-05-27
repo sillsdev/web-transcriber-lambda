@@ -4,15 +4,13 @@ using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using static SIL.Transcriber.Data.DbContextExtentions;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
-using System.Threading;
-using Microsoft.AspNetCore.Http;
+
 
 namespace SIL.Transcriber.Data
 {
@@ -30,37 +28,37 @@ namespace SIL.Transcriber.Data
         public DbSet<Artifactcategory> Artifactcategorys => Set<Artifactcategory>();
         public DbSet<Artifacttype> Artifacttypes => Set<Artifacttype>();
         public DbSet<Comment> Comments => Set<Comment>();
-        public DbSet<CurrentVersion> CurrentVersions => Set<CurrentVersion>();
+        public DbSet<Currentversion> Currentversions => Set<Currentversion>();
         public DbSet<Dashboard> Dashboards => Set<Dashboard>();
-        public DbSet<DataChanges> DataChanges => Set<DataChanges>();
+        public DbSet<Datachanges> Datachanges => Set<Datachanges>();
         public DbSet<Discussion> Discussions => Set<Discussion>();
         public DbSet<Group> Groups => Set<Group>();
-        public DbSet<GroupMembership> Groupmemberships => Set<GroupMembership>();
+        public DbSet<Groupmembership> Groupmemberships => Set<Groupmembership>();
         public DbSet<Integration> Integrations => Set<Integration>();
         public DbSet<Invitation> Invitations => Set<Invitation>();
         public DbSet<Mediafile> Mediafiles => Set<Mediafile>();
         public DbSet<Organization> Organizations => Set<Organization>();
-        public DbSet<OrganizationMembership> Organizationmemberships => Set<OrganizationMembership>();
+        public DbSet<Organizationmembership> Organizationmemberships => Set<Organizationmembership>();
         public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
-        public DbSet<OrgWorkflowstep> Orgworkflowsteps => Set<OrgWorkflowstep>();
+        public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
         public DbSet<Passage> Passages => Set<Passage>();
-        public DbSet<PassageStateChange> Passagestatechanges => Set<PassageStateChange>();
+        public DbSet<Passagestatechange> Passagestatechanges => Set<Passagestatechange>();
         public DbSet<Plan> Plans => Set<Plan>();
-        public DbSet<PlanType> Plantypes => Set<PlanType>();
-        public DbSet<ProjData> Projdatas => Set<ProjData>();
-        public DbSet<ProjectIntegration> Projectintegrations => Set<ProjectIntegration>();
+        public DbSet<Plantype> Plantypes => Set<Plantype>();
+        public DbSet<Projdata> Projdatas => Set<Projdata>();
+        public DbSet<Projectintegration> Projectintegrations => Set<Projectintegration>();
         public DbSet<Project> Projects => Set<Project>();
-        public DbSet<ProjectType> Projecttypes => Set<ProjectType>();
+        public DbSet<Projecttype> Projecttypes => Set<Projecttype>();
         public DbSet<Resource> Resources => Set<Resource>();
         public DbSet<Role> Roles => Set<Role>();
         public DbSet<Section> Sections => Set<Section>();
-         public DbSet<SectionPassage> Sectionpassages => Set<SectionPassage>();
-        public DbSet<SectionResource> Sectionresources => Set<SectionResource>();
-        public DbSet<SectionResourceUser> Sectionresourceusers => Set<SectionResourceUser>();
+         public DbSet<Sectionpassage> Sectionpassages => Set<Sectionpassage>();
+        public DbSet<Sectionresource> Sectionresources => Set<Sectionresource>();
+        public DbSet<Sectionresourceuser> Sectionresourceusers => Set<Sectionresourceuser>();
         public DbSet<User> Users => Set<User>();
-        public DbSet<UserVersion> UserVersions => Set<UserVersion>();
-        public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails => Set<VwPassageStateHistoryEmail>();
+        public DbSet<Userversion> UserVersions => Set<Userversion>();
+        public DbSet<Vwpassagestatehistoryemail> Vwpassagestatehistoryemails => Set<Vwpassagestatehistoryemail>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
         #endregion
 
@@ -86,6 +84,18 @@ namespace SIL.Transcriber.Data
             DefineManyToMany(builder);
             DefineLastModifiedByUser(builder);
         }
+        /* On Plan Patch:
+         * Server error: An error was generated for warning 'Microsoft.EntityFrameworkCore.Query.NavigationBaseIncludeIgnored': 
+         * The navigation 'Section.Plan' was ignored from 'Include' in the query since the fix-up will automatically populate it. 
+         * If any further navigations are specified in 'Include' afterwards then they will be ignored. 
+         * Walking back include tree is not allowed. 
+         * This exception can be suppressed or logged by passing event ID 'CoreEventId.NavigationBaseIncludeIgnored' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+         **/
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.ConfigureWarnings(optionsBuilder => optionsBuilder.Ignore(CoreEventId.NavigationBaseIncludeIgnored));
+            base.OnConfiguring(optionsBuilder);
+        }
         private static void DefineLastModifiedByUser(ModelBuilder builder)
         {
             builder.Entity<Activitystate>()
@@ -104,11 +114,11 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<CurrentVersion>()
+            builder.Entity<Currentversion>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<DataChanges>()
+            builder.Entity<Datachanges>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -120,7 +130,7 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<GroupMembership>()
+            builder.Entity<Groupmembership>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -152,11 +162,11 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<OrganizationMembership>()
+            builder.Entity<Organizationmembership>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<OrgWorkflowstep>()
+            builder.Entity<Orgworkflowstep>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -164,7 +174,7 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<PassageStateChange>()
+            builder.Entity<Passagestatechange>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -172,11 +182,11 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<PlanType>()
+            builder.Entity<Plantype>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<ProjData>()
+            builder.Entity<Projdata>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -184,11 +194,11 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<ProjectIntegration>()
+            builder.Entity<Projectintegration>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<ProjectType>()
+            builder.Entity<Projecttype>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);   
@@ -200,15 +210,15 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<SectionPassage>()
+            builder.Entity<Sectionpassage>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<SectionResource>()
+            builder.Entity<Sectionresource>()
                .HasOne(o => o.LastModifiedByUser)
                .WithMany()
                .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<SectionResourceUser>()
+            builder.Entity<Sectionresourceuser>()
                .HasOne(o => o.LastModifiedByUser)
                .WithMany()
                .HasForeignKey(o => o.LastModifiedBy);
@@ -216,7 +226,7 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<UserVersion>()
+            builder.Entity<Userversion>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -228,7 +238,7 @@ namespace SIL.Transcriber.Data
 
         private static void DefineManyToMany(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<GroupMembership>()
+            modelBuilder.Entity<Groupmembership>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -282,11 +292,11 @@ namespace SIL.Transcriber.Data
                 .Property(p => p.IsPublic)
                 .HasDefaultValue(false);
 
-            modelBuilder.Entity<OrgWorkflowstep>()
+            modelBuilder.Entity<Orgworkflowstep>()
                 .HasOne(s => s.Parent)
                 .WithMany()
                 .HasForeignKey(s => s.ParentId);
-             modelBuilder.Entity<SectionResource>()
+             modelBuilder.Entity<Sectionresource>()
                 .HasMany(r => r.SectionResourceUsers)
                 .WithOne(srow => srow.SectionResource)
                 .HasForeignKey(x => x.SectionResourceId);
@@ -303,7 +313,7 @@ namespace SIL.Transcriber.Data
         }
         private void UpdateSoftDeleteStatuses()
         {
-            List<EntityEntry> entries = ChangeTracker.Entries().ToList();
+            List<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.State == EntityState.Added || e.State == EntityState.Deleted).ToList();
             for (int ix = entries.Count - 1; ix >= 0; ix--)
             {
                 EntityEntry entry = entries[ix];
@@ -347,6 +357,27 @@ namespace SIL.Transcriber.Data
         {
             return GetFingerprint(HttpContext);
         }
+
+        //Include all HasOne attributes
+        public IQueryable<Artifactcategory> ArtifactcategoriesData => Artifactcategorys.Include(c => c.Organization);
+        public IQueryable<Artifacttype> ArtifacttypesData => Artifacttypes.Include(c => c.Organization);
+        public IQueryable<Comment> CommentsData => Comments.Include(c => c.Mediafile).Include(c => c.Discussion);
+        public IQueryable<Discussion> DiscussionsData => Discussions.Include(d => d.ArtifactCategory).Include(d => d.Mediafile).Include(d => d.OrgWorkflowStep).Include(d => d.Group).Include(d => d.User);
+        public IQueryable<Groupmembership> GroupmembershipsData => Groupmemberships.Include(x => x.Group).Include(x => x.User).Include(x => x.Role);
+        public IQueryable<Group> GroupsData => Groups.Include(x => x.Owner);
+        public IQueryable<Invitation> InvitationsData => Invitations.Include(x => x.Organization).Include(x => x.Role);
+        public IQueryable<Mediafile> MediafilesData => Mediafiles.Include(x => x.Passage).Include(x => x.Plan).Include(x=>x.ArtifactCategory).Include(x => x.ArtifactType).Include(x => x.ResourcePassage).Include(x => x.SourceMedia);
+        public IQueryable<Organizationmembership> OrganizationmembershipsData => Organizationmemberships.Include(x => x.Organization).Include(x => x.Role).Include(x => x.User);
+        public IQueryable<Organization> OrganizationsData => Organizations.Include(x => x.Owner);
+        public IQueryable<Orgworkflowstep> OrgworkflowstepsData => Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
+        public IQueryable<Passage> PassagesData => Passages.Include(x => x.Section).Include(x => x.OrgWorkflowStep);
+        public IQueryable<Passagestatechange> PassagestatechangesData => Passagestatechanges.Include(x => x.Passage);
+        public IQueryable<Plan> PlansData => Plans.Include(x => x.Owner).Include(x => x.Plantype).Include(x => x.Project);
+        public IQueryable<Projectintegration> ProjectintegrationsData => Projectintegrations.Include(x => x.Project).Include(x => x.Integration);
+        public IQueryable<Project> ProjectsData => Projects.Include(x => x.Group).Include(x => x.Organization).Include(x => x.Projecttype).Include(x => x.Owner);
+        public IQueryable<Sectionresource> SectionresourcesData => Sectionresources.Include(x => x.Mediafile).Include(x => x.OrgWorkflowStep).Include(x => x.Section).Include(x => x.Project).Include(x => x.Passage);
+        public IQueryable<Sectionresourceuser> SectionresourceusersData => Sectionresourceusers.Include(x => x.SectionResource).Include(x => x.User);
+        public IQueryable<Section> SectionsData => Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber);
     }
     public class AppDbContextResolver : IDbContextResolver
     {

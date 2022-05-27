@@ -49,10 +49,6 @@ namespace SIL.Transcriber.Repositories
             return entities;
         }
 
-        public IQueryable<Project> Get()
-        {
-            return GetAll();
-        }
         //TODO?
         protected IQueryable<Project> FromProjectDate(QueryLayer layer, string projDate)
         { //only project

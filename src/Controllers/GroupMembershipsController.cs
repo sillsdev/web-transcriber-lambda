@@ -6,13 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class GroupmembershipsController : BaseController<GroupMembership>
+    public class GroupmembershipsController : BaseController<Groupmembership>
     {
         public GroupmembershipsController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<GroupMembership,int> resourceService,
+            IResourceService<Groupmembership,int> resourceService,
             ICurrentUserContext currentUserContext,
   
             UserService userService)

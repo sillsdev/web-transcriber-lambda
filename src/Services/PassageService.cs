@@ -13,19 +13,17 @@ namespace SIL.Transcriber.Services
     {
         private readonly HttpContext? HttpContext;
         private readonly PassageRepository MyRepository;
-        MediafileRepository MediafileRepository;
         public PassageService(
             IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
             IJsonApiRequest request, IResourceChangeTracker<Passage> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             IHttpContextAccessor httpContextAccessor,
-            PassageRepository myRepository, MediafileRepository mediafileRepo) 
+            PassageRepository myRepository) 
             : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor,myRepository)
         {
             HttpContext = httpContextAccessor.HttpContext;
             MyRepository = myRepository;
-            MediafileRepository = mediafileRepo;
         }
 
         public IQueryable<Passage> GetBySection(int SectionId)

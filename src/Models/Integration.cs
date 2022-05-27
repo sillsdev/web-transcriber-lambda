@@ -18,7 +18,7 @@ namespace SIL.Transcriber.Models
         public string? Url { get; set; }
 
         [HasMany(PublicName="project-integrations")]
-        public virtual List<ProjectIntegration>? ProjectIntegrations { get; set; }
+        public virtual List<Projectintegration>? ProjectIntegrations { get; set; }
 
         public bool Archived { get; set; }
     }

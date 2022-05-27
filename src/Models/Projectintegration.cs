@@ -5,7 +5,7 @@ namespace SIL.Transcriber.Models
 {
     [Table("projectintegrations")]
 
-    public partial class ProjectIntegration :BaseModel, IArchive
+    public partial class Projectintegration :BaseModel, IArchive
     {
         [Attr(PublicName="project-id")]
         public int ProjectId { get; set; }

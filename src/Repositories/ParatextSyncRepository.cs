@@ -6,7 +6,7 @@ using JsonApiDotNetCore.Resources;
 
 namespace SIL.Logging.Repositories
 {
-    public class ParatextSyncRepository : LoggingDbContextRepository<ParatextSync>
+    public class ParatextSyncRepository : LoggingDbContextRepository<Paratextsync>
     {
         public ParatextSyncRepository(
             ITargetedFields targetedFields, LoggingDbContextResolver contextResolver,

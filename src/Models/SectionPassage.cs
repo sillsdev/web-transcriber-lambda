@@ -3,7 +3,7 @@ using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
-    public class SectionPassage : BaseModel
+    public class Sectionpassage : BaseModel
     {
         [Attr(PublicName="data")]
         public string? Data { get; set; }

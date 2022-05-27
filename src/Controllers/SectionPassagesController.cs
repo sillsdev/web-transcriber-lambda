@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class SectionpassagesController : BaseController<SectionPassage>
+    public class SectionpassagesController : BaseController<Sectionpassage>
     {
         private readonly SectionPassageService _service;
 
@@ -21,7 +21,7 @@ namespace SIL.Transcriber.Controllers
              ILoggerFactory loggerFactory,
              IJsonApiOptions options,
              IResourceGraph resourceGraph,
-             IResourceService<SectionPassage,int> resourceService,
+             IResourceService<Sectionpassage,int> resourceService,
              ICurrentUserContext currentUserContext,
              UserService userService,
              SectionPassageService service)
@@ -31,7 +31,7 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpPost]
-        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] SectionPassage entity, CancellationToken cancelled)
+        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Sectionpassage entity, CancellationToken cancelled)
         {
             return Ok(await _service.PostAsync(entity));
 

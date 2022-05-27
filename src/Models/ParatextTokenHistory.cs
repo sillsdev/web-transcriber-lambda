@@ -5,21 +5,23 @@ using SIL.Transcriber.Utility.Extensions;
 
 namespace SIL.Logging.Models
 {
-    public class ParatextTokenHistory : LogBaseModel
+    public class Paratexttokenhistory : LogBaseModel
     {
-        public ParatextTokenHistory() : base() {
+        public Paratexttokenhistory() : base()
+        {
             AccessToken = "";
             RefreshToken = "";
             Msg = "";
+            UserId = 0;
         }
-        public ParatextTokenHistory(int userid, string access, string refresh, string msg, string errmsg="") : base(userid) {
+        public Paratexttokenhistory(int userid, string access, string refresh, string msg, string errmsg="") : base(userid) {
             AccessToken = access;
             RefreshToken = refresh;
             Msg = msg;
             ErrMsg = errmsg;
             if (access != null)
             {
-                JwtSecurityToken jwt = new JwtSecurityToken(access);
+                JwtSecurityToken jwt = new (access);
                 IssuedAt = jwt.Payload.Iat != null ? EpochTime.DateTime((long)jwt.Payload.Iat) : DateTime.MinValue;
                 ValidTo = jwt.ValidTo;
                 Console.WriteLine(IssuedAt.ToString(), ValidTo.ToString());
@@ -27,12 +29,13 @@ namespace SIL.Logging.Models
         }
 
         [Attr(PublicName="access-token")]
-        public string AccessToken { get; set; }
+        public string AccessToken { get; set; } = "";
+
         [Attr(PublicName="refresh-token")]
-        public string RefreshToken { get; set; }
+        public string RefreshToken { get; set; } = "";
 
         [Attr(PublicName="msg")]
-        public string Msg { get; set; }
+        public string Msg { get; set; } = "";
         [Attr(PublicName="err-msg")]
         public string? ErrMsg { get; set; }
         private DateTime _issued;

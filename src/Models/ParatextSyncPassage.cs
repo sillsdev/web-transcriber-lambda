@@ -2,22 +2,22 @@
 
 namespace SIL.Logging.Models
 {
-    public partial class ParatextSyncPassage : LogBaseModel
+    public partial class Paratextsyncpassage : LogBaseModel
     {
-        public ParatextSyncPassage() : base()
+        public Paratextsyncpassage() : base()
         {
             Reference = "";
             Transcription = "";
             AfterSync = "";
         }
-        public ParatextSyncPassage(int userid, int paratextSyncId, string reference, string transcription, string afterSync) : base(userid)
+        public Paratextsyncpassage(int userid, int paratextSyncId, string reference, string transcription, string afterSync) : base(userid)
         {
             ParatextSyncId = paratextSyncId;
             Reference = reference;
             Transcription = transcription;
             AfterSync = afterSync;
         }
-        public ParatextSyncPassage(int userid,int paratextSyncId, string reference, string err) : base(userid)
+        public Paratextsyncpassage(int userid,int paratextSyncId, string reference, string err) : base(userid)
         {
             ParatextSyncId = paratextSyncId;
             Reference = reference;

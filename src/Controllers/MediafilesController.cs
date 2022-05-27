@@ -68,7 +68,8 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{id}/eaf")]
         public IActionResult GetEaf([FromRoute] int id)
         {
-            string response = _service.EAF(_service.GetAsync(id, new CancellationToken()).Result);
+            Mediafile? mf = _service.GetAsync(id, new CancellationToken()).Result;
+            string response = mf != null ? _service.EAF(mf) : "";
 
            return Ok(response);
         }

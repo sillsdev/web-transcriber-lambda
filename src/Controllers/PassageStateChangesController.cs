@@ -13,13 +13,13 @@ namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PassagestatechangesController : BaseController<PassageStateChange>
+    public class PassagestatechangesController : BaseController<Passagestatechange>
     {
         public PassagestatechangesController(
            ILoggerFactory loggerFactory,
            IJsonApiOptions options,
            IResourceGraph resourceGraph,
-           IResourceService<PassageStateChange, int> resourceService,
+           IResourceService<Passagestatechange, int> resourceService,
            ICurrentUserContext currentUserContext,
  
            UserService userService)

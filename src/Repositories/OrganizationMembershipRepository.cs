@@ -11,7 +11,7 @@ using JsonApiDotNetCore.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrganizationMembershipRepository : BaseRepository<OrganizationMembership>
+    public class OrganizationMembershipRepository : BaseRepository<Organizationmembership>
     {
         readonly private OrganizationRepository OrganizationRepository;
         public OrganizationMembershipRepository(
@@ -27,7 +27,7 @@ namespace SIL.Transcriber.Repositories
         {
             OrganizationRepository = organizationRepository;
         }
-        public IQueryable<OrganizationMembership> UsersOrganizationMemberships(IQueryable<OrganizationMembership> entities)
+        public IQueryable<Organizationmembership> UsersOrganizationMemberships(IQueryable<Organizationmembership> entities)
         {
             if (CurrentUser == null) return entities.Where(e => e.Id == -1);
 
@@ -41,18 +41,18 @@ namespace SIL.Transcriber.Repositories
             }                
             return entities;
         }
-        public IQueryable<OrganizationMembership> ProjectOrganizationMemberships(IQueryable<OrganizationMembership> entities, string projectid)
+        public IQueryable<Organizationmembership> ProjectOrganizationMemberships(IQueryable<Organizationmembership> entities, string projectid)
         {
             IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(dbContext.Organizations, projectid);
             return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
         }
 
         #region overrides
-        public override IQueryable<OrganizationMembership> FromCurrentUser(IQueryable<OrganizationMembership>? entities = null)
+        public override IQueryable<Organizationmembership> FromCurrentUser(IQueryable<Organizationmembership>? entities = null)
         {
             return UsersOrganizationMemberships(entities ?? GetAll());
         }
-        protected override IQueryable<OrganizationMembership> FromProjectList(IQueryable<OrganizationMembership>? entities, string idList)
+        protected override IQueryable<Organizationmembership> FromProjectList(IQueryable<Organizationmembership>? entities, string idList)
         {
             return ProjectOrganizationMemberships(entities??GetAll(), idList);
         }

@@ -16,21 +16,21 @@ namespace SIL.Transcriber.Controllers
 {
     public class StateChange
     {
-        public string Organization { get; set; }
-        public string ProjectName { get; set; }
-        public string Planname { get; set; }
-        public string Passage { get; set; }
-        public string Transcriber { get; set; }
-        public string Editor { get; set; }
-        public string PassageState { get; set; }
-        public string StateModifiedby { get; set; }
+        public string Organization { get; set; } = "";
+        public string ProjectName { get; set; } = "";
+        public string Planname { get; set; } = "";
+        public string Passage { get; set; } = "";
+        public string Transcriber { get; set; } = "";
+        public string Editor { get; set; } = "";
+        public string PassageState { get; set; } = "";
+        public string StateModifiedby { get; set; } = "";
         public DateTime StateUpdated { get; set; }
-        public string Email { get; set; }
+        public string Email { get; set; } = "";
     }
     //HttpReadOnly]
     [Route("api/[controller]")]
     [ApiController]
-    public class StatehistoryController :BaseController<VwPassageStateHistoryEmail>
+    public class StatehistoryController :BaseController<Vwpassagestatehistoryemail>
     {
         readonly private VwPassageStateHistoryEmailService myService;
         public StatehistoryController(

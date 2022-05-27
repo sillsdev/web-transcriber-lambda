@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions;
+using System.Diagnostics;
 
 namespace SIL.Transcriber.Data
 {
@@ -23,7 +24,7 @@ namespace SIL.Transcriber.Data
                 // Replace table names
                 //05/16/22 This doesn't work anymore so use the [Table] schema notation--and now it does...
                 entity.SetTableName(entity.GetTableName()?.ToLower());
-                Console.Write("tablename:{0} {1} {2}", entity.GetTableName(), entity.GetDefaultTableName(), entity.DisplayName());
+                Debug.WriteLine("tablename:{0} {1} {2}", entity.GetTableName(), entity.GetDefaultTableName(), entity.DisplayName());
 
                 // Replace column names            
                 foreach (IMutableProperty property in entity.GetProperties())

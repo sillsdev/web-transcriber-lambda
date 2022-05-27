@@ -7,7 +7,7 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class SectionResourceRepository : BaseRepository<SectionResource>
+    public class SectionResourceRepository : BaseRepository<Sectionresource>
     {
         private readonly SectionRepository SectionRepository;
         public SectionResourceRepository(
@@ -25,25 +25,25 @@ namespace SIL.Transcriber.Repositories
         }
         #region ScopeToUser
         //get my sections in these projects
-        public IQueryable<SectionResource> UsersSectionResources(IQueryable<SectionResource> entities, IQueryable<Project>? projects = null)
+        public IQueryable<Sectionresource> UsersSectionResources(IQueryable<Sectionresource> entities, IQueryable<Project>? projects = null)
         {
             IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, projects);
             return entities.Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr);
         }
 
         #endregion
-        public IQueryable<SectionResource> ProjectSectionResources(IQueryable<SectionResource> entities, string projectid)
+        public IQueryable<Sectionresource> ProjectSectionResources(IQueryable<Sectionresource> entities, string projectid)
         {
 
             return UsersSectionResources(entities, dbContext.Projects.Where(p => p.Id.ToString() == projectid));
         }
 
         #region Overrides
-        protected override IQueryable<SectionResource> FromProjectList(IQueryable<SectionResource>? entities, string idList)
+        protected override IQueryable<Sectionresource> FromProjectList(IQueryable<Sectionresource>? entities, string idList)
         {
             return ProjectSectionResources(entities ?? GetAll(), idList);
         }
-        public override IQueryable<SectionResource> FromCurrentUser(IQueryable<SectionResource>? entities = null)
+        public override IQueryable<Sectionresource> FromCurrentUser(IQueryable<Sectionresource>? entities = null)
         {
             return UsersSectionResources(entities ?? GetAll());
         }

@@ -12,6 +12,7 @@ namespace SIL.Transcriber.Services
 {
     public class InvitationService : BaseService<Invitation>
     {
+        readonly private OrganizationRepository OrganizationRepository;
         readonly private OrganizationService OrganizationService;
         readonly private GroupMembershipService GroupMembershipService;
         readonly private UserRepository UserRepository;
@@ -25,12 +26,14 @@ namespace SIL.Transcriber.Services
             GroupMembershipService groupMembershipService,
             CurrentUserRepository currentUserRepository,
             OrganizationService organizationService,
+            OrganizationRepository organizationRepository,
             UserRepository userRepository,
             InvitationRepository repository
         ) : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, repository)
         {
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
+            OrganizationRepository = organizationRepository;
             UserRepository = userRepository;
             GroupMembershipService = groupMembershipService;
         }
@@ -62,7 +65,8 @@ namespace SIL.Transcriber.Services
         public override async Task<Invitation?> CreateAsync(Invitation entity, CancellationToken cancellationToken)
         {
             //call the Identity api and receive an invitation id
-            Organization? org = await OrganizationService.GetAsync(entity.OrganizationId,cancellationToken);
+            Organization? org =  OrganizationRepository.Get().Where(o => o.Id == entity.OrganizationId).FirstOrDefault();
+            if (org == null) return null;
             entity.Organization = org;
             try
             {
@@ -83,26 +87,29 @@ namespace SIL.Transcriber.Services
         {
             User? currentUser = CurrentUserRepository.GetCurrentUser();
             Invitation? oldentity = GetAsync(id, cancellationToken).Result;
+            if (oldentity == null) return null;
+
             //verify current user is logged in with invitation email
-            if ((entity.Email ?? oldentity?.Email ?? "").ToLower() != (currentUser?.Email ?? "").ToLower())
+            if ((entity.Email ?? oldentity.Email ?? "").ToLower() != (currentUser?.Email ?? "").ToLower())
             {
                 throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity?.Email + "  Currently logged in as " + currentUser?.Email);
             }
-            if (currentUser != null && entity.Accepted && !(oldentity?.Accepted??false))
+            if (currentUser != null && entity.Accepted && !oldentity.Accepted)
             {
                 //add the user to the org
-                Organization org = await OrganizationService.GetAsync(oldentity.OrganizationId, new CancellationToken());
+                Organization? org = OrganizationRepository.Get().Where(o => o.Id == oldentity.OrganizationId).FirstOrDefault();
                 OrganizationService.JoinOrg(org, currentUser, (RoleName)oldentity.RoleId, (RoleName)oldentity.AllUsersRoleId);
                 if (oldentity.GroupId != null)
                 {
                     if (oldentity.GroupRoleId == null)
                         oldentity.GroupRoleId = (int)RoleName.Transcriber;
-                    await GroupMembershipService.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
+                    GroupMembershipService.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
                 }
                 //update the user so all other users in the new org get the user downloaded with the next datachange
                 UserRepository.Refresh( currentUser);
             }
-            return await base.UpdateAsync(id, entity, cancellationToken);
+            //updateAsync now returns null if no changes were actually made :/
+            return await base.UpdateAsync(id, entity, cancellationToken) ?? entity;
         }
     }
 }

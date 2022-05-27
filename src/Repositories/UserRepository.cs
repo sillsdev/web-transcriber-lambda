@@ -37,11 +37,11 @@ namespace SIL.Transcriber.Repositories
         }
          
         
-        public IQueryable<User> OrgMemUsers(IQueryable<User> entities, IQueryable<OrganizationMembership> orgmems)
+        public IQueryable<User> OrgMemUsers(IQueryable<User> entities, IQueryable<Organizationmembership> orgmems)
         {
             var mems =  entities.Join(orgmems, u => u.Id, om => om.UserId, (u, om) => u);
             //add groupby and select because once we join with om, we duplicate users
-            return mems.ToList().GroupBy(u => u.Id).Select(g => g.First()).AsQueryable();
+            return mems.ToList().GroupBy(u => u.Id).Select(g => g.First()).AsAsyncQueryable();
         }
         
         public IQueryable<User> UsersUsers(IQueryable<User> entities)
@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Repositories
         
         public IQueryable<User> ProjectUsers(IQueryable<User> entities, string projectid)
         {
-            IQueryable<OrganizationMembership> orgmems = OrgMemRepository.ProjectOrganizationMemberships(dbContext.Organizationmemberships, projectid);
+            IQueryable<Organizationmembership> orgmems = OrgMemRepository.ProjectOrganizationMemberships(dbContext.Organizationmemberships, projectid);
             return OrgMemUsers(entities, orgmems);
         }
 

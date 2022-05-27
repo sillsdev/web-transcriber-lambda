@@ -4,32 +4,27 @@ using JsonApiDotNetCore.Resources.Annotations;
 namespace SIL.Transcriber.Models
 {
     [Table("organizationmemberships")]
-    public partial class OrganizationMembership :BaseModel, IArchive
+    public partial class Organizationmembership :BaseModel, IArchive
     {
-        public OrganizationMembership():base()
-        {
-            User = new User();
-            Organization = new Organization();
-            Role = new Role();
-        }
+
         [NotMapped]
         [Attr(PublicName="email")]  //user's email?
         public string? Email { get; set; }
 
         [HasOne(PublicName="user")]
-        public virtual User User { get; set; }
+        public virtual User User { get; set; } = null!;
 
         [Attr(PublicName="user-id")]
         public int UserId { get; set; }
 
         [HasOne(PublicName="organization")]
-        public virtual Organization Organization { get; set; }
+        public virtual Organization Organization { get; set; } = null!;
 
         [Attr(PublicName="organization-id")]
         public int OrganizationId { get; set; }
 
         [HasOne(PublicName="role")]
-        public Role Role { get; set; }
+        public Role Role { get; set; } = null!;
         public int RoleId { get; set; }
 
         [NotMapped]

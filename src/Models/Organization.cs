@@ -47,7 +47,7 @@ namespace SIL.Transcriber.Models
 
         [HasMany(PublicName="organization-memberships")]
         [JsonIgnore]
-        public List<OrganizationMembership>? OrganizationMemberships { get; set; }
+        public List<Organizationmembership>? OrganizationMemberships { get; set; }
 
         [JsonIgnore]
         [HasMany(PublicName="groups")]

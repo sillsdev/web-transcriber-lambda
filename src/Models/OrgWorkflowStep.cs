@@ -5,7 +5,7 @@ namespace SIL.Transcriber.Models
 {
     [Table("orgworkflowsteps")]
 
-    public class OrgWorkflowstep : WorkflowStepBase
+    public class Orgworkflowstep : WorkflowStepBase
     {
         public int OrganizationId { get; set; }
         [HasOne(PublicName = "organization")]
@@ -13,6 +13,6 @@ namespace SIL.Transcriber.Models
 
         public int? ParentId { get; set; }
         [HasOne(PublicName = "parent")]
-        public OrgWorkflowstep? Parent { get; set; }  
+        public Orgworkflowstep? Parent { get; set; }  
     }
 }

@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 namespace SIL.Logging.Repositories
 {
-    public class ParatextTokenHistoryRepository : LoggingDbContextRepository<ParatextTokenHistory>
+    public class ParatextTokenHistoryRepository : LoggingDbContextRepository<Paratexttokenhistory>
     {
         public ParatextTokenHistoryRepository(
         ITargetedFields targetedFields, LoggingDbContextResolver contextResolver,

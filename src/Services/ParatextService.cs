@@ -119,7 +119,7 @@ namespace SIL.Transcriber.Services
                 {
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
-                    ParatextTokenService.UpdateAsync(token.Id, token, new CancellationToken());
+                    _ = ParatextTokenService.UpdateAsync(token.Id, token, new CancellationToken()).Result;
                     //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
                 }
                 else
@@ -287,7 +287,7 @@ namespace SIL.Transcriber.Services
                 if (!int.TryParse(inviteId, out int id))
                     return Attempt.Failure("Invalid invitation Id");
 
-                Invitation invite = InvitationService.GetAsync(id, new CancellationToken()).Result;
+                Invitation? invite = InvitationService.GetAsync(id, new CancellationToken()).Result;
                 string response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get,
                     $"users/?emails.address=" +invite.Email);
                 JArray memberObj = JArray.Parse(response);
@@ -624,7 +624,7 @@ namespace SIL.Transcriber.Services
                 {
                     chapter = chapterList.Where(c => c.Book == bookchapter.Book &&  c.Chapter == bookchapter.Chapter).First();
                     //log it
-                    ParatextSync? history = await ParatextSyncService.CreateAsync(new ParatextSync(currentUser?.Id??0, planId, paratextId, bookchapter.ToString(), chapter.OriginalUSX?.ToString()??""), new CancellationToken());
+                    Paratextsync? history = await ParatextSyncService.CreateAsync(new Paratextsync(currentUser?.Id??0, planId, paratextId, bookchapter.ToString(), chapter.OriginalUSX?.ToString()??""), new CancellationToken());
                     //make sure we have the chapter number
                     try
                     {
@@ -643,7 +643,7 @@ namespace SIL.Transcriber.Services
 
                                 chapter.NewUSX = ParatextHelpers.GenerateParatextData(chapter.NewUSX, passage, transcription, addNumbers);
                                 //log it
-                                await ParatextSyncPassageService.CreateAsync(new ParatextSyncPassage(currentUser?.Id??0, history?.Id??0, passage?.Reference??"", transcription, chapter.NewUSX?.ToString()??""), ct);
+                                await ParatextSyncPassageService.CreateAsync(new Paratextsyncpassage(currentUser?.Id??0, history?.Id??0, passage?.Reference??"", transcription, chapter.NewUSX?.ToString()??""), ct);
                                 for (int ix=0; ix < psgMedia.Count; ix++)
                                 {
                                     Mediafile mediafile = psgMedia[ix];
@@ -657,7 +657,7 @@ namespace SIL.Transcriber.Services
                                 //log it
                                 Logger.LogError("Paratext Error passage {0} {1} {2}", ex.Message, passage.Id, passage.Reference);
                                 if (history != null)
-                                    await ParatextSyncPassageService.CreateAsync(new ParatextSyncPassage(currentUser?.Id??0, history.Id, passage?.Reference ?? "", ex.Message+ex.InnerException?.Message?? ""), new CancellationToken());
+                                    await ParatextSyncPassageService.CreateAsync(new Paratextsyncpassage(currentUser?.Id??0, history.Id, passage?.Reference ?? "", ex.Message+ex.InnerException?.Message?? ""), new CancellationToken());
                                 transaction.Rollback();
                                 throw ex;
                             }
@@ -690,7 +690,7 @@ namespace SIL.Transcriber.Services
                     {
                         transaction.Rollback();
                         //log it
-                        ParatextSync? history = await ParatextSyncService.CreateAsync(new ParatextSync(currentUser?.Id??0, planId, paratextId, c.Book+c.Chapter, c.NewUSX?.ToString()??"", ex.Message), new CancellationToken());
+                        Paratextsync? history = await ParatextSyncService.CreateAsync(new Paratextsync(currentUser?.Id??0, planId, paratextId, c.Book+c.Chapter, c.NewUSX?.ToString()??"", ex.Message), new CancellationToken());
                         Logger.LogError("Paratext Error updating Chapter text {0} {1} {2}: {3} {4}", ex.Message, c.Book, c.Chapter, c.OriginalUSX?.ToString(), c.NewUSX?.ToString() ?? "");
                         throw ex;
                     }

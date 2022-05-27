@@ -7,7 +7,7 @@ using JsonApiDotNetCore.Queries;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgWorkflowStepRepository : BaseRepository<OrgWorkflowstep>
+    public class OrgWorkflowStepRepository : BaseRepository<Orgworkflowstep>
     {
         private readonly OrganizationRepository OrganizationRepository;
         public OrgWorkflowStepRepository(
@@ -23,7 +23,7 @@ namespace SIL.Transcriber.Repositories
         {
             OrganizationRepository = organizationRepository;
         }
-        public IQueryable<OrgWorkflowstep> UsersOrgWorkflowSteps(IQueryable<OrgWorkflowstep> entities)
+        public IQueryable<Orgworkflowstep> UsersOrgWorkflowSteps(IQueryable<Orgworkflowstep> entities)
         {
             if (CurrentUser == null) return entities.Where(e => e.Id == -1);
 
@@ -35,18 +35,18 @@ namespace SIL.Transcriber.Repositories
             }
             return entities;
         }
-        public IQueryable<OrgWorkflowstep> ProjectOrgWorkflowSteps(IQueryable<OrgWorkflowstep> entities, string projectid)
+        public IQueryable<Orgworkflowstep> ProjectOrgWorkflowSteps(IQueryable<Orgworkflowstep> entities, string projectid)
         {
             IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(dbContext.Organizations, projectid);
             return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
         }
 
         #region Overrides
-        protected override IQueryable<OrgWorkflowstep> FromProjectList(IQueryable<OrgWorkflowstep>? entities, string idList)
+        protected override IQueryable<Orgworkflowstep> FromProjectList(IQueryable<Orgworkflowstep>? entities, string idList)
         {
             return ProjectOrgWorkflowSteps(entities??GetAll(), idList);
         }
-        public override IQueryable<OrgWorkflowstep> FromCurrentUser(IQueryable<OrgWorkflowstep>? entities = null)
+        public override IQueryable<Orgworkflowstep> FromCurrentUser(IQueryable<Orgworkflowstep>? entities = null)
         {
             return UsersOrgWorkflowSteps(entities ?? GetAll());
         }

@@ -15,15 +15,15 @@ namespace SIL.Transcriber.Models
         public string? Segments { get; set; }
         [Attr(PublicName = "resolved")]
         public bool Resolved { get; set; }
-        public int? RoleId { get; set; }
-        [HasOne(PublicName = "role")]
-        public Role? Role { get; set; }
+        public int? GroupId { get; set; }
+        [HasOne(PublicName = "group")]
+        public Group? Group { get; set; }
         public int? UserId { get; set; }
         [HasOne(PublicName = "user")]
         public User? User { get; set; }
         public int OrgWorkflowStepId { get; set; }
         [HasOne(PublicName = "org-workflow-step")]
-        public OrgWorkflowstep? OrgWorkflowStep { get; set; }
+        public Orgworkflowstep? OrgWorkflowStep { get; set; }
         public int? ArtifactCategoryId { get; set; }
         [HasOne(PublicName = "artifact-category")]
         public Artifactcategory? ArtifactCategory { get; set; }

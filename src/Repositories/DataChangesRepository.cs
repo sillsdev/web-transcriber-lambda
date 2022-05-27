@@ -10,9 +10,9 @@ using JsonApiDotNetCore.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class DataChangesRepository : BaseRepository<DataChanges>
+    public class DatachangesRepository : BaseRepository<Datachanges>
     {
-        public DataChangesRepository(
+        public DatachangesRepository(
                ITargetedFields targetedFields, AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph, IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
@@ -23,11 +23,11 @@ namespace SIL.Transcriber.Repositories
                 constraintProviders, loggerFactory,resourceDefinitionAccessor, currentUserRepository)
         {
         }
-        public override IQueryable<DataChanges> FromCurrentUser(IQueryable<DataChanges>? entities = null)
+        public override IQueryable<Datachanges> FromCurrentUser(IQueryable<Datachanges>? entities = null)
         {
             return entities ?? GetAll();
         }
-        protected override IQueryable<DataChanges> FromProjectList(IQueryable<DataChanges>? entities, string idList)
+        protected override IQueryable<Datachanges> FromProjectList(IQueryable<Datachanges>? entities, string idList)
         {
             return entities??GetAll();
         }

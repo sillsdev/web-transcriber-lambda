@@ -63,10 +63,6 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans = PlanRepository.ProjectPlans(dbContext.Plans, projects);
             return PlansMediafiles(entities, plans);
         }
-        public IQueryable<Mediafile> Get()
-        {
-            return base.GetAll();
-        }
         public Mediafile? GetLatestShared(int passageId)
         {
             return GetAll().Where(p => p.PassageId == passageId && p.ReadyToShare).OrderBy(m => m.VersionNumber).LastOrDefault();
@@ -93,7 +89,7 @@ namespace SIL.Transcriber.Repositories
         }
         public Mediafile? Get(int id)
         {
-            return GetAll().SingleOrDefault(p => p.Id == id);
+            return dbContext.MediafilesData.SingleOrDefault(p => p.Id == id);
         }
 
     }

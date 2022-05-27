@@ -5,9 +5,9 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 namespace SIL.Transcriber.Repositories
 {
-    public class FileResponseRepository : AppDbContextRepository<FileResponse>
+    public class FileresponseRepository : AppDbContextRepository<Fileresponse>
     {
-        public FileResponseRepository(
+        public FileresponseRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph, IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,

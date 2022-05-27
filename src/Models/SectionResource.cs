@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class SectionResource : BaseModel, IArchive
+    public partial class Sectionresource : BaseModel, IArchive
     {
         [Attr(PublicName = "sequence-num")]
         public int SequenceNum { get; set; }
@@ -35,10 +35,10 @@ namespace SIL.Transcriber.Models
 
         public int orgWorkflowStepId { get; set; }
         [HasOne(PublicName = "org-workflow-step")]
-        public OrgWorkflowstep? OrgWorkflowStep { get; set; }
+        public Orgworkflowstep? OrgWorkflowStep { get; set; }
 
         [HasMany(PublicName = "section-resource-users")]
-        public List<SectionResourceUser>? SectionResourceUsers { get; set; }
+        public List<Sectionresourceuser>? SectionResourceUsers { get; set; }
 
         public bool Archived { get; set; }
     }

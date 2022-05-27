@@ -10,7 +10,7 @@ using JsonApiDotNetCore.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class PassageStateChangeRepository : BaseRepository<PassageStateChange>
+    public class PassageStateChangeRepository : BaseRepository<Passagestatechange>
     {
 
         readonly private SectionRepository SectionRepository;
@@ -29,32 +29,32 @@ namespace SIL.Transcriber.Repositories
             SectionRepository = sectionRepository;
         }
 
-        public IQueryable<PassageStateChange> SectionsPassageStateChanges(IQueryable<PassageStateChange> entities, IQueryable<Section> sections)
+        public IQueryable<Passagestatechange> SectionsPassageStateChanges(IQueryable<Passagestatechange> entities, IQueryable<Section> sections)
         {
             return sections.Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Join(entities, p => p.Id, psc => psc.PassageId, (p, psc) => psc);
         }
-        public IQueryable<PassageStateChange> UsersPassageStateChanges(IQueryable<PassageStateChange> entities, IQueryable<Project> projects)
+        public IQueryable<Passagestatechange> UsersPassageStateChanges(IQueryable<Passagestatechange> entities, IQueryable<Project> projects)
         {
             IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, projects);
             return SectionsPassageStateChanges(entities, sections);
         }
-        public IQueryable<PassageStateChange> UsersPassageStateChanges(IQueryable<PassageStateChange> entities, IQueryable<Section>? sections = null)
+        public IQueryable<Passagestatechange> UsersPassageStateChanges(IQueryable<Passagestatechange> entities, IQueryable<Section>? sections = null)
         {
             if (sections == null)
                 sections = SectionRepository.UsersSections(dbContext.Sections);
             return SectionsPassageStateChanges(entities, sections);
         }
-        public IQueryable<PassageStateChange> ProjectPassageStateChanges(IQueryable<PassageStateChange> entities, string projectid)
+        public IQueryable<Passagestatechange> ProjectPassageStateChanges(IQueryable<Passagestatechange> entities, string projectid)
         {
             IQueryable<Section> sections = SectionRepository.ProjectSections(dbContext.Sections, projectid);
             return SectionsPassageStateChanges(entities, sections);
         }
 
-        public override IQueryable<PassageStateChange> FromCurrentUser(IQueryable<PassageStateChange>? entities = null)
+        public override IQueryable<Passagestatechange> FromCurrentUser(IQueryable<Passagestatechange>? entities = null)
         {
             return UsersPassageStateChanges(entities ?? GetAll());
         }
-        protected override IQueryable<PassageStateChange> FromProjectList(IQueryable<PassageStateChange>? entities, string idList)
+        protected override IQueryable<Passagestatechange> FromProjectList(IQueryable<Passagestatechange>? entities, string idList)
         {
             return ProjectPassageStateChanges(entities ?? GetAll(), idList);
         }

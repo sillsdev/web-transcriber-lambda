@@ -26,7 +26,7 @@ namespace SIL.Transcriber.Services
             CurrentUserRepository = currentUserRepository;
         }
 
-        public override async Task<User> GetAsync(int id, CancellationToken cancellationToken)
+        public override async Task<User?> GetAsync(int id, CancellationToken cancellationToken)
         {
             User? CurrentUser = CurrentUserRepository.GetCurrentUser();
             if (id == 0 && CurrentUser != null) 

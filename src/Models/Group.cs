@@ -9,7 +9,7 @@ namespace SIL.Transcriber.Models
         public Group() :base ()
         {
             Name = "";
-            GroupMemberships = new List<GroupMembership>();
+            GroupMemberships = new List<Groupmembership>();
             Projects = new List<Project> ();
             Owner = new Organization();
         }
@@ -33,7 +33,7 @@ namespace SIL.Transcriber.Models
 
         [JsonIgnore]
         [HasMany(PublicName="group-memberships")]
-        public virtual List<GroupMembership> GroupMemberships { get; set; }
+        public virtual List<Groupmembership> GroupMemberships { get; set; }
 
         [NotMapped]
         public int OrganizationId { get => OwnerId; set { } }

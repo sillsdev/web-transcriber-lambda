@@ -41,7 +41,8 @@ namespace SIL.Transcriber.Services
         {
             if (currentuser > 0)
             {
-                return GetChanges(Repo.FromCurrentUser(entities), currentuser, origin, since);
+                //return GetChanges(Repo.FromCurrentUser(entities), currentuser, origin, since);
+                return GetChanges(entities, currentuser, origin, since);
             }
             else
             {
@@ -69,9 +70,9 @@ namespace SIL.Transcriber.Services
         }
         public override async Task<TResource?> CreateAsync(TResource resource, CancellationToken cancellationToken)
         {
-            IReadOnlyCollection<TResource>? all = await base.GetAsync(cancellationToken);
+            IQueryable<TResource> all = Repo.Get();
             //orbit sometimes sends two in a row...see if we already know about this one
-            TResource? x = all.Where(t => t.DateCreated == resource.DateCreated && t.LastModifiedByUser?.Id == resource.LastModifiedByUser?.Id).FirstOrDefault();
+            TResource? x = all.Where(t => t.DateCreated == resource.DateCreated && t.LastModifiedBy == resource.LastModifiedBy).FirstOrDefault();
             if (x == null)
                 return await base.CreateAsync(resource, cancellationToken);
             return x;

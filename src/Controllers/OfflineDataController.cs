@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Controllers
 
     [Route("api/[controller]")]
     [ApiController]
-    public class OfflinedataController : BaseController<FileResponse>
+    public class OfflinedataController : BaseController<Fileresponse>
     {
         private readonly IOfflineDataService _service;
 
@@ -21,7 +21,7 @@ namespace SIL.Transcriber.Controllers
            ILoggerFactory loggerFactory,
            IJsonApiOptions options,
            IResourceGraph resourceGraph,
-           JsonApiResourceService<FileResponse, int> frService,
+           JsonApiResourceService<Fileresponse, int> frService,
            ICurrentUserContext currentUserContext,
            UserService userService,
            IOfflineDataService service)
@@ -31,15 +31,15 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("project/export/{id}/{start}")]
-        public ActionResult<FileResponse> Export([FromRoute] int id, int start)
+        public ActionResult<Fileresponse> Export([FromRoute] int id, int start)
         {
-            FileResponse response = _service.ExportProjectPTF(id, start);
+            Fileresponse response = _service.ExportProjectPTF(id, start);
             return Ok(response);
         }
         [HttpPost("project/export/{exporttype}/{id}/{start}")]
-        public ActionResult<JsonedFileResponse> Export([FromRoute] string exportType, int id, int start, [FromForm] string ids, [FromForm] string artifactType)
+        public ActionResult<JsonedFileresponse> Export([FromRoute] string exportType, int id, int start, [FromForm] string ids, [FromForm] string artifactType)
         {
-            FileResponse response;
+            Fileresponse response;
             Debug.WriteLine(exportType, artifactType, ids);
             switch (exportType)
             {
@@ -61,21 +61,21 @@ namespace SIL.Transcriber.Controllers
             return Ok(response.Twiddle());
         }
         [HttpGet("project/import/{filename}")]
-        public ActionResult<FileResponse> ImportFileUpload([FromRoute] string filename)
+        public ActionResult<Fileresponse> ImportFileUpload([FromRoute] string filename)
         {
             /* get a signed PUT url */
-            FileResponse response = _service.ImportFileURL(filename);
+            Fileresponse response = _service.ImportFileURL(filename);
             return response;
         }
 
         [HttpPut("project/import/{projectid}/{filename}")]
-        public async Task<ActionResult<FileResponse>> ProcessImportFileAsync([FromRoute] int projectid, string filename)
+        public async Task<ActionResult<Fileresponse>> ProcessImportFileAsync([FromRoute] int projectid, string filename)
         {
             return await _service.ImportFileAsync(projectid, filename);
         }
 
         [HttpPut("sync/{filename}")]
-        public async Task<ActionResult<FileResponse>> ProcessSyncFileAsync([FromRoute] string filename)
+        public async Task<ActionResult<Fileresponse>> ProcessSyncFileAsync([FromRoute] string filename)
         {
             return await _service.ImportFileAsync(filename);
         }

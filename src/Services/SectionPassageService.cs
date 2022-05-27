@@ -21,11 +21,11 @@ using System.Threading;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionPassageService : JsonApiResourceService<SectionPassage, int>
+    public class SectionPassageService : JsonApiResourceService<Sectionpassage, int>
     {
         protected SectionPassageRepository MyRepository { get; }
         //protected IJsonApiOptions options { get; }
-        protected ILogger<SectionPassage> Logger { get; set; }
+        protected ILogger<Sectionpassage> Logger { get; set; }
         public SectionPassageService(
             IResourceRepositoryAccessor repositoryAccessor, 
             IQueryLayerComposer queryLayerComposer,
@@ -33,23 +33,23 @@ namespace SIL.Transcriber.Services
             IJsonApiOptions options, 
             ILoggerFactory loggerFactory,
             IJsonApiRequest request, 
-            IResourceChangeTracker<SectionPassage> resourceChangeTracker,
+            IResourceChangeTracker<Sectionpassage> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             SectionPassageRepository myRepository) 
             : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,resourceChangeTracker, resourceDefinitionAccessor)
         {
             this.MyRepository = myRepository;
-            this.Logger = loggerFactory.CreateLogger<SectionPassage>();
+            this.Logger = loggerFactory.CreateLogger<Sectionpassage>();
         }
-        public override async Task<SectionPassage?> GetAsync(int id, CancellationToken cancelled)
+        public override async Task<Sectionpassage> GetAsync(int id, CancellationToken cancelled)
         {
-            SectionPassage entity = await base.GetAsync(id, cancelled); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
+            Sectionpassage entity = await base.GetAsync(id, cancelled); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
             if (entity != null && entity.Complete)
                 return entity;
             return null;
         }
         
-        public async Task<SectionPassage?>? PostAsync(SectionPassage entity)
+        public async Task<Sectionpassage?>? PostAsync(Sectionpassage entity)
         {
             object? input = entity.Data != null ? JsonConvert.DeserializeObject(entity.Data) : null;
             
@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Services
 
             if (data.Count == 0) return entity;
 
-            SectionPassage? inprogress = MyRepository.GetByUUID(entity.Uuid) ;
+            Sectionpassage? inprogress = MyRepository.GetByUUID(entity.Uuid) ;
             if (inprogress != null)
             {
                 if (inprogress.Complete)
@@ -108,9 +108,11 @@ namespace SIL.Transcriber.Services
                 }
                 int lastSectionId = 0;
                 /* process all the passages now */
-                List<JToken> updpass = new List<JToken>();
-                List<Passage> updpassages = new List<Passage>();
-                List<Passage> delpassages = new List<Passage>();
+                List<JToken> updpass = new ();
+                List<Passage> updpassages = new ();
+                List<Passage> delpassages = new ();
+#pragma warning disable CS8604 // Possible null reference argument.
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
                 foreach (JArray item in data)
                 {
                     if ((bool)item[0]["issection"])
@@ -142,6 +144,8 @@ namespace SIL.Transcriber.Services
                         delpassages.Add(MyRepository.GetPassage((int?)item[0]["id"]??0).UpdateFrom(item[0]));
                     }
                 }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+#pragma warning restore CS8604 // Possible null reference argument.
                 if (updpassages.Count > 0)
                 {
                     //Logger.LogInformation($"updpassages {updpassages.Count} {updpassages}");

@@ -67,10 +67,6 @@ namespace SIL.Transcriber.Repositories
         {
             return PlansSections(entities, PlanRepository.ProjectPlans(dbContext.Plans, projectid));
         }
-        public IQueryable<Section> Get()
-        {
-            return GetAll();
-        }
 
         #region Overrides
         public override IQueryable<Section> FromCurrentUser(IQueryable<Section>? entities = null)

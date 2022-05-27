@@ -7,7 +7,7 @@ using JsonApiDotNetCore.Resources;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class SectionPassageRepository : BaseRepository<SectionPassage>
+    public class SectionPassageRepository : BaseRepository<Sectionpassage>
     {
         public SectionPassageRepository(
         ITargetedFields targetedFields, AppDbContextResolver contextResolver,
@@ -22,7 +22,7 @@ namespace SIL.Transcriber.Repositories
 
         }
 
-        public SectionPassage? GetByUUID(Guid uuid)
+        public Sectionpassage? GetByUUID(Guid uuid)
         {
             return dbContext.Sectionpassages.Where(e => e.Uuid == uuid).FirstOrDefault();
         }
@@ -81,11 +81,11 @@ namespace SIL.Transcriber.Repositories
         {
             return dbContext.Sections.First(p => p.Id == id);
         }
-        public override IQueryable<SectionPassage> FromCurrentUser(IQueryable<SectionPassage>? entities = null)
+        public override IQueryable<Sectionpassage> FromCurrentUser(IQueryable<Sectionpassage>? entities = null)
         {
             return entities ?? GetAll();
         }
-        protected override IQueryable<SectionPassage> FromProjectList(IQueryable<SectionPassage>? entities, string idList)
+        protected override IQueryable<Sectionpassage> FromProjectList(IQueryable<Sectionpassage>? entities, string idList)
         {
             return entities ?? GetAll();
         }

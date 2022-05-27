@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Repositories;
 using SIL.Logging.Repositories;
+using SIL.Transcriber.Definitions;
 using Amazon.S3;
 using JsonApiDotNetCore.Serialization.Response;
 using System.Diagnostics.CodeAnalysis;
@@ -16,7 +17,7 @@ using System.Text.Json.Serialization;
 using JsonApiDotNetCore.Diagnostics;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
+using SIL.Transcriber.Serialization;
 
 namespace SIL.Transcriber
 {
@@ -30,6 +31,7 @@ namespace SIL.Transcriber
 
             services.AddScoped<AppDbContextResolver>();
             services.AddScoped<LoggingDbContextResolver>();
+            services.AddScoped<MyResponseModelAdapter>();
 
             // Add the Entity Framework Core DbContext like you normally would.
             services.AddDbContext<AppDbContext>(options =>
@@ -46,7 +48,7 @@ namespace SIL.Transcriber
                 options.DefaultPageSize = null;
                 options.Namespace = "api";
                 options.UseRelativeLinks = true;
-                options.IncludeTotalResourceCount = true;
+                options.IncludeTotalResourceCount = false;
                 options.SerializerOptions.WriteIndented = true;
                 options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.ResourceLinks = JsonApiDotNetCore.Resources.Annotations.LinkTypes.None;
@@ -77,7 +79,6 @@ namespace SIL.Transcriber
 
             services.RegisterRepositories();
             services.RegisterServices();
-
             services.AddSingleton<IS3Service, S3Service>();
             services.AddAWSService<IAmazonS3>();
             return services;
@@ -87,10 +88,10 @@ namespace SIL.Transcriber
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
             services.AddScoped<CommentService>();
-            services.AddScoped<CurrentVersionService>();
+            services.AddScoped<CurrentversionService>();
             services.AddScoped<DataChangeService>();
             services.AddScoped<DiscussionService>();
-            //services.AddScoped<FileResponseService>();
+            //services.AddScoped<FileresponseService>();
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
@@ -118,7 +119,6 @@ namespace SIL.Transcriber
             services.AddScoped<UserVersionService>();
             services.AddScoped<VwPassageStateHistoryEmailService>();
             services.AddScoped<WorkflowStepService>();
-            services.AddScoped<JsonApiWriter>();
         }
         public static void RegisterRepositories(this IServiceCollection services)
         {
@@ -127,11 +127,11 @@ namespace SIL.Transcriber
             services.AddScoped<ArtifactTypeRepository>();
             services.AddScoped<CommentRepository>();
             services.AddScoped<CurrentUserRepository>();
-            services.AddScoped<CurrentVersionRepository>();
+            services.AddScoped<CurrentversionRepository>();
             services.AddScoped<DashboardRepository>();
-            services.AddScoped<DataChangesRepository>();
+            services.AddScoped<DatachangesRepository>();
             services.AddScoped<DiscussionRepository>();
-            //services.AddScoped<FileResponseRepository>();
+            //services.AddScoped<FileresponseRepository>();
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();
             services.AddScoped<IntegrationRepository>();
