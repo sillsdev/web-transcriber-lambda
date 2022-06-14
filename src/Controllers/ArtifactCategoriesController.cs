@@ -13,8 +13,15 @@ namespace SIL.Transcriber.Controllers
             IResourceGraph resourceGraph,
             IResourceService<Artifactcategory, int> resourceService,
             ICurrentUserContext currentUserContext,
-            UserService userService)
-          : base(loggerFactory, options, resourceGraph, resourceService, currentUserContext, userService)
-        { }
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
     }
 }

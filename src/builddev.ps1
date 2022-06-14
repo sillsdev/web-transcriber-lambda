@@ -1,4 +1,4 @@
 dotnet build 
-dotnet lambda package --configuration release --framework netcoreapp3.1 --output-package bin/release/netcoreapp3.1/deploy-package_devy.zip
-serverless deploy -v -s devy
+dotnet lambda package --configuration release --output-package bin/release/net6.0/deploy-package_devy.zip
+serverless deploy --verbose -s devy
 

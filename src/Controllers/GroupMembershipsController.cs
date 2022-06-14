@@ -2,7 +2,6 @@
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -12,12 +11,17 @@ namespace SIL.Transcriber.Controllers
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<Groupmembership,int> resourceService,
+            IResourceService<Groupmembership, int> resourceService,
             ICurrentUserContext currentUserContext,
-  
-            UserService userService)
-          : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext,  userService)
-        { }
-     }
-
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
+    }
 }

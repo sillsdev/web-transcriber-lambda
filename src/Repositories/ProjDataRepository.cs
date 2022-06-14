@@ -6,7 +6,7 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Serialization;
 using Newtonsoft.Json;
-using Microsoft.EntityFrameworkCore;
+using JsonApiDotNetCore.Serialization.Response;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -14,7 +14,9 @@ namespace SIL.Transcriber.Repositories
     {
         protected readonly SectionService SectionService;
         protected readonly SectionRepository SectionRepository;
-        protected readonly MyResponseModelAdapter ResponseModelAdapter;
+        protected readonly IJsonApiOptions _options;
+        protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
+        protected readonly IMetaBuilder _metaBuilder;
 
         public ProjDataRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
@@ -25,15 +27,21 @@ namespace SIL.Transcriber.Repositories
             CurrentUserRepository currentUserRepository,
             SectionService sectionService,
             SectionRepository sectionRepository,
-             MyResponseModelAdapter responseModelAdapter
+             IMetaBuilder metaBuilder,
+              IJsonApiOptions options
           ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
               constraintProviders, loggerFactory,resourceDefinitionAccessor, currentUserRepository)
         {
             SectionService = sectionService;
             SectionRepository = sectionRepository;
-            ResponseModelAdapter = responseModelAdapter;
+            _options = options;
+            _resourceDefinitionAccessor = resourceDefinitionAccessor;
+            _metaBuilder = metaBuilder;
         }
-
+        private string ToJson<TResource>(IEnumerable<TResource> resources) where TResource : class, IIdentifiable
+        {
+            return SerializerHelpers.ResourcesToJson<TResource>(resources, ResourceGraph, _options, _resourceDefinitionAccessor, _metaBuilder);
+        }
         private IQueryable<Projdata> GetData(IQueryable<Projdata> entities, string project, string start, int version = 1)
         {
             string data = "";
@@ -55,32 +63,32 @@ namespace SIL.Transcriber.Repositories
                 //sections
                 IQueryable<Section> sections = dbContext.SectionsData
                     .Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s).Where(x => !x.Archived);
-                if (!CheckAdd(1, SerializeIt(sections, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                if (!CheckAdd(1, ToJson<Section>(sections), dtBail,  ref iStartNext, ref data)) break;
                 
                 //passages
                 IQueryable<Passage> passages = dbContext.PassagesData.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
-                if (!CheckAdd(2, SerializeIt(passages, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                if (!CheckAdd(2, ToJson<Passage>(passages), dtBail,  ref iStartNext, ref data)) break;
 
                 //mediafiles
                 IQueryable<Mediafile> mediafiles = dbContext.MediafilesData.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived);
-                if (!CheckAdd(3, SerializeIt(mediafiles, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                if (!CheckAdd(3, ToJson<Mediafile>(mediafiles), dtBail,  ref iStartNext, ref data)) break;
 
                 //passagestatechanges
-                if (!CheckAdd(4, SerializeIt(dbContext.PassagestatechangesData.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc), ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                if (!CheckAdd(4, ToJson<Passagestatechange>(dbContext.PassagestatechangesData.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc)), dtBail,  ref iStartNext, ref data)) break;
                 if (version > 3)
                 {
                     //discussions
                     IQueryable<Discussion> discussions = dbContext.DiscussionsData.Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d).Where(x => !x.Archived);
-                    if (!CheckAdd(5, SerializeIt(discussions, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                    if (!CheckAdd(5, ToJson<Discussion>(discussions), dtBail,  ref iStartNext, ref data)) break;
 
                     //comments
-                    if (!CheckAdd(6, SerializeIt(dbContext.CommentsData.Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c).Where(x => !x.Archived), ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                    if (!CheckAdd(6, ToJson<Comment>(dbContext.CommentsData.Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c).Where(x => !x.Archived)), dtBail,  ref iStartNext, ref data)) break;
                     
                     IQueryable<Sectionresource> sectionresources = dbContext.SectionresourcesData.Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr).Where(x => !x.Archived);
-                    if (!CheckAdd(7, SerializeIt(sectionresources, ResponseModelAdapter), dtBail,   ref iStartNext, ref data)) break;
+                    if (!CheckAdd(7, ToJson<Sectionresource>(sectionresources), dtBail,   ref iStartNext, ref data)) break;
                    
                     IQueryable<Sectionresourceuser> srusers = dbContext.SectionresourceusersData.Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u).Where(x => !x.Archived);
-                    if (!CheckAdd(8, SerializeIt(srusers, ResponseModelAdapter), dtBail,  ref iStartNext, ref data)) break;
+                    if (!CheckAdd(8, ToJson<Sectionresourceuser>(srusers), dtBail,  ref iStartNext, ref data)) break;
                 }
                 iStartNext = -1; //Done!
             } while (false); //do it once

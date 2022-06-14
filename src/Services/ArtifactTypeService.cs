@@ -10,14 +10,27 @@ namespace SIL.Transcriber.Services
 {
     public class ArtifactTypeService : BaseArchiveService<Artifacttype>
     {
-        public ArtifactTypeService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<Artifacttype> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, ArtifactTypeRepository repository) : 
-            base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
-                resourceChangeTracker, resourceDefinitionAccessor, repository)
-        {
-
-        }
+        public ArtifactTypeService(
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Artifacttype> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            ArtifactTypeRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            ) { }
     }
 }

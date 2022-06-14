@@ -3,25 +3,33 @@ using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using JsonApiDotNetCore.Configuration;
-using Microsoft.Extensions.Logging;
-using System.Threading;
 
 namespace SIL.Transcriber.Controllers
 {
     public class OrganizationsController : BaseController<Organization>
     {
-         public OrganizationsController(
+        public OrganizationsController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<Organization,int> resourceService,
+            IResourceService<Organization, int> resourceService,
             ICurrentUserContext currentUserContext,
-            UserService userService)
-          : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext,  userService)
-        { }
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
 
         [HttpPost]
-        public override async System.Threading.Tasks.Task<IActionResult> PostAsync([FromBody] Organization entity, CancellationToken cancelled)
+        public override async System.Threading.Tasks.Task<IActionResult> PostAsync(
+            [FromBody] Organization entity,
+            CancellationToken cancelled
+        )
         {
             if (entity.Owner == null)
             {
@@ -30,5 +38,4 @@ namespace SIL.Transcriber.Controllers
             return await base.PostAsync(entity, cancelled);
         }
     }
-
 }

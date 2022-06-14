@@ -8,15 +8,21 @@ namespace SIL.Transcriber.Controllers
 {
     public class OrganizationmembershipsController : BaseController<Organizationmembership>
     {
-         public OrganizationmembershipsController(
+        public OrganizationmembershipsController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<Organizationmembership,int> resourceService,
+            IResourceService<Organizationmembership, int> resourceService,
             ICurrentUserContext currentUserContext,
-  
-            UserService userService)
-          : base(loggerFactory, options, resourceGraph, resourceService, currentUserContext,  userService)
-        { }
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
     }
 }

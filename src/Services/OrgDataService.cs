@@ -10,12 +10,27 @@ namespace SIL.Transcriber.Services
 {
     public class OrgDataService : BaseService<Orgdata>
     {
-        public OrgDataService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<Orgdata> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, OrgDataRepository repository)
-        : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, repository)
-        {
-        }
+        public OrgDataService(
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Orgdata> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            OrgDataRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            ) { }
     }
 }

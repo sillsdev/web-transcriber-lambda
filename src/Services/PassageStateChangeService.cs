@@ -11,21 +11,26 @@ namespace SIL.Transcriber.Services
     public class PassageStateChangeService : BaseService<Passagestatechange>
     {
         public PassageStateChangeService(
-            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<Passagestatechange> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, PassageStateChangeRepository repository) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, 
-                  resourceChangeTracker, resourceDefinitionAccessor, repository)
-        {
-        }
-        public Task<Passagestatechange?> CreateAsync(Passage passage, string state, string comment)
-        {
-            return base.CreateAsync(new Passagestatechange { 
-                PassageId = passage.Id, 
-                State = state,
-                Comments = comment}, new CancellationToken());
-        }
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Passagestatechange> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            PassageStateChangeRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            ) { }
     }
-    
 }

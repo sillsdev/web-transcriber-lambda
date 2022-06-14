@@ -24,42 +24,64 @@ namespace SIL.Transcriber.Services
     public class SectionPassageService : JsonApiResourceService<Sectionpassage, int>
     {
         protected SectionPassageRepository MyRepository { get; }
+
         //protected IJsonApiOptions options { get; }
         protected ILogger<Sectionpassage> Logger { get; set; }
+        protected IResourceChangeTracker<Sectionpassage> ResourceChangeTracker;
+
         public SectionPassageService(
-            IResourceRepositoryAccessor repositoryAccessor, 
+            IResourceRepositoryAccessor repositoryAccessor,
             IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, 
-            IJsonApiOptions options, 
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
             ILoggerFactory loggerFactory,
-            IJsonApiRequest request, 
+            IJsonApiRequest request,
             IResourceChangeTracker<Sectionpassage> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
-            SectionPassageRepository myRepository) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,resourceChangeTracker, resourceDefinitionAccessor)
+            SectionPassageRepository myRepository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor
+            )
         {
             this.MyRepository = myRepository;
             this.Logger = loggerFactory.CreateLogger<Sectionpassage>();
+            ResourceChangeTracker = resourceChangeTracker;
         }
-        public override async Task<Sectionpassage> GetAsync(int id, CancellationToken cancelled)
+
+#pragma warning disable CS8609 // Nullability of reference types in return type doesn't match overridden member.
+        public override async Task<Sectionpassage?> GetAsync(int id, CancellationToken cancelled)
+#pragma warning restore CS8609 // Nullability of reference types in return type doesn't match overridden member.
         {
             Sectionpassage entity = await base.GetAsync(id, cancelled); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
             if (entity != null && entity.Complete)
                 return entity;
             return null;
         }
-        
-        public async Task<Sectionpassage?>? PostAsync(Sectionpassage entity)
+
+        public override async Task<Sectionpassage?> CreateAsync(
+            Sectionpassage entity,
+            CancellationToken cancellationToken
+        )
         {
             object? input = entity.Data != null ? JsonConvert.DeserializeObject(entity.Data) : null;
-            
-            if (input==null || !input.GetType().IsAssignableFrom(typeof(JArray))) throw new Exception("Invalid input");
+
+            if (input == null || !input.GetType().IsAssignableFrom(typeof(JArray)))
+                throw new Exception("Invalid input");
 
             JArray data = (JArray)input;
 
-            if (data.Count == 0) return entity;
+            if (data.Count == 0)
+                return entity;
 
-            Sectionpassage? inprogress = MyRepository.GetByUUID(entity.Uuid) ;
+            Sectionpassage? inprogress = MyRepository.GetByUUID(entity.Uuid);
             if (inprogress != null)
             {
                 if (inprogress.Complete)
@@ -76,25 +98,34 @@ namespace SIL.Transcriber.Services
             entity.DateCreated = DateTime.UtcNow;
             try
             {
-                await CreateAsync(entity, new CancellationToken());
+                Sectionpassage? newentity = await base.CreateAsync(entity, new CancellationToken());
+                if (newentity == null)
+                    return null;
+                entity = newentity;
             }
             catch (Exception ex)
             {
-                Logger.LogError($"{ex}");
+                Logger.LogError("{ex}", ex);
                 if (ex.InnerException != null && ex.InnerException.Message.Contains("23505"))
                     return null;
             }
             using IDbContextTransaction transaction = MyRepository.BeginTransaction();
             try
             {
-                IEnumerable<JToken> updsecs = data.Where(d => ((bool?)d[0]?["issection"]??false) && ((bool?)d[0]?["changed"]??false));
+                IEnumerable<JToken> updsecs = data.Where(
+                    d => ((bool?)d[0]?["issection"] ?? false) && ((bool?)d[0]?["changed"] ?? false)
+                );
 
                 //add all sections
-                List<Section> updsections = new List<Section>();
+                List<Section> updsections = new();
 
                 foreach (JArray item in updsecs)
                 {
-                    updsections.Add((item[0]?["id"]??"").ToString() != "" ? MyRepository.GetSection((int?)item[0]["id"]??0).UpdateFrom(item[0]) : new Section().UpdateFrom(item[0], entity.PlanId));
+                    updsections.Add(
+                        (item[0]?["id"] ?? "").ToString() != ""
+                            ? MyRepository.GetSection((int?)item[0]["id"] ?? 0).UpdateFrom(item[0])
+                            : new Section().UpdateFrom(item[0], entity.PlanId)
+                    );
                 }
                 if (updsections.Count > 0)
                 {
@@ -108,16 +139,16 @@ namespace SIL.Transcriber.Services
                 }
                 int lastSectionId = 0;
                 /* process all the passages now */
-                List<JToken> updpass = new ();
-                List<Passage> updpassages = new ();
-                List<Passage> delpassages = new ();
+                List<JToken> updpass = new();
+                List<Passage> updpassages = new();
+                List<Passage> delpassages = new();
 #pragma warning disable CS8604 // Possible null reference argument.
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
                 foreach (JArray item in data)
                 {
                     if ((bool)item[0]["issection"])
                     {
-                        if (item[0]["id"] != null && item[0]["id"].ToString() != "")  //saving in chunks may not have saved this section...passages will be marked unchanged
+                        if (item[0]["id"] != null && item[0]["id"].ToString() != "") //saving in chunks may not have saved this section...passages will be marked unchanged
                         {
                             lastSectionId = (int)item[0]["id"];
                             if (item.Count > 1)
@@ -125,23 +156,39 @@ namespace SIL.Transcriber.Services
                                 if ((bool)item[1]["changed"])
                                 {
                                     updpass.Add(item);
-                                    updpassages.Add(item[1]["id"] != null && item[1]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage().UpdateFrom(item[1], lastSectionId));
+                                    updpassages.Add(
+                                        item[1]["id"] != null && item[1]["id"].ToString() != ""
+                                            ? MyRepository
+                                                .GetPassage((int)item[1]["id"])
+                                                .UpdateFrom(item[1])
+                                            : new Passage().UpdateFrom(item[1], lastSectionId)
+                                    );
                                 }
                                 else if (item[1]["deleted"] != null && (bool)item[1]["deleted"])
                                 {
-                                    delpassages.Add(MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]));
+                                    delpassages.Add(
+                                        MyRepository
+                                            .GetPassage((int)item[1]["id"])
+                                            .UpdateFrom(item[1])
+                                    );
                                 }
                             }
                         }
                     }
-                    else if ((bool?)item[0]["changed"]??false)
+                    else if ((bool?)item[0]["changed"] ?? false)
                     {
                         updpass.Add(item);
-                        updpassages.Add((item[0]?["id"]?.ToString() ?? "") != "" ? MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]) : new Passage().UpdateFrom(item[0], lastSectionId));
+                        updpassages.Add(
+                            (item[0]?["id"]?.ToString() ?? "") != ""
+                                ? MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0])
+                                : new Passage().UpdateFrom(item[0], lastSectionId)
+                        );
                     }
-                    else if (item[0]["deleted"] != null && ((bool?)item[0]["deleted"]??false))
+                    else if (item[0]["deleted"] != null && ((bool?)item[0]["deleted"] ?? false))
                     {
-                        delpassages.Add(MyRepository.GetPassage((int?)item[0]["id"]??0).UpdateFrom(item[0]));
+                        delpassages.Add(
+                            MyRepository.GetPassage((int?)item[0]["id"] ?? 0).UpdateFrom(item[0])
+                        );
                     }
                 }
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
@@ -163,31 +210,33 @@ namespace SIL.Transcriber.Services
                     MyRepository.BulkDeletePassages(delpassages);
                     delpassages.ForEach(p => MyRepository.UpdateSectionModified(p.SectionId));
                 }
-                IEnumerable<JToken> delsecs = data.Where(d => ((bool?)d[0]?["issection"]??false) && ((bool?)d[0]?["deleted"]??false));
-                List<Section> delsections = new ();
+                IEnumerable<JToken> delsecs = data.Where(
+                    d => ((bool?)d[0]?["issection"] ?? false) && ((bool?)d[0]?["deleted"] ?? false)
+                );
+                List<Section> delsections = new();
                 foreach (JArray item in delsecs)
                 {
-                    delsections.Add(MyRepository.GetSection((int?)item[0]["id"]??0));
+                    delsections.Add(MyRepository.GetSection((int?)item[0]["id"] ?? 0));
                 }
                 MyRepository.BulkDeleteSections(delsections);
                 MyRepository.UpdatePlanModified(entity.PlanId);
                 transaction.Commit();
                 entity.Data = JsonConvert.SerializeObject(data);
                 entity.Complete = true;
-                //TODO
-                //ResourceContext contextEntity = ResourceGraph.GetResourceContext("sectionpassages");
-                //contextEntity.Attributes.Where(a => a.PublicName == "data").First() = entity.Data;
                 await UpdateAsync(entity.Id, entity, new CancellationToken());
                 return entity;
             }
             catch (Exception ex)
             {
-                Logger.LogCritical($"Insert Error {ex}");
+                Logger.LogCritical("Insert Error {ex}", ex);
                 /* I'm giving up...let the next one try */
                 transaction.Rollback();
                 await MyRepository.DeleteAsync(entity, entity.Id, new CancellationToken());
-                throw new JsonApiException(new ErrorObject(System.Net.HttpStatusCode.InternalServerError), new Exception(ex.Message));
+                throw new JsonApiException(
+                    new ErrorObject(System.Net.HttpStatusCode.InternalServerError),
+                    new Exception(ex.Message)
+                );
             }
         }
-     }
+    }
 }

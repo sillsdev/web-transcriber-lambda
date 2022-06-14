@@ -56,9 +56,7 @@ namespace SIL.Transcriber.Serialization
                 queryStringAccessor);
 
             Document document = adapter.Convert(resources);
-            var so = options.SerializerOptions;
-            so.WriteIndented = false;
-            return JsonSerializer.Serialize(document, so);
+            return JsonSerializer.Serialize(document, options.SerializerOptions);
         }
 
         /// <summary>

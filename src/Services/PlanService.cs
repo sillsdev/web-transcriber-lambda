@@ -21,20 +21,27 @@ namespace SIL.Transcriber.Services
     public class PlanService : BaseArchiveService<Plan>
     {
         public PlanService(
-            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<Plan> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, PlanRepository myRepository,
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Plan> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            PlanRepository myRepository,
             IEnumerable<IQueryConstraintProvider> constraintProviders
-)           : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
-                resourceChangeTracker, resourceDefinitionAccessor, myRepository)
-        {
-        }
-        
-        public Plan? Get(int id)
-        {
-            return GetAsync(id, new CancellationToken()).Result;
-        }
-
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                myRepository
+            ) { }
     }
 }

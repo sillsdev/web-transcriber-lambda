@@ -93,6 +93,10 @@ namespace SIL.Transcriber.Models
         {
             get { return Transcriptionstate == "approved" && !Archived; }
         }
+        public bool IsVernacular
+        {
+            get { return ArtifactTypeId is null; }
+        }
 
     }
     [Table("mediafiles")]

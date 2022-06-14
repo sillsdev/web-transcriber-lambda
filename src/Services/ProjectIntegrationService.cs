@@ -16,13 +16,26 @@ namespace SIL.Transcriber.Services
     public class ProjectIntegrationService : BaseService<Projectintegration>
     {
         public ProjectIntegrationService(
-           IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<Projectintegration> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, ProjectIntegrationRepository repository) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, 
-                  resourceChangeTracker, resourceDefinitionAccessor,repository)
-        {
-        }
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Projectintegration> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            ProjectIntegrationRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            ) { }
     }
 }

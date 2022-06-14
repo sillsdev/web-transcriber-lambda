@@ -23,12 +23,20 @@ namespace SIL.Transcriber.Controllers
             IResourceService<T, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-            ) : base(loggerFactory, options, resourceGraph, resourceService, currentUserContext, userService)
-        {
-        }
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
     }
+
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class BaseController<T, TId> : JsonApiController<T, TId> where T : class, IIdentifiable<TId>
+    public class BaseController<T, TId> : JsonApiController<T, TId>
+        where T : class, IIdentifiable<TId>
     {
         protected IResourceService<T, TId> service;
         protected UserService userService;
@@ -43,7 +51,7 @@ namespace SIL.Transcriber.Controllers
             IResourceService<T, TId> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-            ) : base(options, resourceGraph, loggerFactory, resourceService)
+        ) : base(options, resourceGraph, loggerFactory, resourceService)
         {
             this.service = resourceService;
             this.userService = userService;
@@ -56,18 +64,18 @@ namespace SIL.Transcriber.Controllers
         {
             get
             {
-                if (_currentUser == null && HttpContext != null && HttpContext.Request.Headers[HeaderNames.Authorization].Count > 0)
+                if (_currentUser == null) // && HttpContext != null && HttpContext.Request.Headers[HeaderNames.Authorization].Count > 0)
                 {
                     // current user has not yet been found for this request.
                     // find or create because users are managed by auth0 and
                     // creation isn't proxied through the api.
-                    _currentUser = FindOrCreateCurrentUser().Result;
+                    _currentUser = FindOrCreateCurrentUser();
                 }
                 return _currentUser;
             }
         }
 
-        private async Task<User?> FindOrCreateCurrentUser()
+        private User? FindOrCreateCurrentUser()
         {
             User? existing = userService.GetCurrentUser();
 
@@ -76,25 +84,29 @@ namespace SIL.Transcriber.Controllers
                 return existing;
             }
 
-            if (currentUserContext.Auth0Id == null || currentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", ""))
+            if (
+                currentUserContext.Auth0Id == null
+                || currentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", "")
+            )
             {
                 Console.WriteLine("No Auth0 user.");
                 return null;
             }
 
-            User newUser = new()
-            {
-                ExternalId = currentUserContext.Auth0Id,
-                Email = currentUserContext.Email,
-                Name = currentUserContext.Name,
-                GivenName = currentUserContext.GivenName,
-                FamilyName = currentUserContext.FamilyName,
-                AvatarUrl = currentUserContext.Avatar,
-                DigestPreference = 1,  // 0=none, >1=daily  room for future preferences
-                NewsPreference = false,
-            };
-
-            User? newEntity = await userService.CreateAsync(newUser, new System.Threading.CancellationToken());
+            User newUser =
+                new()
+                {
+                    ExternalId = currentUserContext.Auth0Id,
+                    Email = currentUserContext.Email,
+                    Name = currentUserContext.Name,
+                    GivenName = currentUserContext.GivenName,
+                    FamilyName = currentUserContext.FamilyName,
+                    AvatarUrl = currentUserContext.Avatar,
+                    DigestPreference = 1, // 0=none, >1=daily  room for future preferences
+                    NewsPreference = false,
+                    DateCreated = DateTime.UtcNow,
+                };
+            User? newEntity = userService.CreateUser(newUser);
             Console.WriteLine("New user created.");
 
             return newEntity;

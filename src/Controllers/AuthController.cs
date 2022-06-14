@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
@@ -14,10 +13,8 @@ namespace SIL.Transcriber.Controllers
         protected IAuthService service;
         protected ICurrentUserContext currentUserContext;
 
-        public AuthController(
-            ICurrentUserContext currentUserContext,
-            IAuthService authService)
-           : base()
+        public AuthController(ICurrentUserContext currentUserContext, IAuthService authService)
+            : base()
         {
             this.service = authService;
             this.currentUserContext = currentUserContext;
@@ -28,6 +25,5 @@ namespace SIL.Transcriber.Controllers
         {
             return service.ResendVerification(currentUserContext.Auth0Id);
         }
-
     }
 }

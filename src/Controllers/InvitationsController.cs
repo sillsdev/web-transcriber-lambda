@@ -1,8 +1,6 @@
 ﻿using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using Microsoft.Extensions.Logging;
 using JsonApiDotNetCore.Configuration;
 
 namespace SIL.Transcriber.Controllers
@@ -10,16 +8,20 @@ namespace SIL.Transcriber.Controllers
     public class InvitationsController : BaseController<Invitation>
     {
         public InvitationsController(
-           ILoggerFactory loggerFactory,
-           IJsonApiOptions options,
-           IResourceGraph resourceGraph,
-            IResourceService<Invitation,int> resourceService,
-           ICurrentUserContext currentUserContext,
- 
-           UserService userService)
-        : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext,  userService)
-        {
-        }
-
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Invitation, int> resourceService,
+            ICurrentUserContext currentUserContext,
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
     }
 }

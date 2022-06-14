@@ -80,7 +80,10 @@
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
     <Compile Remove="Repositories\PassageSectionRepository.cs" />
+    <Compile Remove="Serializers\ArgumentGuard.cs" />
+    <Compile Remove="Serializers\CollectionConverter.cs" />
     <Compile Remove="Serializers\JsonInvalidAttributeInfo.cs" />
+    <Compile Remove="Serializers\MyResponseModelAdapter.cs" />
     <Compile Remove="Serializers\MyResponseResourceObjectBuilder.cs" />
     <Compile Remove="Serializers\ResourceObjectConverter.cs" />
     <Compile Remove="Serializers\SingleOrManyDataConverterFactory.cs" />
@@ -92,7 +95,6 @@
     <Compile Remove="Services\PlantypeService.cs" />
     <Compile Remove="Services\ProjecttypeService.cs" />
     <Compile Remove="Services\RoleService.cs" />
-    <Compile Remove="Startup.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -109,22 +111,19 @@
 
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="7.2.0" />
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="1.3.1" />
     <PackageReference Include="Amazon.Lambda.Core" Version="2.1.0" />
     <PackageReference Include="Auth0.ManagementApi" Version="7.16.0" />
     <PackageReference Include="AWS.Logger.AspNetCore" Version="3.3.0" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.2" />
-    <PackageReference Include="AWSSDK.Lambda" Version="3.7.13" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.9.2" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.158" />
+    <PackageReference Include="AWSSDK.Lambda" Version="3.7.13.13" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.9.15" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.171" />
     <PackageReference Include="IdentityModel" Version="6.0.0" />
-    <PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
+    <PackageReference Include="JsonApiDotNetCore" Version="5.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.5" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.4" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\externalrepos\JsonApiDotNetCore\src\JsonApiDotNetCore\JsonApiDotNetCore.csproj" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.1" />
   </ItemGroup>
 
 </Project>

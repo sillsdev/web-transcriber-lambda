@@ -9,14 +9,17 @@ namespace SIL.Transcriber.Definitions
 {
     public class UserDefinition : BaseDefinition<User>
     {
-        public UserDefinition(IResourceGraph resourceGraph, ILoggerFactory loggerFactory,
-           IJsonApiRequest Request) : base(resourceGraph, loggerFactory, Request) { }
+        public UserDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
 
-        public override IImmutableSet<IncludeElementExpression> OnApplyIncludes(IImmutableSet<IncludeElementExpression> existingIncludes)
+        public override IImmutableSet<IncludeElementExpression> OnApplyIncludes(
+            IImmutableSet<IncludeElementExpression> existingIncludes
+        )
         {
             return existingIncludes;
-          
         }
     }
 }
-

@@ -10,22 +10,38 @@ namespace SIL.Transcriber.Repositories
     public class ActivitystateRepository : BaseRepository<Activitystate>
     {
         public ActivitystateRepository(
-            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
-                loggerFactory, resourceDefinitionAccessor, currentUserRepository)
-        {
-        }
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            ) { }
+
         #region Overrides
-        protected override IQueryable<Activitystate> FromProjectList(IQueryable<Activitystate>? entities, string idList)
+        protected override IQueryable<Activitystate> FromProjectList(
+            IQueryable<Activitystate>? entities,
+            string idList
+        )
         {
             return entities ?? GetAll();
         }
-        public override IQueryable<Activitystate> FromCurrentUser(IQueryable<Activitystate>? entities = null)
+
+        public override IQueryable<Activitystate> FromCurrentUser(
+            IQueryable<Activitystate>? entities = null
+        )
         {
             return entities ?? GetAll();
         }

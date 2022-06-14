@@ -12,6 +12,7 @@ namespace SIL.Transcriber.Models
         {
             Hold = false;
         }
+
         /*
         public Passage(JToken item, int sectionId) : base()
         {
@@ -24,9 +25,12 @@ namespace SIL.Transcriber.Models
             Book = item["book"]?.ToString() ?? "";
             Reference = item["reference"]?.ToString() ?? "";
             Title = item["title"]?.ToString() ?? "";
-            Sequencenum = int.TryParse(item["sequencenum"]?.ToString()??"", out int tryint) ? tryint : 0;
+            Sequencenum = int.TryParse(item["sequencenum"]?.ToString() ?? "", out int tryint)
+                ? tryint
+                : 0;
             return this;
         }
+
         public Passage UpdateFrom(JToken item, int sectionId)
         {
             UpdateFrom(item);
@@ -34,42 +38,49 @@ namespace SIL.Transcriber.Models
             State = "noMedia";
             return this;
         }
-        [Attr(PublicName="sequencenum")]
+
+        [Attr(PublicName = "sequencenum")]
         public int Sequencenum { get; set; }
-        
-        [Attr(PublicName="book")]
+
+        [Attr(PublicName = "book")]
         public string? Book { get; set; }
-        
-        [Attr(PublicName="reference")]
+
+        [Attr(PublicName = "reference")]
         public string? Reference { get; set; }
-        
-        [Attr(PublicName="state")]
+
+        [Attr(PublicName = "state")]
         public string? State { get; set; }
-        
-        [Attr(PublicName="hold")]
+
+        [Attr(PublicName = "hold")]
         public bool Hold { get; set; }
 
-        [Attr(PublicName="title")]
+        [Attr(PublicName = "title")]
         public string? Title { get; set; }
 
-        [Attr(PublicName="last-comment")]
+        [Attr(PublicName = "last-comment")]
         public string? LastComment { get; set; }
 
-        [Attr(PublicName="section-id")]
+        [Attr(PublicName = "section-id")]
         public int SectionId { get; set; }
 
-        [HasOne(PublicName="section")]
+        [HasOne(PublicName = "section")]
         public virtual Section? Section { get; set; }
 
         public int? OrgWorkflowStepId { get; set; }
 
-        [HasOne(PublicName="org-workflow-step")]
+        [HasOne(PublicName = "org-workflow-step")]
         public Orgworkflowstep? OrgWorkflowStep { get; set; }
 
-        [Attr(PublicName="step-complete")]
+        [Attr(PublicName = "step-complete")]
         [Column(TypeName = "jsonb")]
         public string? StepComplete { get; set; } //json
-     
+
+        [Attr(PublicName = "plan-id")]
+        [NotMapped]
+        public int PlanId
+        {
+            get { return Section?.PlanId ?? 0; }
+        }
         public bool Archived { get; set; }
 
         public bool ReadyToSync //backward compatibility
@@ -77,14 +88,23 @@ namespace SIL.Transcriber.Models
             get { return State == "approved" && !Archived; }
         }
 
-        private int startChapter = 0, endChapter = 0, startVerse = 0, endVerse = 0;
+        private int startChapter = 0,
+            endChapter = 0,
+            startVerse = 0,
+            endVerse = 0;
         public int StartChapter
         {
             get
             {
                 if (startChapter > 0 || Reference == null)
                     return startChapter;
-                ParseReference(Reference, out startChapter, out endChapter, out startVerse, out endVerse);
+                ParseReference(
+                    Reference,
+                    out startChapter,
+                    out endChapter,
+                    out startVerse,
+                    out endVerse
+                );
                 return startChapter;
             }
         }
@@ -94,9 +114,14 @@ namespace SIL.Transcriber.Models
             {
                 if (endChapter > 0 || Reference == null)
                     return endChapter;
-                ParseReference(Reference, out startChapter, out endChapter, out startVerse, out endVerse);
+                ParseReference(
+                    Reference,
+                    out startChapter,
+                    out endChapter,
+                    out startVerse,
+                    out endVerse
+                );
                 return endChapter;
-
             }
         }
         public int StartVerse
@@ -105,9 +130,14 @@ namespace SIL.Transcriber.Models
             {
                 if (startVerse > 0 || Reference == null)
                     return startVerse;
-                ParseReference(Reference, out startChapter, out endChapter, out startVerse, out endVerse);
+                ParseReference(
+                    Reference,
+                    out startChapter,
+                    out endChapter,
+                    out startVerse,
+                    out endVerse
+                );
                 return startVerse;
-
             }
         }
         public int EndVerse
@@ -116,7 +146,13 @@ namespace SIL.Transcriber.Models
             {
                 if (endVerse > 0 || Reference == null)
                     return endVerse;
-                ParseReference(Reference, out startChapter, out endChapter, out startVerse, out endVerse);
+                ParseReference(
+                    Reference,
+                    out startChapter,
+                    out endChapter,
+                    out startVerse,
+                    out endVerse
+                );
                 return endVerse;
             }
         }
@@ -125,7 +161,7 @@ namespace SIL.Transcriber.Models
             get
             {
                 if (StartChapter != EndChapter)
-                    return Reference??"";
+                    return Reference ?? "";
                 if (StartVerse != EndVerse)
                     return StartVerse.ToString() + "-" + EndVerse.ToString();
                 return StartVerse.ToString();
@@ -146,7 +182,14 @@ namespace SIL.Transcriber.Models
             }
             return int.TryParse(reference, out verse);
         }
-        private bool ParseReference(string reference, out int startChapter, out int endChapter, out int startVerse, out int endVerse)
+
+        private bool ParseReference(
+            string reference,
+            out int startChapter,
+            out int endChapter,
+            out int startVerse,
+            out int endVerse
+        )
         {
             bool ok;
             int dash = reference.IndexOf("-");

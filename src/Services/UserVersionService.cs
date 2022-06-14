@@ -11,17 +11,33 @@ namespace SIL.Transcriber.Services
     public class UserVersionService : BaseService<Userversion>
     {
         public UserVersionService(
-            IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<Userversion> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, UserVersionRepository repository) 
-            : base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request, resourceChangeTracker, resourceDefinitionAccessor, repository)
-        {
-        }
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Userversion> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            UserVersionRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            ) { }
+
         public Userversion StoreVersion(string version)
         {
             return StoreVersion(version, "unknown");
         }
+
         public Userversion StoreVersion(string version, string env)
         {
             return ((UserVersionRepository)Repo).CreateOrUpdate(version, env);

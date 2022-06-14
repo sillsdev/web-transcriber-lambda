@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
@@ -15,4 +14,4 @@ namespace SIL.Transcriber.Controllers
             return Ok(true);
         }
     }
-} 
+}

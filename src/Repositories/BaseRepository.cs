@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using JsonApiDotNetCore.Resources;
+﻿using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Configuration;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
@@ -8,28 +7,34 @@ using JsonApiDotNetCore.Queries.Expressions;
 using System.Text.Json;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using JsonApiDotNetCore.Serialization.JsonConverters;
-using SIL.Transcriber.Serialization;
-using JsonApiDotNetCore.Serialization.Response;
-using JsonApiDotNetCore.Middleware;
-using JsonApiDotNetCore.Serialization.Objects;
 
 namespace SIL.Transcriber.Repositories
 {
-    public abstract class BaseRepository<TEntity> : BaseRepository<TEntity, int> where TEntity: BaseModel
+    public abstract class BaseRepository<TEntity> : BaseRepository<TEntity, int>
+        where TEntity : BaseModel
     {
-        public BaseRepository(ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+        public BaseRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-             )
-            : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
-                  constraintProviders, loggerFactory, resourceDefinitionAccessor,  currentUserRepository)
-        {
-        }
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            ) { }
     }
-    
+
     public abstract class BaseRepository<TEntity, TId> : AppDbContextRepository<TEntity>
         where TEntity : BaseModel, IIdentifiable<TId>
     {
@@ -39,20 +44,32 @@ namespace SIL.Transcriber.Repositories
         protected readonly AppDbContext dbContext;
         protected ILogger<TEntity> Logger { get; set; }
         protected readonly IEnumerable<IQueryConstraintProvider> ConstraintProviders;
-        protected readonly JsonSerializerOptions Options = new()
-        {
-           // WriteIndented = true,
-            //PropertyNamingPolicy = new CamelToDashNamingPolicy(),
-        };
+        protected readonly JsonSerializerOptions Options =
+            new()
+            {
+                // WriteIndented = true,
+                //PropertyNamingPolicy = new CamelToDashNamingPolicy(),
+            };
 
-        public BaseRepository(ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+        public BaseRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
-                constraintProviders, loggerFactory,resourceDefinitionAccessor)
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor
+            )
         {
             dbContext = (AppDbContext)contextResolver.GetContext();
             CurrentUserRepository = currentUserRepository;
@@ -64,65 +81,51 @@ namespace SIL.Transcriber.Repositories
             ResourceDefinitionAccessor = resourceDefinitionAccessor;
             ResourceGraph = resourceGraph;
         }
+
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {
             return dbContext.Database.BeginTransaction();
         }
-        public User? CurrentUser {
-            get {
-                return CurrentUserRepository.GetCurrentUser();
-            }
+
+        public User? CurrentUser
+        {
+            get { return CurrentUserRepository.GetCurrentUser(); }
         }
+
         #region MultipleData //orgdata, projdata
         protected string InitData(bool withBracket = true)
         {
             return "{\"data\":" + (withBracket ? "[" : "");
         }
+
         protected string FinishData(bool withBracket = true)
         {
             return (withBracket ? "]" : "") + "}";
         }
-        protected string SerializeIt(IEnumerable<IIdentifiable> resources, MyResponseModelAdapter ResponseModelAdapter)
-        {
-            SingleOrManyData<ResourceObject> returnResources = new();
-            if (!resources.Any()) return "[]";
-            
-            ResourceType? resourceType = ResourceGraph.FindResourceType(resources.First().GetType());
-            if (resourceType != null)
-            {
 
-                IImmutableSet<IncludeElementExpression> includeElements = SerializerHelpers.GetSingleIncludes(resourceType);
-                ResourceObjectTreeNode? rootNode = ResourceObjectTreeNode.CreateRoot();
-
-                foreach (IIdentifiable resource in resources)
-                {
-                    ResponseModelAdapter.TraverseResource(resource, resourceType, EndpointKind.Primary, includeElements, rootNode, null);
-                }
-
-                ResponseModelAdapter.PopulateRelationshipsInTree(rootNode, EndpointKind.Primary);
-
-                IReadOnlyList<ResourceObject> resourceObjects = rootNode.GetResponseData();
-                returnResources = new(resourceObjects);
-            }
-            
-            return JsonSerializer.Serialize(returnResources, Options);
-        }
- 
-        protected bool CheckAdd(int check, string thisData, DateTime dtBail, ref int start, ref string data)
+        protected bool CheckAdd(
+            int check,
+            string thisData,
+            DateTime dtBail,
+            ref int start,
+            ref string data
+        )
         {
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
-            if (DateTime.Now > dtBail) return false;
+            if (DateTime.Now > dtBail)
+                return false;
             if (start <= check)
             {
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
-                data += (data.Length > 0 ? "," : InitData()) + (InitData(false) + thisData  + FinishData(false));
+                data += (data.Length > 0 ? "," : InitData()) + thisData;
                 start++;
             }
             return true;
         }
         #endregion
 
+        //public version of GetAll which avoids current user checks
         public IQueryable<TEntity> Get()
         {
             return GetAll();
@@ -134,23 +137,36 @@ namespace SIL.Transcriber.Repositories
             string[] ids = idList.Replace("'", "").Split("|");
             return entities.Where(e => ids.Any(i => i == e.Id.ToString()));
         }
+
         public abstract IQueryable<TEntity> FromCurrentUser(IQueryable<TEntity>? entities); //force this one
-        protected abstract IQueryable<TEntity> FromProjectList(IQueryable<TEntity>? entities, string idList);
-        protected virtual IQueryable<TEntity> FromStartIndex(IQueryable<TEntity>? entities, string startIndex, string version = "", string projectid = "")
+        protected abstract IQueryable<TEntity> FromProjectList(
+            IQueryable<TEntity>? entities,
+            string idList
+        );
+
+        protected virtual IQueryable<TEntity> FromStartIndex(
+            IQueryable<TEntity>? entities,
+            string startIndex,
+            string version = "",
+            string projectid = ""
+        )
         {
             return entities ?? Enumerable.Empty<TEntity>().AsQueryable();
         }
+
         protected virtual IQueryable<TEntity> FromPlan(QueryLayer layer, string planId)
         {
             return base.ApplyQueryLayer(layer);
         }
+
         protected override IQueryable<TEntity> ApplyQueryLayer(QueryLayer layer)
         {
             ExpressionInScope[] expressions = ConstraintProviders
-                                        .SelectMany(provider => provider.GetConstraints())
-                                        .Where(expressionInScope => expressionInScope.Scope == null).ToArray();
+                .SelectMany(provider => provider.GetConstraints())
+                .Where(expressionInScope => expressionInScope.Scope == null)
+                .ToArray();
 
-            if (layer.Filter?.Has(FilterConstants.ID)??false) //internal call after insert...if external, we caught it in GetAsync
+            if (layer.Filter?.Has(FilterConstants.ID) ?? false) //internal call after insert...if external, we caught it in GetAsync
                 return base.ApplyQueryLayer(layer);
 
             foreach (ExpressionInScope ex in expressions)
@@ -162,8 +178,10 @@ namespace SIL.Transcriber.Repositories
                 {
                     LogicalExpression logex = (LogicalExpression)ex.Expression;
                     IReadOnlyCollection<FilterExpression> terms = logex.Terms;
-                    string projectid = "", startid = "", version = "";
-                    foreach(FilterExpression term in terms)
+                    string projectid = "",
+                        startid = "",
+                        version = "";
+                    foreach (FilterExpression term in terms)
                     {
                         if (term.Field() == FilterConstants.PROJECT_SEARCH_TERM)
                             projectid = term.Value().Replace("'", "");
@@ -175,7 +193,12 @@ namespace SIL.Transcriber.Repositories
                     if (startid != "")
                     {
                         layer.Filter = null;
-                        return FromStartIndex(base.ApplyQueryLayer(layer), startid, version, projectid);
+                        return FromStartIndex(
+                            base.ApplyQueryLayer(layer),
+                            startid,
+                            version,
+                            projectid
+                        );
                     }
                 }
                 else
@@ -187,7 +210,8 @@ namespace SIL.Transcriber.Repositories
                         case FilterConstants.PROJECT_LIST:
                             layer.Filter = null;
                             return FromProjectList(base.ApplyQueryLayer(layer), ex.Value());
-                    };
+                    }
+                ;
             }
             return FromCurrentUser(base.ApplyQueryLayer(layer));
         }

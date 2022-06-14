@@ -1,18 +1,6 @@
-﻿
-using System;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Extensions;
-using SIL.Transcriber.Services;
+﻿using JsonApiDotNetCore.Configuration;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using Amazon.S3;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Hosting;
+using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber
 {
@@ -35,49 +23,60 @@ namespace SIL.Transcriber
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
             services.AddCors();
-            services.AddMvc(x => x.EnableEndpointRouting = false);
-            //services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0).AddJsonOptions(x => x.JsonSerializerOptions.ReferenceLoggingHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
-            services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
-            services.AddDbContext<LoggingDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
-            services.AddApiServices();
-            services.AddAuthenticationServices(Configuration);
+            services.AddMvc();
             services.AddContextServices();
-            services.AddSingleton<IS3Service, S3Service>();
-            services.AddAWSService<IAmazonS3>();
+            services.AddApiServices();
+            services.AddAuthenticationServices();
+
+            services.AddControllers();
+            services.AddEndpointsApiExplorer();
+            services.AddSwagger();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            ILoggerFactory loggerFactory
+        )
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI();
+                app.UseCors(builder =>
+                {
+                    builder
+                        .WithOrigins("http://localhost:44370")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
             }
             else
             {
+                app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()).AllowAnyHeader());
                 app.UseExceptionHandler("/Home/Error");
                 app.UseHsts();
             }
             AWSLoggerConfigSection config = Configuration.GetAWSLoggingConfigSection();
             loggerFactory.AddAWSProvider(config);
-           
-            app.UseAuthentication();
 
-            app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()).AllowAnyHeader());
+            app.UseAuthentication();
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();
-            app.UseJsonApi(true);
+
+            app.UseRouting();
+            app.UseAuthorization();
+            app.UseJsonApi();
+            app.UseEndpoints(endpoints => endpoints.MapControllers());
         }
 
-        private string GetAllowedOrigins()
+        private static string GetAllowedOrigins()
         {
             return GetVarOrDefault("SIL_TR_ORIGINSITES", "*");
-        }
-
-        private string GetConnectionString()
-        {
-            return GetVarOrDefault("SIL_TR_CONNECTIONSTRING", Configuration["ConnectionString"]);
         }
     }
 }

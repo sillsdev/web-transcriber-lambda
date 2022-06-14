@@ -9,17 +9,17 @@ namespace SIL.Transcriber.Controllers
     public class UserversionsController : ControllerBase
     {
         private readonly UserVersionService ResourceService;
-        public UserversionsController(
-           UserVersionService resourceService
-        )
-         : base()
-        { ResourceService = resourceService; }
+
+        public UserversionsController(UserVersionService resourceService) : base()
+        {
+            ResourceService = resourceService;
+        }
 
         [AllowAnonymous]
         [HttpPost("{version}")]
         public IActionResult PostVersionAsync([FromRoute] string version)
         {
-            return Ok( ResourceService.StoreVersion(version));
+            return Ok(ResourceService.StoreVersion(version));
         }
 
         [AllowAnonymous]
@@ -30,4 +30,3 @@ namespace SIL.Transcriber.Controllers
         }
     }
 }
-

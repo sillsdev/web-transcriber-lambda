@@ -10,15 +10,27 @@ namespace SIL.Transcriber.Services
 {
     public class ArtifactCategoryService : BaseArchiveService<Artifactcategory>
     {
-        public ArtifactCategoryService(IResourceRepositoryAccessor repositoryAccessor, IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext, IJsonApiOptions options, ILoggerFactory loggerFactory,
-            IJsonApiRequest request, IResourceChangeTracker<Artifactcategory> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor, ArtifactCategoryRepository repository) : 
-            base(repositoryAccessor, queryLayerComposer, paginationContext, options, loggerFactory, request,
-                resourceChangeTracker, resourceDefinitionAccessor,repository)
-        {
-
-        }
-
+        public ArtifactCategoryService(
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Artifactcategory> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            ArtifactCategoryRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            ) { }
     }
 }

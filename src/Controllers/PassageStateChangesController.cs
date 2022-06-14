@@ -2,10 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 using JsonApiDotNetCore.Configuration;
-using System.Threading;
 using JsonApiDotNetCore.Errors;
 using JsonApiDotNetCore.Serialization.Objects;
 
@@ -16,16 +13,21 @@ namespace SIL.Transcriber.Controllers
     public class PassagestatechangesController : BaseController<Passagestatechange>
     {
         public PassagestatechangesController(
-           ILoggerFactory loggerFactory,
-           IJsonApiOptions options,
-           IResourceGraph resourceGraph,
-           IResourceService<Passagestatechange, int> resourceService,
-           ICurrentUserContext currentUserContext,
- 
-           UserService userService)
-        : base(loggerFactory, options,resourceGraph, resourceService, currentUserContext,  userService)
-        {
-        }
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Passagestatechange, int> resourceService,
+            ICurrentUserContext currentUserContext,
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
 
 #pragma warning disable 1998
         [HttpDelete("{id}")]

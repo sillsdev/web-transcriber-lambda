@@ -1,16 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 using JsonApiDotNetCore.Configuration;
-using System;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
-using System.Threading;
 using JsonApiDotNetCore.Errors;
 using JsonApiDotNetCore.Serialization.Objects;
-using JsonApiDotNetCore.Controllers.Annotations;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -27,24 +21,34 @@ namespace SIL.Transcriber.Controllers
         public DateTime StateUpdated { get; set; }
         public string Email { get; set; } = "";
     }
+
     //HttpReadOnly]
     [Route("api/[controller]")]
     [ApiController]
-    public class StatehistoryController :BaseController<Vwpassagestatehistoryemail>
+    public class StatehistoryController : BaseController<Vwpassagestatehistoryemail>
     {
         readonly private VwPassageStateHistoryEmailService myService;
+
         public StatehistoryController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
             VwPassageStateHistoryEmailService resourceService,
             ICurrentUserContext currentUserContext,
-  
-            UserService userService)
-            : base(loggerFactory, options, resourceGraph,resourceService, currentUserContext,  userService)
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            )
         {
             myService = (VwPassageStateHistoryEmailService)resourceService;
         }
+
         [AllowAnonymous]
         [HttpGet("since/{since}")]
         public ActionResult<List<StateChange>> GetSince([FromRoute] string since)
@@ -54,9 +58,10 @@ namespace SIL.Transcriber.Controllers
                 return Ok(myService.GetHistorySince(dateValue));
             }
             else
-                throw new JsonApiException(new ErrorObject(System.Net.HttpStatusCode.BadRequest), new Exception($"Invalid Date"));
+                throw new JsonApiException(
+                    new ErrorObject(System.Net.HttpStatusCode.BadRequest),
+                    new Exception($"Invalid Date")
+                );
         }
-    
     }
-
 }

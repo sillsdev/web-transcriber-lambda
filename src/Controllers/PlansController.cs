@@ -3,9 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using JsonApiDotNetCore.Configuration;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
-using System.Threading;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -15,17 +12,26 @@ namespace SIL.Transcriber.Controllers
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<Plan,int> resourceService,
+            IResourceService<Plan, int> resourceService,
             ICurrentUserContext currentUserContext,
-  
-            UserService userService)
-         : base(loggerFactory, options, resourceGraph, resourceService, currentUserContext,  userService)
-        { }
+            UserService userService
+        )
+            : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            ) { }
 
         [HttpPost]
-        public override async Task<IActionResult> PostAsync([FromBody] Plan entity, CancellationToken cancelled)
+        public override async Task<IActionResult> PostAsync(
+            [FromBody] Plan entity,
+            CancellationToken cancelled
+        )
         {
-            if ((entity.OwnerId??0) == 0)
+            if ((entity.OwnerId ?? 0) == 0)
             {
                 entity.OwnerId = CurrentUser?.Id;
             }
