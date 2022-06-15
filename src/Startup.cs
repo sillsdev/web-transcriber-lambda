@@ -45,20 +45,11 @@ namespace SIL.Transcriber
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI();
-                app.UseCors(builder =>
-                {
-                    builder
-                        .WithOrigins("http://localhost:44370")
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials();
-                });
             }
             else
             {
-                app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()).AllowAnyHeader());
                 app.UseExceptionHandler("/Home/Error");
-                app.UseHsts();
+                // app.UseHsts();
             }
             AWSLoggerConfigSection config = Configuration.GetAWSLoggingConfigSection();
             loggerFactory.AddAWSProvider(config);
@@ -69,6 +60,14 @@ namespace SIL.Transcriber
             app.UseCookiePolicy();
 
             app.UseRouting();
+            app.UseCors(
+                builder =>
+                    builder
+                        .WithOrigins(GetAllowedOrigins())
+                        .SetIsOriginAllowed((host) => host == GetAllowedOrigins() || host == "*")
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+            );
             app.UseAuthorization();
             app.UseJsonApi();
             app.UseEndpoints(endpoints => endpoints.MapControllers());

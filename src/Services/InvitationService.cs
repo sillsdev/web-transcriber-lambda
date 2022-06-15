@@ -96,15 +96,20 @@ namespace SIL.Transcriber.Services
                 throw new Exception("Organization must be set");
             try
             {
-                dynamic strings = JObject.Parse(entity.Strings ?? "");
+                dynamic strings = JObject.Parse(entity.Strings);
+
+                Invitation? dbentity = await base.CreateAsync(entity, cancellationToken);
+                if (dbentity == null)
+                    return null;
+
                 string subject =
                     strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
                 await TranscriberAPI.Utility.Email.SendEmailAsync(
                     entity.Email,
                     subject,
-                    BuildEmailBody(strings, entity)
+                    BuildEmailBody(strings, dbentity)
                 );
-                return await base.CreateAsync(entity, cancellationToken);
+                return dbentity;
             }
             catch (Exception ex)
             {
