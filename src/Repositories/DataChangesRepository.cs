@@ -13,23 +13,39 @@ namespace SIL.Transcriber.Repositories
     public class DatachangesRepository : BaseRepository<Datachanges>
     {
         public DatachangesRepository(
-               ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
-                constraintProviders, loggerFactory,resourceDefinitionAccessor, currentUserRepository)
-        {
-        }
-        public override IQueryable<Datachanges> FromCurrentUser(IQueryable<Datachanges>? entities = null)
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            ) { }
+
+        public override IQueryable<Datachanges> FromCurrentUser(
+            IQueryable<Datachanges>? entities = null
+        )
         {
             return entities ?? GetAll();
         }
-        protected override IQueryable<Datachanges> FromProjectList(IQueryable<Datachanges>? entities, string idList)
+
+        public override IQueryable<Datachanges> FromProjectList(
+            IQueryable<Datachanges>? entities,
+            string idList
+        )
         {
-            return entities??GetAll();
+            return entities ?? GetAll();
         }
     }
 }

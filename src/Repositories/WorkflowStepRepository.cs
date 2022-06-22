@@ -12,22 +12,38 @@ namespace SIL.Transcriber.Repositories
     public class WorkflowStepRepository : BaseRepository<Workflowstep>
     {
         public WorkflowStepRepository(
-            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
-                loggerFactory, resourceDefinitionAccessor, currentUserRepository)
-        {
-        }
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            ) { }
+
         #region Overrides
-        protected override IQueryable<Workflowstep> FromProjectList(IQueryable<Workflowstep>? entities, string idList)
+        public override IQueryable<Workflowstep> FromProjectList(
+            IQueryable<Workflowstep>? entities,
+            string idList
+        )
         {
             return entities ?? GetAll();
         }
-        public override IQueryable<Workflowstep> FromCurrentUser(IQueryable<Workflowstep>? entities = null)
+
+        public override IQueryable<Workflowstep> FromCurrentUser(
+            IQueryable<Workflowstep>? entities = null
+        )
         {
             return entities ?? GetAll();
         }

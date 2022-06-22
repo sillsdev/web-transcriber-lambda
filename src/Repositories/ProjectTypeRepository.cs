@@ -9,21 +9,37 @@ namespace SIL.Transcriber.Repositories
     public class ProjectTypeRepository : BaseRepository<Projecttype>
     {
         public ProjectTypeRepository(
-            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
-                constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
-        {
-        }
-        public override IQueryable<Projecttype> FromCurrentUser(IQueryable<Projecttype>? entities = null)
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            ) { }
+
+        public override IQueryable<Projecttype> FromCurrentUser(
+            IQueryable<Projecttype>? entities = null
+        )
         {
             return entities ?? GetAll();
         }
-        protected override IQueryable<Projecttype> FromProjectList(IQueryable<Projecttype>? entities, string idList)
+
+        public override IQueryable<Projecttype> FromProjectList(
+            IQueryable<Projecttype>? entities,
+            string idList
+        )
         {
             return entities ?? GetAll();
         }

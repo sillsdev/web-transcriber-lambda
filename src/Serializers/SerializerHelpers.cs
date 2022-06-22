@@ -14,48 +14,102 @@ namespace SIL.Transcriber.Serialization
 {
     public static class SerializerHelpers
     {
-        public static IImmutableSet<IncludeElementExpression> GetSingleIncludes(ResourceType resourceType, IImmutableSet<IncludeElementExpression>? existingIncludes = null)
+        public static IImmutableSet<IncludeElementExpression> GetSingleIncludes(
+            ResourceType resourceType,
+            IImmutableSet<IncludeElementExpression>? existingIncludes = null
+        )
         {
             IReadOnlyCollection<RelationshipAttribute>? rcol = resourceType.Relationships;
-            if (existingIncludes == null) existingIncludes = ImmutableHashSet<IncludeElementExpression>.Empty;
+            if (existingIncludes == null)
+                existingIncludes = ImmutableHashSet<IncludeElementExpression>.Empty;
             List<IncludeElementExpression> allIncludes = new(existingIncludes);
 
             foreach (RelationshipAttribute r in rcol)
             {
-                if (!allIncludes.Any(include => include.Relationship.Property.Name == r.PublicName) &&
-                    r is HasOneAttribute)
+                if (
+                    !allIncludes.Any(include => include.Relationship.Property.Name == r.PublicName)
+                    && r is HasOneAttribute
+                )
                 {
                     allIncludes.Add(new IncludeElementExpression(r));
                 }
             }
             return allIncludes.ToImmutableHashSet();
         }
-        
-        public  static string ResourcesToJson<TResource>(IEnumerable<TResource> resources, IResourceGraph resourceGraph, 
-            IJsonApiOptions options, IResourceDefinitionAccessor resourceDefinitionAccessor, IMetaBuilder metaBuilder)
-                where TResource : class, IIdentifiable
+
+        private static ResponseModelAdapter GetAdapter<TResource>(
+            bool isCollection,
+            IResourceGraph resourceGraph,
+            IJsonApiOptions options,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            IMetaBuilder metaBuilder
+        ) where TResource : class, IIdentifiable
         {
             ResourceType resourceType = resourceGraph.GetResourceType<TResource>();
 
             IncludeExpression includeExpression = new(GetSingleIncludes(resourceType));
 
-            JsonApiRequest request = new()
-            {
-                Kind = EndpointKind.Primary,
-                PrimaryResourceType = resourceType,
-                IsCollection = true,
-                IsReadOnly = true
-            };
+            JsonApiRequest request =
+                new()
+                {
+                    Kind = EndpointKind.Primary,
+                    PrimaryResourceType = resourceType,
+                    IsCollection = isCollection,
+                    IsReadOnly = true
+                };
 
             HiddenLinksBuilder? linksBuilder = new();
             IncludeCache includeCache = new(includeExpression);
             EveryFieldCache sparseFieldSetCache = new();
             EmptyQueryStringAccessor queryStringAccessor = new();
 
-            ResponseModelAdapter adapter = new(request, options, linksBuilder, metaBuilder, resourceDefinitionAccessor, includeCache, sparseFieldSetCache,
-                queryStringAccessor);
+            return new(
+                request,
+                options,
+                linksBuilder,
+                metaBuilder,
+                resourceDefinitionAccessor,
+                includeCache,
+                sparseFieldSetCache,
+                queryStringAccessor
+            );
+        }
 
+        public static string ResourceListToJson<TResource>(
+            IEnumerable<TResource> resources,
+            IResourceGraph resourceGraph,
+            IJsonApiOptions options,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            IMetaBuilder metaBuilder
+        ) where TResource : class, IIdentifiable
+        {
+            ResponseModelAdapter adapter = GetAdapter<TResource>(
+                true,
+                resourceGraph,
+                options,
+                resourceDefinitionAccessor,
+                metaBuilder
+            );
             Document document = adapter.Convert(resources);
+            return JsonSerializer.Serialize(document, options.SerializerOptions);
+        }
+
+        public static string ResourceToJson<TResource>(
+            TResource resource,
+            IResourceGraph resourceGraph,
+            IJsonApiOptions options,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            IMetaBuilder metaBuilder
+        ) where TResource : class, IIdentifiable
+        {
+            ResponseModelAdapter adapter = GetAdapter<TResource>(
+                false,
+                resourceGraph,
+                options,
+                resourceDefinitionAccessor,
+                metaBuilder
+            );
+            Document document = adapter.Convert(resource);
             return JsonSerializer.Serialize(document, options.SerializerOptions);
         }
 
@@ -92,12 +146,18 @@ namespace SIL.Transcriber.Serialization
                 return null;
             }
 
-            public ResourceLinks? GetResourceLinks(ResourceType resourceType, IIdentifiable resource)
+            public ResourceLinks? GetResourceLinks(
+                ResourceType resourceType,
+                IIdentifiable resource
+            )
             {
                 return null;
             }
 
-            public RelationshipLinks? GetRelationshipLinks(RelationshipAttribute relationship, IIdentifiable leftResource)
+            public RelationshipLinks? GetRelationshipLinks(
+                RelationshipAttribute relationship,
+                IIdentifiable leftResource
+            )
             {
                 return null;
             }
@@ -108,24 +168,28 @@ namespace SIL.Transcriber.Serialization
         /// </summary>
         private sealed class EveryFieldCache : ISparseFieldSetCache
         {
-            public IImmutableSet<ResourceFieldAttribute> GetSparseFieldSetForQuery(ResourceType resourceType)
+            public IImmutableSet<ResourceFieldAttribute> GetSparseFieldSetForQuery(
+                ResourceType resourceType
+            )
             {
                 return resourceType.Fields.ToImmutableHashSet();
             }
 
-            public IImmutableSet<AttrAttribute> GetIdAttributeSetForRelationshipQuery(ResourceType resourceType)
+            public IImmutableSet<AttrAttribute> GetIdAttributeSetForRelationshipQuery(
+                ResourceType resourceType
+            )
             {
                 return resourceType.Attributes.ToImmutableHashSet();
             }
 
-            public IImmutableSet<ResourceFieldAttribute> GetSparseFieldSetForSerializer(ResourceType resourceType)
+            public IImmutableSet<ResourceFieldAttribute> GetSparseFieldSetForSerializer(
+                ResourceType resourceType
+            )
             {
                 return resourceType.Fields.ToImmutableHashSet();
             }
 
-            public void Reset()
-            {
-            }
+            public void Reset() { }
         }
 
         /// <summary>
@@ -137,4 +201,3 @@ namespace SIL.Transcriber.Serialization
         }
     }
 }
-

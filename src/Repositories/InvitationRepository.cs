@@ -77,7 +77,7 @@ namespace SIL.Transcriber.Repositories
             return UsersInvitations(entities ?? GetAll());
         }
 
-        protected override IQueryable<Invitation> FromProjectList(
+        public override IQueryable<Invitation> FromProjectList(
             IQueryable<Invitation>? entities,
             string idList
         )

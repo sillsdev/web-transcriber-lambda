@@ -139,7 +139,7 @@ namespace SIL.Transcriber.Repositories
         }
 
         public abstract IQueryable<TEntity> FromCurrentUser(IQueryable<TEntity>? entities); //force this one
-        protected abstract IQueryable<TEntity> FromProjectList(
+        public abstract IQueryable<TEntity> FromProjectList(
             IQueryable<TEntity>? entities,
             string idList
         );

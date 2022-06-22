@@ -2,28 +2,26 @@ using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.Diagnostics;
-using JsonApiDotNetCore.Configuration;
-using JsonApiDotNetCore.Services;
 
 namespace SIL.Transcriber.Controllers
 {
     /* This has to be a BaseController of some sort to force JsonApiDotNetCore to serialize our objects so they are in right format in the zip file */
 
-    [Route("api/[controller]")]
     [ApiController]
-    public class OfflinedataController : BaseController<Fileresponse>
+    [Route("api/offlineData")]
+    public class OfflinedataController : ControllerBase
     {
         private readonly IOfflineDataService _service;
 
         public OfflinedataController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            JsonApiResourceService<Fileresponse, int> frService,
-            ICurrentUserContext currentUserContext,
-            UserService userService,
+            //ILoggerFactory loggerFactory,
+            //IJsonApiOptions options,
+            //IResourceGraph resourceGraph,
+            //JsonApiResourceService<Fileresponse, int> frService,
+            //ICurrentUserContext currentUserContext,
+            //UserService userService,
             IOfflineDataService service
-        ) : base(loggerFactory, options, resourceGraph, frService, currentUserContext, userService)
+        ) : base()
         {
             _service = service;
         }
@@ -36,34 +34,23 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpPost("project/export/{exporttype}/{id}/{start}")]
-        public ActionResult<JsonedFileresponse> Export(
+        public ActionResult<Fileresponse> Export(
             [FromRoute] string exportType,
             int id,
             int start,
-            [FromForm] string ids,
-            [FromForm] string artifactType
+            [FromForm] string? ids,
+            [FromForm] string? artifactType
         )
         {
-            Fileresponse response;
             Debug.WriteLine(exportType, artifactType, ids);
-            switch (exportType)
+            Fileresponse response = exportType switch
             {
-                case "ptf":
-                    response = _service.ExportProjectPTF(id, start);
-                    break;
-                case "audio":
-                    response = _service.ExportProjectAudio(id, artifactType ?? "", ids, start);
-                    break;
-                case "burrito":
-                    response = _service.ExportBurrito(id, ids, start);
-                    break;
-                default:
-                    response = _service.ExportProjectPTF(id, start);
-                    break;
-            }
-            //morph this into what we got from the get
-
-            return Ok(response.Twiddle());
+                "ptf" => _service.ExportProjectPTF(id, start),
+                "audio" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start),
+                "burrito" => _service.ExportBurrito(id, ids, start),
+                _ => _service.ExportProjectPTF(id, start),
+            };
+            return Ok(response);
         }
 
         [HttpGet("project/import/{filename}")]

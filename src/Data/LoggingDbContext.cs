@@ -16,8 +16,11 @@ namespace SIL.Transcriber.Data
         public HttpContext? HttpContext { get; }
         public DbContextOptions Options { get; }
         public IHttpContextAccessor HttpContextAccessor { get; }
-        public LoggingDbContext(DbContextOptions<LoggingDbContext> options,  IHttpContextAccessor httpContextAccessor) :
-             base(options)
+
+        public LoggingDbContext(
+            DbContextOptions<LoggingDbContext> options,
+            IHttpContextAccessor httpContextAccessor
+        ) : base(options)
         {
             HttpContext = httpContextAccessor.HttpContext;
             HttpContextAccessor = httpContextAccessor;
@@ -26,24 +29,29 @@ namespace SIL.Transcriber.Data
 
         private void DefineLastModifiedByUser(ModelBuilder builder)
         {
-            builder.Entity<Paratextsync>()
+            builder
+                .Entity<Paratextsync>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<Paratextsyncpassage>()
+            builder
+                .Entity<Paratextsyncpassage>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<Paratexttokenhistory>()
+            builder
+                .Entity<Paratexttokenhistory>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder.Entity<User>()
+            builder
+                .Entity<User>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
         }
-        private void DefineManyToMany(ModelBuilder modelBuilder)
+
+        private static void DefineManyToMany(ModelBuilder modelBuilder)
         {
             EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
             EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
@@ -53,7 +61,7 @@ namespace SIL.Transcriber.Data
                 .WithOne(om => om.User)
                 .HasForeignKey(om => om.UserId);
             userEntity
-                 .HasMany(u => u.GroupMemberships)
+                .HasMany(u => u.GroupMemberships)
                 .WithOne(gm => gm.User)
                 .HasForeignKey(gm => gm.UserId);
             userEntity
@@ -65,24 +73,17 @@ namespace SIL.Transcriber.Data
                 .WithOne(om => om.Organization)
                 .HasForeignKey(om => om.OrganizationId);
 
-            orgEntity
-                .HasMany(o => o.Groups)
-                .WithOne(g => g.Owner)
-                .HasForeignKey(g => g.OwnerId);
+            orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
 
             orgEntity
                 .HasMany(o => o.Projects)
                 .WithOne(p => p.Organization)
                 .HasForeignKey(p => p.OrganizationId);
 
-            orgEntity
-                .Property(o => o.PublicByDefault)
-                .HasDefaultValue(true);
-            orgEntity
-                .HasOne(o => o.Owner)
-                .WithMany()
-                .HasForeignKey(o => o.OwnerId);
+            orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(true);
+            orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
         }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -92,52 +93,84 @@ namespace SIL.Transcriber.Data
             DefineManyToMany(builder);
             DefineLastModifiedByUser(builder);
         }
+
         public override int SaveChanges()
         {
-            IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            int userid = (entries.FirstOrDefault()?.Entity is LogBaseModel trackUser) ? trackUser.UserId : 0;
+            IEnumerable<EntityEntry> entries = ChangeTracker
+                .Entries()
+                .Where(
+                    e =>
+                        e.Entity is ITrackDate
+                        && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                );
+            int userid =
+                (entries.FirstOrDefault()?.Entity is LogBaseModel trackUser) ? trackUser.UserId : 0;
             AddTimestamps(this, HttpContext, userid);
             return base.SaveChanges();
         }
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+
+        public override async Task<int> SaveChangesAsync(
+            CancellationToken cancellationToken = default
+        )
         {
-            IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            int userid = (entries.FirstOrDefault()?.Entity is LogBaseModel trackUser) ? trackUser.UserId : 0;
+            IEnumerable<EntityEntry> entries = ChangeTracker
+                .Entries()
+                .Where(
+                    e =>
+                        e.Entity is ITrackDate
+                        && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                );
+            int userid =
+                (entries.FirstOrDefault()?.Entity is LogBaseModel trackUser) ? trackUser.UserId : 0;
             AddTimestamps(this, HttpContext, userid);
             return await base.SaveChangesAsync(cancellationToken);
         }
+
         public DbSet<Paratextsync> Paratextsyncs => Set<Paratextsync>();
         public DbSet<Paratextsyncpassage> Paratextsyncpassages => Set<Paratextsyncpassage>();
         public DbSet<Paratexttokenhistory> Paratexttokenhistory => Set<Paratexttokenhistory>();
     }
+
     public class LoggingDbContextResolver : IDbContextResolver
     {
         private readonly LoggingDbContext _context;
+
         public LoggingDbContextResolver(LoggingDbContext context)
         {
             _context = context;
         }
+
         public DbContext GetContext()
         {
             return _context;
         }
+
         public DbSet<TEntity> GetDbSet<TEntity>() where TEntity : class
         {
             return _context.Set<TEntity>();
         }
     }
 
-    public class LoggingDbContextRepository<TResource> : EntityFrameworkCoreRepository<TResource,int>
-    where TResource : class, IIdentifiable<int>
+    public class LoggingDbContextRepository<TResource>
+        : EntityFrameworkCoreRepository<TResource, int> where TResource : class, IIdentifiable<int>
     {
         public LoggingDbContextRepository(
             ITargetedFields targetedFields,
-            LoggingDbContextResolver contextResolver, IResourceGraph resourceGraph, IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders, ILoggerFactory loggerFactory,
+            LoggingDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor
-           ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
-               constraintProviders, loggerFactory, resourceDefinitionAccessor)
-        { }
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor
+            ) { }
     }
-
 }

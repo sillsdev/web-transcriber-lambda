@@ -13,44 +13,74 @@ namespace SIL.Transcriber.Repositories
     public class ArtifactTypeRepository : BaseRepository<Artifacttype>
     {
         private OrganizationRepository OrganizationRepository;
+
         public ArtifactTypeRepository(
-            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
             OrganizationRepository organizationRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
-                loggerFactory,resourceDefinitionAccessor, currentUserRepository)
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             OrganizationRepository = organizationRepository;
         }
+
         public IQueryable<Artifacttype> UsersArtifactTypes(IQueryable<Artifacttype> entities)
         {
-            if (CurrentUser == null) return entities.Where(e => e.Id == -1);
+            if (CurrentUser == null)
+                return entities.Where(e => e.Id == -1);
 
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                entities = entities
-                             .Where(om => om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId));
+                entities = entities.Where(
+                    om => om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId)
+                );
             }
             return entities;
         }
-        public IQueryable<Artifacttype> ProjectArtifactTypes(IQueryable<Artifacttype> entities, string projectid)
+
+        public IQueryable<Artifacttype> ProjectArtifactTypes(
+            IQueryable<Artifacttype> entities,
+            string projectid
+        )
         {
-            IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(dbContext.Organizations, projectid);
+            IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(
+                dbContext.Organizations,
+                projectid
+            );
             IQueryable<int> ids = orgs.Select(o => o.Id);
-            return entities.Where(om => om.OrganizationId == null || ids.Contains((int)om.OrganizationId));
+            return entities.Where(
+                om => om.OrganizationId == null || ids.Contains((int)om.OrganizationId)
+            );
         }
 
         #region Overrides
-        protected override IQueryable<Artifacttype> FromProjectList(IQueryable<Artifacttype>? entities, string idList)
+        public override IQueryable<Artifacttype> FromProjectList(
+            IQueryable<Artifacttype>? entities,
+            string idList
+        )
         {
-            return ProjectArtifactTypes(entities??GetAll(), idList);
+            return ProjectArtifactTypes(entities ?? GetAll(), idList);
         }
-        public override IQueryable<Artifacttype> FromCurrentUser(IQueryable<Artifacttype>? entities = null)
+
+        public override IQueryable<Artifacttype> FromCurrentUser(
+            IQueryable<Artifacttype>? entities = null
+        )
         {
             return UsersArtifactTypes(entities ?? GetAll());
         }

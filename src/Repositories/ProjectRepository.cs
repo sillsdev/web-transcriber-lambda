@@ -86,7 +86,7 @@ namespace SIL.Transcriber.Repositories
             return UsersProjects(entities ?? GetAll());
         }
 
-        protected override IQueryable<Project> FromProjectList(
+        public override IQueryable<Project> FromProjectList(
             IQueryable<Project>? entities,
             string idList
         )

@@ -24,9 +24,8 @@ namespace SIL.Transcriber.Data
                 // Replace table names
                 //05/16/22 This doesn't work anymore so use the [Table] schema notation--and now it does...
                 entity.SetTableName(entity.GetTableName()?.ToLower());
-                Debug.WriteLine("tablename:{0} {1} {2}", entity.GetTableName(), entity.GetDefaultTableName(), entity.DisplayName());
 
-                // Replace column names            
+                // Replace column names
                 foreach (IMutableProperty property in entity.GetProperties())
                 {
                     property.SetColumnName(property.Name.ToLower());
@@ -53,10 +52,17 @@ namespace SIL.Transcriber.Data
         {
             return http?.GetFP() ?? "noFP";
         }
+
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
         public static void AddTimestamps(DbContext dbc, HttpContext? http, int userid)
         {
-            System.Collections.Generic.IEnumerable<EntityEntry> entries = dbc.ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            System.Collections.Generic.IEnumerable<EntityEntry> entries = dbc.ChangeTracker
+                .Entries()
+                .Where(
+                    e =>
+                        e.Entity is ITrackDate
+                        && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                );
             DateTime now = DateTime.UtcNow.AddSeconds(2).SetKindUtc();
 
             foreach (EntityEntry entry in entries)
@@ -70,31 +76,42 @@ namespace SIL.Transcriber.Data
                             trackDate.DateCreated = now;
                             trackDate.DateUpdated = now;
                         }
+                        else
+                            trackDate.DateUpdated = trackDate.DateUpdated?.SetKindUtc();
                     }
                     else
                     {
-                        trackDate.DateCreated = trackDate.DateCreated.SetKindUtc();
                         trackDate.DateUpdated = now;
                     }
+                    trackDate.DateCreated = trackDate.DateCreated.SetKindUtc();
                 }
             }
             if (userid > 0) // we allow s3 trigger anonymous access
             {
-                entries = dbc.ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+                entries = dbc.ChangeTracker
+                    .Entries()
+                    .Where(
+                        e =>
+                            e.Entity is ILastModified
+                            && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                    );
                 foreach (EntityEntry entry in entries)
                 {
                     entry.CurrentValues["LastModifiedBy"] = userid;
                 }
-
             }
             string origin = GetFingerprint(http);
-            entries = dbc.ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            entries = dbc.ChangeTracker
+                .Entries()
+                .Where(
+                    e =>
+                        e.Entity is ILastModified
+                        && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                );
             foreach (EntityEntry entry in entries)
             {
                 entry.CurrentValues["LastModifiedOrigin"] = origin;
             }
         }
-
     }
-
 }

@@ -66,8 +66,12 @@ namespace SIL.Transcriber.Services
             }
             else
             {
-                throw new Exception("I thought this wasn't used");
-                //return GetChanges(GetByProjAsync(project).Result, currentuser, origin, since);
+                return GetChanges(
+                    Repo.FromProjectList(entities, project.ToString()),
+                    currentuser,
+                    origin,
+                    since
+                );
             }
         }
 

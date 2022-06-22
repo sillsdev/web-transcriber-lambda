@@ -102,10 +102,7 @@ namespace SIL.Transcriber.Repositories
             return UsersUsers((entities ?? GetAll()).Where(u => !u.Archived));
         }
 
-        protected override IQueryable<User> FromProjectList(
-            IQueryable<User>? entities,
-            string idList
-        )
+        public override IQueryable<User> FromProjectList(IQueryable<User>? entities, string idList)
         {
             return ProjectUsers(entities ?? GetAll(), idList);
         }

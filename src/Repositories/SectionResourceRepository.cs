@@ -4,50 +4,78 @@ using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 
-
 namespace SIL.Transcriber.Repositories
 {
     public class SectionResourceRepository : BaseRepository<Sectionresource>
     {
         private readonly SectionRepository SectionRepository;
+
         public SectionResourceRepository(
-            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-             SectionRepository sectionRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
-                loggerFactory, resourceDefinitionAccessor, currentUserRepository)
+            SectionRepository sectionRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             SectionRepository = sectionRepository;
         }
+
         #region ScopeToUser
         //get my sections in these projects
-        public IQueryable<Sectionresource> UsersSectionResources(IQueryable<Sectionresource> entities, IQueryable<Project>? projects = null)
+        public IQueryable<Sectionresource> UsersSectionResources(
+            IQueryable<Sectionresource> entities,
+            IQueryable<Project>? projects = null
+        )
         {
-            IQueryable<Section> sections = SectionRepository.UsersSections(dbContext.Sections, projects);
+            IQueryable<Section> sections = SectionRepository.UsersSections(
+                dbContext.Sections,
+                projects
+            );
             return entities.Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr);
         }
 
         #endregion
-        public IQueryable<Sectionresource> ProjectSectionResources(IQueryable<Sectionresource> entities, string projectid)
+        public IQueryable<Sectionresource> ProjectSectionResources(
+            IQueryable<Sectionresource> entities,
+            string projectid
+        )
         {
-
-            return UsersSectionResources(entities, dbContext.Projects.Where(p => p.Id.ToString() == projectid));
+            return UsersSectionResources(
+                entities,
+                dbContext.Projects.Where(p => p.Id.ToString() == projectid)
+            );
         }
 
         #region Overrides
-        protected override IQueryable<Sectionresource> FromProjectList(IQueryable<Sectionresource>? entities, string idList)
+        public override IQueryable<Sectionresource> FromProjectList(
+            IQueryable<Sectionresource>? entities,
+            string idList
+        )
         {
             return ProjectSectionResources(entities ?? GetAll(), idList);
         }
-        public override IQueryable<Sectionresource> FromCurrentUser(IQueryable<Sectionresource>? entities = null)
+
+        public override IQueryable<Sectionresource> FromCurrentUser(
+            IQueryable<Sectionresource>? entities = null
+        )
         {
             return UsersSectionResources(entities ?? GetAll());
         }
         #endregion
-
     }
 }

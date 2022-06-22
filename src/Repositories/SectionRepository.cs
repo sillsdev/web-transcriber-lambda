@@ -16,34 +16,56 @@ namespace SIL.Transcriber.Repositories
 {
     public class SectionRepository : BaseRepository<Section>
     {
-
         readonly private PlanRepository PlanRepository;
+
         public SectionRepository(
-        ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
             PlanRepository planRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
-                constraintProviders, loggerFactory, resourceDefinitionAccessor, currentUserRepository)
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             PlanRepository = planRepository;
         }
+
         #region ScopeToUser
         //get my sections in these projects
-        public IQueryable<Section> UsersSections(IQueryable<Section> entities, IQueryable<Project>? projects)
+        public IQueryable<Section> UsersSections(
+            IQueryable<Section> entities,
+            IQueryable<Project>? projects
+        )
         {
             IQueryable<Plan> plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
             return PlansSections(entities, plans);
         }
 
-        public IQueryable<Section> PlansSections(IQueryable<Section> entities, IQueryable<Plan> plans)
+        public IQueryable<Section> PlansSections(
+            IQueryable<Section> entities,
+            IQueryable<Plan> plans
+        )
         {
             return entities.Join(plans, s => s.PlanId, p => p.Id, (s, p) => s);
         }
-        public IQueryable<Section> UsersSections(IQueryable<Section> entities, IQueryable<Plan>? plans = null)
+
+        public IQueryable<Section> UsersSections(
+            IQueryable<Section> entities,
+            IQueryable<Plan>? plans = null
+        )
         {
             //this gets just the plans I have access to
             if (plans == null)
@@ -73,32 +95,49 @@ namespace SIL.Transcriber.Repositories
         {
             return UsersSections(entities ?? GetAll());
         }
-        protected override IQueryable<Section> FromProjectList(IQueryable<Section>? entities, string idList)
+
+        public override IQueryable<Section> FromProjectList(
+            IQueryable<Section>? entities,
+            string idList
+        )
         {
             return ProjectSections(entities ?? GetAll(), idList);
         }
         #endregion
         #region ParatextSync
-        public async Task<IList<SectionSummary>> SectionSummary(int PlanId, string book, int chapter)
-{
-    IList<SectionSummary> ss = new List<SectionSummary>();
-    var passagewithsection = dbContext.Passages.Join(dbContext.Sections.Where(section => section.PlanId == PlanId), passage => passage.SectionId, section => section.Id, (passage, section) => new { passage, section }).Where(x => x.passage.Book == book && x.passage.StartChapter == chapter);
-    await passagewithsection.GroupBy(p => p.section).ForEachAsync(ps =>
-      {
-          SectionSummary newss = new ()
-          {
-              section = ps.FirstOrDefault()?.section??new(),
-              Book = book,
-              StartChapter = chapter,
-              EndChapter = chapter,
-              StartVerse = ps.Min(a => a.passage.StartVerse),
-              EndVerse = ps.Max(a => a.passage.EndVerse),
-          };
-          ss.Add(newss);
-      });
-    return ss;
-}
+        public async Task<IList<SectionSummary>> SectionSummary(
+            int PlanId,
+            string book,
+            int chapter
+        )
+        {
+            IList<SectionSummary> ss = new List<SectionSummary>();
+            var passagewithsection = dbContext.Passages
+                .Join(
+                    dbContext.Sections.Where(section => section.PlanId == PlanId),
+                    passage => passage.SectionId,
+                    section => section.Id,
+                    (passage, section) => new { passage, section }
+                )
+                .Where(x => x.passage.Book == book && x.passage.StartChapter == chapter);
+            await passagewithsection
+                .GroupBy(p => p.section)
+                .ForEachAsync(ps =>
+                {
+                    SectionSummary newss =
+                        new()
+                        {
+                            section = ps.FirstOrDefault()?.section ?? new(),
+                            Book = book,
+                            StartChapter = chapter,
+                            EndChapter = chapter,
+                            StartVerse = ps.Min(a => a.passage.StartVerse),
+                            EndVerse = ps.Max(a => a.passage.EndVerse),
+                        };
+                    ss.Add(newss);
+                });
+            return ss;
+        }
 #endregion
-
-}
+    }
 }

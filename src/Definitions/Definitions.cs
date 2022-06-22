@@ -101,6 +101,20 @@ namespace SIL.Transcriber.Definitions
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
+        /*  I couldn't get this to be called...so I just added plan-id to the passage model
+         *
+        public override QueryStringParameterHandlers<Passage> OnRegisterQueryableHandlersForQueryStringParameters()
+        {
+            return new QueryStringParameterHandlers<Passage>
+            {
+                ["plan-id"] = (source, parameterValue) =>
+                    source
+                        .Include(item => item.Section)
+                        .ThenInclude(s => s.Plan)
+                        .Where(item => item.Section.Plan.Id == parameterValue)
+            };
+        }
+        */
     }
 
     public class PassageStateChangeDefinition : BaseDefinition<Passagestatechange>

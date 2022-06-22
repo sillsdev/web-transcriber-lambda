@@ -131,7 +131,7 @@ namespace SIL.Transcriber.Repositories
         }
 
         //handles PROJECT_SEARCH_TERM and PROJECT_LIST
-        protected override IQueryable<Mediafile> FromProjectList(
+        public override IQueryable<Mediafile> FromProjectList(
             IQueryable<Mediafile>? entities,
             string idList
         )

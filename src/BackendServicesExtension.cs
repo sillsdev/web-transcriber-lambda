@@ -99,7 +99,7 @@ namespace SIL.Transcriber
             services.AddScoped<IntegrationService>();
             services.AddScoped<InvitationService>();
             services.AddScoped<MediafileService>();
-            services.AddScoped<OfflineDataService>();
+            services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();
             services.AddScoped<OrgDataService>();

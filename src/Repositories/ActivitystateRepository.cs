@@ -31,7 +31,7 @@ namespace SIL.Transcriber.Repositories
             ) { }
 
         #region Overrides
-        protected override IQueryable<Activitystate> FromProjectList(
+        public override IQueryable<Activitystate> FromProjectList(
             IQueryable<Activitystate>? entities,
             string idList
         )

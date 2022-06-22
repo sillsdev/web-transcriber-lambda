@@ -51,7 +51,9 @@ namespace SIL.Transcriber.Controllers
                     }.ToString()
                 );
                 //Console.WriteLine("size:" + response.FileStream.Length.ToString());
-                return File(response.FileStream, response.ContentType);
+                return response.FileStream != null
+                    ? File(response.FileStream, response.ContentType)
+                    : NotFound();
             }
             else
             {

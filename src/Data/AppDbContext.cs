@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Utility.Extensions;
 using static SIL.Transcriber.Data.DbContextExtentions;
 
 namespace SIL.Transcriber.Data
@@ -358,6 +359,11 @@ namespace SIL.Transcriber.Data
             foreach (EntityEntry entry in entries)
             {
                 entry.CurrentValues["LastModifiedOrigin"] = "electron";
+                if (entry.Entity is ITrackDate trackDate)
+                {
+                    trackDate.DateCreated = trackDate.DateCreated?.SetKindUtc();
+                    trackDate.DateUpdated = trackDate.DateUpdated?.SetKindUtc();
+                }
             }
             return await base.SaveChangesAsync(cancellationToken);
         }

@@ -1,6 +1,6 @@
-﻿
-using JsonApiDotNetCore.Resources.Annotations;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
@@ -17,6 +17,7 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "section")]
         public Section? Section { get; set; }
+
         [Attr(PublicName = "mediafile-id")]
         public int? MediafileId { get; set; }
 
@@ -25,18 +26,22 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "passage-id")]
         public int? PassageId { get; set; }
+
         [HasOne(PublicName = "passage")]
         public Passage? Passage { get; set; }
 
         [Attr(PublicName = "project-id")]
         public int? ProjectId { get; set; }
+
         [HasOne(PublicName = "project")]
         public Project? Project { get; set; }
 
         public int orgWorkflowStepId { get; set; }
+
         [HasOne(PublicName = "org-workflow-step")]
         public Orgworkflowstep? OrgWorkflowStep { get; set; }
 
+        [JsonIgnore]
         [HasMany(PublicName = "section-resource-users")]
         public List<Sectionresourceuser>? SectionResourceUsers { get; set; }
 

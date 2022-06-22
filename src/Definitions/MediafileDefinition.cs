@@ -1,10 +1,8 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
-using JsonApiDotNetCore.Queries.Expressions;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.Collections.Immutable;
 
 namespace SIL.Transcriber.Definitions
 {
@@ -23,13 +21,6 @@ namespace SIL.Transcriber.Definitions
         {
             MediafileService = mfService;
             AppDbContext = appDbContext;
-        }
-
-        public override IImmutableSet<IncludeElementExpression> OnApplyIncludes(
-            IImmutableSet<IncludeElementExpression> existingIncludes
-        )
-        {
-            return base.OnApplyIncludes(existingIncludes);
         }
 
         public override async Task OnWritingAsync(
