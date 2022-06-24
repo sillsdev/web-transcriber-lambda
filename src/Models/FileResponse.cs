@@ -12,63 +12,55 @@ namespace SIL.Transcriber.Models
             FileURL = "";
             ContentType = "application/json";
         }
+
         [Attr(PublicName = "status")]
         public HttpStatusCode Status { get; set; }
+
         [Attr(PublicName = "message")]
         public string Message { get; set; }
+
         [Attr(PublicName = "fileurl")]
         public string FileURL { get; set; }
+
         [Attr(PublicName = "contenttype")]
         public string ContentType { get; set; }
-
-        public JsonedFileresponse Twiddle()
-        {
-            return new JsonedFileresponse
-            {
-                data = new JFRData
-                {
-                    attributes = new JFRAttributes
-                    {
-                        message = Message,
-                        fileurl = FileURL,
-                        contenttype = ContentType,
-                    },
-                    id = Id,
-                }
-            };
-        }
     }
 #pragma warning disable IDE1006 // Naming Styles
     public class JFRData
-{
-        public JFRData():base()
+    {
+        public JFRData() : base()
         {
             attributes = new();
             type = "";
         }
-    public JFRAttributes attributes { get; set; }
-    public string type { get; set; }
-    public int id { get; set; }
-}
-public class JFRAttributes
-{
-        public JFRAttributes():base()
+
+        public JFRAttributes attributes { get; set; }
+        public string type { get; set; }
+        public int id { get; set; }
+    }
+
+    public class JFRAttributes
+    {
+        public JFRAttributes() : base()
         {
             message = "";
             fileurl = "";
-            contenttype="application/json";
+            contenttype = "application/json";
         }
-    public string message { get; set; }
-    public string fileurl { get; set; }
-    public string contenttype { get; set; }
-}
-public class JsonedFileresponse
-{
-        public JsonedFileresponse():base()
+
+        public string message { get; set; }
+        public string fileurl { get; set; }
+        public string contenttype { get; set; }
+    }
+
+    public class JsonedFileresponse
+    {
+        public JsonedFileresponse() : base()
         {
             data = new();
         }
-    public JFRData data;
-}
+
+        public JFRData data;
+    }
 #pragma warning restore IDE1006 // Naming Styles
 }

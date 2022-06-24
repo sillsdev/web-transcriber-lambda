@@ -11,7 +11,6 @@ using JsonApiDotNetCore.Serialization.Objects;
 using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Utility.Extensions;
-using System.Text.Json.Serialization;
 using JsonApiDotNetCore.Resources.Annotations;
 using SIL.Transcriber.Serialization;
 using JsonApiDotNetCore.Serialization.Response;
@@ -84,13 +83,30 @@ namespace SIL.Transcriber.Services
             return dt;
         }
 
-        private static void AddJsonEntry(ZipArchive zipArchive, string table, IList list, char sort)
+        private string ToJson<TResource>(IEnumerable<TResource> resources)
+            where TResource : class, IIdentifiable
+        {
+            return SerializerHelpers.ResourceListToJson<TResource>(
+                resources,
+                _resourceGraph,
+                _options,
+                _resourceDefinitionAccessor,
+                _metaBuilder
+            );
+        }
+
+        private void AddJsonEntry<TResource>(
+            ZipArchive zipArchive,
+            string table,
+            IList<TResource> list,
+            char sort
+        ) where TResource : class, IIdentifiable
         {
             ZipArchiveEntry entry = zipArchive.CreateEntry(
                 "data/" + sort + "_" + table + ".json",
                 CompressionLevel.Fastest
             );
-            WriteEntry(entry, JsonSerializer.Serialize(list));
+            WriteEntry(entry, ToJson(list));
         }
 
         private static void AddEafEntry(ZipArchive zipArchive, string name, string eafxml)
@@ -355,15 +371,15 @@ namespace SIL.Transcriber.Services
             return sanitisedName;
         }
 
-        private bool CheckAdd(
+        private bool CheckAdd<TResource>(
             int check,
             DateTime dtBail,
             ref int completed,
             ZipArchive zipArchive,
             string table,
-            IList list,
+            IList<TResource> list,
             char sort
-        )
+        ) where TResource : class, IIdentifiable
         {
             Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail)
@@ -1604,7 +1620,7 @@ namespace SIL.Transcriber.Services
                     );
                     if (myTypeAttribute != null && row.Value != null)
                     {
-                        var value = ((JsonElement)row.Value).Deserialize(
+                        object? value = ((JsonElement)row.Value).Deserialize(
                             myTypeAttribute.Property.PropertyType
                         );
                         if (value is DateTime)
