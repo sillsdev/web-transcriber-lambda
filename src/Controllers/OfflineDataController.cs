@@ -42,7 +42,6 @@ namespace SIL.Transcriber.Controllers
             [FromForm] string? artifactType
         )
         {
-            Debug.WriteLine(exportType, artifactType, ids);
             Fileresponse response = exportType switch
             {
                 "ptf" => _service.ExportProjectPTF(id, start),

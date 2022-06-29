@@ -77,15 +77,20 @@ namespace SIL.Transcriber.Services
                 org = dbContext.Organizations
                     .Where(o => o.Id == proj.OrganizationId)
                     .FirstOrDefault();
-            return (org?.Slug ?? "noorg") + "/" + plan.Slug;
+            if (org == null)
+                throw new Exception("No org in DirectoryName");
+            return org.Slug + "/" + plan.Slug;
         }
 
         public string DirectoryName(Mediafile entity)
         {
             int id = entity.Plan?.Id ?? entity.PlanId;
             /* this no longer works...project is null */
-            Plan? plan = dbContext.PlansData.Where(p => p.Id == id).First();
-
+            Plan plan = dbContext.Plans
+                .Include(p => p.Project)
+                .ThenInclude(p => p.Organization)
+                .Where(p => p.Id == id)
+                .First();
             if (plan != null)
                 return DirectoryName(plan);
             return "";
@@ -268,7 +273,10 @@ namespace SIL.Transcriber.Services
             CancellationToken cancellationToken
         )
         {
-            Debug.Write(dbContext.Plans.First().ProjectId);
+            //do this here because we know how to do it here...
+            //but then capture it in the repository before it gets lost
+            resource.S3File = GetNewFileNameAsync(resource).Result;
+            resource.AudioUrl = GetAudioUrl(resource);
             return await base.CreateAsync(resource, cancellationToken);
         }
     }

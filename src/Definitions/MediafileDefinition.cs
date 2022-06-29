@@ -2,25 +2,24 @@
 using JsonApiDotNetCore.Middleware;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Definitions
 {
     public class MediafileDefinition : BaseDefinition<Mediafile>
     {
-        private readonly MediafileService MediafileService;
         private readonly AppDbContext AppDbContext;
 
         public MediafileDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request,
-            MediafileService mfService,
             AppDbContext appDbContext
         ) : base(resourceGraph, loggerFactory, Request)
         {
-            MediafileService = mfService;
             AppDbContext = appDbContext;
+
+            //Do not use a service here...the dbContext in the service isn't correct when called from definition
+            //at least in onWritingAsync
         }
 
         public override async Task OnWritingAsync(
@@ -39,8 +38,6 @@ namespace SIL.Transcriber.Definitions
                     resource.Transcriptionstate = "transcribeReady";
                 if (resource.ResourcePassageId == null)
                 {
-                    resource.S3File = MediafileService.GetNewFileNameAsync(resource).Result;
-                    resource.AudioUrl = MediafileService.GetAudioUrl(resource);
                     if (resource.IsVernacular && resource.Passage != null)
                     {
                         Mediafile? mfs = AppDbContext.Mediafiles

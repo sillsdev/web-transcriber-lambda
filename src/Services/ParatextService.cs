@@ -613,7 +613,7 @@ namespace SIL.Transcriber.Services
         {
             VerifyUserSecret(userSecret);
 
-            ParatextChapter chapter = new ParatextChapter();
+            ParatextChapter chapter = new();
             chapter.Book = book;
             chapter.Chapter = number;
             //get the text out of paratext

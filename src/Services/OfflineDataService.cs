@@ -655,7 +655,7 @@ namespace SIL.Transcriber.Services
         public Fileresponse ExportProjectAudio(
             int projectid,
             string artifactType,
-            string idList,
+            string? idList,
             int start
         )
         {
@@ -675,7 +675,7 @@ namespace SIL.Transcriber.Services
                 return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
-            using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Update, true))
+            using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
             {
                 if (start == 0)
                 {
@@ -684,7 +684,7 @@ namespace SIL.Transcriber.Services
                         dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 4
                     );
                     List<Mediafile> mediafiles = dbContext.Mediafiles
-                        .Where(x => idList.Contains("," + x.Id.ToString() + ","))
+                        .Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))
                         .ToList();
                     AddJsonEntry(zipArchive, "mediafiles", mediafiles, 'H');
                     AddMediaEaf(
@@ -701,7 +701,7 @@ namespace SIL.Transcriber.Services
             return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
         }
 
-        public Fileresponse ExportBurrito(int projectid, string idList, int start)
+        public Fileresponse ExportBurrito(int projectid, string? idList, int start)
         {
             int LAST_ADD = 0;
             const string ext = ".burrito";
@@ -720,12 +720,12 @@ namespace SIL.Transcriber.Services
                 return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
-            using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Update, true))
+            using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
             {
                 if (start == 0)
                 {
                     List<Mediafile> mediaList = dbContext.Mediafiles
-                        .Where(x => idList.Contains("," + x.Id.ToString() + ","))
+                        .Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))
                         .ToList();
                     mediaList = AddBurritoMedia(zipArchive, project, mediaList);
                     AddBurritoMeta(zipArchive, project, mediaList);
@@ -756,11 +756,11 @@ namespace SIL.Transcriber.Services
                 return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
-            using (ZipArchive zipArchive = new ZipArchive(ms, ZipArchiveMode.Update, true))
+            using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
             {
                 if (start == 0)
                 {
-                    Dictionary<string, string> fonts = new Dictionary<string, string>();
+                    Dictionary<string, string> fonts = new();
                     fonts.Add("Charis SIL", "");
                     DateTime exported = AddCheckEntry(
                         zipArchive,
@@ -1749,7 +1749,6 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
-                    List<Mediafile>? mediafiles = null;
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
                         if (!entry.FullName.StartsWith("data"))
@@ -1844,7 +1843,7 @@ namespace SIL.Transcriber.Services
                                         passage.LastModifiedBy = p.LastModifiedBy;
                                         passage.DateUpdated = DateTime.UtcNow;
                                         dbContext.Passages.Update(passage);
-                                        Passagestatechange psc = new Passagestatechange
+                                        Passagestatechange psc = new()
                                         {
                                             Comments = "Imported", //TODO Localize
                                             DateCreated = passage.DateUpdated,

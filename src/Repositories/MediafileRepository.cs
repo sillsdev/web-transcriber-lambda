@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using Microsoft.EntityFrameworkCore;
+using SIL.Transcriber.Services;
+using System.Diagnostics;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -142,6 +144,18 @@ namespace SIL.Transcriber.Repositories
         public Mediafile? Get(int id)
         {
             return dbContext.MediafilesData.SingleOrDefault(p => p.Id == id);
+        }
+
+        public override Task CreateAsync(
+            Mediafile resourceFromRequest,
+            Mediafile resourceForDatabase,
+            CancellationToken cancellationToken
+        )
+        {
+            //copy the values we set manually in the service CreateAsync
+            resourceForDatabase.S3File = resourceFromRequest.S3File;
+            resourceForDatabase.AudioUrl = resourceFromRequest.AudioUrl;
+            return base.CreateAsync(resourceFromRequest, resourceForDatabase, cancellationToken);
         }
     }
 }
