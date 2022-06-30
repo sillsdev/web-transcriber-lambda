@@ -1465,7 +1465,7 @@ namespace SIL.Transcriber.Services
             foreach (Mediafile m in mediafiles)
             {
                 Mediafile? sourcemedia = dbContext.Mediafiles
-                    .Where(sm => m.OfflineId == m.SourceMediaOfflineId)
+                    .Where(sm => sm.OfflineId == m.SourceMediaOfflineId)
                     .FirstOrDefault();
                 if (sourcemedia != null)
                 {
@@ -1843,15 +1843,16 @@ namespace SIL.Transcriber.Services
                                         passage.LastModifiedBy = p.LastModifiedBy;
                                         passage.DateUpdated = DateTime.UtcNow;
                                         dbContext.Passages.Update(passage);
-                                        Passagestatechange psc = new()
-                                        {
-                                            Comments = "Imported", //TODO Localize
-                                            DateCreated = passage.DateUpdated,
-                                            DateUpdated = passage.DateUpdated,
-                                            LastModifiedBy = currentuser,
-                                            PassageId = passage.Id,
-                                            State = passage.State ?? "",
-                                        };
+                                        Passagestatechange psc =
+                                            new()
+                                            {
+                                                Comments = "Imported", //TODO Localize
+                                                DateCreated = passage.DateUpdated,
+                                                DateUpdated = passage.DateUpdated,
+                                                LastModifiedBy = currentuser,
+                                                PassageId = passage.Id,
+                                                State = passage.State ?? "",
+                                            };
                                         dbContext.Passagestatechanges.Add(psc);
                                     }
                                 }
