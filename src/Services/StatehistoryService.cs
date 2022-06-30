@@ -8,18 +8,18 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class VwPassageStateHistoryEmailService : BaseService<Vwpassagestatehistoryemail>
+    public class StatehistoryService : BaseService<Statehistory>
     {
-        public VwPassageStateHistoryEmailService(
+        public StatehistoryService(
             IResourceRepositoryAccessor repositoryAccessor,
             IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext,
             IJsonApiOptions options,
             ILoggerFactory loggerFactory,
             IJsonApiRequest request,
-            IResourceChangeTracker<Vwpassagestatehistoryemail> resourceChangeTracker,
+            IResourceChangeTracker<Statehistory> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
-            VwPassageStateHistoryEmailRepository repository
+            StatehistoryRepository repository
         )
             : base(
                 repositoryAccessor,
@@ -33,7 +33,7 @@ namespace SIL.Transcriber.Services
                 repository
             ) { }
 
-        public IEnumerable<Vwpassagestatehistoryemail> GetHistorySince(DateTime since)
+        public IEnumerable<Statehistory> GetHistorySince(DateTime since)
         {
             return GetAsync(new CancellationToken()).Result
                 .Where(h => h.StateUpdated > since)

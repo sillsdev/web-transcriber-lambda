@@ -23,17 +23,17 @@ namespace SIL.Transcriber.Controllers
     }
 
     //HttpReadOnly]
-    [Route("api/[controller]")]
+    [Route("api/statehistory")]
     [ApiController]
-    public class StatehistoryController : BaseController<Vwpassagestatehistoryemail>
+    public class StatehistoryController : BaseController<Statehistory>
     {
-        readonly private VwPassageStateHistoryEmailService myService;
+        readonly private StatehistoryService myService;
 
         public StatehistoryController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            VwPassageStateHistoryEmailService resourceService,
+            StatehistoryService resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
         )
@@ -46,7 +46,7 @@ namespace SIL.Transcriber.Controllers
                 userService
             )
         {
-            myService = (VwPassageStateHistoryEmailService)resourceService;
+            myService = (StatehistoryService)resourceService;
         }
 
         [AllowAnonymous]

@@ -59,8 +59,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Sectionresourceuser> Sectionresourceusers => Set<Sectionresourceuser>();
         public DbSet<User> Users => Set<User>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
-        public DbSet<Vwpassagestatehistoryemail> Vwpassagestatehistoryemails =>
-            Set<Vwpassagestatehistoryemail>();
+        public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
         #endregion
 
@@ -273,6 +272,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             builder
                 .Entity<Userversion>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            builder
+                .Entity<Statehistory>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);

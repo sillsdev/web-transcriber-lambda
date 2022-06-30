@@ -119,7 +119,7 @@ namespace SIL.Transcriber
             services.AddScoped<SectionResourceUserService>();
             services.AddScoped<UserService>();
             services.AddScoped<UserVersionService>();
-            services.AddScoped<VwPassageStateHistoryEmailService>();
+            services.AddScoped<StatehistoryService>();
             services.AddScoped<WorkflowStepService>();
         }
 
@@ -164,7 +164,7 @@ namespace SIL.Transcriber
             services.AddScoped<SectionResourceUserRepository>();
             services.AddScoped<UserRepository>();
             services.AddScoped<UserVersionRepository>();
-            services.AddScoped<VwPassageStateHistoryEmailRepository>();
+            services.AddScoped<StatehistoryRepository>();
             services.AddScoped<WorkflowStepRepository>();
         }
 

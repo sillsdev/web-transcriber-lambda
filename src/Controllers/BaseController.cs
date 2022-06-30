@@ -85,7 +85,7 @@ namespace SIL.Transcriber.Controllers
             }
 
             if (
-                currentUserContext.Auth0Id == null
+                (currentUserContext.Auth0Id ?? "") == ""
                 || currentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", "")
             )
             {
