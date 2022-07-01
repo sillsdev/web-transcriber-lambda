@@ -1,8 +1,5 @@
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using System.Linq;
 
 
 namespace SIL.Transcriber.Utility
@@ -27,7 +24,7 @@ namespace SIL.Transcriber.Utility
         }
         public static void SetFP(this HttpContext context, string value)
         {
-            context.Request.Headers["x-fp"]  = value;
+            context.Request.Headers ["x-fp"] = value;
         }
 
         // NOTE: User Claims of Interest:
@@ -51,7 +48,7 @@ namespace SIL.Transcriber.Utility
             return context
                 .User.Claims
                 .FirstOrDefault(c => c.Type == TYPE_NAME_IDENTIFIER)
-                ?.Value ??"Bearer";
+                ?.Value ?? "Bearer";
         }
 
 

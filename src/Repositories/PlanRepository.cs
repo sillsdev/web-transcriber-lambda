@@ -2,8 +2,8 @@
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
-using SIL.Transcriber.Models;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {

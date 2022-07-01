@@ -1,11 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -28,7 +22,7 @@ namespace SIL.Transcriber.Repositories
         public IAsyncEnumerator<TEntity> GetAsyncEnumerator(CancellationToken cancellationToken = default) => new AsyncEnumerator(this.AsEnumerable().GetEnumerator());
         IQueryProvider IQueryable.Provider => new AsyncQueryProvider(this);
 
-        class AsyncEnumerator : IAsyncEnumerator<TEntity>
+        private class AsyncEnumerator : IAsyncEnumerator<TEntity>
         {
             private readonly IEnumerator<TEntity> inner;
             public AsyncEnumerator(IEnumerator<TEntity> inner) => this.inner = inner;
@@ -40,7 +34,7 @@ namespace SIL.Transcriber.Repositories
 #pragma warning restore CS1998
         }
 
-        class AsyncQueryProvider : IAsyncQueryProvider
+        private class AsyncQueryProvider : IAsyncQueryProvider
         {
             private readonly IQueryProvider inner;
             internal AsyncQueryProvider(IQueryProvider inner) => this.inner = inner;

@@ -1,8 +1,7 @@
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using Microsoft.AspNetCore.Mvc;
-using JsonApiDotNetCore.Configuration;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -15,14 +14,14 @@ namespace SIL.Transcriber.Controllers
             IResourceService<Project, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
+        ) : base(
                 loggerFactory,
                 options,
                 resourceGraph,
                 resourceService,
                 currentUserContext,
                 userService
-            ) { }
+            )
+        { }
     }
 }

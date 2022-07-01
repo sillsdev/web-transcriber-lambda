@@ -1,15 +1,15 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
     public class GroupMembershipRepository : BaseRepository<Groupmembership>
     {
-        readonly GroupRepository GroupRepository;
+        private readonly GroupRepository GroupRepository;
         readonly private HttpContext? HttpContext;
 
         public GroupMembershipRepository(

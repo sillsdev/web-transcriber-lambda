@@ -1,13 +1,13 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using JsonApiDotNetCore.Queries.Expressions;
-using JsonApiDotNetCore.Resources.Annotations;
-using System.Collections.Immutable;
 using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries.Expressions;
 using JsonApiDotNetCore.Queries.Internal;
 using JsonApiDotNetCore.QueryStrings;
 using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Resources.Annotations;
 using JsonApiDotNetCore.Serialization.Objects;
 using JsonApiDotNetCore.Serialization.Response;
+using System.Collections.Immutable;
 using System.Text.Json;
 
 namespace SIL.Transcriber.Serialization

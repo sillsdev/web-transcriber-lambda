@@ -1,9 +1,9 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using Microsoft.EntityFrameworkCore;
-using SIL.Transcriber.Models;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 
 namespace SIL.Transcriber.Repositories

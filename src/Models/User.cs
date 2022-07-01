@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Resources.Annotations;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using JsonApiDotNetCore.Serialization.Objects;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using System.Text.Json.Serialization;
-using JsonApiDotNetCore.Serialization.Objects;
 
 namespace SIL.Transcriber.Models
 {

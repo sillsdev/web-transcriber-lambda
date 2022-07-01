@@ -1,6 +1,6 @@
 ﻿using Amazon.S3;
-using Amazon.S3.Transfer;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using Amazon.S3.Util;
 using SIL.Transcriber.Models;
 using System.Net;
@@ -57,7 +57,7 @@ namespace SIL.Transcriber.Services
             {
                 for (int o = 0; o < response.S3Objects.Count; o++)
                 {
-                    if (response.S3Objects[o].Key == fileName)
+                    if (response.S3Objects [o].Key == fileName)
                         return true;
                 }
             }
@@ -169,7 +169,7 @@ namespace SIL.Transcriber.Services
             {
                 if (overwriteifExists && await FileExistsAsync(fileName, folder))
                 {
-                    await RemoveFile(fileName, folder);
+                    _ = await RemoveFile(fileName, folder);
                 }
                 TransferUtility fileTransferUtility = new(_client);
                 await fileTransferUtility.UploadAsync(
@@ -194,7 +194,7 @@ namespace SIL.Transcriber.Services
             try
             {
                 byte[] fileBytes = new byte[file.Length];
-                file.OpenReadStream().Read(fileBytes, 0, int.Parse(file.Length.ToString()));
+                _ = file.OpenReadStream().Read(fileBytes, 0, int.Parse(file.Length.ToString()));
 
                 // create unique file name
                 string fileName = Guid.NewGuid() + "_" + file.FileName;
@@ -295,9 +295,9 @@ namespace SIL.Transcriber.Services
                     {
                         list += string.Format(
                             "{{\"Key\":\"{0}\",\"Size\":\"{1}\",\"LastModified\":\"{2}\"}},",
-                            response.S3Objects[o].Key,
-                            response.S3Objects[o].Size,
-                            response.S3Objects[o].LastModified
+                            response.S3Objects [o].Key,
+                            response.S3Objects [o].Size,
+                            response.S3Objects [o].LastModified
                         );
                     }
                     list += "]";
@@ -331,7 +331,7 @@ namespace SIL.Transcriber.Services
                     fileName,
                     HttpStatusCode.OK,
                     stream,
-                    response.Headers["Content-Type"]
+                    response.Headers ["Content-Type"]
                 );
             }
             catch (AmazonS3Exception e)

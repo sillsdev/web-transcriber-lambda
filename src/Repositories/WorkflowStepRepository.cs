@@ -1,11 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Data;
-using System.Linq;
-using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
-using System.Collections.Generic;
+using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -30,7 +27,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         #region Overrides
         public override IQueryable<Workflowstep> FromProjectList(

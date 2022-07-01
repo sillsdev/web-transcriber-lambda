@@ -1,18 +1,17 @@
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Configuration;
-using Microsoft.EntityFrameworkCore;
-using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using SIL.Transcriber.Services;
-using SIL.Transcriber.Repositories;
-using SIL.Logging.Repositories;
-using SIL.Transcriber.Definitions;
 using Amazon.S3;
-using System.Text.Json.Serialization;
+using JsonApiDotNetCore.Configuration;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using SIL.Logging.Repositories;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text.Json.Serialization;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber
 {
@@ -28,18 +27,15 @@ namespace SIL.Transcriber
             services.AddScoped<LoggingDbContextResolver>();
 
             // Add the Entity Framework Core DbContext like you normally would.
-            services.AddDbContext<AppDbContext>(options =>
-            {
+            services.AddDbContext<AppDbContext>(options => {
                 options.UseNpgsql(GetConnectionString());
             });
-            services.AddDbContext<LoggingDbContext>(options =>
-            {
+            services.AddDbContext<LoggingDbContext>(options => {
                 options.UseNpgsql(GetConnectionString());
             });
             // Add JsonApiDotNetCore services.
             services.AddJsonApi<AppDbContext>(
-                options =>
-                {
+                options => {
                     options.DefaultPageSize = null;
                     options.Namespace = "api";
                     options.UseRelativeLinks = true;
@@ -64,20 +60,6 @@ namespace SIL.Transcriber
                 },
                 discovery => discovery.AddCurrentAssembly()
             );
-            /*services.AddJsonApi(options =>
-            {
-                //options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-                //options.SerializerSettings.MaxDepth = 2;
-                //options.SerializerSettings.ContractResolver = new DefaultContractResolver
-                //{
-                //    NamingStrategy = new KebabCaseNamingStrategy() //TODO
-                //};
-                //options.SerializerSettings.Converters.Add(new JsonStringEnumConverter());
-                //options.EnableOperations = true;
-
-            },
-            discovery => discovery.AddCurrentAssembly(), null, services.AddMvcCore()); */
-
             services.RegisterRepositories();
             services.RegisterServices();
             services.AddSingleton<IS3Service, S3Service>();
@@ -170,27 +152,22 @@ namespace SIL.Transcriber
 
         public static IServiceCollection AddAuthenticationServices(this IServiceCollection services)
         {
-            _ = services
+            services
                 .AddAuthentication()
-                .AddJwtBearer(options =>
-                {
+                .AddJwtBearer(options => {
                     options.Authority = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
                     options.Audience = GetVarOrThrow("SIL_TR_AUTH0_AUDIENCE");
                     options.RequireHttpsMetadata = false;
                     options.SaveToken = true;
                     options.Events = new JwtBearerEvents
                     {
-                        OnTokenValidated = context =>
-                        {
+                        OnTokenValidated = context => {
                             //string TYPE_NAME_IDENTIFIER = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
                             string TYPE_NAME_EMAILVERIFIED = "https://sil.org/email_verified";
                             // Add the access_token as a claim, as we may actually need it
                             ClaimsIdentity? identity = (ClaimsIdentity?)context.Principal?.Identity;
-                            if (
-                                (!identity?.HasClaim(TYPE_NAME_EMAILVERIFIED, "true") ?? true)
-                                && context.HttpContext.Request.Path.Value?.IndexOf("auth/resend")
-                                    < 0
-                            )
+                            if ((!identity?.HasClaim(TYPE_NAME_EMAILVERIFIED, "true") ?? true)
+                                && context.HttpContext.Request.Path.Value?.IndexOf("auth/resend") < 0)
                             {
                                 Exception ex = new("Email address is not validated."); //this message gets lost
                                 ex.Data.Add(402, "Email address is not validated."); //this also gets lost
@@ -201,9 +178,7 @@ namespace SIL.Transcriber
                             {
                                 if (identity != null)
                                 {
-                                    identity.AddClaim(
-                                        new Claim("access_token", accessToken.RawData)
-                                    );
+                                    identity.AddClaim(new Claim("access_token", accessToken.RawData));
                                 }
                             }
                             return System.Threading.Tasks.Task.CompletedTask;
@@ -211,14 +186,12 @@ namespace SIL.Transcriber
                     };
                 })
                 // Om nom nom
-                .AddCookie(options =>
-                {
+                .AddCookie(options => {
                     options.ExpireTimeSpan = TimeSpan.FromDays(365);
                     options.LoginPath = "/Account/Login/";
                 });
 
-            services.AddAuthorization(options =>
-            {
+            services.AddAuthorization(options => {
                 options.AddPolicy(
                     "Authenticated",
                     policy =>
@@ -236,8 +209,7 @@ namespace SIL.Transcriber
 
         public static IServiceCollection AddSwagger(this IServiceCollection services)
         {
-            services.AddSwaggerGen(options =>
-            {
+            services.AddSwaggerGen(options => {
                 options.SwaggerDoc(
                     "v1",
                     new OpenApiInfo

@@ -70,7 +70,7 @@ namespace SIL.Transcriber.Services
                     OrganizationId = entity.Id,
                     RoleId = (int)orgRole
                 };
-                dbContext.Organizationmemberships.Add(membership);
+                _ = dbContext.Organizationmemberships.Add(membership);
                 //dbContext.SaveChanges();
             }
             else
@@ -79,7 +79,7 @@ namespace SIL.Transcriber.Services
                 {
                     membership.RoleId = (int)orgRole;
                     membership.Archived = false;
-                    dbContext.Organizationmemberships.Update(membership);
+                    _ = dbContext.Organizationmemberships.Update(membership);
                     //dbContext.SaveChanges();
                 }
             }

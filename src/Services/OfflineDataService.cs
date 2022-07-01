@@ -1,19 +1,18 @@
-﻿using SIL.Transcriber.Data;
-using SIL.Transcriber.Models;
-using System.IO.Compression;
-using System.Collections;
-using static SIL.Transcriber.Utility.ResourceHelpers;
-using System.Net;
-using SIL.Transcriber.Repositories;
-using Newtonsoft.Json.Linq;
-using System.Text.Json;
-using JsonApiDotNetCore.Serialization.Objects;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Resources;
-using SIL.Transcriber.Utility.Extensions;
 using JsonApiDotNetCore.Resources.Annotations;
-using SIL.Transcriber.Serialization;
+using JsonApiDotNetCore.Serialization.Objects;
 using JsonApiDotNetCore.Serialization.Response;
+using Newtonsoft.Json.Linq;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Utility.Extensions;
+using System.IO.Compression;
+using System.Net;
+using System.Text.Json;
+using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Services
 {
@@ -24,15 +23,15 @@ namespace SIL.Transcriber.Services
         protected CurrentUserRepository CurrentUserRepository { get; }
 
         readonly private IS3Service _S3service;
-        const string ImportFolder = "imports";
-        const string ExportFolder = "exports";
+        private const string ImportFolder = "imports";
+        private const string ExportFolder = "exports";
 
         protected ILogger<OfflineDataService> Logger { get; set; }
 
-        readonly IResourceGraph _resourceGraph;
-        readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
-        readonly IMetaBuilder _metaBuilder;
-        readonly IJsonApiOptions _options;
+        private readonly IResourceGraph _resourceGraph;
+        private readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
+        private readonly IMetaBuilder _metaBuilder;
+        private readonly IJsonApiOptions _options;
 
         public OfflineDataService(
             AppDbContextResolver contextResolver,
@@ -178,16 +177,15 @@ namespace SIL.Transcriber.Services
             {
                 return null;
             }
-            return imageData == null ? null : new MemoryStream(imageData);
+            return imageData != null ? new MemoryStream(imageData) : null;
         }
 
         private static void AddOrgLogos(ZipArchive zipArchive, List<Organization> orgs)
         {
-            orgs.ForEach(o =>
-            {
+            orgs.ForEach(o => {
                 if (!string.IsNullOrEmpty(o.LogoUrl))
                 {
-                    AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png");
+                    _ = AddStreamEntry(zipArchive, o.LogoUrl, "logos/", o.Slug + ".png");
                     //    o.LogoUrl = "logos/" + o.Slug + ".png";
                     //else
                     //    o.LogoUrl = null;
@@ -197,11 +195,10 @@ namespace SIL.Transcriber.Services
 
         private static void AddUserAvatars(ZipArchive zipArchive, List<User> users)
         {
-            users.ForEach(u =>
-            {
+            users.ForEach(u => {
                 if (!string.IsNullOrEmpty(u.AvatarUrl))
                 {
-                    AddStreamEntry(
+                    _ = AddStreamEntry(
                         zipArchive,
                         u.AvatarUrl,
                         "avatars/",
@@ -276,11 +273,11 @@ namespace SIL.Transcriber.Services
                 if (start != 3)
                 {
                     int end = css.IndexOf("')", start);
-                    url = css[start..end];
+                    url = css [start..end];
                     string fontfile = url[(url.LastIndexOf("/") + 1)..];
                     url = bucket + fontfile;
-                    AddStreamEntry(zipArchive, url, "fonts/", fontfile);
-                    css = css.Substring(0, start + 1) + fontfile + css[end..];
+                    _ = AddStreamEntry(zipArchive, url, "fonts/", fontfile);
+                    css = css.Substring(0, start + 1) + fontfile + css [end..];
                 }
                 ZipArchiveEntry entry = zipArchive.CreateEntry(
                     "fonts/" + cssfile,
@@ -403,7 +400,7 @@ namespace SIL.Transcriber.Services
                 string data = reader.ReadToEnd();
                 if (data.IndexOf("|") > 0)
                 {
-                    err = data[(data.IndexOf("|") + 1)..];
+                    err = data [(data.IndexOf("|") + 1)..];
                     data = data.Substring(0, data.IndexOf("|"));
                 }
                 if (!int.TryParse(data, out startNext))
@@ -450,9 +447,7 @@ namespace SIL.Transcriber.Services
         private Stream OpenFile(string fileName)
         {
             S3Response s3response = _S3service.ReadObjectDataAsync(fileName, ExportFolder).Result;
-            if (s3response.FileStream == null)
-                throw (new Exception("Export in progress " + fileName + "not found."));
-            return s3response.FileStream;
+            return s3response.FileStream ?? throw (new Exception("Export in progress " + fileName + "not found."));
         }
 
         private Stream GetMemoryStream(int start, string fileName, string ext)
@@ -549,40 +544,39 @@ namespace SIL.Transcriber.Services
             root.meta.dateCreated = DateTime.Now.ToString("o");
             root.identification.name.en = project.Name;
             root.identification.description.en = project.Description;
-            root.languages[0].tag = project.Language;
-            root.languages[0].name.en = project.LanguageName;
+            root.languages [0].tag = project.Language;
+            root.languages [0].name.en = project.LanguageName;
 
-            mediafiles.ForEach(m =>
-            {
+            mediafiles.ForEach(m => {
                 //get stored book and ref out of audioquality
                 string[] split = (m.AudioQuality ?? "|").Split("|");
                 string book = split[0];
                 string reference = split[1];
                 if (!scopes.ContainsKey(book))
                     scopes.Add(book, new List<string>());
-                scopes[book].Add(reference);
+                scopes [book].Add(reference);
                 string ext = Path.GetExtension(m.AudioUrl ?? "").TrimStart('.');
                 if (!formats.Contains(ext))
                     formats.Add(ext);
-                root.ingredients[m.AudioUrl] = new JObject();
+                root.ingredients [m.AudioUrl] = new JObject();
                 if (mimeMap.ContainsKey(ext))
-                    root.ingredients[m.AudioUrl].mimeType = mimeMap[ext];
-                root.ingredients[m.AudioUrl].size = m.Filesize;
+                    root.ingredients [m.AudioUrl].mimeType = mimeMap [ext];
+                root.ingredients [m.AudioUrl].size = m.Filesize;
                 string scopestr = string.Format("{{[{0}]:[{1}]}}", book, reference);
-                root.ingredients[m.AudioUrl].scope = new JObject();
-                root.ingredients[m.AudioUrl].scope[book] = JToken.FromObject(
-                    new string[] { reference }
+                root.ingredients [m.AudioUrl].scope = new JObject();
+                root.ingredients [m.AudioUrl].scope [book] = JToken.FromObject(
+                    new string [] { reference }
                 );
             });
             for (int n = 0; n < formats.Count; n++)
             {
                 string name = "format" + (n + 1).ToString();
-                root.type.flavorType.flavor.formats[name] = new JObject();
-                root.type.flavorType.flavor.formats[name].compression = formats[n];
+                root.type.flavorType.flavor.formats [name] = new JObject();
+                root.type.flavorType.flavor.formats [name].compression = formats [n];
             }
             foreach (KeyValuePair<string, List<string>> item in scopes)
             {
-                root.type.flavorType.currentScope[item.Key] = JToken.FromObject(
+                root.type.flavorType.currentScope [item.Key] = JToken.FromObject(
                     item.Value.ToArray()
                 );
             }
@@ -621,8 +615,7 @@ namespace SIL.Transcriber.Services
             List<Mediafile> mediafiles
         )
         {
-            mediafiles.ForEach(m =>
-            {
+            mediafiles.ForEach(m => {
                 Passage? passage = dbContext.Passages
                     .Where(p => p.Id == m.PassageId)
                     .FirstOrDefault();
@@ -640,8 +633,7 @@ namespace SIL.Transcriber.Services
 
         private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles)
         {
-            mediafiles.ForEach(m =>
-            {
+            mediafiles.ForEach(m => {
                 //S3File has just the filename
                 //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
                 //change the audioUrl to have the offline path + filename
@@ -687,7 +679,7 @@ namespace SIL.Transcriber.Services
                         .Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))
                         .ToList();
                     AddJsonEntry(zipArchive, "mediafiles", mediafiles, 'H');
-                    AddMediaEaf(
+                    _ = AddMediaEaf(
                         0,
                         DateTime.Now.AddSeconds(15),
                         ref startNext,
@@ -819,7 +811,7 @@ namespace SIL.Transcriber.Services
                     foreach (string? font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
                     {
                         if (font != null)
-                            fonts[font] = ""; //add it if it's not there
+                            fonts [font] = ""; //add it if it's not there
                     }
                     foreach (
                         string? font in projects
@@ -828,7 +820,7 @@ namespace SIL.Transcriber.Services
                     )
                     {
                         if (font != null)
-                            fonts[font] = ""; //add it if it's not there
+                            fonts [font] = ""; //add it if it's not there
                     }
                     AddFonts(zipArchive, fonts.Keys);
                     //users
@@ -997,7 +989,7 @@ namespace SIL.Transcriber.Services
                                     res.ContentType ?? ""
                                 )
                                 .Message;
-                        dbContext.Mediafiles.Update(mf);
+                        _ = dbContext.Mediafiles.Update(mf);
                     }
                     if (
                         !CheckAdd(
@@ -1020,8 +1012,7 @@ namespace SIL.Transcriber.Services
                             zipArchive,
                             "artifactcategorys",
                             dbContext.Artifactcategorys
-                                .Where(
-                                    a =>
+                                .Where(a =>
                                         (
                                             a.OrganizationId == null
                                             || a.OrganizationId == project.OrganizationId
@@ -1040,8 +1031,7 @@ namespace SIL.Transcriber.Services
                             zipArchive,
                             "artifacttypes",
                             dbContext.Artifacttypes
-                                .Where(
-                                    a =>
+                                .Where(a =>
                                         (
                                             a.OrganizationId == null
                                             || a.OrganizationId == project.OrganizationId
@@ -1304,8 +1294,8 @@ namespace SIL.Transcriber.Services
                     errors.Add(JsonSerializer.Serialize(fr));
                 }
             }
-            report.RemoveAll(s => s.Length == 0);
-            errors.RemoveAll(s => s.Length == 0);
+            _ = report.RemoveAll(s => s.Length == 0);
+            _ = errors.RemoveAll(s => s.Length == 0);
             if (errors.Count > 0)
                 return ErrorResponse(
                     "{\"errors\": ["
@@ -1475,17 +1465,14 @@ namespace SIL.Transcriber.Services
                 }
             }
             dbContext.Mediafiles.UpdateRange(mediafiles);
-            dbContext.SaveChanges();
+            _ = dbContext.SaveChanges();
         }
 
         private int CompareMediafilesByArtifactTypeVersionDesc(Mediafile a, Mediafile b)
         {
             if (a == null)
             {
-                if (b == null)
-                    return 0;
-                else
-                    return -1;
+                return b == null ? 0 : -1;
             }
             else
             { //a is not null
@@ -1496,16 +1483,13 @@ namespace SIL.Transcriber.Services
                     if (a.IsVernacular)
                     {
                         if (b.IsVernacular)
-                            return (int)(a.VersionNumber ?? 0 - b.VersionNumber ?? 0); //both vernacular so use version number
+                            return a.VersionNumber ?? 0 - b.VersionNumber ?? 0; //both vernacular so use version number
                         else
                             return -1;
                     }
                     else
                     {
-                        if (b.IsVernacular)
-                            return 1;
-                        else //neither is a vernacular so should all be version 1
-                            return 0;
+                        return b.IsVernacular ? 1 : 0;
                     }
                 }
             }
@@ -1518,13 +1502,12 @@ namespace SIL.Transcriber.Services
             List<string> report
         )
         {
-            if (
-                !existing.Archived && existing.Subject != importing.Subject
-                || (
-                    existing.MediafileId != importing.MediafileId
-                    || existing.ArtifactCategoryId != importing.ArtifactCategoryId
-                    || existing.Resolved != importing.Resolved
-                    || existing.GroupId != importing.GroupId
+            if (!existing.Archived && 
+                (existing.Subject != importing.Subject
+                || existing.MediafileId != importing.MediafileId
+                || existing.ArtifactCategoryId != importing.ArtifactCategoryId
+                || existing.Resolved != importing.Resolved
+                || existing.GroupId != importing.GroupId
                 )
             )
             {
@@ -1539,7 +1522,7 @@ namespace SIL.Transcriber.Services
                 existing.OfflineMediafileId = importing.OfflineMediafileId;
                 existing.LastModifiedBy = importing.LastModifiedBy;
                 existing.DateUpdated = DateTime.UtcNow;
-                dbContext.Discussions.Update(existing);
+                _ = dbContext.Discussions.Update(existing);
             }
         }
 
@@ -1562,7 +1545,7 @@ namespace SIL.Transcriber.Services
                 existing.OfflineMediafileId = importing.OfflineMediafileId;
                 existing.DateUpdated = DateTime.UtcNow;
                 existing.Archived = false;
-                dbContext.Comments.Update(existing);
+                _ = dbContext.Comments.Update(existing);
             }
         }
 
@@ -1600,7 +1583,7 @@ namespace SIL.Transcriber.Services
                     existing.Transcriptionstate = importing.Transcriptionstate;
                 existing.LastModifiedBy = importing.LastModifiedBy;
                 existing.DateUpdated = DateTime.UtcNow;
-                dbContext.Mediafiles.Update(existing);
+                _ = dbContext.Mediafiles.Update(existing);
             }
         }
 
@@ -1728,7 +1711,7 @@ namespace SIL.Transcriber.Services
                 }
                 if (project == null)
                     return ProjectDeletedResponse(
-                        fileproject.Attributes?["name"]?.ToString() ?? "project not found",
+                        fileproject.Attributes? ["name"]?.ToString() ?? "project not found",
                         sFile
                     );
             }
@@ -1793,7 +1776,7 @@ namespace SIL.Transcriber.Services
                                         user.LastModifiedBy = u.LastModifiedBy;
                                         user.DateUpdated = DateTime.UtcNow;
                                         /* TODO: figure out if the avatar needs uploading */
-                                        dbContext.Users.Update(user);
+                                        _ = dbContext.Users.Update(user);
                                     }
                                 }
                                 break;
@@ -1813,7 +1796,7 @@ namespace SIL.Transcriber.Services
                                         section.State = s.State;
                                         section.LastModifiedBy = s.LastModifiedBy;
                                         section.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Sections.Update(section);
+                                        _ = dbContext.Sections.Update(section);
                                     }
                                 }
                                 ;
@@ -1842,7 +1825,7 @@ namespace SIL.Transcriber.Services
                                         passage.StepComplete = p.StepComplete;
                                         passage.LastModifiedBy = p.LastModifiedBy;
                                         passage.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Passages.Update(passage);
+                                        _ = dbContext.Passages.Update(passage);
                                         Passagestatechange psc =
                                             new()
                                             {
@@ -1853,7 +1836,7 @@ namespace SIL.Transcriber.Services
                                                 PassageId = passage.Id,
                                                 State = passage.State ?? "",
                                             };
-                                        dbContext.Passagestatechanges.Add(psc);
+                                        _ = dbContext.Passagestatechanges.Add(psc);
                                     }
                                 }
                                 ;
@@ -1877,7 +1860,7 @@ namespace SIL.Transcriber.Services
                                             .FirstOrDefault();
                                         if (discussion == null)
                                         {
-                                            dbContext.Discussions.Add(
+                                            _ = dbContext.Discussions.Add(
                                                 new Discussion
                                                 {
                                                     ArtifactCategoryId = d.ArtifactCategoryId,
@@ -1922,7 +1905,7 @@ namespace SIL.Transcriber.Services
                                             .FirstOrDefault();
                                         if (comment == null)
                                         {
-                                            dbContext.Comments.Add(
+                                            _ = dbContext.Comments.Add(
                                                 new Comment
                                                 {
                                                     OfflineId = c.OfflineId,
@@ -1988,8 +1971,7 @@ namespace SIL.Transcriber.Services
                                                 else
                                                 {
                                                     mediafile = dbContext.Mediafiles
-                                                        .Where(
-                                                            p =>
+                                                        .Where(p =>
                                                                 p.PassageId == m.PassageId
                                                                 && !p.Archived
                                                                 && p.IsVernacular
@@ -2000,7 +1982,7 @@ namespace SIL.Transcriber.Services
                                                         m.VersionNumber =
                                                             mediafile.VersionNumber + 1;
                                                 }
-                                                passageVersions[(int)m.PassageId] =
+                                                passageVersions [(int)m.PassageId] =
                                                     m.VersionNumber ?? 1;
                                             }
                                             m.S3File = await mediaService.GetNewFileNameAsync(m);
@@ -2012,7 +1994,7 @@ namespace SIL.Transcriber.Services
                                                 )
                                                 .Message;
                                             await CopyMediaFile(m, archive);
-                                            dbContext.Mediafiles.Add(
+                                            _ = dbContext.Mediafiles.Add(
                                                 new Mediafile
                                                 {
                                                     ArtifactTypeId = m.ArtifactTypeId,
@@ -2076,7 +2058,7 @@ namespace SIL.Transcriber.Services
                                         grpmem.FontSize = gm.FontSize;
                                         grpmem.LastModifiedBy = gm.LastModifiedBy;
                                         grpmem.DateUpdated = DateTime.UtcNow;
-                                        dbContext.Groupmemberships.Update(grpmem);
+                                        _ = dbContext.Groupmemberships.Update(grpmem);
                                     }
                                 }
                                 ;
@@ -2097,15 +2079,14 @@ namespace SIL.Transcriber.Services
                                     );
                                     //see if it's already there...
                                     IQueryable<Passagestatechange> dups =
-                                        dbContext.Passagestatechanges.Where(
-                                            c =>
+                                        dbContext.Passagestatechanges.Where(c =>
                                                 c.PassageId == psc.PassageId
                                                 && c.DateCreated == psc.DateCreated
                                                 && c.State == psc.State
                                         );
                                     if (!dups.Any())
                                     { /* if I send psc in directly, the id goes wonky...must be *something* different in the way it is initialized (tried setting id=0), so copy relevant info here */
-                                        dbContext.Passagestatechanges.Add(
+                                        _ = dbContext.Passagestatechanges.Add(
                                             new Passagestatechange
                                             {
                                                 PassageId = psc.PassageId,
@@ -2127,7 +2108,7 @@ namespace SIL.Transcriber.Services
 
                     UpdateOfflineIds();
                 }
-                report.RemoveAll(s => s.Length == 0);
+                _ = report.RemoveAll(s => s.Length == 0);
 
                 return new Fileresponse()
                 {

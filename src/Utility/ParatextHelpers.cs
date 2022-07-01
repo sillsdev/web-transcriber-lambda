@@ -9,16 +9,17 @@ namespace SIL.Transcriber.Utility
 {
     public class ParatextHelpers
     {
-        public static string ParatextProject(int? projectId, string artifactType, ProjectIntegrationRepository piRepo )
+        public static string ParatextProject(int? projectId, string artifactType, ProjectIntegrationRepository piRepo)
         {
-            if (projectId == null) return "";
+            if (projectId == null)
+                return "";
             string? paratextSettings = piRepo.IntegrationSettings(projectId??0, "paratext"+ artifactType);
             if (paratextSettings == null || paratextSettings == "")
             {
                 throw new Exception("No Paratext Integration Settings for this project " + projectId.ToString());
             }
             dynamic? settings = JsonConvert.DeserializeObject(paratextSettings);
-            return settings?.ParatextId??"";
+            return settings?.ParatextId ?? "";
         }
 
         public static string TraverseNodes(XNode? xml, int level)
@@ -57,14 +58,15 @@ namespace SIL.Transcriber.Utility
         {
             value.RemoveText();
             string[] lines = transcription.Split('\n');
-            if (lines.Length == 1 && !lines[0].EndsWith('\n')) lines[0] += '\n';
+            if (lines.Length == 1 && !lines [0].EndsWith('\n'))
+                lines [0] += '\n';
             XText newverse = new XText(lines[0]);
             value.AddAfterSelf(newverse);
             XNode ?last = value.Parent.IsPara() ? value.Parent : value.NextNode;
 
             for (int ix = 1; ix < lines.Length; ix++)
             {
-                last?.AddAfterSelf(ParatextPara("p", new XText(lines[ix])));
+                last?.AddAfterSelf(ParatextPara("p", new XText(lines [ix])));
                 last = last?.NextNode;
             }
             return;
@@ -81,7 +83,8 @@ namespace SIL.Transcriber.Utility
         {
             XElement verse = new ("verse", new XAttribute("number", verses), new XAttribute("style", "v"), null);
             XElement first = ParatextPara("p", verse);
-            if (parent == null) return first;
+            if (parent == null)
+                return first;
 
             if (before)
                 parent.AddBeforeSelf(first);
@@ -99,16 +102,17 @@ namespace SIL.Transcriber.Utility
 
         private static XElement? MoveToPara(XElement verse)
         {
-            if (verse.IsPara()) return verse;
+            if (verse.IsPara())
+                return verse;
             string text = verse.VerseText();
-            if (verse.Parent.IsPara()) 
+            if (verse.Parent.IsPara())
             {
                 if (verse.PreviousNode != null)
                 {
                     XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute?.Value??"", text);
                     XNode? nextVerse = verse.NextNode;
                     XNode? endverse = newVerse;
-                    
+
                     while (nextVerse != null)
                     {
                         endverse?.AddAfterSelf(nextVerse); //unlike javascript, this doesn't MOVE it, it copies it
@@ -127,14 +131,14 @@ namespace SIL.Transcriber.Utility
                         rem.Remove();
                         endverse = endverse?.NextNode;
                     }
-                    verse.RemoveVerse();  //remove the verse and its text
+                    _ = verse.RemoveVerse();  //remove the verse and its text
                     return newVerse;
                 }
                 return verse.Parent;
             }
             XNode? prev = verse.PreviousNode;
-            AddParatextVerse(prev, verse.FirstAttribute?.Value??"", text);
-            verse.RemoveVerse();  //remove the verse and its text
+            _ = AddParatextVerse(prev, verse.FirstAttribute?.Value ?? "", text);
+            _ = verse.RemoveVerse();  //remove the verse and its text
             return (XElement?)prev?.NextNode; //return the para
         }
 
@@ -146,8 +150,9 @@ namespace SIL.Transcriber.Utility
                 book = new XElement("book", new XAttribute("code", code));
                 /* find the book */
                 if (chapterContent == null)
-                    chapterContent = book;
-                else chapterContent.AddFirst(book);
+                    _ = book;
+                else
+                    chapterContent.AddFirst(book);
             }
             return book;
         }
@@ -166,7 +171,10 @@ namespace SIL.Transcriber.Utility
                 }
                 else
                 {
-                    if (chapterContent == null) chapterContent = chapter; else chapterContent.AddFirst(chapter);
+                    if (chapterContent == null)
+                        chapterContent = chapter;
+                    else
+                        chapterContent.AddFirst(chapter);
                 }
             }
             return chapterContent;
@@ -181,7 +189,7 @@ namespace SIL.Transcriber.Utility
             //find where to put it
             XElement? nextVerse = null;
             if (verses != null)
-                foreach(XElement v in verses)
+                foreach (XElement v in verses)
                 {
                     if (nextVerse == null)
                     {
@@ -191,14 +199,14 @@ namespace SIL.Transcriber.Utility
                             nextVerse = v;
                     }
                 };
-                if (nextVerse != null)
-                {
-                    nextVerse = MoveToPara(nextVerse);
-                    //skip section if there
-                    if (nextVerse?.PreviousNode != null && nextVerse.PreviousNode.IsSection())
-                        return nextVerse.PreviousNode;
-                    return nextVerse;
-                }
+            if (nextVerse != null)
+            {
+                nextVerse = MoveToPara(nextVerse);
+                //skip section if there
+                if (nextVerse?.PreviousNode != null && nextVerse.PreviousNode.IsSection())
+                    return nextVerse.PreviousNode;
+                return nextVerse;
+            }
             return nextVerse;
         }
         private static bool FindNodes(XNode? thisNode, XNode nextVerse, List<XNode> list)
@@ -219,13 +227,13 @@ namespace SIL.Transcriber.Utility
         public static SortedList<string, XElement> GetExistingVerses(XElement? chapterContent, Passage currentPassage, out XElement? thisVerse)
         {
             SortedList<string, XElement> existing = new ();
-             XElement? exactVerse = null;
+            XElement? exactVerse = null;
             if (chapterContent != null)
             {
                 IEnumerable<XElement>? verses = chapterContent.GetElements("verse");
                 for (int ix = currentPassage.StartVerse; ix <= currentPassage.EndVerse; ix++)
                 {
-                    IEnumerable<XElement>? myverses = verses?.Where(n => ((XElement)n).IncludesVerse(ix));
+                    IEnumerable<XElement>? myverses = verses?.Where(n => n.IncludesVerse(ix));
                     if (myverses != null)
                         foreach (XElement verse in myverses)
                         {
@@ -291,9 +299,11 @@ namespace SIL.Transcriber.Utility
         public static string GetParatextData(XElement? chapterContent, Passage currentPassage)
         {
             string transcription = "";
+
             //find the verses that contain verses in my range
-            SortedList<string, XElement> existing = GetExistingVerses(chapterContent, currentPassage, out XElement? thisVerse);
-            if (existing.Values.Count == 0) throw new Exception("no range");
+            SortedList<string, XElement> existing = GetExistingVerses(chapterContent, currentPassage, out _);
+            if (existing.Values.Count == 0)
+                throw new Exception("no range");
             foreach (XElement v in existing.Values)
             {
                 if (v.IsVerse())
@@ -308,11 +318,11 @@ namespace SIL.Transcriber.Utility
             if (parsedPassages.Count() > 1)
             {
                 //remove the original range if it exists 
-                GetExistingVerses(chapterContent, currentPassage, out XElement? thisVerse);
+                _ = GetExistingVerses(chapterContent, currentPassage, out XElement? thisVerse);
                 if (thisVerse != null)
-                    thisVerse.RemoveVerse();
+                    _ = thisVerse.RemoveVerse();
             }
-            foreach(Passage? p in parsedPassages)
+            foreach (Passage? p in parsedPassages)
             {
                 //find the verses that contain verses in my range
                 SortedList<string, XElement> existing = GetExistingVerses(chapterContent, p, out XElement? thisVerse);
@@ -321,7 +331,7 @@ namespace SIL.Transcriber.Utility
                     if (v != thisVerse)
                     {
                         if (v.IsVerse())
-                            v.RemoveVerse();
+                            _ = v.RemoveVerse();
                         else
                             v.RemoveSection();
                     }
@@ -329,7 +339,7 @@ namespace SIL.Transcriber.Utility
 
                 if (thisVerse != null)
                 {
-                    ReplaceText(thisVerse, (p.LastComment??""));
+                    ReplaceText(thisVerse, (p.LastComment ?? ""));
                 }
                 else
                 {
@@ -337,11 +347,11 @@ namespace SIL.Transcriber.Utility
                     XNode? nextVerse = FindNodeAfterVerse(p.StartVerse, p.EndVerse, verses);
                     if (nextVerse == null)
                     {   //add it at the end
-                        thisVerse = AddParatextVerse(chapterContent?.LastNode, p.Verses, p.LastComment??"");
+                        thisVerse = AddParatextVerse(chapterContent?.LastNode, p.Verses, p.LastComment ?? "");
                     }
                     else
                     {   //add before
-                        thisVerse = AddParatextVerse(nextVerse, p.Verses, p.LastComment??"", true);
+                        thisVerse = AddParatextVerse(nextVerse, p.Verses, p.LastComment ?? "", true);
                     }
                 }
                 if (currentPassage.Sequencenum == 1 && first)
@@ -349,18 +359,18 @@ namespace SIL.Transcriber.Utility
                     XElement? vp = MoveToPara(thisVerse);
                     if (vp != null)
                         //add/update the section header
-                        if (vp.PreviousNode?.IsSection()??false)
+                        if (vp.PreviousNode?.IsSection() ?? false)
                         {
                             XText? firstNode = (XText?)((XElement)vp.PreviousNode).FirstNode;
                             if (firstNode != null)
-                                firstNode.Value = currentPassage.Section?.SectionHeader(addNumbers) ??"";
+                                firstNode.Value = currentPassage.Section?.SectionHeader(addNumbers) ?? "";
                         }
                         else
                         {
-                            vp.AddBeforeSelf(ParatextSection(currentPassage.Section?.SectionHeader(addNumbers)??""));
+                            vp.AddBeforeSelf(ParatextSection(currentPassage.Section?.SectionHeader(addNumbers) ?? ""));
                         }
                     first = false;
-                } 
+                }
             };
             return chapterContent;
         }

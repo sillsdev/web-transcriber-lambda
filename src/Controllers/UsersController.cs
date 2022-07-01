@@ -1,8 +1,8 @@
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using JsonApiDotNetCore.Configuration;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -15,15 +15,15 @@ namespace SIL.Transcriber.Controllers
             IResourceService<User, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
+        ) : base(
                 loggerFactory,
                 options,
                 resourceGraph,
                 resourceService,
                 currentUserContext,
                 userService
-            ) { }
+            )
+        { }
 
         /*  this makes the api not work...
         [HttpPost]
@@ -36,9 +36,7 @@ namespace SIL.Transcriber.Controllers
         public async Task<IActionResult?> GetCurrentUser()
         {
             User? currentUser = CurrentUser;
-            if (currentUser == null)
-                return null;
-            return await base.GetAsync(currentUser.Id, new System.Threading.CancellationToken());
+            return currentUser != null ? await base.GetAsync(currentUser.Id, new System.Threading.CancellationToken()) : null;
         }
     }
 }

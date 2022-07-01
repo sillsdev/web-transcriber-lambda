@@ -1,9 +1,9 @@
-﻿using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {

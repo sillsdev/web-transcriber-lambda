@@ -1,9 +1,8 @@
-﻿using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
-using SIL.Transcriber.Data;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Configuration;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -18,8 +17,7 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-        )
-            : base(
+        ) : base(
                 targetedFields,
                 contextResolver,
                 resourceGraph,
@@ -28,7 +26,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         #region Overrides
         public override IQueryable<Activitystate> FromProjectList(

@@ -1,14 +1,9 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using Microsoft.Extensions.Logging;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System;
-using System.Linq;
-using JsonApiDotNetCore.Queries;
-using JsonApiDotNetCore.Resources;
-using System.Collections.Generic;
-using JsonApiDotNetCore.Serialization;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -52,14 +47,14 @@ namespace SIL.Transcriber.Repositories
                 {
                     uv.DesktopVersion = version;
                     uv.Environment = env;
-                    dbContext.Update(uv);
+                    _ = dbContext.Update(uv);
                 }
                 else
                 {
                     uv = new Userversion { DesktopVersion = version, Environment = env, };
-                    dbContext.UserVersions.Add(uv);
+                    _ = dbContext.UserVersions.Add(uv);
                 }
-                dbContext.SaveChanges();
+                _ = dbContext.SaveChanges();
                 Currentversion cv = CVService.GetVersion(version);
                 uv.DesktopVersion = cv.DesktopVersion;
                 uv.DateUpdated = cv.DateUpdated;

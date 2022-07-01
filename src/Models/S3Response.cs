@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace SIL.Transcriber.Models
+﻿namespace SIL.Transcriber.Models
 {
     public class S3Response : Fileresponse
     {

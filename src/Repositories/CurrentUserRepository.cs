@@ -1,29 +1,25 @@
-using System.Linq;
 using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using JsonApiDotNetCore.Queries;
-using JsonApiDotNetCore.Resources;
-using System.Collections.Generic;
-using JsonApiDotNetCore.Repositories;
-using Microsoft.AspNetCore.Http;
 
 namespace SIL.Transcriber.Repositories
 {
     public class CurrentUserRepository : EntityFrameworkCoreRepository<CurrentUser, int>
     {
         // NOTE: this repository MUST not rely on any other repositories or services
-        protected readonly AppDbContext dbContext; 
+        protected readonly AppDbContext dbContext;
 
         public CurrentUserRepository(
             ITargetedFields targetedFields, AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph, IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory, 
+            ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             ICurrentUserContext currentUserContext
        ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
@@ -48,8 +44,8 @@ namespace SIL.Transcriber.Repositories
                 string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", CurrentUserContext.Auth0Id);
 
                 curUser = dbContext.Users
-                    .Where(user => !user.Archived && (user.ExternalId??"").Equals(auth0Id))
-                    .Include(user => user.OrganizationMemberships.Where(om => !om.Archived)) 
+                    .Where(user => !user.Archived && (user.ExternalId ?? "").Equals(auth0Id))
+                    .Include(user => user.OrganizationMemberships.Where(om => !om.Archived))
                     .Include(user => user.GroupMemberships.Where(gm => !gm.Archived))
                     .FirstOrDefault();
 
@@ -66,11 +62,12 @@ namespace SIL.Transcriber.Repositories
         }
 
         public CurrentUser? Get()
-       {
+        {
             string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
             User? user= dbContext.Users
                      .Where(user => !user.Archived && (user.ExternalId??"").Equals(auth0Id)).FirstOrDefault();
-            if (user == null) return null;
+            if (user == null)
+                return null;
             CurrentUser cu = new(user)
             {
                 LastModifiedByUser = null

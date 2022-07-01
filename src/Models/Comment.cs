@@ -1,10 +1,9 @@
 ﻿
 using JsonApiDotNetCore.Resources.Annotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-   public class Comment : BaseModel, IArchive
+    public class Comment : BaseModel, IArchive
     {
         public int? DiscussionId { get; set; }
         [HasOne(PublicName = "discussion")]

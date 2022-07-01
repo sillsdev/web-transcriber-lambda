@@ -31,6 +31,7 @@ namespace SIL.Transcriber.Services
                 resourceChangeTracker,
                 resourceDefinitionAccessor,
                 repository
-            ) { }
+            )
+        { }
     }
 }

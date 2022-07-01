@@ -1,8 +1,8 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -27,7 +27,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         public Sectionpassage? GetByUUID(Guid uuid)
         {
@@ -37,28 +38,28 @@ namespace SIL.Transcriber.Repositories
         public List<Section> BulkUpdateSections(List<Section> sections)
         {
             dbContext.UpdateRange(sections);
-            dbContext.SaveChanges();
+            _ = dbContext.SaveChanges();
             return sections;
         }
 
         public List<Section> BulkDeleteSections(List<Section> sections)
         {
             dbContext.RemoveRange(sections);
-            dbContext.SaveChanges();
+            _ = dbContext.SaveChanges();
             return sections;
         }
 
         public List<Passage> BulkUpdatePassages(List<Passage> passages)
         {
             dbContext.UpdateRange(passages);
-            dbContext.SaveChanges();
+            _ = dbContext.SaveChanges();
             return passages;
         }
 
         public List<Passage> BulkDeletePassages(List<Passage> passages)
         {
             dbContext.RemoveRange(passages);
-            dbContext.SaveChanges();
+            _ = dbContext.SaveChanges();
             return passages;
         }
 
@@ -67,8 +68,8 @@ namespace SIL.Transcriber.Repositories
             Section? section = dbContext.Sections.Find(sectionId);
             if (section != null)
             {
-                dbContext.Sections.Update(section);
-                dbContext.SaveChanges();
+                _ = dbContext.Sections.Update(section);
+                _ = dbContext.SaveChanges();
             }
             return section;
         }
@@ -81,8 +82,8 @@ namespace SIL.Transcriber.Repositories
                 plan.SectionCount = dbContext.Sections
                     .Where(s => s.PlanId == planId && !s.Archived)
                     .Count();
-                dbContext.Plans.Update(plan);
-                dbContext.SaveChanges();
+                _ = dbContext.Plans.Update(plan);
+                _ = dbContext.SaveChanges();
             }
             return plan;
         }

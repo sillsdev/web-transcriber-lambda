@@ -1,16 +1,12 @@
-﻿using JsonApiDotNetCore.Controllers;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Controllers;
+using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Models;
-using System.Threading.Tasks;
-using System;
-using Microsoft.Extensions.Logging;
-using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using Microsoft.Net.Http.Headers;
-using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Configuration;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using SIL.Transcriber.Services;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -23,24 +19,24 @@ namespace SIL.Transcriber.Controllers
             IResourceService<T, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
+        ) : base(
                 loggerFactory,
                 options,
                 resourceGraph,
                 resourceService,
                 currentUserContext,
                 userService
-            ) { }
+            )
+        { }
     }
 
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class BaseController<T, TId> : JsonApiController<T, TId>
         where T : class, IIdentifiable<TId>
     {
-        protected IResourceService<T, TId> service;
-        protected UserService userService;
-        protected ICurrentUserContext currentUserContext;
+        protected IResourceService<T, TId> Service;
+        protected UserService UserService;
+        protected ICurrentUserContext CurrentUserContext;
         protected User? _currentUser;
         protected ILogger<T> Logger { get; set; }
 
@@ -53,18 +49,16 @@ namespace SIL.Transcriber.Controllers
             UserService userService
         ) : base(options, resourceGraph, loggerFactory, resourceService)
         {
-            this.service = resourceService;
-            this.userService = userService;
-            this.currentUserContext = currentUserContext;
-            this.Logger = loggerFactory.CreateLogger<T>();
+            Service = resourceService;
+            UserService = userService;
+            CurrentUserContext = currentUserContext;
+            Logger = loggerFactory.CreateLogger<T>();
             _currentUser = CurrentUser; //make sure this happens first no matter what entrypoint is used
         }
 
-        public User? CurrentUser
-        {
-            get
-            {
-                if (_currentUser == null) // && HttpContext != null && HttpContext.Request.Headers[HeaderNames.Authorization].Count > 0)
+        public User? CurrentUser {
+            get {
+                if (_currentUser == null && (CurrentUserContext.Auth0Id ?? "") != "")
                 {
                     // current user has not yet been found for this request.
                     // find or create because users are managed by auth0 and
@@ -77,17 +71,15 @@ namespace SIL.Transcriber.Controllers
 
         private User? FindOrCreateCurrentUser()
         {
-            User? existing = userService.GetCurrentUser();
+            User? existing = UserService.GetCurrentUser();
 
             if (existing != null)
             {
                 return existing;
             }
 
-            if (
-                (currentUserContext.Auth0Id ?? "") == ""
-                || currentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", "")
-            )
+            if ((CurrentUserContext.Auth0Id ?? "") == ""
+                || CurrentUserContext.Auth0Id == GetVarOrDefault("SIL_TR_WEBHOOK_USERNAME", ""))
             {
                 Console.WriteLine("No Auth0 user.");
                 return null;
@@ -96,17 +88,17 @@ namespace SIL.Transcriber.Controllers
             User newUser =
                 new()
                 {
-                    ExternalId = currentUserContext.Auth0Id,
-                    Email = currentUserContext.Email,
-                    Name = currentUserContext.Name,
-                    GivenName = currentUserContext.GivenName,
-                    FamilyName = currentUserContext.FamilyName,
-                    AvatarUrl = currentUserContext.Avatar,
+                    ExternalId = CurrentUserContext.Auth0Id,
+                    Email = CurrentUserContext.Email,
+                    Name = CurrentUserContext.Name,
+                    GivenName = CurrentUserContext.GivenName,
+                    FamilyName = CurrentUserContext.FamilyName,
+                    AvatarUrl = CurrentUserContext.Avatar,
                     DigestPreference = 1, // 0=none, >1=daily  room for future preferences
                     NewsPreference = false,
                     DateCreated = DateTime.UtcNow,
                 };
-            User? newEntity = userService.CreateUser(newUser);
+            User? newEntity = UserService.CreateUser(newUser);
             Console.WriteLine("New user created.");
 
             return newEntity;

@@ -1,12 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using JsonApiDotNetCore.Configuration;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
-using SIL.Transcriber.Models;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Serialization;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {

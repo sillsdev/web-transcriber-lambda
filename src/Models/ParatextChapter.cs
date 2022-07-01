@@ -4,7 +4,7 @@ namespace SIL.Paratext.Models
 {
     public class ParatextChapter
     {
-        public ParatextChapter():base()
+        public ParatextChapter() : base()
         {
             Project = "";
             Book = "";

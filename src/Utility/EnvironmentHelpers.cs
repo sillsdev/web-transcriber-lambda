@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SIL.Transcriber.Utility
+﻿namespace SIL.Transcriber.Utility
 {
     public static class EnvironmentHelpers
     {

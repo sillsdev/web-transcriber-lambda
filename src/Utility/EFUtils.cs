@@ -2,11 +2,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SIL.Transcriber.Utility
 {
-  public static class EFUtils
-  {
-    public static bool Like(string value, string search) 
+    public static class EFUtils
     {
-        return EF.Functions.Like(value, $"%{search}%");
+        public static bool Like(string value, string search)
+        {
+            return EF.Functions.Like(value, $"%{search}%");
+        }
     }
-  }
 }

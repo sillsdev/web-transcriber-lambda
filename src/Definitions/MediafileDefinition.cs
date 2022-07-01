@@ -56,8 +56,7 @@ namespace SIL.Transcriber.Definitions
                 {
                     //pick the highest version media of the resource per passage
                     Mediafile? sourcemediafile = AppDbContext.Mediafiles
-                        .Where(
-                            x =>
+                        .Where(x =>
                                 x.PassageId == resource.ResourcePassageId
                                 && x.ReadyToShare
                                 && !x.Archived
@@ -73,12 +72,12 @@ namespace SIL.Transcriber.Definitions
                     Passagestatechange psc =
                         new()
                         {
-                            PassageId = (int)resource.Passage.Id,
+                            PassageId = resource.Passage.Id,
                             State = "",
                             Comments = resource.EafUrl
                         };
 
-                    AppDbContext.Passagestatechanges.Add(psc);
+                    _ = AppDbContext.Passagestatechanges.Add(psc);
                     resource.EafUrl = "";
                 }
             }

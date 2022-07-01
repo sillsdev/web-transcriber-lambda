@@ -142,8 +142,7 @@ namespace SIL.Transcriber.Services
 
         private static void AddNewChanges(List<OrbitId> newCh, List<OrbitId> master)
         {
-            newCh.ForEach(t =>
-            {
+            newCh.ForEach(t => {
                 OrbitId? list = master.Find(c => c.Type == t.Type);
                 if (list == null)
                     master.Add(t);
@@ -154,7 +153,7 @@ namespace SIL.Transcriber.Services
 
         public Datachanges GetProjectChanges(
             string origin,
-            ProjDate?[] projects,
+            ProjDate? [] projects,
             string version = "1",
             int start = 0
         )
@@ -176,8 +175,8 @@ namespace SIL.Transcriber.Services
                     start = ret.startNext;
                 }
             }
-            changes.RemoveAll(c => c.Ids.Count == 0);
-            deleted.RemoveAll(d => d.Ids.Count == 0);
+            _ = changes.RemoveAll(c => c.Ids.Count == 0);
+            _ = deleted.RemoveAll(d => d.Ids.Count == 0);
             return new Datachanges()
             {
                 Id = 1,
@@ -207,8 +206,8 @@ namespace SIL.Transcriber.Services
                 ret = GetChanges(origin, dtSince, user.Id, 0, dbVersion, start);
                 AddNewChanges(ret.changes, changes);
                 AddNewChanges(ret.deleted, deleted);
-                changes.RemoveAll(c => c.Ids.Count == 0);
-                deleted.RemoveAll(d => d.Ids.Count == 0);
+                _ = changes.RemoveAll(c => c.Ids.Count == 0);
+                _ = deleted.RemoveAll(d => d.Ids.Count == 0);
                 return new Datachanges()
                 {
                     Id = 1,
@@ -226,8 +225,7 @@ namespace SIL.Transcriber.Services
 
         private class ArchiveModel : BaseModel, IArchive
         {
-            bool IArchive.Archived
-            {
+            bool IArchive.Archived {
                 get => throw new NotImplementedException();
                 set => throw new NotImplementedException();
             }

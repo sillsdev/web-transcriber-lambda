@@ -1,26 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Serialization.Response;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using JsonApiDotNetCore.Serialization.JsonConverters;
-using System.Text.Json;
-using JsonApiDotNetCore.Serialization.Response;
-using JsonApiDotNetCore.Serialization.Objects;
-using JsonApiDotNetCore.Middleware;
-using JsonApiDotNetCore.Resources.Annotations;
-using SIL.Transcriber.Utility.Extensions;
-using System.Text.Json.Serialization;
-using JsonApiDotNetCore.Resources.Internal;
-using SIL.Transcriber.Utility;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
-using JsonApiDotNetCore.Queries.Expressions;
 using System.Collections.Immutable;
 
 namespace SIL.Transcriber.Repositories
@@ -270,8 +256,8 @@ namespace SIL.Transcriber.Repositories
                     )
                         break;
                     IEnumerable<int> ids = orgs.Select(o => o.Id);
-                    IQueryable<Artifactcategory> cats = dbContext.ArtifactcategoriesData.Where(
-                        c =>
+                    IQueryable<Artifactcategory> cats = dbContext.ArtifactcategoriesData
+                        .Where(c =>
                             (c.OrganizationId == null || ids.Contains((int)c.OrganizationId))
                             && !c.Archived
                     );
@@ -287,8 +273,7 @@ namespace SIL.Transcriber.Repositories
                         break;
                     IQueryable<Artifacttype> typs = dbContext.ArtifacttypesData
                         .Include(c => c.Organization)
-                        .Where(
-                            c =>
+                        .Where(c =>
                                 (c.OrganizationId == null || ids.Contains((int)c.OrganizationId))
                                 && !c.Archived
                         );

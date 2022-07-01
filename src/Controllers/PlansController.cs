@@ -1,8 +1,8 @@
-﻿using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using JsonApiDotNetCore.Configuration;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -15,15 +15,15 @@ namespace SIL.Transcriber.Controllers
             IResourceService<Plan, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
+        ) : base(
                 loggerFactory,
                 options,
                 resourceGraph,
                 resourceService,
                 currentUserContext,
                 userService
-            ) { }
+            )
+        { }
 
         [HttpPost]
         public override async Task<IActionResult> PostAsync(

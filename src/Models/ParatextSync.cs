@@ -23,19 +23,19 @@ namespace SIL.Logging.Models
             Err = err;
         }
 
-        [Attr(PublicName="plan-id")]
+        [Attr(PublicName = "plan-id")]
         public int PlanId { get; set; }
 
-        [Attr(PublicName="paratext-project")]
+        [Attr(PublicName = "paratext-project")]
         public string? ParatextProject { get; set; }
 
-        [Attr(PublicName="book-chapter")]
+        [Attr(PublicName = "book-chapter")]
         public string? BookChapter { get; set; }
 
-        [Attr(PublicName="before-sync")]
+        [Attr(PublicName = "before-sync")]
         public string? BeforeSync { get; set; }
 
-        [Attr(PublicName="err")]
+        [Attr(PublicName = "err")]
         public string? Err { get; set; }
     }
 }

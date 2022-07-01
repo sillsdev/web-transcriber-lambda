@@ -1,9 +1,9 @@
-﻿using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -51,8 +51,7 @@ namespace SIL.Transcriber.Repositories
                 );
                 string currentEmail = CurrentUser.Email?.ToLower() ?? "";
 
-                entities = entities.Where(
-                    i =>
+                entities = entities.Where(i =>
                         orgadmins.Contains(i.OrganizationId)
                         || currentEmail == (i.Email ?? "").ToLower()
                 );

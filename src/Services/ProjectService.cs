@@ -1,17 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
     public class ProjectService : BaseArchiveService<Project>
     {
-        readonly ProjectRepository MyRepository;
+        private readonly ProjectRepository MyRepository;
 
         public ProjectService(
             IResourceRepositoryAccessor repositoryAccessor,

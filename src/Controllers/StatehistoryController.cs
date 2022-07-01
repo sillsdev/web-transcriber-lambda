@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
-using JsonApiDotNetCore.Configuration;
-using Microsoft.AspNetCore.Authorization;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Errors;
 using JsonApiDotNetCore.Serialization.Objects;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -22,8 +22,7 @@ namespace SIL.Transcriber.Controllers
             StatehistoryService resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
+        ) : base(
                 loggerFactory,
                 options,
                 resourceGraph,
@@ -32,7 +31,7 @@ namespace SIL.Transcriber.Controllers
                 userService
             )
         {
-            myService = (StatehistoryService)resourceService;
+            myService = resourceService;
         }
 
         [AllowAnonymous]

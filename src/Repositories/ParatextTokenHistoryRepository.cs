@@ -1,10 +1,8 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using Microsoft.Extensions.Logging;
-using SIL.Logging.Models;
-using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using System.Collections.Generic;
+using SIL.Logging.Models;
+using SIL.Transcriber.Data;
 
 
 namespace SIL.Logging.Repositories
@@ -17,7 +15,7 @@ namespace SIL.Logging.Repositories
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
                 constraintProviders, loggerFactory, resourceDefinitionAccessor)
         {
         }

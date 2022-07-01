@@ -1,12 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using JsonApiDotNetCore.Configuration;
-
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Services;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Services
 {
@@ -31,6 +29,7 @@ namespace SIL.Transcriber.Services
                 request,
                 resourceChangeTracker,
                 resourceDefinitionAccessor
-            ) { }
+            )
+        { }
     }
 }

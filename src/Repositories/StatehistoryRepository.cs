@@ -1,12 +1,8 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using System.Collections.Generic;
-using System.Linq;
-using JsonApiDotNetCore.Serialization;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -31,7 +27,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         public override IQueryable<Statehistory> FromCurrentUser(
             IQueryable<Statehistory>? entities = null

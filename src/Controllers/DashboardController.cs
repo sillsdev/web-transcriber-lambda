@@ -1,15 +1,10 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Controllers;
-using JsonApiDotNetCore.Controllers.Annotations;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -18,7 +13,7 @@ namespace SIL.Transcriber.Controllers
     [ApiController]
     public class DashboardsController : JsonApiController<Dashboard, int>
     {
-        readonly DashboardRepository repo;
+        private readonly DashboardRepository repo;
 
         public DashboardsController(
             ILoggerFactory loggerFactory,
@@ -26,7 +21,12 @@ namespace SIL.Transcriber.Controllers
             IResourceGraph resourceGraph,
             IResourceService<Dashboard, int> resourceService,
             DashboardRepository repository
-        ) : base(options, resourceGraph, loggerFactory, resourceService)
+        ) : base(
+                options,
+                resourceGraph,
+                loggerFactory,
+                resourceService
+            )
         {
             repo = repository;
         }

@@ -12,7 +12,7 @@ namespace SIL.Transcriber.Controllers
 {
     public class MediafilesController : BaseController<Mediafile>
     {
-        readonly MediafileService _service;
+        private readonly MediafileService _service;
 
         public MediafilesController(
             ILoggerFactory loggerFactory,
@@ -21,8 +21,7 @@ namespace SIL.Transcriber.Controllers
             IResourceService<Mediafile, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
+        ) : base(
                 loggerFactory,
                 options,
                 resourceGraph,
@@ -116,9 +115,7 @@ namespace SIL.Transcriber.Controllers
         )
         {
             Mediafile? response = await _service.GetFromFile(plan, s3File);
-            if (response == null)
-                return NotFound();
-            return Ok(response);
+            return response == null ? NotFound() : Ok(response);
         }
 
         [AllowAnonymous]
@@ -130,9 +127,7 @@ namespace SIL.Transcriber.Controllers
         )
         {
             Mediafile? mf = await _service.UpdateFileInfoAsync(id, filesize, duration);
-            if (mf == null)
-                return NotFound();
-            return Ok(mf);
+            return mf != null ? Ok(mf) : NotFound();
         }
     }
 }

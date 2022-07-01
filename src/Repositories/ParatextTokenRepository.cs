@@ -1,8 +1,8 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using SIL.Paratext.Models;
-using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Paratext.Models;
+using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -16,7 +16,7 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
                 constraintProviders, loggerFactory, resourceDefinitionAccessor)
         {
             CurrentUserRepository = currentUserRepository;

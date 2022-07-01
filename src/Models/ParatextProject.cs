@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-
-namespace SIL.Paratext.Models
+﻿namespace SIL.Paratext.Models
 {
     public class ParatextProject
     {
-        public ParatextProject():base()
+        public ParatextProject() : base()
         {
             ParatextId = "";
             Name = "";

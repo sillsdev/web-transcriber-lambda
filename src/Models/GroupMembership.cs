@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Resources.Annotations;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
@@ -10,23 +10,22 @@ namespace SIL.Transcriber.Models
         public virtual User User { get; set; } = null!;
         public int UserId { get; set; }
 
-        [HasOne(PublicName="group")]
+        [HasOne(PublicName = "group")]
         public virtual Group Group { get; set; } = null!;
         public int GroupId { get; set; }
 
-        [HasOne(PublicName="role")]
+        [HasOne(PublicName = "role")]
         public virtual Role Role { get; set; } = null!;
         public int RoleId { get; set; }
 
         [NotMapped]
-        public RoleName RoleName
-        {
+        public RoleName RoleName {
             get { return Role == null ? RoleName.Transcriber : Role.Rolename; }
         }
-        [Attr(PublicName="font")]
+        [Attr(PublicName = "font")]
         public string? Font { get; set; }
 
-        [Attr(PublicName="font-size")]
+        [Attr(PublicName = "font-size")]
         public string? FontSize { get; set; }
 
         public bool Archived { get; set; }

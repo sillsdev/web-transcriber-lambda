@@ -34,7 +34,8 @@ namespace SIL.Transcriber.Services
                 resourceChangeTracker,
                 resourceDefinitionAccessor,
                 baseRepo
-            ) { }
+            )
+        { }
 
         public override IEnumerable<TResource> GetChanges(
             IQueryable<TResource> entities,

@@ -1,7 +1,6 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries.Expressions;
-using JsonApiDotNetCore.Resources.Annotations;
 using SIL.Transcriber.Models;
 using System.Collections.Immutable;
 

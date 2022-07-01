@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+﻿using IdentityModel;
+using Microsoft.EntityFrameworkCore.Storage;
 using Newtonsoft.Json.Linq;
 using SIL.Logging.Models;
 using SIL.Logging.Repositories;
@@ -15,9 +16,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using IdentityModel;
 
 namespace SIL.Transcriber.Services
 {
@@ -40,8 +39,9 @@ namespace SIL.Transcriber.Services
 
         readonly private HttpContext? HttpContext;
         protected ILogger<ParatextService> Logger { get; set; }
-        readonly ParatextTokenHistoryRepository TokenHistoryRepo;
-        readonly ProjectIntegrationRepository ProjectIntegrationRepository;
+
+        private readonly ParatextTokenHistoryRepository TokenHistoryRepo;
+        private readonly ProjectIntegrationRepository ProjectIntegrationRepository;
 
         public ParatextService(
             AppDbContextResolver contextResolver,
@@ -122,7 +122,7 @@ namespace SIL.Transcriber.Services
                 {
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
-                    dbContext.Paratexttokens.Update(token);
+                    _ = dbContext.Paratexttokens.Update(token);
                     //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
                 }
                 else
@@ -133,7 +133,7 @@ namespace SIL.Transcriber.Services
             }
             else
             {
-                dbContext.Paratexttokens.Add(newPTToken.ParatextTokens);
+                _ = dbContext.Paratexttokens.Add(newPTToken.ParatextTokens);
                 //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, newPTToken.ParatextTokens.AccessToken, newPTToken.ParatextTokens.RefreshToken, "From First Login"));
             }
             return newPTToken;
@@ -150,7 +150,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<IReadOnlyList<ParatextOrg>> GetOrgsAsync(UserSecret userSecret)
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             string response = await CallApiAsync(
                 _registryClient,
                 userSecret,
@@ -170,20 +170,20 @@ namespace SIL.Transcriber.Services
                 orgs.Add(
                     new ParatextOrg
                     {
-                        Id = (string?)o["id"] ?? "",
-                        Name = (string?)o["name"] ?? "",
-                        NameLocal = (string?)o["nameLocal"] ?? "",
-                        Url = (string?)o["url"],
-                        Abbr = (string?)o["abbr"],
-                        Parent = (string?)o["parent"],
-                        Location = (string?)o["location"],
-                        Area = (string?)o["area"],
-                        Public = (bool)(o["public"] ?? false),
-                        Active = (bool)(o["active"] ?? false),
-                        InDbl = (bool)(o["in_dbl"] ?? false),
-                        AuthorizedForParatext = (bool)(o["authorizedForParatext"] ?? false),
-                        ShareBasicProgressInfo = (bool)(o["shareBasicProgressInfo"] ?? false),
-                        CountryISO = (string?)o["country_iso"],
+                        Id = (string?)o ["id"] ?? "",
+                        Name = (string?)o ["name"] ?? "",
+                        NameLocal = (string?)o ["nameLocal"] ?? "",
+                        Url = (string?)o ["url"],
+                        Abbr = (string?)o ["abbr"],
+                        Parent = (string?)o ["parent"],
+                        Location = (string?)o ["location"],
+                        Area = (string?)o ["area"],
+                        Public = (bool)(o ["public"] ?? false),
+                        Active = (bool)(o ["active"] ?? false),
+                        InDbl = (bool)(o ["in_dbl"] ?? false),
+                        AuthorizedForParatext = (bool)(o ["authorizedForParatext"] ?? false),
+                        ShareBasicProgressInfo = (bool)(o ["shareBasicProgressInfo"] ?? false),
+                        CountryISO = (string?)o ["country_iso"],
                         Domains = domains,
                     }
                 );
@@ -195,7 +195,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<IReadOnlyList<ParatextProject>?> GetProjectsAsync(UserSecret userSecret)
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             //Console.WriteLine("GetProjectsAsync");
             Claim? usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             string? username = usernameClaim?.Value;
@@ -277,8 +277,7 @@ namespace SIL.Transcriber.Services
                 List<ParatextProject> subProjects = projects.FindAll(
                     p => p.BaseProject == proj.ParatextId
                 );
-                subProjects.ForEach(sp =>
-                {
+                subProjects.ForEach(sp => {
                     if (sp.Name.Length == 0)
                         sp.Name = sp.ProjectType + " " + proj.Name;
                     if (sp.LanguageName == null)
@@ -305,7 +304,7 @@ namespace SIL.Transcriber.Services
             string paratextId
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             try
             {
                 Claim? subClaim = GetClaim(
@@ -322,7 +321,7 @@ namespace SIL.Transcriber.Services
                     );
                     JObject memberObj = JObject.Parse(response);
 
-                    return Attempt.Success((string?)memberObj["role"]);
+                    return Attempt.Success((string?)memberObj ["role"]);
                 }
                 return Attempt.Failure((string?)null, "Claim not found");
             }
@@ -339,7 +338,7 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                VerifyUserSecret(userSecret);
+                _ = VerifyUserSecret(userSecret);
                 if (!int.TryParse(inviteId, out int id))
                     return Attempt.Failure("Invalid invitation Id");
 
@@ -355,13 +354,13 @@ namespace SIL.Transcriber.Services
                     JArray memberObj = JArray.Parse(response);
                     if (
                         memberObj.Count > 0
-                        && memberObj[0]["username"]?.ToString() == GetParatextUsername(userSecret)
+                        && memberObj [0] ["username"]?.ToString() == GetParatextUsername(userSecret)
                     )
                     {
                         invite.Email = CurrentUserContext.Email;
                         invite.Accepted = true;
-                        dbContext.Invitations.Update(invite);
-                        dbContext.SaveChanges();
+                        _ = dbContext.Invitations.Update(invite);
+                        _ = dbContext.SaveChanges();
                         return Attempt.Success(inviteId);
                     }
                     else
@@ -389,7 +388,7 @@ namespace SIL.Transcriber.Services
 
         public string? GetParatextUsername(UserSecret userSecret)
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             Claim? usernameClaim = GetClaim(userSecret.ParatextTokens.AccessToken, "username");
             return usernameClaim?.Value;
         }
@@ -399,7 +398,7 @@ namespace SIL.Transcriber.Services
             string projectId
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             string response = await CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -416,7 +415,7 @@ namespace SIL.Transcriber.Services
 
         public Task<string> GetBookTextAsync(UserSecret userSecret, string projectId, string bookId)
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             return CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -432,7 +431,7 @@ namespace SIL.Transcriber.Services
             int chapter
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             Console.WriteLine($"text/{projectId}/{bookId}/{chapter}");
             return CallApiAsync(
                 _dataAccessClient,
@@ -452,7 +451,7 @@ namespace SIL.Transcriber.Services
             string usxText
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             return CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -471,7 +470,7 @@ namespace SIL.Transcriber.Services
             string usxText
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             return CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -483,7 +482,7 @@ namespace SIL.Transcriber.Services
 
         public Task<string> GetNotesAsync(UserSecret userSecret, string projectId, string bookId)
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             return CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -498,7 +497,7 @@ namespace SIL.Transcriber.Services
             string notesText
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             return CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -510,7 +509,7 @@ namespace SIL.Transcriber.Services
 
         private async Task<UserSecret> RefreshAccessTokenAsync(UserSecret userSecret)
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
             if (userSecret.ParatextTokens.RefreshToken == null)
             {
                 throw new Exception("401 RefreshTokenNull");
@@ -539,12 +538,12 @@ namespace SIL.Transcriber.Services
             //requestObj["client_secret"] = "XXX";
             //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, (string)responseObj["access_token"], (string)responseObj["refresh_token"], requestObj.ToString(), response.ReasonPhrase + responseObj));
 
-            response.EnsureSuccessStatusCode();
+            _ = response.EnsureSuccessStatusCode();
 
-            userSecret.ParatextTokens.AccessToken = (string?)responseObj["access_token"] ?? "";
-            userSecret.ParatextTokens.RefreshToken = (string?)responseObj["refresh_token"] ?? "";
+            userSecret.ParatextTokens.AccessToken = (string?)responseObj ["access_token"] ?? "";
+            userSecret.ParatextTokens.RefreshToken = (string?)responseObj ["refresh_token"] ?? "";
             if (userSecret.ParatextTokens.RefreshToken != null)
-                dbContext.Paratexttokens.Update(userSecret.ParatextTokens);
+                _ = dbContext.Paratexttokens.Update(userSecret.ParatextTokens);
             else
                 throw new Exception(
                     "401 RefreshTokenNull.  Expected on Dev and QA.  Login again with Paratext connection."
@@ -564,7 +563,7 @@ namespace SIL.Transcriber.Services
             string? content = null
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
 
             bool expired = !userSecret.ParatextTokens.ValidateLifetime();
             bool refreshed = false;
@@ -611,7 +610,7 @@ namespace SIL.Transcriber.Services
             int number
         )
         {
-            VerifyUserSecret(userSecret);
+            _ = VerifyUserSecret(userSecret);
 
             ParatextChapter chapter = new();
             chapter.Book = book;
@@ -877,8 +876,8 @@ namespace SIL.Transcriber.Services
                             bookchapter.ToString(),
                             chapter.OriginalUSX?.ToString() ?? ""
                         );
-                    logDbContext.Add(history);
-                    logDbContext.SaveChanges();
+                    _ = logDbContext.Add(history);
+                    _ = logDbContext.SaveChanges();
                     //make sure we have the chapter number
                     try
                     {
@@ -912,7 +911,7 @@ namespace SIL.Transcriber.Services
                                     addNumbers
                                 );
                                 //log it
-                                logDbContext.Paratextsyncpassages.Add(
+                                _ = logDbContext.Paratextsyncpassages.Add(
                                     new Paratextsyncpassage(
                                         currentUser?.Id ?? 0,
                                         history?.Id ?? 0,
@@ -921,13 +920,13 @@ namespace SIL.Transcriber.Services
                                         chapter.NewUSX?.ToString() ?? ""
                                     )
                                 );
-                                logDbContext.SaveChanges();
+                                _ = logDbContext.SaveChanges();
                                 for (int ix = 0; ix < psgMedia.Count; ix++)
                                 {
                                     Mediafile mediafile = psgMedia[ix];
                                     mediafile.Transcriptionstate = "done";
                                     //Debug.WriteLine("mediafile {0}", mediafile.Id);
-                                    dbContext.Mediafiles.Update(mediafile);
+                                    _ = dbContext.Mediafiles.Update(mediafile);
                                 }
                             }
                             catch (Exception ex)
@@ -941,7 +940,7 @@ namespace SIL.Transcriber.Services
                                 );
                                 if (history != null)
                                 {
-                                    logDbContext.Paratextsyncpassages.Add(
+                                    _ = logDbContext.Paratextsyncpassages.Add(
                                         new Paratextsyncpassage(
                                             currentUser?.Id ?? 0,
                                             history.Id,
@@ -949,7 +948,7 @@ namespace SIL.Transcriber.Services
                                             ex.Message + ex.InnerException?.Message ?? ""
                                         )
                                     );
-                                    logDbContext.SaveChanges();
+                                    _ = logDbContext.SaveChanges();
                                 }
                                 transaction.Rollback();
                                 throw ex;
@@ -973,8 +972,8 @@ namespace SIL.Transcriber.Services
                                 + "::"
                                 + (ex.InnerException != null ? ex.InnerException.Message : "");
                             //log it
-                            logDbContext.Paratextsyncs.Update(history);
-                            logDbContext.SaveChanges();
+                            _ = logDbContext.Paratextsyncs.Update(history);
+                            _ = logDbContext.SaveChanges();
                         }
                         Logger.LogError(
                             "Paratext Error generating Chapter text {0} {1} {2}: {3}",
@@ -1016,8 +1015,8 @@ namespace SIL.Transcriber.Services
                                 c.NewUSX?.ToString() ?? "",
                                 ex.Message
                             );
-                        logDbContext.Paratextsyncs.Add(history);
-                        logDbContext.SaveChanges();
+                        _ = logDbContext.Paratextsyncs.Add(history);
+                        _ = logDbContext.SaveChanges();
 
                         Logger.LogError(
                             "Paratext Error updating Chapter text {M0} {B1} {C2}: {O3} {N4}",
@@ -1030,7 +1029,7 @@ namespace SIL.Transcriber.Services
                         throw ex;
                     }
                 }
-                dbContext.SaveChanges();
+                _ = dbContext.SaveChanges();
                 transaction.Commit();
             }
             return chapterList;

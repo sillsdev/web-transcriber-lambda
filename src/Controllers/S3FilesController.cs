@@ -1,8 +1,8 @@
-﻿using System.Net;
-using System.Net.Mime;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Net;
+using System.Net.Mime;
 
 //Transcriber doesn't currently use this controller
 

@@ -1,8 +1,8 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
 using Auth0.ManagementApi;
 using Auth0.ManagementApi.Models;
 using Newtonsoft.Json.Linq;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services
@@ -25,10 +25,8 @@ namespace SIL.Transcriber.Services
             _httpClient = new HttpClient { BaseAddress = new Uri(domain) };
         }
 
-        private ManagementApiClient ManagementApiClient
-        {
-            get
-            {
+        private ManagementApiClient ManagementApiClient {
+            get {
                 if (managementApiClient == null)
                 {
                     (string? AccessToken, bool _) = GetAccessTokenAsync().Result;
@@ -79,7 +77,7 @@ namespace SIL.Transcriber.Services
                     "application/json"
                 );
                 HttpResponseMessage response = await _httpClient.SendAsync(request);
-                response.EnsureSuccessStatusCode();
+                _ = response.EnsureSuccessStatusCode();
                 string responseJson = await response.Content.ReadAsStringAsync();
                 dynamic responseObj = JObject.Parse(responseJson);
                 _accessToken = (string)responseObj.access_token;
@@ -87,7 +85,7 @@ namespace SIL.Transcriber.Services
             }
             finally
             {
-                _lock.Release();
+                _ = _lock.Release();
             }
         }
 

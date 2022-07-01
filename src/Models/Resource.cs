@@ -11,7 +11,7 @@ namespace SIL.Transcriber.Models
         public int OrganizationId { get; set; }
         [Attr(PublicName = "organization")]
         public string? Organization { get; set; }
-        
+
         [Attr(PublicName = "language")]
         public string? Language { get; set; }
 
@@ -32,7 +32,7 @@ namespace SIL.Transcriber.Models
         public int? Passageid { get; set; }
         [Attr(PublicName = "passage-sequencenum")]
         public int PassageSequencenum { get; set; }
-     
+
         [Attr(PublicName = "book")]
         public string? Book { get; set; }
         [Attr(PublicName = "reference")]
@@ -57,7 +57,7 @@ namespace SIL.Transcriber.Models
         public string? S3File { get; set; }
         [Attr(PublicName = "filesize")]
         public long Filesize { get; set; }
-        
+
         [Attr(PublicName = "languagebcp47")]
         public string? Languagebcp47 { get; set; }
 

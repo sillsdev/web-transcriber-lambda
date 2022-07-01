@@ -31,7 +31,8 @@ namespace SIL.Transcriber.Services
                 resourceChangeTracker,
                 resourceDefinitionAccessor,
                 repository
-            ) { }
+            )
+        { }
 
         public Userversion StoreVersion(string version)
         {

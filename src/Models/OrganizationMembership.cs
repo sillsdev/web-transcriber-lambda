@@ -1,35 +1,34 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Resources.Annotations;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
     [Table("organizationmemberships")]
-    public partial class Organizationmembership :BaseModel, IArchive
+    public partial class Organizationmembership : BaseModel, IArchive
     {
 
         [NotMapped]
-        [Attr(PublicName="email")]  //user's email?
+        [Attr(PublicName = "email")]  //user's email?
         public string? Email { get; set; }
 
-        [HasOne(PublicName="user")]
+        [HasOne(PublicName = "user")]
         public virtual User User { get; set; } = null!;
 
-        [Attr(PublicName="user-id")]
+        [Attr(PublicName = "user-id")]
         public int UserId { get; set; }
 
-        [HasOne(PublicName="organization")]
+        [HasOne(PublicName = "organization")]
         public virtual Organization Organization { get; set; } = null!;
 
-        [Attr(PublicName="organization-id")]
+        [Attr(PublicName = "organization-id")]
         public int OrganizationId { get; set; }
 
-        [HasOne(PublicName="role")]
+        [HasOne(PublicName = "role")]
         public Role Role { get; set; } = null!;
         public int RoleId { get; set; }
 
         [NotMapped]
-        public RoleName RoleName
-        {
+        public RoleName RoleName {
             get { return (RoleName)RoleId; }
         }
         public bool Archived { get; set; }

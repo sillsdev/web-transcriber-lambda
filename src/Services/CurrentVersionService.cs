@@ -1,11 +1,11 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
@@ -52,8 +52,7 @@ namespace SIL.Transcriber.Services
             Microsoft.EntityFrameworkCore.DbSet<Currentversion>? cvs = dbContext.Currentversions;
             Currentversion? cv = null;
             if (version.Contains("beta"))
-                cv = cvs?.Where(
-                    v =>
+                cv = cvs?.Where(v =>
                         (v.DesktopVersion ?? "").Contains("beta")
                         || (v.DesktopVersion ?? "").Contains("rc")
                 )

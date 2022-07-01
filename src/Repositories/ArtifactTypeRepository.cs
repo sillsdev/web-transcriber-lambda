@@ -1,18 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
-using System.Linq;
-using SIL.Transcriber.Data;
-using System.Collections.Generic;
-using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Configuration;
-using JsonApiDotNetCore.Queries;
 
 namespace SIL.Transcriber.Repositories
 {
     public class ArtifactTypeRepository : BaseRepository<Artifacttype>
     {
-        private OrganizationRepository OrganizationRepository;
+        private readonly OrganizationRepository OrganizationRepository;
 
         public ArtifactTypeRepository(
             ITargetedFields targetedFields,

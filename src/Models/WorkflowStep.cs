@@ -6,7 +6,7 @@ namespace SIL.Transcriber.Models
 {
     public class WorkflowStepBase : BaseModel, IArchive
     {
-        public WorkflowStepBase(): base()
+        public WorkflowStepBase() : base()
         {
             Process = "";
             Name = "";
@@ -18,14 +18,14 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "name")]
         public string Name { get; set; }
-        
+
         [Attr(PublicName = "sequencenum")]
         public int Sequencenum { get; set; }
 
         [Attr(PublicName = "tool")]
         [Column(TypeName = "jsonb")]
         public string Tool { get; set; }
-        
+
         [Attr(PublicName = "permissions")]
         [Column(TypeName = "jsonb")]
         public string Permissions { get; set; }

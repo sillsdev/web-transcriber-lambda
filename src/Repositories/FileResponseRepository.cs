@@ -1,8 +1,8 @@
-﻿using SIL.Transcriber.Models;
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 namespace SIL.Transcriber.Repositories
 {
     public class FileresponseRepository : AppDbContextRepository<Fileresponse>
@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Repositories
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor
-        ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+        ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
             constraintProviders, loggerFactory, resourceDefinitionAccessor)
         {
         }

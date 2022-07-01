@@ -1,10 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
-using JsonApiDotNetCore.Resources.Annotations;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using Newtonsoft.Json.Linq;
 using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Serialization.Objects;
-using SIL.Transcriber.Utility.Extensions;
-using System;
-using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
@@ -19,8 +15,8 @@ namespace SIL.Transcriber.Models
 
         public Section UpdateFrom(JToken item)
         {
-            Name = item["title"]?.ToString() ?? "";
-            Sequencenum = int.TryParse(item["sequencenum"]?.ToString() ?? "", out int tryint)
+            Name = item ["title"]?.ToString() ?? "";
+            Sequencenum = int.TryParse(item ["sequencenum"]?.ToString() ?? "", out int tryint)
                 ? tryint
                 : 0;
             return this;
@@ -28,7 +24,7 @@ namespace SIL.Transcriber.Models
 
         public Section UpdateFrom(JToken item, int planId)
         {
-            UpdateFrom(item);
+            _ = UpdateFrom(item);
             PlanId = planId;
             return this;
         }

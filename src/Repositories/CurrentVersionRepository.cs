@@ -1,8 +1,8 @@
-﻿using SIL.Transcriber.Data;
-using SIL.Transcriber.Models;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -27,7 +27,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         public Currentversion CreateOrUpdate(string version)
         {
@@ -37,15 +38,15 @@ namespace SIL.Transcriber.Repositories
                 if (cv.DesktopVersion != version)
                 {
                     cv.DesktopVersion = version;
-                    dbContext.Update(cv);
-                    dbContext.SaveChanges();
+                    _ = dbContext.Update(cv);
+                    _ = dbContext.SaveChanges();
                 }
             }
             else
             {
                 cv = new Currentversion { DesktopVersion = version };
-                dbContext.Currentversions.Add(cv);
-                dbContext.SaveChanges();
+                _ = dbContext.Currentversions.Add(cv);
+                _ = dbContext.SaveChanges();
             }
             return cv;
         }

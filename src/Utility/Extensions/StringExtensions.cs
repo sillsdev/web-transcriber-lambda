@@ -1,5 +1,3 @@
-using System;
-
 namespace SIL.Transcriber.Utility.Extensions
 {
     public static class StringExtensions

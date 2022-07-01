@@ -1,12 +1,12 @@
-﻿using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Data;
-using SIL.Transcriber.Models;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Queries.Expressions;
-using System.Text.Json;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.JsonConverters;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using System.Text.Json;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -32,7 +32,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
     }
 
     public abstract class BaseRepository<TEntity, TId> : AppDbContextRepository<TEntity>
@@ -87,8 +88,7 @@ namespace SIL.Transcriber.Repositories
             return dbContext.Database.BeginTransaction();
         }
 
-        public User? CurrentUser
-        {
+        public User? CurrentUser {
             get { return CurrentUserRepository.GetCurrentUser(); }
         }
 
@@ -217,16 +217,5 @@ namespace SIL.Transcriber.Repositories
         }
         #endregion
 
-        /*
-        public override Task CreateAsync(TEntity resourceFromRequest, TEntity resourceForDatabase, CancellationToken cancellationToken)
-        {
-            var all = base.GetAll();
-            TEntity? x = all.Where(t => t.DateCreated == resourceFromRequest.DateCreated && t.LastModifiedByUser == resourceFromRequest.LastModifiedByUser).FirstOrDefault();
-            if (x == null)
-                return base.CreateAsync(resourceFromRequest, resourceForDatabase, cancellationToken);
-            resourceForDatabase = x;
-            return x as Task; //?? what should this be??
-        }
-        */
     }
 }

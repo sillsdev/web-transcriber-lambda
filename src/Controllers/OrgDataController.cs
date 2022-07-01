@@ -18,14 +18,14 @@ namespace SIL.Transcriber.Controllers
             IResourceService<Orgdata, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
+        ) : base(
                 loggerFactory,
                 options,
                 resourceGraph,
                 resourceService,
                 currentUserContext,
                 userService
-            ) { }
+            )
+        { }
     }
 }

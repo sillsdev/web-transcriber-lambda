@@ -2,12 +2,12 @@
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
-using SIL.Transcriber.Models;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using static SIL.Transcriber.Utility.Extensions.StringExtensions;
-using SIL.Transcriber.Utility;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
+using static SIL.Transcriber.Utility.Extensions.StringExtensions;
+using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -32,7 +32,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         public IQueryable<Project> ProjectProjects(IQueryable<Project> entities, string projectid)
         {
@@ -55,8 +56,7 @@ namespace SIL.Transcriber.Repositories
                     o => CurrentUserRepository.IsOrgAdmin(CurrentUser, o)
                 );
 
-                entities = entities.Where(
-                    p =>
+                entities = entities.Where(p =>
                         orgadmins.Contains(p.OrganizationId)
                         || CurrentUser.GroupIds.Contains(p.GroupId)
                 );
@@ -97,7 +97,7 @@ namespace SIL.Transcriber.Repositories
         private static string SettingOrDefault(string? json, string settingName)
         {
             dynamic settings = JObject.Parse(json ?? "");
-            return settings[settingName] ?? "";
+            return settings [settingName] ?? "";
         }
 
         public IQueryable<Project> HasIntegrationSetting(

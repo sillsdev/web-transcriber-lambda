@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Configuration;
-using Microsoft.Extensions.Logging;
-using System.Threading;
+﻿using JsonApiDotNetCore.Configuration;
 
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
@@ -36,6 +32,7 @@ namespace SIL.Transcriber.Services
                 resourceChangeTracker,
                 resourceDefinitionAccessor,
                 repository
-            ) { }
+            )
+        { }
     }
 }

@@ -12,12 +12,7 @@ namespace SIL.Transcriber.Utility
         [Pure]
         public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this IEnumerable<T>? source)
         {
-            if (source == null)
-            {
-                return true;
-            }
-
-            return !source.Any();
+            return source == null || !source.Any();
         }
 
         public static void AddRange<T>(this ICollection<T> source, IEnumerable<T> itemsToAdd)

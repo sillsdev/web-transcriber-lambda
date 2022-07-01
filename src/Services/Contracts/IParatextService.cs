@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using SIL.Paratext.Models;
+﻿using SIL.Paratext.Models;
 using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
-{ 
+{
     public interface IParatextService
     {
         UserSecret ParatextLogin();
@@ -25,6 +23,6 @@ namespace SIL.Transcriber.Services
         int PlanPassagesToSyncCount(int planId, int artifactTypeId);
         Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, int artifactTypeId);
         Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId, int artifactTypeId);
-        Task<string?> PassageTextAsync(int passageId, int  type);
+        Task<string?> PassageTextAsync(int passageId, int type);
     }
 }

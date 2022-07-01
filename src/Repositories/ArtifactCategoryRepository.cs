@@ -1,15 +1,15 @@
-﻿using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
-using SIL.Transcriber.Data;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Configuration;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
     public class ArtifactCategoryRepository : BaseRepository<Artifactcategory>
     {
-        private OrganizationRepository OrganizationRepository;
+        private readonly OrganizationRepository OrganizationRepository;
 
         public ArtifactCategoryRepository(
             ITargetedFields targetedFields,
@@ -21,8 +21,7 @@ namespace SIL.Transcriber.Repositories
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
             OrganizationRepository organizationRepository
-        )
-            : base(
+        ) : base(
                 targetedFields,
                 contextResolver,
                 resourceGraph,

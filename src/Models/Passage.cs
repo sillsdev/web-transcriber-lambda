@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using Newtonsoft.Json.Linq;
-using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
@@ -22,10 +21,10 @@ namespace SIL.Transcriber.Models
         */
         public Passage UpdateFrom(JToken item)
         {
-            Book = item["book"]?.ToString() ?? "";
-            Reference = item["reference"]?.ToString() ?? "";
-            Title = item["title"]?.ToString() ?? "";
-            Sequencenum = int.TryParse(item["sequencenum"]?.ToString() ?? "", out int tryint)
+            Book = item ["book"]?.ToString() ?? "";
+            Reference = item ["reference"]?.ToString() ?? "";
+            Title = item ["title"]?.ToString() ?? "";
+            Sequencenum = int.TryParse(item ["sequencenum"]?.ToString() ?? "", out int tryint)
                 ? tryint
                 : 0;
             return this;
@@ -33,7 +32,7 @@ namespace SIL.Transcriber.Models
 
         public Passage UpdateFrom(JToken item, int sectionId)
         {
-            UpdateFrom(item);
+            _ = UpdateFrom(item);
             SectionId = sectionId;
             State = "noMedia";
             return this;
@@ -77,8 +76,7 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "plan-id")]
         [NotMapped]
-        public int PlanId
-        {
+        public int PlanId {
             get { return Section?.PlanId ?? 0; }
         }
         public bool Archived { get; set; }
@@ -92,13 +90,11 @@ namespace SIL.Transcriber.Models
             endChapter = 0,
             startVerse = 0,
             endVerse = 0;
-        public int StartChapter
-        {
-            get
-            {
+        public int StartChapter {
+            get {
                 if (startChapter > 0 || Reference == null)
                     return startChapter;
-                ParseReference(
+                _ = ParseReference(
                     Reference,
                     out startChapter,
                     out endChapter,
@@ -108,13 +104,11 @@ namespace SIL.Transcriber.Models
                 return startChapter;
             }
         }
-        public int EndChapter
-        {
-            get
-            {
+        public int EndChapter {
+            get {
                 if (endChapter > 0 || Reference == null)
                     return endChapter;
-                ParseReference(
+                _ = ParseReference(
                     Reference,
                     out startChapter,
                     out endChapter,
@@ -124,13 +118,11 @@ namespace SIL.Transcriber.Models
                 return endChapter;
             }
         }
-        public int StartVerse
-        {
-            get
-            {
+        public int StartVerse {
+            get {
                 if (startVerse > 0 || Reference == null)
                     return startVerse;
-                ParseReference(
+                _ = ParseReference(
                     Reference,
                     out startChapter,
                     out endChapter,
@@ -140,13 +132,11 @@ namespace SIL.Transcriber.Models
                 return startVerse;
             }
         }
-        public int EndVerse
-        {
-            get
-            {
+        public int EndVerse {
+            get {
                 if (endVerse > 0 || Reference == null)
                     return endVerse;
-                ParseReference(
+                _ = ParseReference(
                     Reference,
                     out startChapter,
                     out endChapter,
@@ -156,10 +146,8 @@ namespace SIL.Transcriber.Models
                 return endVerse;
             }
         }
-        public string Verses
-        {
-            get
-            {
+        public string Verses {
+            get {
                 if (StartChapter != EndChapter)
                     return Reference ?? "";
                 if (StartVerse != EndVerse)
@@ -173,8 +161,8 @@ namespace SIL.Transcriber.Models
             int colon = reference.IndexOf(':');
             if (colon >= 0)
             {
-                int.TryParse(reference.Substring(0, colon), out chapter);
-                reference = reference[(colon + 1)..];
+                _ = int.TryParse(reference.Substring(0, colon), out chapter);
+                reference = reference [(colon + 1)..];
             }
             else
             {
@@ -203,7 +191,7 @@ namespace SIL.Transcriber.Models
             endVerse = startVerse;
             if (ok && dash > 0)
             {
-                ok = ParseReferencePart(reference[(dash + 1)..], out endChapter, out endVerse);
+                ok = ParseReferencePart(reference [(dash + 1)..], out endChapter, out endVerse);
                 if (endChapter == 0)
                     endChapter = startChapter;
             }

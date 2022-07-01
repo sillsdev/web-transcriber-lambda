@@ -64,7 +64,7 @@ namespace SIL.Transcriber.Services
                 if (newEntity.Archived)
                 {
                     newEntity.Archived = false;
-                    await base.UpdateArchivedAsync(newEntity.Id, newEntity, cancellationToken);
+                    _ = await base.UpdateArchivedAsync(newEntity.Id, newEntity, cancellationToken);
                 }
             }
             return newEntity;
@@ -87,13 +87,13 @@ namespace SIL.Transcriber.Services
                     UserId = UserId,
                     RoleId = (int)groupRole,
                 };
-                dbContext.Groupmemberships.Add(groupmembership);
+                _ = dbContext.Groupmemberships.Add(groupmembership);
                 //dbContext.SaveChanges();
             }
             else if (groupmembership.Archived)
             {
                 groupmembership.Archived = false;
-                dbContext.Groupmemberships.Update(groupmembership);
+                _ = dbContext.Groupmemberships.Update(groupmembership);
                 //dbContext.SaveChanges();
             }
             return groupmembership;

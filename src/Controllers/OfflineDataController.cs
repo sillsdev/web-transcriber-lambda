@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.Diagnostics;
 
 namespace SIL.Transcriber.Controllers
 {

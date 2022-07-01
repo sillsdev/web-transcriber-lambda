@@ -1,12 +1,8 @@
-﻿
-
-using System.Collections.Generic;
-
-namespace SIL.Paratext.Models
+﻿namespace SIL.Paratext.Models
 {
     public class ParatextOrg
     {
-        public ParatextOrg():base()
+        public ParatextOrg() : base()
         {
             Id = "";
             Name = "";

@@ -1,12 +1,12 @@
 ﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries.Expressions;
 using JsonApiDotNetCore.Resources;
 using Microsoft.Extensions.Primitives;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Serialization;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using System.Collections.Immutable;
-using SIL.Transcriber.Serialization;
-using JsonApiDotNetCore.Middleware;
 
 namespace SIL.Transcriber.Definitions
 {
@@ -39,8 +39,7 @@ namespace SIL.Transcriber.Definitions
             ResourceType rt = ResourceGraph.GetResourceType<TEntity>();
             if (
                 TopLevel
-                && (
-                    Request.IsReadOnly
+                && (Request.IsReadOnly
                     || Request.WriteOperation == WriteOperationKind.CreateResource
                 )
                 && rt.PublicName == Request.PrimaryResourceType?.PublicName

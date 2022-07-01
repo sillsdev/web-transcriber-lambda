@@ -1,9 +1,9 @@
-﻿using System.Security;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Services;
+using System.Security;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -97,12 +97,10 @@ namespace SIL.Transcriber.Controllers
             }
             catch (Exception ex)
             {
-                Logger.LogError(
-                    "Paratext Error projects get {0} {1} {2}",
-                    ex.Message,
-                    languageTag,
-                    userSecret.ParatextTokens.IssuedAt.ToString()
-                );
+                Logger.LogError("Paratext Error projects get {message} {lang} {token}",
+                                ex.Message,
+                                languageTag,
+                                userSecret.ParatextTokens.IssuedAt.ToString());
                 throw ex;
                 //return NoContent();
             }
@@ -276,7 +274,8 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(
+
+            _ = await _paratextService.SyncProjectAsync(
                 userSecret,
                 projectId,
                 0
@@ -299,7 +298,8 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-            List<ParatextChapter> chapters = await _paratextService.SyncProjectAsync(
+
+            _ = await _paratextService.SyncProjectAsync(
                 userSecret,
                 projectId,
                 type

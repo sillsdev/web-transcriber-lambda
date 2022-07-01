@@ -1,5 +1,4 @@
 ﻿using SIL.Transcriber.Models;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Services
 {

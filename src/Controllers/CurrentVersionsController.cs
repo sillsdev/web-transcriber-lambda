@@ -1,9 +1,7 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using JsonApiDotNetCore.Controllers.Annotations;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
@@ -22,15 +20,15 @@ namespace SIL.Transcriber.Controllers
             IResourceService<Currentversion, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
-        )
-            : base(
-                loggerFactory,
+        ) : base(
+               loggerFactory,
                 options,
                 resourceGraph,
                 resourceService,
                 currentUserContext,
                 userService
-            ) { }
+            )
+        { }
 
         [AllowAnonymous]
         [HttpPost("{version}")]

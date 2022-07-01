@@ -1,6 +1,6 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Models;
 using JsonApiDotNetCore.Middleware;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Definitions
 {

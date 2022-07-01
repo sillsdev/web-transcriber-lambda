@@ -1,7 +1,7 @@
 ﻿
+using JsonApiDotNetCore.Resources.Annotations;
 using SIL.Transcriber.Models;
 using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Logging.Models
 {
@@ -15,7 +15,7 @@ namespace SIL.Logging.Models
             UserId = userid;
         }
         [NotMapped]
-        [Attr(PublicName="userid")]
+        [Attr(PublicName = "userid")]
         public int UserId { get; set; }
 
     }

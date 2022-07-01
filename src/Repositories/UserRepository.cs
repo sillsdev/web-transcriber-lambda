@@ -1,18 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using SIL.Transcriber.Utility;
-using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Serialization;
+using Microsoft.EntityFrameworkCore;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -125,8 +117,8 @@ namespace SIL.Transcriber.Repositories
                 local = u;
             }
             local.LastModifiedOrigin = "refresh"; //this will get overwritten but just change something to force a save
-            dbContext.Update(local);
-            dbContext.SaveChanges();
+            _ = dbContext.Update(local);
+            _ = dbContext.SaveChanges();
         }
     }
 }

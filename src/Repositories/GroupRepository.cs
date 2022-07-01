@@ -1,13 +1,9 @@
-﻿using System;
-using System.Linq;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using SIL.Transcriber.Data;
-using System.Collections.Generic;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -32,7 +28,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         public IQueryable<Group> UsersGroups(IQueryable<Group> entities)
         {

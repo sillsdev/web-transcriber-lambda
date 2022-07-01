@@ -1,15 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Serialization;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using Microsoft.EntityFrameworkCore;
-using SIL.Transcriber.Services;
-using System.Diagnostics;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -105,8 +99,7 @@ namespace SIL.Transcriber.Repositories
             //this should disqualify media that has a new version that isn't ready...but doesn't (yet)
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
             IEnumerable<Mediafile> media = dbContext.Mediafiles
-                .Where(
-                    m =>
+                .Where(m =>
                         m.PlanId == PlanId
                         && (
                             artifactTypeId == 0

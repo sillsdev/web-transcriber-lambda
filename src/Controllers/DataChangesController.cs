@@ -16,14 +16,19 @@ namespace SIL.Transcriber.Controllers
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class DatachangesController : JsonApiController<Datachanges, int>
     {
-        readonly DataChangeService service;
+        private readonly DataChangeService service;
 
         public DatachangesController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
             IResourceService<Datachanges, int> resourceService
-        ) : base(options, resourceGraph, loggerFactory, resourceService)
+        ) : base(
+                options,
+                resourceGraph,
+                loggerFactory,
+                resourceService
+            )
         {
             service = (DataChangeService)resourceService;
         }

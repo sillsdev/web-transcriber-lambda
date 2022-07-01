@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
@@ -12,9 +11,9 @@ namespace SIL.Transcriber.Models
             Id = 1;
             Json = "{}";
         }
-        [Attr(PublicName="json")]
+        [Attr(PublicName = "json")]
         public string Json { get; set; }
-        [Attr(PublicName="start-index")]
+        [Attr(PublicName = "start-index")]
         public int StartIndex { get; set; }
     }
 }

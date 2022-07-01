@@ -28,7 +28,7 @@ namespace SIL.Transcriber
                 ResponseContentEncoding.Base64
             );
 
-            builder.UseStartup<Startup>();
+            _ = builder.UseStartup<Startup>();
         }
     }
 }

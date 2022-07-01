@@ -1,20 +1,10 @@
-﻿using System.Threading;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
-using JsonApiDotNetCore.Configuration;
-
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
-using JsonApiDotNetCore.Queries.Expressions;
-using JsonApiDotNetCore.Resources.Annotations;
-using JsonApiDotNetCore.Queries.Internal;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
@@ -42,6 +32,7 @@ namespace SIL.Transcriber.Services
                 resourceChangeTracker,
                 resourceDefinitionAccessor,
                 myRepository
-            ) { }
+            )
+        { }
     }
 }

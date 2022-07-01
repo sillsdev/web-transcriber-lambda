@@ -1,6 +1,5 @@
-﻿using System;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
@@ -8,8 +7,8 @@ namespace SIL.Transcriber.Models
     {
         public Datachanges() : base()
         {
-            Changes = new OrbitId[0];
-            Deleted = new OrbitId[0];
+            Changes = new OrbitId [0];
+            Deleted = new OrbitId [0];
         }
         [NotMapped]
         [Attr(PublicName = "startnext")]
@@ -19,10 +18,10 @@ namespace SIL.Transcriber.Models
         public DateTime Querydate { get; set; }
         [NotMapped]
         [Attr(PublicName = "changes")]
-        public OrbitId[] Changes { get; set; }
+        public OrbitId [] Changes { get; set; }
         [NotMapped]
         [Attr(PublicName = "deleted")]
-        public OrbitId[] Deleted { get; set; }
+        public OrbitId [] Deleted { get; set; }
     }
 }
 

@@ -1,6 +1,6 @@
-﻿using System.Net;
-using JsonApiDotNetCore.Resources;
+﻿using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Resources.Annotations;
+using System.Net;
 
 namespace SIL.Transcriber.Models
 { /* This is an Identifiable only so that we can pass it back without JsonApiDotNetCore puking on it */

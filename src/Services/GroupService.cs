@@ -1,9 +1,9 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Models;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
@@ -31,6 +31,7 @@ namespace SIL.Transcriber.Services
                 resourceChangeTracker,
                 resourceDefinitionAccessor,
                 repository
-            ) { }
+            )
+        { }
     }
 }

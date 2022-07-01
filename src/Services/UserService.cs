@@ -1,13 +1,13 @@
-﻿using SIL.Transcriber.Models;
-using SIL.Transcriber.Repositories;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Errors;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.Objects;
-using JsonApiDotNetCore.Errors;
-using JsonApiDotNetCore.Configuration;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
@@ -47,9 +47,9 @@ namespace SIL.Transcriber.Services
 
         public User CreateUser(User newUser)
         {
-            Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<User>? saved =
+            _ =
                 dbContext.Users.Add(newUser);
-            dbContext.SaveChanges();
+            _ = dbContext.SaveChanges();
             return newUser;
         }
 

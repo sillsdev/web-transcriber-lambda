@@ -1,8 +1,8 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using SIL.Logging.Models;
-using SIL.Transcriber.Data;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Logging.Models;
+using SIL.Transcriber.Data;
 namespace SIL.Transcriber.Repositories
 {
     public class ParatextSyncPassageRepository : LoggingDbContextRepository<Paratextsyncpassage>
@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Repositories
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
                 constraintProviders, loggerFactory, resourceDefinitionAccessor)
         {
         }

@@ -16,10 +16,8 @@ namespace SIL.Paratext.Models
         public string OriginalRefreshToken { get; set; } = "";
 
         [NotMapped]
-        public DateTime IssuedAt
-        {
-            get
-            {
+        public DateTime IssuedAt {
+            get {
                 JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
                 if (accessToken.Payload.Iat != null)
                     return EpochTime.DateTime((long)accessToken.Payload.Iat);
@@ -27,10 +25,8 @@ namespace SIL.Paratext.Models
             }
         }
         [NotMapped]
-        public DateTime ValidTo
-        {
-            get
-            {
+        public DateTime ValidTo {
+            get {
                 JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
                 return accessToken.ValidTo;
             }

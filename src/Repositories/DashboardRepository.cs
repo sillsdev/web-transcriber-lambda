@@ -1,13 +1,9 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 
 namespace SIL.Transcriber.Repositories
@@ -20,7 +16,7 @@ namespace SIL.Transcriber.Repositories
             AppDbContextResolver contextResolver, IResourceGraph resourceGraph, IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders, ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, 
+            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
                 constraintProviders, loggerFactory, resourceDefinitionAccessor)
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
@@ -44,11 +40,11 @@ namespace SIL.Transcriber.Repositories
         private IQueryable<Plan> TrainingProjects()
         {
 #pragma warning disable CS8604 // Possible null reference argument.
-            return Plans().Where(p => p.Tags != null && JObject.Parse(p.Tags)["training"] != null && JObject.Parse(p.Tags)["training"].Value<bool>()||false);
+            return Plans().Where(p => p.Tags != null && JObject.Parse(p.Tags) ["training"] != null && JObject.Parse(p.Tags) ["training"].Value<bool>() || false);
         }
         private IQueryable<Plan> Plans()
         {
-            return dbContext.Plans.Where(p => !p.Archived && (p.Tags == null || JObject.Parse(p.Tags)["testing"] == null || !JObject.Parse(p.Tags)["testing"].Value<bool>()));
+            return dbContext.Plans.Where(p => !p.Archived && (p.Tags == null || JObject.Parse(p.Tags) ["testing"] == null || !JObject.Parse(p.Tags) ["testing"].Value<bool>()));
 #pragma warning restore CS8604 // Possible null reference argument.
         }
         private IQueryable<Passage> Passages()

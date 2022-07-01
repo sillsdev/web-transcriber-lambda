@@ -1,12 +1,12 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Data;
-using SIL.Transcriber.Services;
-using SIL.Transcriber.Serialization;
-using Newtonsoft.Json;
 using JsonApiDotNetCore.Serialization.Response;
+using Newtonsoft.Json;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Repositories
 {

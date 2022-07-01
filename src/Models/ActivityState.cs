@@ -5,9 +5,9 @@ namespace SIL.Transcriber.Models
 {
     public partial class Activitystate : BaseModel
     {
-        [Attr(PublicName="state")]
+        [Attr(PublicName = "state")]
         public string? State { get; set; }
-        [Attr(PublicName="sequencenum")]
+        [Attr(PublicName = "sequencenum")]
         public int Sequencenum { get; set; }
     }
 }

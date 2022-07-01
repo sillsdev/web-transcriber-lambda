@@ -13,22 +13,23 @@ namespace SIL.Transcriber.Utility.Extensions
 
             return result;
         }
-    public static DateTime? SetKindUtc(this DateTime? dateTime)
-    {
-        if (dateTime.HasValue)
+        public static DateTime? SetKindUtc(this DateTime? dateTime)
         {
-            return dateTime.Value.SetKindUtc();
+            if (dateTime.HasValue)
+            {
+                return dateTime.Value.SetKindUtc();
+            }
+            else
+            {
+                return null;
+            }
         }
-        else
+        public static DateTime SetKindUtc(this DateTime dateTime)
         {
-            return null;
+            if (dateTime.Kind == DateTimeKind.Utc)
+            { return dateTime; }
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
         }
     }
-    public static DateTime SetKindUtc(this DateTime dateTime)
-    {
-        if (dateTime.Kind == DateTimeKind.Utc) { return dateTime; }
-        return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-    }
-}
 }
 

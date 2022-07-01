@@ -1,16 +1,9 @@
 ﻿using JsonApiDotNetCore.Configuration;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Data;
-using SIL.Transcriber.Models;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
-using JsonApiDotNetCore.Serialization;
+using Microsoft.EntityFrameworkCore;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -122,8 +115,7 @@ namespace SIL.Transcriber.Repositories
                 .Where(x => x.passage.Book == book && x.passage.StartChapter == chapter);
             await passagewithsection
                 .GroupBy(p => p.section)
-                .ForEachAsync(ps =>
-                {
+                .ForEachAsync(ps => {
                     SectionSummary newss =
                         new()
                         {
@@ -138,6 +130,6 @@ namespace SIL.Transcriber.Repositories
                 });
             return ss;
         }
-#endregion
+        #endregion
     }
 }

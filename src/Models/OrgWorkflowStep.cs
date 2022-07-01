@@ -13,6 +13,6 @@ namespace SIL.Transcriber.Models
 
         public int? ParentId { get; set; }
         [HasOne(PublicName = "parent")]
-        public Orgworkflowstep? Parent { get; set; }  
+        public Orgworkflowstep? Parent { get; set; }
     }
 }

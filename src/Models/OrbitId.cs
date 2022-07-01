@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace SIL.Transcriber.Models
+﻿namespace SIL.Transcriber.Models
 {
     public class OrbitId
     {
@@ -14,9 +12,9 @@ namespace SIL.Transcriber.Models
 
         public void AddUnique(List<int> newIds)
         {
-            newIds.ForEach(i =>
-            {
-                if (!Ids.Exists(id => id == i)) Ids.Add(i);
+            newIds.ForEach(i => {
+                if (!Ids.Exists(id => id == i))
+                    Ids.Add(i);
             });
         }
     }

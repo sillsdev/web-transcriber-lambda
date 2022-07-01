@@ -1,19 +1,18 @@
-﻿using System.Net;
-using System.Text.RegularExpressions;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ResourceHelpers;
-using System.Xml.Linq;
+using System.Net;
+using System.Text.RegularExpressions;
 using System.Web;
+using System.Xml.Linq;
 using TranscriberAPI.Utility.Extensions;
-using SIL.Transcriber.Data;
-using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
+using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Services
 {
@@ -66,20 +65,18 @@ namespace SIL.Transcriber.Services
         {
             if (plan == null)
                 return "";
-            var proj = plan.Project;
+            Project? proj = plan.Project;
             if (proj == null)
                 proj = dbContext.Projects
                     .Where(p => p.Id == plan.ProjectId)
                     .Include(p => p.Organization)
                     .FirstOrDefault();
-            var org = proj?.Organization;
+            Organization? org = proj?.Organization;
             if (org == null && proj?.OrganizationId != null)
                 org = dbContext.Organizations
                     .Where(o => o.Id == proj.OrganizationId)
                     .FirstOrDefault();
-            if (org == null)
-                throw new Exception("No org in DirectoryName");
-            return org.Slug + "/" + plan.Slug;
+            return org != null ? org.Slug + "/" + plan.Slug : throw new Exception("No org in DirectoryName");
         }
 
         public string DirectoryName(Mediafile entity)
@@ -165,7 +162,7 @@ namespace SIL.Transcriber.Services
                     .SignedUrlForGet(mf.S3File ?? "", DirectoryName(mf), mf.ContentType ?? "")
                     .Message;
             }
-            await UpdateAsync(id, mf, new CancellationToken());
+            _ = await UpdateAsync(id, mf, new CancellationToken());
             return mf;
         }
 
@@ -264,7 +261,7 @@ namespace SIL.Transcriber.Services
                 return null;
             p.Filesize = filesize;
             p.Duration = (int)duration;
-            await base.UpdateAsync(id, p, new CancellationToken());
+            _ = await base.UpdateAsync(id, p, new CancellationToken());
             return p;
         }
 

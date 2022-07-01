@@ -1,8 +1,8 @@
-﻿using SIL.Transcriber.Models;
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -27,7 +27,8 @@ namespace SIL.Transcriber.Repositories
                 loggerFactory,
                 resourceDefinitionAccessor,
                 currentUserRepository
-            ) { }
+            )
+        { }
 
         public override IQueryable<Plantype> FromCurrentUser(IQueryable<Plantype>? entities = null)
         {

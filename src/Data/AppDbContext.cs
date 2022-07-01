@@ -80,7 +80,7 @@ namespace SIL.Transcriber.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-            builder.HasPostgresExtension("uuid-ossp");
+            _ = builder.HasPostgresExtension("uuid-ossp");
             //make all query items lowercase to send to postgres...
             LowerCaseDB(builder);
 
@@ -97,7 +97,7 @@ namespace SIL.Transcriber.Data
          **/
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.ConfigureWarnings(
+            _ = optionsBuilder.ConfigureWarnings(
                 optionsBuilder => optionsBuilder.Ignore(CoreEventId.NavigationBaseIncludeIgnored)
             );
             base.OnConfiguring(optionsBuilder);
@@ -105,182 +105,182 @@ namespace SIL.Transcriber.Data
 
         private static void DefineLastModifiedByUser(ModelBuilder builder)
         {
-            builder
+            _ = builder
                 .Entity<Activitystate>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Artifactcategory>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Artifacttype>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Comment>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Currentversion>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Datachanges>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Discussion>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Group>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Groupmembership>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Integration>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Invitation>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Mediafile>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Mediafile>()
                 .HasOne(o => o.Passage)
                 .WithMany()
                 .HasForeignKey(o => o.PassageId);
-            builder
+            _ = builder
                 .Entity<Mediafile>()
                 .HasOne(o => o.ResourcePassage)
                 .WithMany()
                 .HasForeignKey(o => o.ResourcePassageId);
-            builder
+            _ = builder
                 .Entity<Organization>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Orgdata>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Organizationmembership>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Orgworkflowstep>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Passage>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Passagestatechange>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Plan>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Plantype>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Projdata>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Project>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Projectintegration>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Projecttype>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Resource>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Role>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Section>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Sectionpassage>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Sectionresource>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Sectionresourceuser>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<User>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Userversion>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Statehistory>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Workflowstep>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -289,60 +289,60 @@ namespace SIL.Transcriber.Data
 
         private static void DefineManyToMany(ModelBuilder modelBuilder)
         {
-            modelBuilder
+            _ = modelBuilder
                 .Entity<Groupmembership>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
 
-            modelBuilder
+            _ = modelBuilder
                 .Entity<Group>()
                 .HasMany(g => g.GroupMemberships)
                 .WithOne(gm => gm.Group)
                 .HasForeignKey(gm => gm.GroupId);
 
             EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
-            userEntity
+            _ = userEntity
                 .HasMany(u => u.OrganizationMemberships)
                 .WithOne(om => om.User)
                 .HasForeignKey(om => om.UserId);
-            userEntity
+            _ = userEntity
                 .HasMany(u => u.GroupMemberships)
                 .WithOne(gm => gm.User)
                 .HasForeignKey(gm => gm.UserId);
-            userEntity
+            _ = userEntity
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
 
             EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
-            orgEntity
+            _ = orgEntity
                 .HasMany(o => o.OrganizationMemberships)
                 .WithOne(om => om.Organization)
                 .HasForeignKey(om => om.OrganizationId);
-            orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
+            _ = orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
 
-            orgEntity
+            _ = orgEntity
                 .HasMany(o => o.Projects)
                 .WithOne(p => p.Organization)
                 .HasForeignKey(p => p.OrganizationId);
-            orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
-            orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
+            _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
+            _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
 
-            modelBuilder
+            _ = modelBuilder
                 .Entity<Section>()
                 .HasOne(s => s.Plan)
                 .WithMany(p => p.Sections)
                 .HasForeignKey(sectionEntity => sectionEntity.PlanId);
 
-            modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
+            _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
 
-            modelBuilder
+            _ = modelBuilder
                 .Entity<Orgworkflowstep>()
                 .HasOne(s => s.Parent)
                 .WithMany()
                 .HasForeignKey(s => s.ParentId);
-            modelBuilder
+            _ = modelBuilder
                 .Entity<Sectionresource>()
                 .HasMany(r => r.SectionResourceUsers)
                 .WithOne(srow => srow.SectionResource)
@@ -355,14 +355,13 @@ namespace SIL.Transcriber.Data
         {
             IEnumerable<EntityEntry> entries = ChangeTracker
                 .Entries()
-                .Where(
-                    e =>
+                .Where(e =>
                         e.Entity is ILastModified
                         && (e.State == EntityState.Added || e.State == EntityState.Modified)
                 );
             foreach (EntityEntry entry in entries)
             {
-                entry.CurrentValues["LastModifiedOrigin"] = "electron";
+                entry.CurrentValues ["LastModifiedOrigin"] = "electron";
                 if (entry.Entity is ITrackDate trackDate)
                 {
                     trackDate.DateCreated = trackDate.DateCreated?.SetKindUtc();
@@ -386,15 +385,15 @@ namespace SIL.Transcriber.Data
                     switch (entry.State)
                     {
                         case EntityState.Added:
-                            entry.CurrentValues["Archived"] = false;
+                            entry.CurrentValues ["Archived"] = false;
                             break;
                         case EntityState.Deleted:
-                            if ((bool)(entry.CurrentValues["Archived"] ?? false) == true)
+                            if ((bool)(entry.CurrentValues ["Archived"] ?? false) == true)
                                 entry.State = EntityState.Detached;
                             else
                             {
                                 entry.State = EntityState.Modified;
-                                entry.CurrentValues["Archived"] = true;
+                                entry.CurrentValues ["Archived"] = true;
                             }
                             break;
                     }
@@ -407,9 +406,7 @@ namespace SIL.Transcriber.Data
             if (_currentUser < 0)
             {
                 string auth0Id = CurrentUserContext.Auth0Id;
-                User? userFromResult = Users.FirstOrDefault(
-                    u => (u.ExternalId ?? "").Equals(auth0Id) && !u.Archived
-                );
+                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "").Equals(auth0Id) && !u.Archived);
                 _currentUser = userFromResult == null ? -1 : userFromResult.Id;
             }
             return _currentUser;
@@ -520,8 +517,7 @@ namespace SIL.Transcriber.Data
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor
-        )
-            : base(
+        ) : base(
                 targetedFields,
                 contextResolver,
                 resourceGraph,
@@ -529,6 +525,7 @@ namespace SIL.Transcriber.Data
                 constraintProviders,
                 loggerFactory,
                 resourceDefinitionAccessor
-            ) { }
+            )
+        { }
     }
 }

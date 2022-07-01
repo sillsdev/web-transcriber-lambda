@@ -9,9 +9,9 @@ internal static class ObjectExtensions
         yield return element;
     }
 
-    public static T[] AsArray<T>(this T element)
+    public static T [] AsArray<T>(this T element)
     {
-        return new[]
+        return new []
         {
             element
         };

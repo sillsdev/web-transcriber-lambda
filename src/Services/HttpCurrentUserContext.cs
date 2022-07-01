@@ -1,7 +1,7 @@
 ﻿using Auth0.ManagementApi.Models;
-using SIL.Transcriber.Utility;
-using SIL.Paratext.Models;
 using Newtonsoft.Json.Linq;
+using SIL.Paratext.Models;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
@@ -26,30 +26,18 @@ namespace SIL.Transcriber.Services
             Logger = loggerFactory.CreateLogger<ICurrentUserContext>();
         }
 
-        private User Auth0User
-        {
-            get
-            {
+        private User Auth0User {
+            get {
                 if (auth0User == null)
                 {
-                    try
-                    {
-                        auth0User = AuthService.GetUserAsync(Auth0Id).Result;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        throw;
-                    }
+                    auth0User = AuthService.GetUserAsync(Auth0Id).Result;
                 }
                 return auth0User;
             }
         }
 
-        public string Auth0Id
-        {
-            get
-            {
+        public string Auth0Id {
+            get {
                 if (auth0Id == null)
                 {
                     auth0Id = HttpContext?.GetAuth0Id() ?? "";
@@ -58,31 +46,25 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        public string Email
-        {
+        public string Email {
             get { return Auth0User.Email; }
         }
 
-        public string GivenName
-        {
+        public string GivenName {
             get { return Auth0User.FirstName; }
         }
 
-        public string FamilyName
-        {
+        public string FamilyName {
             get { return Auth0User.LastName; }
         }
 
-        public string Name
-        {
+        public string Name {
             get { return Auth0User.FullName; }
         }
-        public string Avatar
-        {
+        public string Avatar {
             get { return Auth0User.Picture; }
         }
-        public bool EmailVerified
-        {
+        public bool EmailVerified {
             get { return Auth0User.EmailVerified ?? false; }
         }
 
@@ -111,9 +93,9 @@ namespace SIL.Transcriber.Services
                 ParatextToken newPTTokens =
                     new()
                     {
-                        AccessToken = (string)ptIdentity.AccessToken,
-                        RefreshToken = (string)ptIdentity.RefreshToken,
-                        OriginalRefreshToken = (string)ptIdentity.RefreshToken,
+                        AccessToken = ptIdentity.AccessToken,
+                        RefreshToken = ptIdentity.RefreshToken,
+                        OriginalRefreshToken = ptIdentity.RefreshToken,
                         UserId = userId
                     };
                 return new UserSecret { ParatextTokens = newPTTokens };

@@ -16,10 +16,7 @@ internal static class TypeExtensions
     private static bool IsOrImplementsInterface(this Type? source, Type interfaceType)
     {
         if (source == null)
-        {
             return false;
-        }
-
         return AreTypesEqual(interfaceType, source, interfaceType.IsGenericType) ||
             source.GetInterfaces().Any(type => AreTypesEqual(interfaceType, type, interfaceType.IsGenericType));
     }
@@ -44,7 +41,7 @@ internal static class TypeExtensions
         if (type.IsGenericType)
         {
             string typeArguments = type.GetGenericArguments().Select(GetFriendlyTypeName).Aggregate((firstType, secondType) => $"{firstType}, {secondType}");
-            return $"{type.Name[..type.Name.IndexOf("`", StringComparison.Ordinal)]}<{typeArguments}>";
+            return $"{type.Name [..type.Name.IndexOf("`", StringComparison.Ordinal)]}<{typeArguments}>";
         }
 
         return type.Name;

@@ -1,6 +1,5 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber
 {
@@ -16,21 +15,20 @@ namespace SIL.Transcriber
         // This method gets called by the runtime. Use this method to add services to the container.
         public virtual void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<CookiePolicyOptions>(options =>
-            {
+            _ = services.Configure<CookiePolicyOptions>(options => {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
-            services.AddCors();
-            services.AddMvc();
-            services.AddContextServices();
-            services.AddApiServices();
-            services.AddAuthenticationServices();
+            _ = services.AddCors();
+            _ = services.AddMvc();
+            _ = services.AddContextServices();
+            _ = services.AddApiServices();
+            _ = services.AddAuthenticationServices();
 
-            services.AddControllers();
-            services.AddEndpointsApiExplorer();
-            services.AddSwagger();
+            _ = services.AddControllers();
+            _ = services.AddEndpointsApiExplorer();
+            _ = services.AddSwagger();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -42,25 +40,25 @@ namespace SIL.Transcriber
         {
             if (env.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI();
+                _ = app.UseDeveloperExceptionPage();
+                _ = app.UseSwagger();
+                _ = app.UseSwaggerUI();
             }
             else
             {
-                app.UseExceptionHandler("/Home/Error");
+                _ = app.UseExceptionHandler("/Home/Error");
                 // app.UseHsts();
             }
             AWSLoggerConfigSection config = Configuration.GetAWSLoggingConfigSection();
-            loggerFactory.AddAWSProvider(config);
+            _ = loggerFactory.AddAWSProvider(config);
 
-            app.UseAuthentication();
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
-            app.UseCookiePolicy();
+            _ = app.UseAuthentication();
+            _ = app.UseHttpsRedirection();
+            _ = app.UseStaticFiles();
+            _ = app.UseCookiePolicy();
 
-            app.UseRouting();
-            app.UseCors(
+            _ = app.UseRouting();
+            _ = app.UseCors(
                 builder =>
                     builder
                         .WithOrigins(GetAllowedOrigins())
@@ -68,9 +66,9 @@ namespace SIL.Transcriber
                         .AllowAnyMethod()
                         .AllowAnyHeader()
             );
-            app.UseAuthorization();
+            _ = app.UseAuthorization();
             app.UseJsonApi();
-            app.UseEndpoints(endpoints => endpoints.MapControllers());
+            _ = app.UseEndpoints(endpoints => endpoints.MapControllers());
         }
 
         private static string GetAllowedOrigins()

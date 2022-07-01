@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions;
-using System.Diagnostics;
 
 namespace SIL.Transcriber.Data
 {
@@ -58,8 +57,7 @@ namespace SIL.Transcriber.Data
         {
             System.Collections.Generic.IEnumerable<EntityEntry> entries = dbc.ChangeTracker
                 .Entries()
-                .Where(
-                    e =>
+                .Where(e =>
                         e.Entity is ITrackDate
                         && (e.State == EntityState.Added || e.State == EntityState.Modified)
                 );
@@ -90,27 +88,25 @@ namespace SIL.Transcriber.Data
             {
                 entries = dbc.ChangeTracker
                     .Entries()
-                    .Where(
-                        e =>
+                    .Where(e =>
                             e.Entity is ILastModified
                             && (e.State == EntityState.Added || e.State == EntityState.Modified)
                     );
                 foreach (EntityEntry entry in entries)
                 {
-                    entry.CurrentValues["LastModifiedBy"] = userid;
+                    entry.CurrentValues ["LastModifiedBy"] = userid;
                 }
             }
             string origin = GetFingerprint(http);
             entries = dbc.ChangeTracker
                 .Entries()
-                .Where(
-                    e =>
+                .Where(e =>
                         e.Entity is ILastModified
                         && (e.State == EntityState.Added || e.State == EntityState.Modified)
                 );
             foreach (EntityEntry entry in entries)
             {
-                entry.CurrentValues["LastModifiedOrigin"] = origin;
+                entry.CurrentValues ["LastModifiedOrigin"] = origin;
             }
         }
     }

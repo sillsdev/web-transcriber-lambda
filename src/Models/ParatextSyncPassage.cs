@@ -17,7 +17,7 @@ namespace SIL.Logging.Models
             Transcription = transcription;
             AfterSync = afterSync;
         }
-        public Paratextsyncpassage(int userid,int paratextSyncId, string reference, string err) : base(userid)
+        public Paratextsyncpassage(int userid, int paratextSyncId, string reference, string err) : base(userid)
         {
             ParatextSyncId = paratextSyncId;
             Reference = reference;
@@ -26,17 +26,17 @@ namespace SIL.Logging.Models
             AfterSync = "";
         }
 
-        [Attr(PublicName="paratext-sync-id")]
+        [Attr(PublicName = "paratext-sync-id")]
         public int ParatextSyncId { get; set; }
 
-        [Attr(PublicName="reference")]
+        [Attr(PublicName = "reference")]
         public string Reference { get; set; }
 
-        [Attr(PublicName="transcription")]
+        [Attr(PublicName = "transcription")]
         public string Transcription { get; set; }
-        [Attr(PublicName="after-sync")]
+        [Attr(PublicName = "after-sync")]
         public string AfterSync { get; set; }
-        [Attr(PublicName="err")]
+        [Attr(PublicName = "err")]
         public string? Err { get; set; }
     }
 }

@@ -29,22 +29,22 @@ namespace SIL.Transcriber.Data
 
         private void DefineLastModifiedByUser(ModelBuilder builder)
         {
-            builder
+            _ = builder
                 .Entity<Paratextsync>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Paratextsyncpassage>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<Paratexttokenhistory>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            builder
+            _ = builder
                 .Entity<User>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -56,38 +56,38 @@ namespace SIL.Transcriber.Data
             EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
             EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
 
-            userEntity
+            _ = userEntity
                 .HasMany(u => u.OrganizationMemberships)
                 .WithOne(om => om.User)
                 .HasForeignKey(om => om.UserId);
-            userEntity
+            _ = userEntity
                 .HasMany(u => u.GroupMemberships)
                 .WithOne(gm => gm.User)
                 .HasForeignKey(gm => gm.UserId);
-            userEntity
+            _ = userEntity
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            orgEntity
+            _ = orgEntity
                 .HasMany(o => o.OrganizationMemberships)
                 .WithOne(om => om.Organization)
                 .HasForeignKey(om => om.OrganizationId);
 
-            orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
+            _ = orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
 
-            orgEntity
+            _ = orgEntity
                 .HasMany(o => o.Projects)
                 .WithOne(p => p.Organization)
                 .HasForeignKey(p => p.OrganizationId);
 
-            orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(true);
-            orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
+            _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(true);
+            _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-            builder.HasPostgresExtension("uuid-ossp");
+            _ = builder.HasPostgresExtension("uuid-ossp");
             //make all query items lowercase to send to postgres...
             LowerCaseDB(builder);
             DefineManyToMany(builder);
@@ -98,8 +98,7 @@ namespace SIL.Transcriber.Data
         {
             IEnumerable<EntityEntry> entries = ChangeTracker
                 .Entries()
-                .Where(
-                    e =>
+                .Where(e =>
                         e.Entity is ITrackDate
                         && (e.State == EntityState.Added || e.State == EntityState.Modified)
                 );
@@ -115,8 +114,7 @@ namespace SIL.Transcriber.Data
         {
             IEnumerable<EntityEntry> entries = ChangeTracker
                 .Entries()
-                .Where(
-                    e =>
+                .Where(e =>
                         e.Entity is ITrackDate
                         && (e.State == EntityState.Added || e.State == EntityState.Modified)
                 );
@@ -162,8 +160,7 @@ namespace SIL.Transcriber.Data
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor
-        )
-            : base(
+        ) : base(
                 targetedFields,
                 contextResolver,
                 resourceGraph,
@@ -171,6 +168,7 @@ namespace SIL.Transcriber.Data
                 constraintProviders,
                 loggerFactory,
                 resourceDefinitionAccessor
-            ) { }
+            )
+        { }
     }
 }

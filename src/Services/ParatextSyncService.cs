@@ -1,10 +1,10 @@
-﻿using SIL.Logging.Models;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Services;
+using SIL.Logging.Models;
 
 namespace SIL.Transcriber.Services
 {
@@ -29,6 +29,7 @@ namespace SIL.Transcriber.Services
                 request,
                 resourceChangeTracker,
                 resourceDefinitionAccessor
-            ) { }
+            )
+        { }
     }
 }

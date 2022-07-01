@@ -84,21 +84,19 @@ namespace SIL.Transcriber.Services
         {
             if (entities == null)
                 return new List<TResource>();
-            if (currentuser > 0)
-                return entities.Where(
-                    p =>
+            return currentuser > 0
+                ? entities.Where(p =>
                         (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin)
                         && p.DateUpdated > since
-                );
-            return entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
+                )
+                : (IEnumerable<TResource>)entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
         }
 
         public override async Task DeleteAsync(int id, CancellationToken ct)
         {
             TResource existing = await base.GetAsync(id, ct);
-            if (existing == null)
-                return;
-            await base.DeleteAsync(id, ct);
+            if (existing != null)
+                await base.DeleteAsync(id, ct);
         }
 
         public override async Task<TResource?> CreateAsync(
@@ -108,15 +106,13 @@ namespace SIL.Transcriber.Services
         {
             IQueryable<TResource> all = Repo.Get();
             //orbit sometimes sends two in a row...see if we already know about this one
-            TResource? x = all.Where(
-                    t =>
+            TResource? x = all.Where(t =>
                         t.DateCreated == resource.DateCreated
                         && t.LastModifiedBy == resource.LastModifiedBy
                 )
                 .FirstOrDefault();
-            if (x == null)
-                return await base.CreateAsync(resource, cancellationToken);
-            return x;
+            return x ?? await base.CreateAsync(resource, cancellationToken);
+
         }
     }
 }

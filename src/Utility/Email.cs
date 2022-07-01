@@ -1,16 +1,10 @@
 ﻿using Amazon;
+using Amazon.Lambda;
+using Amazon.Lambda.Model;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
-using Amazon.Lambda;
-using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Mail;
-using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using System.IO;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Amazon.Lambda.Model;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace TranscriberAPI.Utility
 {
@@ -33,14 +27,14 @@ namespace TranscriberAPI.Utility
         }
         public class EmailData
         {
-            public EmailData():base()
+            public EmailData() : base()
             {
-                ToAddresses = new string[0];
+                ToAddresses = new string [0];
                 BodyHtml = "";
                 Subject = "";
                 FromEmail = "";
             }
-            public string[] ToAddresses { get; set; }
+            public string [] ToAddresses { get; set; }
             public string BodyHtml { get; set; }
             public string Subject { get; set; }
             public string FromEmail { get; set; }
@@ -49,7 +43,8 @@ namespace TranscriberAPI.Utility
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
             Console.WriteLine("send email lambda: " + To);
-            EmailData payload = new EmailData {
+            EmailData payload = new EmailData
+            {
                 ToAddresses = To.Split(";"),
                 BodyHtml = body,
                 Subject = Subject,
@@ -82,7 +77,7 @@ namespace TranscriberAPI.Utility
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
             Console.WriteLine("SendEmailAPIAsync " + To);
-            using (AmazonSimpleEmailServiceClient? client = new (RegionEndpoint.USEast1))
+            using (AmazonSimpleEmailServiceClient? client = new(RegionEndpoint.USEast1))
             {
                 SendEmailRequest? sendRequest = new()
                 {
@@ -114,7 +109,7 @@ namespace TranscriberAPI.Utility
                 };
                 try
                 {
-                    SendEmailResponse? response = await client.SendEmailAsync(sendRequest); 
+                    SendEmailResponse? response = await client.SendEmailAsync(sendRequest);
                     Console.WriteLine("The email was sent successfully.");
                 }
                 catch (Exception ex)
