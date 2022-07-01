@@ -8,22 +8,8 @@ using JsonApiDotNetCore.Serialization.Objects;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class StateChange
-    {
-        public string Organization { get; set; } = "";
-        public string ProjectName { get; set; } = "";
-        public string Planname { get; set; } = "";
-        public string Passage { get; set; } = "";
-        public string Transcriber { get; set; } = "";
-        public string Editor { get; set; } = "";
-        public string PassageState { get; set; } = "";
-        public string StateModifiedby { get; set; } = "";
-        public DateTime StateUpdated { get; set; }
-        public string Email { get; set; } = "";
-    }
-
     //HttpReadOnly]
-    [Route("api/statehistory")]
+    [Route("api/statehistory")] //ignored...it's statehistories now
     [ApiController]
     public class StatehistoryController : BaseController<Statehistory>
     {
@@ -51,7 +37,7 @@ namespace SIL.Transcriber.Controllers
 
         [AllowAnonymous]
         [HttpGet("since/{since}")]
-        public ActionResult<List<StateChange>> GetSince([FromRoute] string since)
+        public ActionResult<List<Statehistory>> GetSince([FromRoute] string since)
         {
             if (DateTime.TryParse(since, out DateTime dateValue))
             {

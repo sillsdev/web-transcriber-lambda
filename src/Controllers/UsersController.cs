@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using JsonApiDotNetCore.Configuration;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
