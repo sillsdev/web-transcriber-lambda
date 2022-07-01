@@ -203,9 +203,9 @@ namespace SIL.Transcriber.Utility
             {
                 nextVerse = MoveToPara(nextVerse);
                 //skip section if there
-                if (nextVerse?.PreviousNode != null && nextVerse.PreviousNode.IsSection())
-                    return nextVerse.PreviousNode;
-                return nextVerse;
+                return nextVerse?.PreviousNode != null && nextVerse.PreviousNode.IsSection() 
+                    ? nextVerse.PreviousNode 
+                    : nextVerse;
             }
             return nextVerse;
         }
@@ -345,14 +345,12 @@ namespace SIL.Transcriber.Utility
                 {
                     IEnumerable<XElement>? verses = chapterContent?.GetElements("verse");
                     XNode? nextVerse = FindNodeAfterVerse(p.StartVerse, p.EndVerse, verses);
-                    if (nextVerse == null)
-                    {   //add it at the end
-                        thisVerse = AddParatextVerse(chapterContent?.LastNode, p.Verses, p.LastComment ?? "");
-                    }
-                    else
-                    {   //add before
-                        thisVerse = AddParatextVerse(nextVerse, p.Verses, p.LastComment ?? "", true);
-                    }
+                    thisVerse = 
+                        nextVerse == null
+                        //add it at the end
+                        ? AddParatextVerse(chapterContent?.LastNode, p.Verses, p.LastComment ?? "")
+                        //add before
+                        : AddParatextVerse(nextVerse, p.Verses, p.LastComment ?? "", true);
                 }
                 if (currentPassage.Sequencenum == 1 && first)
                 {
@@ -371,7 +369,7 @@ namespace SIL.Transcriber.Utility
                         }
                     first = false;
                 }
-            };
+            }
             return chapterContent;
         }
     }

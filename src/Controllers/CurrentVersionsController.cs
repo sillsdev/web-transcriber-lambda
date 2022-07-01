@@ -34,7 +34,7 @@ namespace SIL.Transcriber.Controllers
         [HttpPost("{version}")]
         public IActionResult PostVersionAsync([FromRoute] string version)
         {
-            return Ok(((CurrentversionService)service).StoreVersion(version));
+            return Ok(((CurrentversionService)Service).StoreVersion(version));
         }
     }
 }
