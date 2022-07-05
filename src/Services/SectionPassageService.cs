@@ -9,6 +9,7 @@ using JsonApiDotNetCore.Services;
 using Microsoft.EntityFrameworkCore.Storage;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 
@@ -17,6 +18,7 @@ namespace SIL.Transcriber.Services
     public class SectionPassageService : JsonApiResourceService<Sectionpassage, int>
     {
         protected SectionPassageRepository MyRepository { get; }
+        protected readonly AppDbContext dbContext;
 
         //protected IJsonApiOptions options { get; }
         protected ILogger<Sectionpassage> Logger { get; set; }
@@ -31,7 +33,8 @@ namespace SIL.Transcriber.Services
             IJsonApiRequest request,
             IResourceChangeTracker<Sectionpassage> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
-            SectionPassageRepository myRepository
+            SectionPassageRepository myRepository,
+            AppDbContextResolver contextResolver
         )
             : base(
                 repositoryAccessor,
@@ -44,19 +47,20 @@ namespace SIL.Transcriber.Services
                 resourceDefinitionAccessor
             )
         {
-            this.MyRepository = myRepository;
-            this.Logger = loggerFactory.CreateLogger<Sectionpassage>();
+            MyRepository = myRepository;
+            Logger = loggerFactory.CreateLogger<Sectionpassage>();
             ResourceChangeTracker = resourceChangeTracker;
+            dbContext = (AppDbContext)contextResolver.GetContext();
+
         }
 
 #pragma warning disable CS8609 // Nullability of reference types in return type doesn't match overridden member.
         public override async Task<Sectionpassage?> GetAsync(int id, CancellationToken cancelled)
 #pragma warning restore CS8609 // Nullability of reference types in return type doesn't match overridden member.
         {
-            Sectionpassage entity = await base.GetAsync(id, cancelled); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
-            if (entity != null && entity.Complete)
-                return entity;
-            return null;
+            Sectionpassage? entity = await base.GetAsync(id, cancelled); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
+            return (entity?.Complete ?? false) ? entity : null;
+
         }
 
         public override async Task<Sectionpassage?> CreateAsync(
@@ -216,7 +220,9 @@ namespace SIL.Transcriber.Services
                 transaction.Commit();
                 entity.Data = JsonConvert.SerializeObject(data);
                 entity.Complete = true;
-                _ = await UpdateAsync(entity.Id, entity, new CancellationToken());
+                //this doesnt work  _ = await UpdateAsync(entity.Id, entity, new CancellationToken());
+                dbContext.Sectionpassages.Update(entity);
+                dbContext.SaveChanges();
                 return entity;
             }
             catch (Exception ex)
