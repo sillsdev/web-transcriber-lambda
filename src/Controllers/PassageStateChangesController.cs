@@ -1,33 +1,39 @@
-﻿using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Errors;
+using JsonApiDotNetCore.Serialization.Objects;
+using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Internal;
 
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PassagestatechangesController : BaseController<PassageStateChange>
+    public class PassagestatechangesController : BaseController<Passagestatechange>
     {
         public PassagestatechangesController(
-           ILoggerFactory loggerFactory,
-           IJsonApiContext jsonApiContext,
-           IResourceService<PassageStateChange> myService,
-           ICurrentUserContext currentUserContext,
-           OrganizationService organizationService,
-           UserService userService)
-        : base(loggerFactory, jsonApiContext, myService, currentUserContext, organizationService, userService)
-        {
-        }
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Passagestatechange, int> resourceService,
+            ICurrentUserContext currentUserContext,
+            UserService userService
+        ) : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            )
+        { }
 
 #pragma warning disable 1998
         [HttpDelete("{id}")]
-        public override async Task<IActionResult> DeleteAsync(int id)
+        public override async Task<IActionResult> DeleteAsync(int id, CancellationToken cancelled)
         {
-            throw new JsonApiException(405, $"Not implemented for State Change.");
+            throw new JsonApiException(new ErrorObject(System.Net.HttpStatusCode.NotImplemented));
         }
 #pragma warning restore 1998
     }

@@ -1,39 +1,30 @@
-﻿using JsonApiDotNetCore.Internal;
+﻿using JsonApiDotNetCore.Serialization.Objects;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Errors;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Threading;
 using System.Threading.Tasks;
+using JsonApiDotNetCore.Controllers.Annotations;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class CurrentusersController : BaseController<User>
+    //[HttpReadOnly]
+    public class CurrentusersController : BaseController<CurrentUser>
     {
         public CurrentusersController(
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-               IResourceService<User> resourceService,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph, IResourceService<CurrentUser, int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
             UserService userService)
-         : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
-        { }
-        //prevent async function not waiting compile warning
-        #pragma warning disable 1998
-        [HttpPost]
-        public override async Task<IActionResult> PostAsync([FromBody] User entity)
+         : base(loggerFactory,options,resourceGraph, resourceService, currentUserContext,  userService)
         {
-            throw new JsonApiException(405, $"Not implemented for Current User resource.");
         }
-
-        [HttpGet]
-        public override async Task<IActionResult> GetAsync()
-        {
-            User currentUser = CurrentUser;
-
-            return Ok(currentUser);
-        }
-        #pragma warning restore 1998
+           
     }
 }

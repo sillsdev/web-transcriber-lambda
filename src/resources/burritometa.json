@@ -62,7 +62,7 @@
           //   bitDepth: 32,
           //   samplingRate: 48000,
           // },
-        },
+        }
         //"as" "FormatsType"
       },
       "currentScope": {

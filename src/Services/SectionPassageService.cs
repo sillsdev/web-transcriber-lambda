@@ -1,40 +1,84 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Errors;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Serialization.Objects;
+using JsonApiDotNetCore.Services;
+using Microsoft.EntityFrameworkCore.Storage;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Internal;
 using SIL.Transcriber.Repositories;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionPassageService : EntityResourceService<SectionPassage>
+    public class SectionPassageService : JsonApiResourceService<Sectionpassage, int>
     {
         protected SectionPassageRepository MyRepository { get; }
-        protected IJsonApiContext JsonApiContext { get; }
-        protected ILogger<SectionPassage> Logger { get; set; }
-        public SectionPassageService(IJsonApiContext jsonApiContext, SectionPassageRepository myRepository, ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
+        protected readonly AppDbContext dbContext;
+
+        //protected IJsonApiOptions options { get; }
+        protected ILogger<Sectionpassage> Logger { get; set; }
+        protected IResourceChangeTracker<Sectionpassage> ResourceChangeTracker;
+
+        public SectionPassageService(
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Sectionpassage> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            SectionPassageRepository myRepository,
+            AppDbContextResolver contextResolver
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor
+            )
         {
-            this.MyRepository = myRepository;
-            JsonApiContext = jsonApiContext;
-            this.Logger = loggerFactory.CreateLogger<SectionPassage>();
+            MyRepository = myRepository;
+            Logger = loggerFactory.CreateLogger<Sectionpassage>();
+            ResourceChangeTracker = resourceChangeTracker;
+            dbContext = (AppDbContext)contextResolver.GetContext();
+
         }
-        public async Task<SectionPassage> PostAsync(SectionPassage entity)
+
+#pragma warning disable CS8609 // Nullability of reference types in return type doesn't match overridden member.
+        public override async Task<Sectionpassage?> GetAsync(int id, CancellationToken cancelled)
+#pragma warning restore CS8609 // Nullability of reference types in return type doesn't match overridden member.
         {
-            object input = JsonConvert.DeserializeObject(entity.Data);
-            
-            if (input==null || !input.GetType().IsAssignableFrom(typeof(JArray))) throw new Exception("Invalid input");
+            Sectionpassage? entity = await base.GetAsync(id, cancelled); // dbContext.Sectionpassages.Where(e => e.Id == id).FirstOrDefault();
+            return (entity?.Complete ?? false) ? entity : null;
+
+        }
+
+        public override async Task<Sectionpassage?> CreateAsync(
+            Sectionpassage entity,
+            CancellationToken cancellationToken
+        )
+        {
+            object? input = entity.Data != null ? JsonConvert.DeserializeObject(entity.Data) : null;
+
+            if (input == null || !input.GetType().IsAssignableFrom(typeof(JArray)))
+                throw new Exception("Invalid input");
 
             JArray data = (JArray)input;
 
-            if (data.Count == 0) return entity;
+            if (data.Count == 0)
+                return entity;
 
-            SectionPassage inprogress = MyRepository.GetByUUID(entity.uuid) ;
+            Sectionpassage? inprogress = MyRepository.GetByUUID(entity.Uuid);
             if (inprogress != null)
             {
                 if (inprogress.Complete)
@@ -51,112 +95,147 @@ namespace SIL.Transcriber.Services
             entity.DateCreated = DateTime.UtcNow;
             try
             {
-                await MyRepository.CreateAsync(entity);
+                Sectionpassage? newentity = await base.CreateAsync(entity, new CancellationToken());
+                if (newentity == null)
+                    return null;
+                entity = newentity;
             }
             catch (Exception ex)
             {
-                Logger.LogError($"{ex}");
+                Logger.LogError("{ex}", ex);
                 if (ex.InnerException != null && ex.InnerException.Message.Contains("23505"))
                     return null;
             }
-            using (IDbContextTransaction transaction = MyRepository.BeginTransaction())
+            using IDbContextTransaction transaction = MyRepository.BeginTransaction();
+            try
             {
-                try
-                {
-                    IEnumerable<JToken> updsecs = data.Where(d => (bool)d[0]["issection"] && (bool)d[0]["changed"]);
+                IEnumerable<JToken> updsecs = data.Where(
+                    d => ((bool?)d[0]?["issection"] ?? false) && ((bool?)d[0]?["changed"] ?? false)
+                );
 
-                    //add all sections
-                    List<Section> updsections = new List<Section>();
-                   
+                //add all sections
+                List<Section> updsections = new();
+
+                foreach (JArray item in updsecs)
+                {
+                    updsections.Add(
+                        (item [0]? ["id"] ?? "").ToString() != ""
+                            ? MyRepository.GetSection((int?)item [0] ["id"] ?? 0).UpdateFrom(item [0])
+                            : new Section().UpdateFrom(item [0], entity.PlanId)
+                    );
+                }
+                if (updsections.Count > 0)
+                {
+                    _ = MyRepository.BulkUpdateSections(updsections);
+                    int ix = 0;
                     foreach (JArray item in updsecs)
                     {
-                        updsections.Add(item[0]["id"] != null && item[0]["id"].ToString() != "" ? MyRepository.GetSection((int)item[0]["id"]).UpdateFrom(item[0]) : new Section(item[0], entity.PlanId));
+                        item [0] ["id"] = updsections [ix].Id;
+                        ix++;
                     }
-                    if (updsections.Count > 0)
+                }
+                int lastSectionId = 0;
+                /* process all the passages now */
+                List<JToken> updpass = new();
+                List<Passage> updpassages = new();
+                List<Passage> delpassages = new();
+#pragma warning disable CS8604 // Possible null reference argument.
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+                foreach (JArray item in data)
+                {
+                    if ((bool)item [0] ["issection"])
                     {
-                        MyRepository.BulkUpdateSections(updsections);
-                        int ix = 0;
-                        foreach (JArray item in updsecs)
+                        if (item [0] ["id"] != null && item [0] ["id"].ToString() != "") //saving in chunks may not have saved this section...passages will be marked unchanged
                         {
-                            item[0]["id"] = updsections[ix].Id;
-                            ix++;
-                        }
-                    }
-                    int lastSectionId = 0;
-                    /* process all the passages now */
-                    List<JToken> updpass = new List<JToken>();
-                    List<Passage> updpassages = new List<Passage>();
-                    List<Passage> delpassages = new List<Passage>();
-                    foreach (JArray item in data)
-                    {
-                        if ((bool)item[0]["issection"])
-                        {
-                            if (item[0]["id"] != null && item[0]["id"].ToString() != "")  //saving in chunks may not have saved this section...passages will be marked unchanged
+                            lastSectionId = (int)item [0] ["id"];
+                            if (item.Count > 1)
                             {
-                                lastSectionId = (int)item[0]["id"];
-                                if (item.Count > 1)
+                                if ((bool)item [1] ["changed"])
                                 {
-                                    if ((bool)item[1]["changed"]) {
-                                        updpass.Add(item);
-                                        updpassages.Add(item[1]["id"] != null && item[1]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]) : new Passage(item[1], lastSectionId));
-                                    } else if(item[1]["deleted"] != null && (bool)item[1]["deleted"])
-                                    {
-                                        delpassages.Add(MyRepository.GetPassage((int)item[1]["id"]).UpdateFrom(item[1]));
-                                    }  
+                                    updpass.Add(item);
+                                    updpassages.Add(
+                                        item [1] ["id"] != null && item [1] ["id"].ToString() != ""
+                                            ? MyRepository
+                                                .GetPassage((int)item [1] ["id"])
+                                                .UpdateFrom(item [1])
+                                            : new Passage().UpdateFrom(item [1], lastSectionId)
+                                    );
+                                }
+                                else if (item [1] ["deleted"] != null && (bool)item [1] ["deleted"])
+                                {
+                                    delpassages.Add(
+                                        MyRepository
+                                            .GetPassage((int)item [1] ["id"])
+                                            .UpdateFrom(item [1])
+                                    );
                                 }
                             }
                         }
-                        else if ((bool)item[0]["changed"])
-                        {
-                            updpass.Add(item);
-                            updpassages.Add(item[0]["id"] != null && item[0]["id"].ToString() != "" ? MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]): new Passage(item[0], lastSectionId));
-                        } else if (item[0]["deleted"] != null && (bool)item[0]["deleted"])
-                        {
-                            delpassages.Add(MyRepository.GetPassage((int)item[0]["id"]).UpdateFrom(item[0]));
-                        }
                     }
-                     if (updpassages.Count > 0)
+                    else if ((bool?)item [0] ["changed"] ?? false)
                     {
-                        //Logger.LogInformation($"updpassages {updpassages.Count} {updpassages}");
-                        MyRepository.BulkUpdatePassages(updpassages);
-                        int ix = 0;
-                        foreach (JArray item in updpass)
-                        {
-                            item[item.Count-1]["id"] = updpassages[ix].Id;
-                            MyRepository.UpdateSectionModified(updpassages[ix].SectionId);
-                            ix++;
-                        }
+                        updpass.Add(item);
+                        updpassages.Add(
+                            (item [0]? ["id"]?.ToString() ?? "") != ""
+                                ? MyRepository.GetPassage((int)item [0] ["id"]).UpdateFrom(item [0])
+                                : new Passage().UpdateFrom(item [0], lastSectionId)
+                        );
                     }
-                    if (delpassages.Count > 0)
+                    else if (item [0] ["deleted"] != null && ((bool?)item [0] ["deleted"] ?? false))
                     {
-                        MyRepository.BulkDeletePassages(delpassages);
-                        delpassages.ForEach(p => MyRepository.UpdateSectionModified(p.SectionId));
+                        delpassages.Add(
+                            MyRepository.GetPassage((int?)item [0] ["id"] ?? 0).UpdateFrom(item [0])
+                        );
                     }
-                    IEnumerable<JToken> delsecs = data.Where(d => (bool)d[0]["issection"] && d[0]["deleted"] != null && (bool)d[0]["deleted"]);
-                    List<Section> delsections = new List<Section>();
-                    foreach (JArray item in delsecs)
-                    {
-                        delsections.Add(MyRepository.GetSection((int)item[0]["id"]));
-                    }
-                    MyRepository.BulkDeleteSections(delsections);
-                    MyRepository.UpdatePlanModified(entity.PlanId);
-                    transaction.Commit();
-                    entity.Data = JsonConvert.SerializeObject(data);
-                    entity.Complete = true;
-                    ContextEntity contextEntity = JsonApiContext.ResourceGraph.GetContextEntity("sectionpassages");
-                    JsonApiContext.AttributesToUpdate[contextEntity.Attributes.Where(a => a.PublicAttributeName == "data").First()] = entity.Data;
-                    await MyRepository.UpdateAsync(entity.Id, entity);
-                    return entity;
                 }
-                catch (Exception ex)
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+#pragma warning restore CS8604 // Possible null reference argument.
+                if (updpassages.Count > 0)
                 {
-                    Logger.LogCritical($"Insert Error {ex}");
-                    /* I'm giving up...let the next one try */
-                    transaction.Rollback();
-                    await MyRepository.DeleteAsync(entity.Id);
-                    throw new JsonApiException(new Error(502, ex.Message));
+                    //Logger.LogInformation($"updpassages {updpassages.Count} {updpassages}");
+                    _ = MyRepository.BulkUpdatePassages(updpassages);
+                    int ix = 0;
+                    foreach (JArray item in updpass)
+                    {
+                        item [item.Count - 1] ["id"] = updpassages [ix].Id;
+                        _ = MyRepository.UpdateSectionModified(updpassages [ix].SectionId);
+                        ix++;
+                    }
                 }
+                if (delpassages.Count > 0)
+                {
+                    _ = MyRepository.BulkDeletePassages(delpassages);
+                    delpassages.ForEach(p => MyRepository.UpdateSectionModified(p.SectionId));
+                }
+                IEnumerable<JToken> delsecs = data.Where(
+                    d => ((bool?)d[0]?["issection"] ?? false) && ((bool?)d[0]?["deleted"] ?? false)
+                );
+                List<Section> delsections = new();
+                foreach (JArray item in delsecs)
+                {
+                    delsections.Add(MyRepository.GetSection((int?)item [0] ["id"] ?? 0));
+                }
+                _ = MyRepository.BulkDeleteSections(delsections);
+                _ = MyRepository.UpdatePlanModified(entity.PlanId);
+                transaction.Commit();
+                entity.Data = JsonConvert.SerializeObject(data);
+                entity.Complete = true;
+                //this doesnt work  _ = await UpdateAsync(entity.Id, entity, new CancellationToken());
+                dbContext.Sectionpassages.Update(entity);
+                dbContext.SaveChanges();
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogCritical("Insert Error {ex}", ex);
+                /* I'm giving up...let the next one try */
+                transaction.Rollback();
+                await MyRepository.DeleteAsync(entity, entity.Id, new CancellationToken());
+                throw new JsonApiException(
+                    new ErrorObject(System.Net.HttpStatusCode.InternalServerError),
+                    new Exception(ex.Message)
+                );
             }
         }
-     }
+    }
 }

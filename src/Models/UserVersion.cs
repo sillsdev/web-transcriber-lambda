@@ -1,13 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Collections.Generic;
-using JsonApiDotNetCore.Models;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public class UserVersion : Version
+    [Table("userversions")]
+    public class Userversion : Version
     {
-        public string Environment { get; set; }
+        public string? Environment { get; set; }
     }
 }

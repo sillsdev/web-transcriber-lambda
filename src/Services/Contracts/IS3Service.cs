@@ -1,7 +1,4 @@
-﻿using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using SIL.Transcriber.Models;
+﻿using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Services
 {

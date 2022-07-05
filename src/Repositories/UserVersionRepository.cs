@@ -1,64 +1,90 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System;
-using System.Linq;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class UserVersionRepository : BaseRepository<UserVersion>
+    public class UserVersionRepository : BaseRepository<Userversion>
     {
-        private CurrentVersionService CVService;
+        private readonly CurrentversionService CVService;
+
         public UserVersionRepository(
-            ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
+            ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
-            CurrentVersionService cvService
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository,
+            CurrentversionService cvService
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             CVService = cvService;
         }
-        public UserVersion CreateOrUpdate(string version, string env)
+
+        public Userversion CreateOrUpdate(string version, string env)
         {
-            string fp = dbContext.GetFingerprint();
             try
             {
-                UserVersion uv = Get().Where(x => x.LastModifiedOrigin == fp).FirstOrDefault();
+                string fp = dbContext.Fingerprint();
+
+                Userversion? uv = GetAll()?.Where(x => x.LastModifiedOrigin == fp).FirstOrDefault();
                 if (uv != null)
                 {
                     uv.DesktopVersion = version;
                     uv.Environment = env;
-                    dbContext.Update(uv);
+                    _ = dbContext.Update(uv);
                 }
                 else
                 {
-                    uv = new UserVersion
-                    {
-                        DesktopVersion = version,
-                        Environment = env,
-                    };
-                    dbContext.UserVersions.Add(uv);
+                    uv = new Userversion { DesktopVersion = version, Environment = env, };
+                    _ = dbContext.UserVersions.Add(uv);
                 }
-                dbContext.SaveChanges();
-                CurrentVersion cv = CVService.GetVersion(version);
+                _ = dbContext.SaveChanges();
+                Currentversion cv = CVService.GetVersion(version);
                 uv.DesktopVersion = cv.DesktopVersion;
                 uv.DateUpdated = cv.DateUpdated;
                 return uv;
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Logger.LogError(ex, "userversion get");
-                return new UserVersion
+                return new Userversion
                 {
                     DesktopVersion = "1",
                     Environment = env,
                     DateUpdated = new DateTime(2000, 1, 1)
                 };
             }
+        }
 
+        public override IQueryable<Userversion> FromCurrentUser(
+            IQueryable<Userversion>? entities = null
+        )
+        {
+            return base.GetAll();
+        }
+
+        public override IQueryable<Userversion> FromProjectList(
+            IQueryable<Userversion>? entities,
+            string idList
+        )
+        {
+            return entities ?? GetAll();
         }
     }
 }

@@ -1,31 +1,37 @@
-﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Serialization;
-using SIL.Transcriber.Data;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-
 
 namespace SIL.Transcriber.Services
 {
-    public class OrgDataService
+    public class OrgDataService : BaseService<Orgdata>
     {
-        protected readonly AppDbContext dbContext;
-        protected readonly IJsonApiSerializer jsonApiSerializer;
-        protected readonly IJsonApiDeSerializer jsonApiDeSerializer;
-        protected readonly OrganizationService organizationService;
-        protected readonly GroupMembershipService gmService;
-        protected readonly CurrentUserRepository currentUserRepository;
-
-        public OrgDataService(AppDbContextResolver contextResolver, IJsonApiSerializer jsonSer, IJsonApiDeSerializer jsonDeser, CurrentUserRepository currentUserRepo,
-            OrganizationService orgService,
-            GroupMembershipService grpMemService)
-        {
-            this.dbContext = (AppDbContext)contextResolver.GetContext();
-            jsonApiSerializer = jsonSer;
-            jsonApiDeSerializer = jsonDeser;
-            currentUserRepository = currentUserRepo;
-            organizationService = orgService;
-            gmService = grpMemService;
-        }
-
+        public OrgDataService(
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Orgdata> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            OrgDataRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            )
+        { }
     }
 }

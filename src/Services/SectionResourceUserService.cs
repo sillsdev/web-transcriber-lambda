@@ -1,24 +1,37 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionResourceUserService : BaseArchiveService<SectionResourceUser>
+    public class SectionResourceUserService : BaseArchiveService<Sectionresourceuser>
     {
         public SectionResourceUserService(
-            IJsonApiContext jsonApiContext,
-           SectionResourceUserRepository SectionResourceUserRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, SectionResourceUserRepository, loggerFactory)
-        {
-        }
-
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Sectionresourceuser> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            SectionResourceUserRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            )
+        { }
     }
 }

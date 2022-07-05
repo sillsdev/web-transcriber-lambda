@@ -1,38 +1,56 @@
-﻿using System.Linq;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using static SIL.Transcriber.Utility.RepositoryExtensions;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using Microsoft.AspNetCore.Http;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class GroupMembershipRepository : BaseRepository<GroupMembership>
+    public class GroupMembershipRepository : BaseRepository<Groupmembership>
     {
-        GroupRepository GroupRepository;
-        private HttpContext HttpContext;
+        private readonly GroupRepository GroupRepository;
+        readonly private HttpContext? HttpContext;
+
         public GroupMembershipRepository(
             IHttpContextAccessor httpContextAccessor,
-          ILoggerFactory loggerFactory,
-          IJsonApiContext jsonApiContext,
-          CurrentUserRepository currentUserRepository,
-          AppDbContextResolver contextResolver,
-          GroupRepository groupRepository
-      ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository,
+            GroupRepository groupRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
         }
-        public IQueryable<GroupMembership> GroupsGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups)
+
+        public IQueryable<Groupmembership> GroupsGroupMemberships(
+            IQueryable<Groupmembership> entities,
+            IQueryable<Group> groups
+        )
         {
             return entities.Join(groups, gm => gm.GroupId, g => g.Id, (gm, g) => gm);
         }
-        public IQueryable<GroupMembership> UsersGroupMemberships(IQueryable<GroupMembership> entities, IQueryable<Group> groups = null)
+
+        public IQueryable<Groupmembership> UsersGroupMemberships(
+            IQueryable<Groupmembership> entities,
+            IQueryable<Group>? groups = null
+        )
         {
             if (groups == null)
             {
@@ -40,60 +58,39 @@ namespace SIL.Transcriber.Repositories
             }
             return GroupsGroupMemberships(entities, groups);
         }
-        public IQueryable<GroupMembership> ProjectGroupMemberships(IQueryable<GroupMembership> entities, string project)
+
+        public IQueryable<Groupmembership> ProjectGroupMemberships(
+            IQueryable<Groupmembership> entities,
+            string project
+        )
         {
             IQueryable<Group> groups = GroupRepository.ProjectGroups(dbContext.Groups, project);
             return GroupsGroupMemberships(entities, groups);
         }
-        #region Overrides
-        public override IQueryable<GroupMembership> Filter(IQueryable<GroupMembership> entities, FilterQuery filterQuery)
+
+        public IQueryable<Groupmembership> GetMine()
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    IQueryable<Group> groups =dbContext.Groups.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-                    return UsersGroupMemberships(entities, groups);
-                }
-                return UsersGroupMemberships(entities);
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersGroupMemberships(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectGroupMemberships(entities, filterQuery.Value);
-            }
-            if (filterQuery.Has(DATA_START_INDEX)) //ignore
-            {
-                return entities;
-            }
-            return base.Filter(entities, filterQuery);
+            return FromCurrentUser()
+                .Include(gm => gm.Group)
+                .Include(gm => gm.User)
+                .Include(gm => gm.Role);
+        }
+
+        #region Overrides
+        public override IQueryable<Groupmembership> FromCurrentUser(
+            IQueryable<Groupmembership>? entities = null
+        )
+        {
+            return UsersGroupMemberships(entities ?? GetAll());
+        }
+
+        public override IQueryable<Groupmembership> FromProjectList(
+            IQueryable<Groupmembership>? entities,
+            string idList
+        )
+        {
+            return ProjectGroupMemberships(entities ?? GetAll(), idList);
         }
         #endregion
-
-        public GroupMembership JoinGroup(int UserId, int groupId, RoleName groupRole)
-        {
-            Group group = dbContext.Groups.Find(groupId);
-            if (group.Archived) return null;
-            GroupMembership groupmembership = Get().Where(gm => gm.GroupId == groupId && gm.UserId == UserId).FirstOrDefault();
-            if (groupmembership == null)
-            {
-                HttpContext.SetFP("api");
-                groupmembership = new GroupMembership
-                {
-                    GroupId = groupId,
-                    UserId = UserId,
-                    RoleId = (int)groupRole,
-                };
-                groupmembership = CreateAsync(groupmembership).Result;
-            } else if (groupmembership.Archived)
-            {
-                groupmembership.Archived = false;
-                groupmembership = UpdateAsync(groupmembership.Id, groupmembership).Result;
-            }
-            return groupmembership;
-        }
     }
 }

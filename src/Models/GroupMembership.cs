@@ -1,32 +1,32 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class GroupMembership : BaseModel, IArchive
+    [Table("groupmemberships")]
+    public partial class Groupmembership : BaseModel, IArchive
     {
-        [HasOne("user", Link.None)]
-        public virtual User User { get; set; }
+        [HasOne(PublicName = "user")]
+        public virtual User User { get; set; } = null!;
         public int UserId { get; set; }
 
-        [HasOne("group", Link.None)]
-        public virtual Group Group { get; set; }
+        [HasOne(PublicName = "group")]
+        public virtual Group Group { get; set; } = null!;
         public int GroupId { get; set; }
 
-        [HasOne("role", Link.None)]
-        public virtual Role Role { get; set; }
+        [HasOne(PublicName = "role")]
+        public virtual Role Role { get; set; } = null!;
         public int RoleId { get; set; }
 
         [NotMapped]
-        public RoleName RoleName
-        {
+        public RoleName RoleName {
             get { return Role == null ? RoleName.Transcriber : Role.Rolename; }
         }
-        [Attr("font")]
-        public string Font { get; set; }
+        [Attr(PublicName = "font")]
+        public string? Font { get; set; }
 
-        [Attr("font-size")]
-        public string FontSize { get; set; }
+        [Attr(PublicName = "font-size")]
+        public string? FontSize { get; set; }
 
         public bool Archived { get; set; }
     }

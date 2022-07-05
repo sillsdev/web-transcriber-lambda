@@ -1,59 +1,73 @@
-﻿using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Serialization;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using SIL.Transcriber.Data;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Serialization.Response;
 using Newtonsoft.Json;
+using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class ProjDataRepository : BaseRepository<ProjData>
+    public class ProjDataRepository : BaseRepository<Projdata>
     {
-        protected readonly IJsonApiSerializer jsonApiSerializer;
-        protected readonly OrganizationService organizationService;
-        protected readonly GroupMembershipService gmService;
-        protected readonly IJsonApiContext jsonApiContext;
-        protected int filterVersion = 0;
-        protected string filterStart = "";
-        protected string filterProject = "";
+        protected readonly SectionService SectionService;
+        protected readonly SectionRepository SectionRepository;
+        protected readonly IJsonApiOptions _options;
+        protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
+        protected readonly IMetaBuilder _metaBuilder;
+
         public ProjDataRepository(
-              ILoggerFactory loggerFactory,
-              IJsonApiContext JsonApiContext,
-              CurrentUserRepository CurrentUserRepository,
-              AppDbContextResolver contextResolver,
-              IJsonApiSerializer jsonSer,
-              OrganizationService orgService,
-              GroupMembershipService grpMemService
-          ) : base(loggerFactory, JsonApiContext, CurrentUserRepository, contextResolver)
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository,
+            SectionService sectionService,
+            SectionRepository sectionRepository,
+            IMetaBuilder metaBuilder,
+            IJsonApiOptions options
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
-            jsonApiSerializer = jsonSer;
-            organizationService = orgService;
-            gmService = grpMemService;
-            jsonApiContext = JsonApiContext;
+            SectionService = sectionService;
+            SectionRepository = sectionRepository;
+            _options = options;
+            _resourceDefinitionAccessor = resourceDefinitionAccessor;
+            _metaBuilder = metaBuilder;
         }
 
-        private bool CheckAdd(int check, object entity, DateTime dtBail, int start, ref int completed, ref string data)
+        private string ToJson<TResource>(IEnumerable<TResource> resources)
+            where TResource : class, IIdentifiable
         {
-            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
-            if (DateTime.Now > dtBail) return false;
-            if (start <= check)
-            {
-                string thisdata = jsonApiSerializer.Serialize(entity);
-                if (data.Length + thisdata.Length > (1000000 * 4))
-                    return false;
-                data += (check == start ? "" : ",") + thisdata;
-                completed++;
-            }
-            return true;
+            return SerializerHelpers.ResourceListToJson<TResource>(
+                resources,
+                ResourceGraph,
+                _options,
+                _resourceDefinitionAccessor,
+                _metaBuilder
+            );
         }
 
-        private IQueryable<ProjData> GetData(IQueryable<ProjData> entities, string project, string start, int version = 1)
+        private IQueryable<Projdata> GetData(
+            IQueryable<Projdata> entities,
+            string project,
+            string start,
+            int version = 1
+        )
         {
             string data = "";
             if (!int.TryParse(start, out int iStart))
@@ -68,105 +82,153 @@ namespace SIL.Transcriber.Repositories
             do
             {
                 //plans
-                IEnumerable<Plan> plans = dbContext.Plans.Where(pl => pl.ProjectId == projectid && !pl.Archived);
-                if (!CheckAdd(0, plans, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                IEnumerable<Plan> plans = dbContext.PlansData.Where(
+                    x => x.ProjectId == projectid && !x.Archived
+                );
+                //if (!CheckAdd(0, plans, dtBail, Serializer, ref iStartNext, ref data)) break;
 
                 //sections
-                IQueryable<Section> sections = dbContext.Sections.Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s).Where(x => !x.Archived);
-                if (!CheckAdd(1, sections, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
-                
+                IQueryable<Section> sections = dbContext.SectionsData
+                    .Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s)
+                    .Where(x => !x.Archived);
+                if (!CheckAdd(1, ToJson<Section>(sections), dtBail, ref iStartNext, ref data))
+                    break;
+
                 //passages
-                IQueryable<Passage> passages = dbContext.Passages.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p).Where(x => !x.Archived);
-                if (!CheckAdd(2, passages, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                IQueryable<Passage> passages = dbContext.PassagesData
+                    .Join(sections, p => p.SectionId, s => s.Id, (p, s) => p)
+                    .Where(x => !x.Archived);
+                if (!CheckAdd(2, ToJson<Passage>(passages), dtBail, ref iStartNext, ref data))
+                    break;
 
                 //mediafiles
-                IQueryable<Mediafile> mediafiles = dbContext.Mediafiles.Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m).Where(x => !x.Archived);
-                if (!CheckAdd(3, mediafiles, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                IQueryable<Mediafile> mediafiles = dbContext.MediafilesData
+                    .Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m)
+                    .Where(x => !x.Archived);
+                if (!CheckAdd(3, ToJson<Mediafile>(mediafiles), dtBail, ref iStartNext, ref data))
+                    break;
 
                 //passagestatechanges
-                if (!CheckAdd(4, dbContext.Passagestatechanges.Join(passages, psc => psc.PassageId, p => p.Id, (psc, p) => psc), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                if (
+                    !CheckAdd(
+                        4,
+                        ToJson<Passagestatechange>(
+                            dbContext.PassagestatechangesData.Join(
+                                passages,
+                                psc => psc.PassageId,
+                                p => p.Id,
+                                (psc, p) => psc
+                            )
+                        ),
+                        dtBail,
+                        ref iStartNext,
+                        ref data
+                    )
+                )
+                    break;
                 if (version > 3)
                 {
                     //discussions
-                    IQueryable<Discussion> discussions = dbContext.Discussions.Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d).Where(x => !x.Archived);
-                    if (!CheckAdd(5, discussions, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                    IQueryable<Discussion> discussions = dbContext.DiscussionsData
+                        .Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d)
+                        .Where(x => !x.Archived);
+                    if (
+                        !CheckAdd(
+                            5,
+                            ToJson<Discussion>(discussions),
+                            dtBail,
+                            ref iStartNext,
+                            ref data
+                        )
+                    )
+                        break;
 
                     //comments
-                    if (!CheckAdd(6, dbContext.Comments.Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c).Where(x => !x.Archived), dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
-                    
-                    IQueryable<SectionResource> sectionresources = dbContext.Sectionresources.Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr).Where(x => !x.Archived);
-                    if (!CheckAdd(7, sectionresources, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
-                   
-                    IQueryable<SectionResourceUser> srusers = dbContext.Sectionresourceusers.Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u).Where(x => !x.Archived);
-                    if (!CheckAdd(8, srusers, dtBail, jsonApiSerializer, ref iStartNext, ref data)) break;
+                    if (
+                        !CheckAdd(
+                            6,
+                            ToJson<Comment>(
+                                dbContext.CommentsData
+                                    .Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c)
+                                    .Where(x => !x.Archived)
+                            ),
+                            dtBail,
+                            ref iStartNext,
+                            ref data
+                        )
+                    )
+                        break;
+
+                    IQueryable<Sectionresource> sectionresources = dbContext.SectionresourcesData
+                        .Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr)
+                        .Where(x => !x.Archived);
+                    if (
+                        !CheckAdd(
+                            7,
+                            ToJson<Sectionresource>(sectionresources),
+                            dtBail,
+                            ref iStartNext,
+                            ref data
+                        )
+                    )
+                        break;
+
+                    IQueryable<Sectionresourceuser> srusers = dbContext.SectionresourceusersData
+                        .Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u)
+                        .Where(x => !x.Archived);
+                    if (
+                        !CheckAdd(
+                            8,
+                            ToJson<Sectionresourceuser>(srusers),
+                            dtBail,
+                            ref iStartNext,
+                            ref data
+                        )
+                    )
+                        break;
                 }
                 iStartNext = -1; //Done!
             } while (false); //do it once
             if (iStart == iStartNext)
                 throw new System.Exception("Single table is too large to return data");
 
-            ProjData ProjData = entities.FirstOrDefault();
+            Projdata ProjData = entities.First();
             ProjData.Json = data + FinishData();
-            ProjData.Startnext = iStartNext;
+            ProjData.StartIndex = iStartNext;
             ProjData.SnapshotDate = snapshotDate;
             return entities;
         }
-        public override IQueryable<ProjData> Get()
-        {
-            List<ProjData> entities = new List<ProjData>
-            {
-                new ProjData()
-            };
-            return entities.AsQueryable();
-        }
-        private void ResetFilters()
-        {
-            filterStart = "";
-            filterVersion = 0;
-            filterProject = "";
-        }
-        private IQueryable<ProjData> ApplyFilter(IQueryable<ProjData> entities)
-        {
-            if (filterVersion == 0 && jsonApiContext.QuerySet.Filters.Find(f => f.Attribute.ToLower() == VERSION) == null)
-            {
-                filterVersion = 1;
-            }
-            if (filterStart != "" && filterProject != "" && filterVersion != 0)
-            {
-                IQueryable<ProjData> result = GetData(entities, filterProject, filterStart, filterVersion);
-                ResetFilters();
-                return result;
-            }
-            return entities;
-        }
-        public override IQueryable<ProjData> Filter(IQueryable<ProjData> entities, FilterQuery filterQuery)
-        {
-            if (filterQuery.Has(VERSION))
-            {
-                //if I'm first...just remember my value
-                dynamic x = JsonConvert.DeserializeObject(filterQuery.Value);
-                try
-                {
-                    filterVersion = x.version;
-                }
-                catch
-                {
-                    filterVersion = 1;
-                }
-                return ApplyFilter(entities);
-            }
-            if (filterQuery.Has(DATA_START_INDEX))
-            {
-                filterStart = filterQuery.Value;
-                return ApplyFilter(entities);
-            }
-            if (filterQuery.Has(PROJECT_SEARCH_TERM))
-            {
-                filterProject = filterQuery.Value;
-                return ApplyFilter(entities);
-            }
-            return entities;
 
+        protected override IQueryable<Projdata> FromStartIndex(
+            IQueryable<Projdata>? entities,
+            string startIndex,
+            string version = "",
+            string projectid = ""
+        )
+        {
+            dynamic? x = JsonConvert.DeserializeObject(version);
+            int filterVersion = x?.version ?? 1;
+            return GetData(entities ?? GetAll(), projectid, startIndex, filterVersion);
+        }
+
+        public override IQueryable<Projdata> FromProjectList(
+            IQueryable<Projdata>? entities,
+            string idList
+        )
+        {
+            IQueryable<Projdata> result = GetData(entities ?? GetAll(), idList, "0");
+            return result;
+        }
+
+        protected override IQueryable<Projdata> GetAll()
+        {
+            List<Projdata> entities = new List<Projdata> { new Projdata() };
+            return entities.AsAsyncQueryable();
+        }
+
+        public override IQueryable<Projdata> FromCurrentUser(IQueryable<Projdata>? entities = null)
+        {
+            return GetAll();
         }
     }
 }

@@ -1,8 +1,6 @@
-﻿using JsonApiDotNetCore.Models;
-
-namespace SIL.Transcriber.Models
+﻿namespace SIL.Transcriber.Models
 {
-    public class CurrentVersion : Version
+    public class Currentversion : Version
     {
     }
 }

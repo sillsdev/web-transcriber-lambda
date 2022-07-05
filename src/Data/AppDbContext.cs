@@ -1,144 +1,382 @@
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using SIL.Paratext.Models;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using JsonApiDotNetCore.Data;
-using Microsoft.Extensions.Logging;
-using JsonApiDotNetCore.Services;
-using SIL.Transcriber.Repositories;
-using JsonApiDotNetCore.Models;
-using System.Collections.Generic;
+using SIL.Transcriber.Utility.Extensions;
+using static SIL.Transcriber.Data.DbContextExtentions;
 
 namespace SIL.Transcriber.Data
 {
-    public class AppDbContext : BaseDbContext
+    public class AppDbContext : DbContext
     {
+        private int _currentUser = -1;
         public ICurrentUserContext CurrentUserContext { get; }
-        private int _currentUser=-1;
-        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserContext currentUserContext, IHttpContextAccessor httpContextAccessor) : 
-            base(options, httpContextAccessor)
+        public ILogger Logger;
+        public HttpContext? HttpContext { get; }
+        public DbContextOptions Options { get; }
+        public IHttpContextAccessor HttpContextAccessor { get; }
+
+        #region DBSet
+        public DbSet<Activitystate> Activitystates => Set<Activitystate>();
+        public DbSet<Artifactcategory> Artifactcategorys => Set<Artifactcategory>();
+        public DbSet<Artifacttype> Artifacttypes => Set<Artifacttype>();
+        public DbSet<Comment> Comments => Set<Comment>();
+        public DbSet<Currentversion> Currentversions => Set<Currentversion>();
+        public DbSet<Dashboard> Dashboards => Set<Dashboard>();
+        public DbSet<Datachanges> Datachanges => Set<Datachanges>();
+        public DbSet<Discussion> Discussions => Set<Discussion>();
+        public DbSet<Group> Groups => Set<Group>();
+        public DbSet<Groupmembership> Groupmemberships => Set<Groupmembership>();
+        public DbSet<Integration> Integrations => Set<Integration>();
+        public DbSet<Invitation> Invitations => Set<Invitation>();
+        public DbSet<Mediafile> Mediafiles => Set<Mediafile>();
+        public DbSet<Organization> Organizations => Set<Organization>();
+        public DbSet<Organizationmembership> Organizationmemberships =>
+            Set<Organizationmembership>();
+        public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
+        public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
+        public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
+        public DbSet<Passage> Passages => Set<Passage>();
+        public DbSet<Passagestatechange> Passagestatechanges => Set<Passagestatechange>();
+        public DbSet<Plan> Plans => Set<Plan>();
+        public DbSet<Plantype> Plantypes => Set<Plantype>();
+        public DbSet<Projdata> Projdatas => Set<Projdata>();
+        public DbSet<Projectintegration> Projectintegrations => Set<Projectintegration>();
+        public DbSet<Project> Projects => Set<Project>();
+        public DbSet<Projecttype> Projecttypes => Set<Projecttype>();
+        public DbSet<Resource> Resources => Set<Resource>();
+        public DbSet<Role> Roles => Set<Role>();
+        public DbSet<Section> Sections => Set<Section>();
+        public DbSet<Sectionpassage> Sectionpassages => Set<Sectionpassage>();
+        public DbSet<Sectionresource> Sectionresources => Set<Sectionresource>();
+        public DbSet<Sectionresourceuser> Sectionresourceusers => Set<Sectionresourceuser>();
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Userversion> UserVersions => Set<Userversion>();
+        public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
+        public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
+        #endregion
+
+        public AppDbContext(
+            DbContextOptions<AppDbContext> options,
+            ICurrentUserContext currentUserContext,
+            IHttpContextAccessor httpContextAccessor,
+            ILoggerFactory loggerFactory
+        ) : base(options)
         {
             CurrentUserContext = currentUserContext;
-        }
-        private void DefineManyToMany(ModelBuilder modelBuilder)
-        {
-            EntityTypeBuilder<Group> groupEntity = modelBuilder.Entity<Group>();
-            EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
-            EntityTypeBuilder<Role> roleEntity = modelBuilder.Entity<Role>();
-            EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
-            EntityTypeBuilder<OrganizationMembership> orgMemberEntity = modelBuilder.Entity<OrganizationMembership>();
-            EntityTypeBuilder<Project> projectEntity = modelBuilder.Entity<Project>();
-            EntityTypeBuilder<GroupMembership> groupMemberEntity = modelBuilder.Entity<GroupMembership>();
-            EntityTypeBuilder<Passage> passageEntity = modelBuilder.Entity<Passage>();
-            EntityTypeBuilder<Section> sectionEntity = modelBuilder.Entity<Section>();
-            EntityTypeBuilder<SectionResource> sectionResourceEntity = modelBuilder.Entity<SectionResource>();
-            EntityTypeBuilder<OrgWorkflowStep> orgWorkflowStepsEntity = modelBuilder.Entity<OrgWorkflowStep>();
-
-            passageEntity.HasMany(p => p.Mediafiles)
-                .WithOne(mf => mf.Passage)
-                .HasForeignKey(mf => mf.PassageId);
-
-            groupEntity
-                .HasMany(g => g.GroupMemberships)
-                .WithOne(gm => gm.Group)
-                .HasForeignKey(gm => gm.GroupId);
-
-            userEntity
-                .HasMany(u => u.OrganizationMemberships)
-                .WithOne(om => om.User)
-                .HasForeignKey(om => om.UserId);
-
-            userEntity
-                .HasMany(u => u.GroupMemberships)
-                .WithOne(gm => gm.User)
-                .HasForeignKey(gm => gm.UserId);
-
-
-            orgEntity
-                .HasMany(o => o.OrganizationMemberships)
-                .WithOne(om => om.Organization)
-                .HasForeignKey(om => om.OrganizationId);
-
-            orgEntity
-                .HasMany(o => o.Groups)
-                .WithOne(g => g.Owner)
-                .HasForeignKey(g => g.OwnerId);
-
-            orgEntity
-                .HasMany(o => o.Projects)
-                .WithOne(p => p.Organization)
-                .HasForeignKey(p => p.OrganizationId);
-
-            orgEntity
-                .Property(o => o.PublicByDefault)
-                .HasDefaultValue(false);
-
-            projectEntity
-                .Property(p => p.IsPublic)
-                .HasDefaultValue(false);
-
-            orgWorkflowStepsEntity
-                .HasOne(s => s.Parent)
-                .WithMany()
-                .HasForeignKey(s => s.ParentId);
-
-            sectionResourceEntity
-                .HasMany(r => r.SectionResourceUsers)
-                .WithOne(srow => srow.SectionResource)
-                .HasForeignKey(x => x.SectionResourceId);
+            Logger = new Logger<AppDbContext>(loggerFactory);
+            HttpContext = httpContextAccessor.HttpContext;
+            HttpContextAccessor = httpContextAccessor;
+            Options = options;
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            _ = builder.HasPostgresExtension("uuid-ossp");
+            //make all query items lowercase to send to postgres...
+            LowerCaseDB(builder);
+
             DefineManyToMany(builder);
-        }
-        private int CurrentUserId()
-        {
-            if (_currentUser < 0)
-            {
-                string auth0Id = this.CurrentUserContext.Auth0Id;
-                if (auth0Id != null)
-                {
-                    User userFromResult = Users.FirstOrDefault(u => u.ExternalId.Equals(auth0Id) && !u.Archived);
-                    _currentUser = userFromResult == null ? -1 : userFromResult.Id;
-                }
-            }
-            return _currentUser;
-        }
-        public async Task<int> SaveChangesNoTimestampAsync(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            System.Collections.Generic.IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            foreach (EntityEntry entry in entries)
-            {
-                entry.CurrentValues["LastModifiedOrigin"] = "electron";
-            }
-            return await base.SaveChangesAsync(cancellationToken);
-        }
-        public override int SaveChanges()
-        {
-            UpdateSoftDeleteStatuses();
-            AddTimestamps(CurrentUserId());
-            return base.SaveChanges();
+            DefineLastModifiedByUser(builder);
         }
 
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
+        /* On Plan Patch:
+         * Server error: An error was generated for warning 'Microsoft.EntityFrameworkCore.Query.NavigationBaseIncludeIgnored':
+         * The navigation 'Section.Plan' was ignored from 'Include' in the query since the fix-up will automatically populate it.
+         * If any further navigations are specified in 'Include' afterwards then they will be ignored.
+         * Walking back include tree is not allowed.
+         * This exception can be suppressed or logged by passing event ID 'CoreEventId.NavigationBaseIncludeIgnored' to the 'ConfigureWarnings' method in 'DbContext.OnConfiguring' or 'AddDbContext'.
+         **/
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            UpdateSoftDeleteStatuses();
-            AddTimestamps(CurrentUserId());
+            _ = optionsBuilder.ConfigureWarnings(
+                optionsBuilder => optionsBuilder.Ignore(CoreEventId.NavigationBaseIncludeIgnored)
+            );
+            base.OnConfiguring(optionsBuilder);
+        }
+
+        private static void DefineLastModifiedByUser(ModelBuilder builder)
+        {
+            _ = builder
+                .Entity<Activitystate>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Artifactcategory>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Artifacttype>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Comment>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Currentversion>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Datachanges>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Discussion>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Group>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Groupmembership>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Integration>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Invitation>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Mediafile>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Mediafile>()
+                .HasOne(o => o.Passage)
+                .WithMany()
+                .HasForeignKey(o => o.PassageId);
+            _ = builder
+                .Entity<Mediafile>()
+                .HasOne(o => o.ResourcePassage)
+                .WithMany()
+                .HasForeignKey(o => o.ResourcePassageId);
+            _ = builder
+                .Entity<Organization>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Orgdata>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Organizationmembership>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Orgworkflowstep>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Passage>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Passagestatechange>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Plan>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Plantype>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Projdata>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Project>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Projectintegration>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Projecttype>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Resource>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Role>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Section>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Sectionpassage>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Sectionresource>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Sectionresourceuser>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<User>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Userversion>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Statehistory>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Workflowstep>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+        }
+
+        private static void DefineManyToMany(ModelBuilder modelBuilder)
+        {
+            _ = modelBuilder
+                .Entity<Groupmembership>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+
+            _ = modelBuilder
+                .Entity<Group>()
+                .HasMany(g => g.GroupMemberships)
+                .WithOne(gm => gm.Group)
+                .HasForeignKey(gm => gm.GroupId);
+
+            EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
+            _ = userEntity
+                .HasMany(u => u.OrganizationMemberships)
+                .WithOne(om => om.User)
+                .HasForeignKey(om => om.UserId);
+            _ = userEntity
+                .HasMany(u => u.GroupMemberships)
+                .WithOne(gm => gm.User)
+                .HasForeignKey(gm => gm.UserId);
+            _ = userEntity
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+
+            EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
+            _ = orgEntity
+                .HasMany(o => o.OrganizationMemberships)
+                .WithOne(om => om.Organization)
+                .HasForeignKey(om => om.OrganizationId);
+            _ = orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
+
+            _ = orgEntity
+                .HasMany(o => o.Projects)
+                .WithOne(p => p.Organization)
+                .HasForeignKey(p => p.OrganizationId);
+            _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
+            _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
+
+            _ = modelBuilder
+                .Entity<Section>()
+                .HasOne(s => s.Plan)
+                .WithMany(p => p.Sections)
+                .HasForeignKey(sectionEntity => sectionEntity.PlanId);
+
+            _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
+
+            _ = modelBuilder
+                .Entity<Orgworkflowstep>()
+                .HasOne(s => s.Parent)
+                .WithMany()
+                .HasForeignKey(s => s.ParentId);
+            _ = modelBuilder
+                .Entity<Sectionresource>()
+                .HasMany(r => r.SectionResourceUsers)
+                .WithOne(srow => srow.SectionResource)
+                .HasForeignKey(x => x.SectionResourceId);
+        }
+
+        public async Task<int> SaveChangesNoTimestampAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+            IEnumerable<EntityEntry> entries = ChangeTracker
+                .Entries()
+                .Where(e =>
+                        e.Entity is ILastModified
+                        && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                );
+            foreach (EntityEntry entry in entries)
+            {
+                entry.CurrentValues ["LastModifiedOrigin"] = "electron";
+                if (entry.Entity is ITrackDate trackDate)
+                {
+                    trackDate.DateCreated = trackDate.DateCreated?.SetKindUtc();
+                    trackDate.DateUpdated = trackDate.DateUpdated?.SetKindUtc();
+                }
+            }
             return await base.SaveChangesAsync(cancellationToken);
         }
-        //The database would handle this on delete, but EFCore would throw an error,
-        //so handle it here too
+
         private void UpdateSoftDeleteStatuses()
         {
-            List<EntityEntry> entries = ChangeTracker.Entries().ToList();
+            List<EntityEntry> entries = ChangeTracker
+                .Entries()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Deleted)
+                .ToList();
             for (int ix = entries.Count - 1; ix >= 0; ix--)
             {
                 EntityEntry entry = entries[ix];
@@ -147,67 +385,116 @@ namespace SIL.Transcriber.Data
                     switch (entry.State)
                     {
                         case EntityState.Added:
-                            entry.CurrentValues["Archived"] = false;
+                            entry.CurrentValues ["Archived"] = false;
                             break;
                         case EntityState.Deleted:
-                            if ((bool)entry.CurrentValues["Archived"] == true)
-                                entry.State = EntityState.Detached;  
+                            if ((bool)(entry.CurrentValues ["Archived"] ?? false) == true)
+                                entry.State = EntityState.Detached;
                             else
                             {
                                 entry.State = EntityState.Modified;
-                                entry.CurrentValues["Archived"] = true;
+                                entry.CurrentValues ["Archived"] = true;
                             }
                             break;
                     }
                 }
             }
         }
-        public DbSet<Activitystate> Activitystates { get; set; }
-        public DbSet<ArtifactCategory> Artifactcategorys { get; set; }
-        public DbSet<ArtifactType> Artifacttypes { get; set; }
-        public DbSet<Comment> Comments { get; set; }
-        public DbSet<CurrentVersion> CurrentVersions { get; set; }
-        public DbSet<Dashboard> Dashboards { get; set; }
-        public DbSet<DataChanges> DataChanges { get; set; }
-        public DbSet<Discussion> Discussions { get; set; }
-        public DbSet<Group> Groups { get; set; }
-        public DbSet<GroupMembership> Groupmemberships { get; set; }
-        public DbSet<Integration> Integrations { get; set; }
-        public DbSet<Invitation> Invitations { get; set; }
-        public DbSet<Mediafile> Mediafiles { get; set; }
-        public DbSet<Organization> Organizations { get; set; }
 
-        public DbSet<OrgData> Orgdatas { get; set; }
-        public DbSet<OrganizationMembership> Organizationmemberships { get; set; }
-        public DbSet<OrgWorkflowStep> Orgworkflowsteps { get; set; }
-        public DbSet<ParatextToken> Paratexttokens { get; set; }
-        public DbSet<Passage> Passages { get; set; }
-        public DbSet<PassageStateChange> Passagestatechanges { get; set; }
-        public DbSet<Plan> Plans { get; set; }
-        public DbSet<PlanType> Plantypes { get; set; }
-        public DbSet<ProjData> Projdatas { get; set; }
-        public DbSet<ProjectIntegration> Projectintegrations { get; set; }
-        public DbSet<Project> Projects { get; set; }
-        public DbSet<ProjectType> Projecttypes { get; set; }
-        public DbSet<Resource> Resources { get; set; }
-        public DbSet<Role> Roles { get; set; }
-        public DbSet<Section> Sections { get; set; }
-        public DbSet<SectionPassage> Sectionpassages { get; set; }
-        public DbSet<SectionResource> Sectionresources { get; set; }
-        public DbSet<SectionResourceUser> Sectionresourceusers { get; set; }
-        public DbSet<User> Users { get; set; }
-        public DbSet<UserVersion> UserVersions { get; set; }
-        public DbSet<VwPassageStateHistoryEmail> Vwpassagestatehistoryemails { get; set; }
-        public DbSet<WorkflowStep> Workflowsteps { get; set; }
+        private int CurrentUserId()
+        {
+            if (_currentUser < 0)
+            {
+                string auth0Id = CurrentUserContext.Auth0Id;
+                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "").Equals(auth0Id) && !u.Archived);
+                _currentUser = userFromResult == null ? -1 : userFromResult.Id;
+            }
+            return _currentUser;
+        }
 
+        public override int SaveChanges()
+        {
+            UpdateSoftDeleteStatuses();
+            AddTimestamps(this, HttpContext, CurrentUserId());
+            return base.SaveChanges();
+        }
+
+        public string Fingerprint()
+        {
+            return GetFingerprint(HttpContext);
+        }
+
+        //Include all HasOne attributes
+        public IQueryable<Artifactcategory> ArtifactcategoriesData =>
+            Artifactcategorys.Include(c => c.Organization);
+        public IQueryable<Artifacttype> ArtifacttypesData =>
+            Artifacttypes.Include(c => c.Organization);
+        public IQueryable<Comment> CommentsData =>
+            Comments.Include(c => c.Mediafile).Include(c => c.Discussion);
+        public IQueryable<Discussion> DiscussionsData =>
+            Discussions
+                .Include(d => d.ArtifactCategory)
+                .Include(d => d.Mediafile)
+                .Include(d => d.OrgWorkflowStep)
+                .Include(d => d.Group)
+                .Include(d => d.User);
+        public IQueryable<Groupmembership> GroupmembershipsData =>
+            Groupmemberships.Include(x => x.Group).Include(x => x.User).Include(x => x.Role);
+        public IQueryable<Group> GroupsData => Groups.Include(x => x.Owner);
+        public IQueryable<Invitation> InvitationsData =>
+            Invitations.Include(x => x.Organization).Include(x => x.Role);
+        public IQueryable<Mediafile> MediafilesData =>
+            Mediafiles
+                .Include(x => x.Passage)
+                .Include(x => x.Plan)
+                .Include(x => x.ArtifactCategory)
+                .Include(x => x.ArtifactType)
+                .Include(x => x.ResourcePassage)
+                .Include(x => x.SourceMedia);
+        public IQueryable<Organizationmembership> OrganizationmembershipsData =>
+            Organizationmemberships
+                .Include(x => x.Organization)
+                .Include(x => x.Role)
+                .Include(x => x.User);
+        public IQueryable<Organization> OrganizationsData => Organizations.Include(x => x.Owner);
+        public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
+            Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
+        public IQueryable<Passage> PassagesData =>
+            Passages.Include(x => x.Section).Include(x => x.OrgWorkflowStep);
+        public IQueryable<Passagestatechange> PassagestatechangesData =>
+            Passagestatechanges.Include(x => x.Passage);
+        public IQueryable<Plan> PlansData =>
+            Plans.Include(x => x.Owner).Include(x => x.Plantype).Include(x => x.Project);
+        public IQueryable<Projectintegration> ProjectintegrationsData =>
+            Projectintegrations.Include(x => x.Project).Include(x => x.Integration);
+        public IQueryable<Project> ProjectsData =>
+            Projects
+                .Include(x => x.Group)
+                .Include(x => x.Organization)
+                .Include(x => x.Projecttype)
+                .Include(x => x.Owner);
+        public IQueryable<Sectionresource> SectionresourcesData =>
+            Sectionresources
+                .Include(x => x.Mediafile)
+                .Include(x => x.OrgWorkflowStep)
+                .Include(x => x.Section)
+                .Include(x => x.Project)
+                .Include(x => x.Passage);
+        public IQueryable<Sectionresourceuser> SectionresourceusersData =>
+            Sectionresourceusers.Include(x => x.SectionResource).Include(x => x.User);
+        public IQueryable<Section> SectionsData =>
+            Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber);
     }
+
     public class AppDbContextResolver : IDbContextResolver
     {
         private readonly AppDbContext _context;
+
         public AppDbContextResolver(AppDbContext context)
         {
             _context = context;
         }
+
         public DbContext GetContext()
         {
             return _context;
@@ -219,15 +506,26 @@ namespace SIL.Transcriber.Data
         }
     }
 
-    public class AppDbContextRepository<TResource> : DefaultEntityRepository<TResource>
-    where TResource : class, IIdentifiable<int>
+    public class AppDbContextRepository<TResource> : EntityFrameworkCoreRepository<TResource, int>
+        where TResource : class, IIdentifiable<int>
     {
         public AppDbContextRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-           ) : base(loggerFactory, jsonApiContext, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor
+        ) : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor
+            )
         { }
     }
 }

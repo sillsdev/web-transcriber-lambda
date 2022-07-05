@@ -1,33 +1,40 @@
-﻿using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
+    //[NoHttpDelete]
+    //[NoHttpPatch]
     [Route("api/[controller]")]
     [ApiController]
-    public class CurrentversionsController : BaseController<CurrentVersion>
+    public class CurrentversionsController : BaseController<Currentversion>
     {
         public CurrentversionsController(
-           ILoggerFactory loggerFactory,
-           IJsonApiContext jsonApiContext,
-               IResourceService<CurrentVersion> resourceService,
-           ICurrentUserContext currentUserContext,
-           OrganizationService organizationService,
-           UserService userService)
-         : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Currentversion, int> resourceService,
+            ICurrentUserContext currentUserContext,
+            UserService userService
+        ) : base(
+               loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            )
         { }
 
         [AllowAnonymous]
         [HttpPost("{version}")]
         public IActionResult PostVersionAsync([FromRoute] string version)
         {
-            return Ok( ((CurrentVersionService)service).StoreVersion(version));
+            return Ok(((CurrentversionService)Service).StoreVersion(version));
         }
     }
 }
-

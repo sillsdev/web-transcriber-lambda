@@ -1,48 +1,45 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
-using System.Linq;
 
 namespace SIL.Transcriber.Models
 {
+    [Table("invitations")]
     public partial class Invitation : BaseModel, IBelongsToOrganization
     {
-        [Attr("email")]
-        public string Email { get; set; }
-        [Attr("accepted")]
+        [Attr(PublicName = "email")]
+        public string? Email { get; set; }
+
+        [Attr(PublicName = "accepted")]
         public bool Accepted { get; set; }
-        [Attr("login-link")]
-        public string LoginLink { get; set; }
-        [Attr("invited-by")]
-        public string InvitedBy { get; set; }
-        [Attr("sil-id")]
-        public int SilId { get; set; }
+
+        [Attr(PublicName = "login-link")]
+        public string? LoginLink { get; set; }
+
+        [Attr(PublicName = "invited-by")]
+        public string? InvitedBy { get; set; }
 
         [NotMapped]
-        [Attr("strings")]
-        public string Strings { get; set; }
+        [Attr(PublicName = "strings")]
+        public string Strings { get; set; } = "";
 
-
-        [HasOne("organization", Link.None)]
-        public virtual Organization Organization { get; set; }
+        [HasOne(PublicName = "organization")]
+        public virtual Organization Organization { get; set; } = null!;
         public int OrganizationId { get; set; }
 
-        [HasOne("role", Link.None)]
-        public virtual Role Role { get; set; }
+        [HasOne(PublicName = "role")]
+        public virtual Role? Role { get; set; }
         public int RoleId { get; set; }
 
-        [HasOne("group", Link.None)]
-        public virtual Group Group { get; set; }
+        [HasOne(PublicName = "group")]
+        public virtual Group? Group { get; set; }
         public int? GroupId { get; set; }
 
-        [HasOne("group-role", Link.None)]
-        public virtual Role GroupRole { get; set; }
+        [HasOne(PublicName = "group-role")]
+        public virtual Role? GroupRole { get; set; }
         public int? GroupRoleId { get; set; }
 
-        [HasOne("all-users-role", Link.None)]
-        public virtual Role AllUsersRole { get; set; }
+        [HasOne(PublicName = "all-users-role")]
+        public virtual Role? AllUsersRole { get; set; }
         public int AllUsersRoleId { get; set; }
-
     }
 }

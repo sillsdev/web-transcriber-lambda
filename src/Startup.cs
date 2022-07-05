@@ -1,18 +1,5 @@
-﻿
-using System;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using SIL.Transcriber.Data;
-using JsonApiDotNetCore.Extensions;
-using SIL.Transcriber.Services;
+﻿using JsonApiDotNetCore.Configuration;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using Amazon.S3;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Hosting;
 
 namespace SIL.Transcriber
 {
@@ -28,56 +15,65 @@ namespace SIL.Transcriber
         // This method gets called by the runtime. Use this method to add services to the container.
         public virtual void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<CookiePolicyOptions>(options =>
-            {
+            _ = services.Configure<CookiePolicyOptions>(options => {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
-            services.AddCors();
-            services.AddMvc(x => x.EnableEndpointRouting = false);
-            //services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0).AddJsonOptions(x => x.JsonSerializerOptions.ReferenceLoggingHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
-            services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
-            services.AddDbContext<LoggingDbContext>(opt => opt.UseNpgsql(GetConnectionString()));
-            services.AddApiServices();
-            services.AddAuthenticationServices(Configuration);
-            services.AddContextServices();
-            services.AddSingleton<IS3Service, S3Service>();
-            services.AddAWSService<IAmazonS3>();
+            _ = services.AddCors();
+            _ = services.AddMvc();
+            _ = services.AddContextServices();
+            _ = services.AddApiServices();
+            _ = services.AddAuthenticationServices();
+
+            _ = services.AddControllers();
+            _ = services.AddEndpointsApiExplorer();
+            _ = services.AddSwagger();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            ILoggerFactory loggerFactory
+        )
         {
             if (env.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage();
+                _ = app.UseDeveloperExceptionPage();
+                _ = app.UseSwagger();
+                _ = app.UseSwaggerUI();
             }
             else
             {
-                app.UseExceptionHandler("/Home/Error");
-                app.UseHsts();
+                _ = app.UseExceptionHandler("/Home/Error");
+                // app.UseHsts();
             }
             AWSLoggerConfigSection config = Configuration.GetAWSLoggingConfigSection();
-            loggerFactory.AddAWSProvider(config);
-           
-            app.UseAuthentication();
+            _ = loggerFactory.AddAWSProvider(config);
 
-            app.UseCors(builder => builder.WithOrigins(GetAllowedOrigins()).AllowAnyHeader());
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
-            app.UseCookiePolicy();
-            app.UseJsonApi(true);
+            _ = app.UseAuthentication();
+            _ = app.UseHttpsRedirection();
+            _ = app.UseStaticFiles();
+            _ = app.UseCookiePolicy();
+
+            _ = app.UseRouting();
+            _ = app.UseCors(
+                builder =>
+                    builder
+                        .WithOrigins(GetAllowedOrigins())
+                        .SetIsOriginAllowed((host) => host == GetAllowedOrigins() || host == "*")
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+            );
+            _ = app.UseAuthorization();
+            app.UseJsonApi();
+            _ = app.UseEndpoints(endpoints => endpoints.MapControllers());
         }
 
-        private string GetAllowedOrigins()
+        private static string GetAllowedOrigins()
         {
             return GetVarOrDefault("SIL_TR_ORIGINSITES", "*");
-        }
-
-        private string GetConnectionString()
-        {
-            return GetVarOrDefault("SIL_TR_CONNECTIONSTRING", Configuration["ConnectionString"]);
         }
     }
 }

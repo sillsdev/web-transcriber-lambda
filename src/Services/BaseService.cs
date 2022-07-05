@@ -1,63 +1,118 @@
-﻿using JsonApiDotNetCore.Data;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using static SIL.Transcriber.Utility.ServiceExtensions;
+using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class BaseService<TResource> : EntityResourceService<TResource>
+    public class BaseService<TResource> : JsonApiResourceService<TResource, int>
         where TResource : BaseModel
     {
-        protected IEntityRepository<TResource> MyRepository { get; }
-        protected IJsonApiContext JsonApiContext { get; }
+        protected IResourceRepositoryAccessor RepositoryAssessor { get; }
+        protected IJsonApiOptions Options { get; }
         protected ILogger<TResource> Logger { get; set; }
-        
+        protected readonly BaseRepository<TResource> Repo;
+
         public BaseService(
-            IJsonApiContext jsonApiContext,
-            IEntityRepository<TResource> myRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, myRepository, loggerFactory)
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<TResource> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            BaseRepository<TResource> baseRepo
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor
+            )
         {
-            this.MyRepository = myRepository;
-            JsonApiContext = jsonApiContext;
-            this.Logger = loggerFactory.CreateLogger<TResource>();
+            Options = options;
+            Logger = loggerFactory.CreateLogger<TResource>();
+            RepositoryAssessor = repositoryAccessor;
+            Repo = baseRepo;
         }
-        public virtual IEnumerable<TResource> GetChanges(int currentuser, string origin, DateTime since, int project)
+        //GetAsync will apply FromCurrentUser - so do that first to see if the id is in that result set
+#pragma warning disable CS8609 // Nullability of reference types in return type doesn't match overridden member.
+        public override async Task<TResource?> GetAsync(int id, CancellationToken cancellationToken)
+#pragma warning restore CS8609 // Nullability of reference types in return type doesn't match overridden member.
         {
-            if (currentuser > 0)
-                return GetChanges(GetAsync().Result, currentuser, origin, since);
-            else
-                return GetChanges(GetByProjAsync(project).Result, currentuser, origin, since);
-        }
-        public async Task<IEnumerable<TResource>> GetByProjAsync(int project)
-        {
-            return await GetScopedToProjects(
-                base.GetAsync,
-                JsonApiContext, 
-                project);
+            return (await base.GetAsync(cancellationToken)).SingleOrDefault(g => g.Id == id);
         }
 
-        public IEnumerable<TResource> GetChanges(IEnumerable<TResource> entities, int currentuser, string origin, DateTime since)
+        public virtual IEnumerable<TResource> GetChanges(
+            IQueryable<TResource> entities,
+            int currentuser,
+            string origin,
+            DateTime since,
+            int project
+        )
         {
-            if (entities == null) return null;
             if (currentuser > 0)
-                return entities.Where(p => (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) && p.DateUpdated > since);
-            return entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
-        }
-
-        public override async Task<bool> DeleteAsync(int id)
-        {
-            TResource existing = await base.GetAsync(id);
-            if (existing == null)
             {
-                return true;
+                return GetChanges(entities, currentuser, origin, since);
             }
-            return await base.DeleteAsync(id);
+            else
+            {
+                return GetChanges(
+                    Repo.FromProjectList(entities, project.ToString()),
+                    currentuser,
+                    origin,
+                    since
+                );
+            }
+        }
+
+        public IEnumerable<TResource> GetChanges(
+            IQueryable<TResource> entities,
+            int currentuser,
+            string origin,
+            DateTime since
+        )
+        {
+            if (entities == null)
+                return new List<TResource>();
+            return currentuser > 0
+                ? entities.Where(p =>
+                        (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin)
+                        && p.DateUpdated > since
+                )
+                : (IEnumerable<TResource>)entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
+        }
+
+        public override async Task DeleteAsync(int id, CancellationToken ct)
+        {
+            TResource existing = await base.GetAsync(id, ct);
+            if (existing != null)
+                await base.DeleteAsync(id, ct);
+        }
+
+        public override async Task<TResource?> CreateAsync(
+            TResource resource,
+            CancellationToken cancellationToken
+        )
+        {
+            IQueryable<TResource> all = Repo.Get();
+            //orbit sometimes sends two in a row...see if we already know about this one
+            TResource? x = all.Where(t =>
+                        t.DateCreated == resource.DateCreated
+                        && t.LastModifiedBy == resource.LastModifiedBy
+                )
+                .FirstOrDefault();
+            return x ?? await base.CreateAsync(resource, cancellationToken);
+
         }
     }
 }
-

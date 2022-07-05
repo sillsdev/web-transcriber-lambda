@@ -1,16 +1,18 @@
-﻿using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public class OrgWorkflowStep : WorkflowStepBase
+    [Table("orgworkflowsteps")]
+
+    public class Orgworkflowstep : WorkflowStepBase
     {
         public int OrganizationId { get; set; }
-        [HasOne("organization", Link.None)]
-        public Organization Organization { get; set; }
+        [HasOne(PublicName = "organization")]
+        public Organization? Organization { get; set; }
 
         public int? ParentId { get; set; }
-        [HasOne("parent", Link.None)]
-        public OrgWorkflowStep Parent { get; set; }  
+        [HasOne(PublicName = "parent")]
+        public Orgworkflowstep? Parent { get; set; }
     }
 }

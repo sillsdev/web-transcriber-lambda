@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
 
@@ -19,20 +13,17 @@ namespace SIL.Transcriber.Controllers
         protected IAuthService service;
         protected ICurrentUserContext currentUserContext;
 
-        public AuthController(
-            ICurrentUserContext currentUserContext,
-            IAuthService authService)
-           : base()
+        public AuthController(ICurrentUserContext currentUserContext, IAuthService authService)
+            : base()
         {
             this.service = authService;
             this.currentUserContext = currentUserContext;
         }
 
         [HttpGet("resend")]
-        public Task GetAsync()
+        public Task Resend()
         {
             return service.ResendVerification(currentUserContext.Auth0Id);
         }
-
     }
 }

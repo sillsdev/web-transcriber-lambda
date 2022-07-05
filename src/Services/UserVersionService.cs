@@ -1,26 +1,47 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class UserVersionService : BaseService<UserVersion>
+    public class UserVersionService : BaseService<Userversion>
     {
         public UserVersionService(
-            IJsonApiContext jsonApiContext,
-            ICurrentUserContext currentUserContext,
-            UserVersionRepository userversionRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, userversionRepository, loggerFactory)
-        {
-        }
-        public UserVersion StoreVersion(string version)
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Userversion> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            UserVersionRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            )
+        { }
+
+        public Userversion StoreVersion(string version)
         {
             return StoreVersion(version, "unknown");
         }
-        public UserVersion StoreVersion(string version, string env)
+
+        public Userversion StoreVersion(string version, string env)
         {
-            return ((UserVersionRepository)MyRepository).CreateOrUpdate(version, env);
+            return ((UserVersionRepository)Repo).CreateOrUpdate(version, env);
         }
     }
 }

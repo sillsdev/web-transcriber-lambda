@@ -1,112 +1,122 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using static SIL.Transcriber.Utility.RepositoryExtensions;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using static SIL.Transcriber.Utility.Extensions.StringExtensions;
-using SIL.Transcriber.Utility;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
+using static SIL.Transcriber.Utility.Extensions.StringExtensions;
+using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
     public class ProjectRepository : BaseRepository<Project>
     {
-
         public ProjectRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-        ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
-        {
-        }
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
+        { }
 
         public IQueryable<Project> ProjectProjects(IQueryable<Project> entities, string projectid)
         {
-           //Do not use the stringId here...that evaluates in code instead of in sql and is SLOW
-           int.TryParse(projectid, out int id);
-           return entities.Where(p => p.Id == id);
+            //Do not use the stringId here...that evaluates in code instead of in sql and is SLOW
+            _ = int.TryParse(projectid, out int id);
+            return entities.Where(p => p.Id == id);
         }
+
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {
+            if (CurrentUser == null)
+                return entities.Where(e => e.Id == -1);
+
             IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 //if I'm an admin in the org, give me all projects in all groups in that org
                 //otherwise give me just the projects in the groups I'm a member of
-                IEnumerable<int> orgadmins = orgIds.Where(o => currentUserRepository.IsOrgAdmin(CurrentUser, o));
+                IEnumerable<int> orgadmins = orgIds.Where(
+                    o => CurrentUserRepository.IsOrgAdmin(CurrentUser, o)
+                );
 
-                entities = entities
-                       .Where(p => orgadmins.Contains(p.OrganizationId) || CurrentUser.GroupIds.Contains(p.GroupId));
+                entities = entities.Where(p =>
+                        orgadmins.Contains(p.OrganizationId)
+                        || CurrentUser.GroupIds.Contains(p.GroupId)
+                );
             }
             return entities;
         }
-        public override IQueryable<Project> Filter(IQueryable<Project> entities, FilterQuery filterQuery)
-        {
-            //Get already gives us just these entities = UsersProjects(entities);
-            if (filterQuery.Has(ORGANIZATION_HEADER)) 
-            {
-                return entities.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-            }
 
-            string value = filterQuery.Value;
-            FilterOperations op = filterQuery.Operation.ToEnum<FilterOperations>(defaultValue: FilterOperations.eq);
-
-            if (filterQuery.Has(PROJECT_UPDATED_DATE)) {
-                DateTime date = value.DateTimeFromISO8601();
-
-                switch(op) {
-                    case FilterOperations.ge:
-                        return entities
-                            .Where(p => p.DateUpdated > date);
-                    case FilterOperations.le:
-                        return entities
-                            .Where(p => p.DateUpdated < date);
-                }
-            }
-
-            if (filterQuery.Has(PROJECT_SEARCH_TERM)) {
-                return entities
-                    .Include(p => p.Owner)
-                    .Include(p => p.Organization)
-                    .Where(p => (
-                        EFUtils.Like(p.Name, value) 
-                        || EFUtils.Like(p.Language, value)
-                        || EFUtils.Like(p.Organization.Name, value)
-                        || EFUtils.Like(p.Owner.Name, value)
-                    ));
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersProjects(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectProjects(entities, value);
-            }
-            return base.Filter(entities, filterQuery);
+        //TODO?
+        protected IQueryable<Project> FromProjectDate(QueryLayer layer, string projDate)
+        { //only project
+            DateTime date = projDate.DateTimeFromISO8601();
+            /*
+                        switch (op)
+                        {
+                            case FilterOperations.ge:
+            */
+            return base.GetAll().Where(p => p.DateUpdated > date);
+            /*                case FilterOperations.le:
+                                return entities
+                                    .Where(p => p.DateUpdated < date);
+                        }
+            */
         }
 
-        public override IQueryable<Project> Sort(IQueryable<Project> entities, List<SortQuery> sortQueries)
+        public override IQueryable<Project> FromCurrentUser(IQueryable<Project>? entities = null)
         {
-            return base.Sort(entities, sortQueries);
+            return UsersProjects(entities ?? GetAll());
         }
-                private string SettingOrDefault(string json, string settingName)
+
+        public override IQueryable<Project> FromProjectList(
+            IQueryable<Project>? entities,
+            string idList
+        )
         {
-            dynamic settings = JObject.Parse(json);
-            return settings[settingName] ?? "";
+            return ProjectProjects(entities ?? GetAll(), idList);
         }
-        public IQueryable<Project> HasIntegrationSetting(string integrationName, string settingName, string value)
+
+        private static string SettingOrDefault(string? json, string settingName)
         {
-            return dbContext.Integrations.Where(i => i.Name == integrationName).Join(dbContext.Projectintegrations.Where(pi => SettingOrDefault(pi.Settings, settingName) == value && !pi.Archived), i => i.Id, pi => pi.IntegrationId, (p, pi) => pi).Join(Get(), pi => pi.ProjectId, p => p.Id, (pi, p) => p);
+            dynamic settings = JObject.Parse(json ?? "");
+            return settings [settingName] ?? "";
+        }
+
+        public IQueryable<Project> HasIntegrationSetting(
+            string integrationName,
+            string settingName,
+            string value
+        )
+        {
+            IEnumerable<Projectintegration>? pi = dbContext.Integrations
+                .Where(i => i.Name == integrationName)
+                .Join(
+                    dbContext.Projectintegrations.Where(pi => !pi.Archived),
+                    i => i.Id,
+                    pi => pi.IntegrationId,
+                    (p, pi) => pi
+                )
+                .ToList()
+                .Where(pi => SettingOrDefault(pi.Settings, settingName) == value);
+            return pi.Join(GetAll(), pi => pi.ProjectId, p => p.Id, (pi, p) => p).AsQueryable();
         }
     }
 }

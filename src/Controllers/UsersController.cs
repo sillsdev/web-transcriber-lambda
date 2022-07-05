@@ -1,10 +1,8 @@
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
-using System.Threading.Tasks;
 using SIL.Transcriber.Services;
-using JsonApiDotNetCore.Internal;
-using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -12,30 +10,33 @@ namespace SIL.Transcriber.Controllers
     {
         public UsersController(
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-               IResourceService<User> resourceService,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<User, int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
-            UserService userService)
-         : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+            UserService userService
+        ) : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            )
         { }
-#if false
-#pragma warning disable 1998
+
+        /*  this makes the api not work...
         [HttpPost]
-        public override async Task<IActionResult> PostAsync([FromBody] User entity)
+        public Task<IActionResult> PostAsync([FromBody] User entity)
         {
-            throw new JsonApiException(405, $"Not implemented for User resource.");
+            throw new Exception($"Not implemented for User resource.");
         }
-#pragma warning restore 1998
-#endif
-
+        */
         [HttpGet("current-user")]
-        public async Task<IActionResult> GetCurrentUser()
+        public async Task<IActionResult?> GetCurrentUser()
         {
-            User currentUser = CurrentUser;
-
-            return await base.GetAsync(currentUser.Id);
+            User? currentUser = CurrentUser;
+            return currentUser != null ? await base.GetAsync(currentUser.Id, new System.Threading.CancellationToken()) : null;
         }
-
     }
 }

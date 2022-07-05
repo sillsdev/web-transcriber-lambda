@@ -1,10 +1,7 @@
-﻿using System.IO;
-using System.Net;
-
-namespace SIL.Transcriber.Models
+﻿namespace SIL.Transcriber.Models
 {
-    public class S3Response : FileResponse
+    public class S3Response : Fileresponse
     {
-        public Stream FileStream { get; set; }
+        public Stream? FileStream { get; set; }
     }
 }

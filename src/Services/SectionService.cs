@@ -1,46 +1,57 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
     public class SectionService : BaseArchiveService<Section>
     {
+        private readonly SectionRepository MyRepository;
+
         public SectionService(
-            IJsonApiContext jsonApiContext,
-           SectionRepository sectionRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, sectionRepository, loggerFactory)
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Section> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            SectionRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            )
         {
-         }
-        public override async Task<IEnumerable<Section>> GetAsync()
-        {
-            return await GetScopedToCurrentUser(
-                base.GetAsync,
-                JsonApiContext);
+            MyRepository = repository;
         }
 
-        public override async Task<Section> GetAsync(int id)
+        public int? GetProjectId(int sectionId)
         {
-            var sections = await GetAsync();
-
-            return sections.SingleOrDefault(g => g.Id == id);
+            Section? section = MyRepository
+                .Get()
+                .Where(s => s.Id == sectionId)
+                .Include(s => s.Plan)
+                .FirstOrDefault();
+            return section?.Plan?.ProjectId;
         }
 
-        public int GetProjectId(int sectionId)
-        {
-            Section section = MyRepository.Get().Where(s => s.Id == sectionId).Include(s => s.Plan).FirstOrDefault();
-            return section.Plan.ProjectId;
-        }
         public IEnumerable<SectionSummary> GetSectionSummary(int PlanId, string book, int chapter)
         {
-            return ((SectionRepository)MyRepository).SectionSummary(PlanId, book, chapter).Result;
+            return MyRepository.SectionSummary(PlanId, book, chapter).Result;
         }
     }
 }

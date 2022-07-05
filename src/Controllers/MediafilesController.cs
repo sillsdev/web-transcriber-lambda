@@ -1,33 +1,38 @@
-using JsonApiDotNetCore.Internal;
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.Net;
 using System.Net.Mime;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace SIL.Transcriber.Controllers
 {
     public class MediafilesController : BaseController<Mediafile>
     {
-        MediafileService _service;
+        private readonly MediafileService _service;
 
         public MediafilesController(
-             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            IResourceService<Mediafile> resourceService,
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Mediafile, int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
-            UserService userService)
-          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+            UserService userService
+        ) : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            )
         {
             _service = (MediafileService)resourceService;
         }
+
         //POST will return your new mediafile with a PUT signed url in Audiourl.
         //POST/file expects mediafile and file to be in MultiPartForm. It will upload the file and return new mediafile with nothing in audiourl.
         //GET/{id} will return mediafile record without refreshing Audiourl.
@@ -40,7 +45,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{id}/fileurl")]
         public IActionResult GetFile([FromRoute] int id)
         {
-            Mediafile response = _service.GetFileSignedUrlAsync(id).Result;
+            Mediafile? response = _service.GetFileSignedUrlAsync(id).Result;
             return Ok(response);
         }
 
@@ -50,13 +55,16 @@ namespace SIL.Transcriber.Controllers
         {
             S3Response response = await _service.GetFile(id);
 
-            if (response.Status == HttpStatusCode.OK)
+            if (response.Status == HttpStatusCode.OK && response.FileStream != null)
             {
-                Response.Headers.Add("Content-Disposition", new ContentDisposition
-                {
-                    FileName = response.Message,
-                    Inline = true // false = prompt the user for downloading; true = browser to try to show the file inline
-                }.ToString());
+                Response.Headers.Add(
+                    "Content-Disposition",
+                    new ContentDisposition
+                    {
+                        FileName = response.Message,
+                        Inline = true // false = prompt the user for downloading; true = browser to try to show the file inline
+                    }.ToString()
+                );
 
                 return File(response.FileStream, response.ContentType);
             }
@@ -65,12 +73,14 @@ namespace SIL.Transcriber.Controllers
                 return NotFound();
             }
         }
+
         [HttpGet("{id}/eaf")]
         public IActionResult GetEaf([FromRoute] int id)
         {
-            string response = _service.EAF(_service.GetAsync(id).Result);
+            Mediafile? mf = _service.GetAsync(id, new CancellationToken()).Result;
+            string response = mf != null ? _service.EAF(mf) : "";
 
-           return Ok(response);
+            return Ok(response);
         }
 
         [HttpDelete("{id}/file")]
@@ -84,34 +94,40 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpPost("file")]
-        public async Task<IActionResult> PostAsync([FromForm] string jsonString,
-                                                    [FromForm] IFormFile file)
+        public async Task<IActionResult> PostAsync(
+            [FromForm] string jsonString,
+            [FromForm] IFormFile file
+        )
         {
-            Mediafile entity = JsonConvert.DeserializeObject<Mediafile>(jsonString);
+            Mediafile? entity = JsonSerializer.Deserialize<Mediafile>(jsonString);
+            if (entity == null)
+                return NotFound();
             entity = await _service.CreateAsyncWithFile(entity, file);
-            return Created("/api/mediafiles/" + entity.Id.ToString(), entity);
+            return Created("/api/mediafiles/" + entity?.Id.ToString(), entity);
         }
 
         //called from s3 trigger - no auth
         [AllowAnonymous]
         [HttpGet("fromfile/{plan}/{s3File}")]
-        public async Task<IActionResult> GetFromFile([FromRoute] int plan, [FromRoute] string s3File)
+        public async Task<IActionResult> GetFromFile(
+            [FromRoute] int plan,
+            [FromRoute] string s3File
+        )
         {
-            Mediafile response = await _service.GetFromFile(plan,s3File);
-            if (response == null)
-                return NotFound();
-            return Ok(response);
+            Mediafile? response = await _service.GetFromFile(plan, s3File);
+            return response == null ? NotFound() : Ok(response);
         }
 
         [AllowAnonymous]
         [HttpPatch("{id}/fileinfo/{filesize}/{duration}")]
-        public async Task<IActionResult> UpdateFileInformationAsync([FromRoute] int id, [FromRoute] long filesize, [FromRoute] decimal duration)
+        public async Task<IActionResult> UpdateFileInformationAsync(
+            [FromRoute] int id,
+            [FromRoute] long filesize,
+            [FromRoute] decimal duration
+        )
         {
-             Mediafile mf = await _service.UpdateFileInfo(id, filesize, duration);
-            if (mf == null)
-                return NotFound();
-            return Ok(mf);
+            Mediafile? mf = await _service.UpdateFileInfoAsync(id, filesize, duration);
+            return mf != null ? Ok(mf) : NotFound();
         }
-
     }
 }

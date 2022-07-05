@@ -1,16 +1,16 @@
 ﻿
-using JsonApiDotNetCore.Models;
+using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
-    public class ArtifactType : BaseModel, IArchive
+    public class Artifacttype : BaseModel, IArchive
     {
-       
-        [Attr("typename")]
-        public string Typename { get; set; }
+
+        [Attr(PublicName = "typename")]
+        public string? Typename { get; set; }
         public bool Archived { get; set; }
         public int? OrganizationId { get; set; }
-        [HasOne("organization", Link.None)]
-        public Organization Organization { get; set; }
+        [HasOne(PublicName = "organization")]
+        public Organization? Organization { get; set; }
     }
 }

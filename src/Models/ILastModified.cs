@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace SIL.Transcriber.Models
+﻿namespace SIL.Transcriber.Models
 {
-    interface ILastModified
+    public interface ILastModified
     {
         int? LastModifiedBy { get; set; }
+        User? LastModifiedByUser { get; set; }
         string LastModifiedOrigin { get; set; }
     }
 }
