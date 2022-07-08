@@ -18,16 +18,14 @@ namespace SIL.Paratext.Models
         [NotMapped]
         public DateTime IssuedAt {
             get {
-                JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
-                if (accessToken.Payload.Iat != null)
-                    return EpochTime.DateTime((long)accessToken.Payload.Iat);
-                return DateTime.MinValue;
+                JwtSecurityToken accessToken = new (AccessToken);
+                return accessToken.Payload.Iat != null ? EpochTime.DateTime((long)accessToken.Payload.Iat) : DateTime.MinValue;
             }
         }
         [NotMapped]
         public DateTime ValidTo {
             get {
-                JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
+                JwtSecurityToken accessToken = new (AccessToken);
                 return accessToken.ValidTo;
             }
         }

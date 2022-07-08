@@ -29,7 +29,7 @@ namespace TranscriberAPI.Utility
         {
             public EmailData() : base()
             {
-                ToAddresses = new string [0];
+                ToAddresses = Array.Empty<string>();
                 BodyHtml = "";
                 Subject = "";
                 FromEmail = "";
@@ -43,7 +43,7 @@ namespace TranscriberAPI.Utility
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
             Console.WriteLine("send email lambda: " + To);
-            EmailData payload = new EmailData
+            EmailData payload = new()
             {
                 ToAddresses = To.Split(";"),
                 BodyHtml = body,
@@ -51,14 +51,14 @@ namespace TranscriberAPI.Utility
                 FromEmail = FROM
             };
 
-            InvokeRequest ir = new InvokeRequest
+            InvokeRequest ir = new ()
             {
                 FunctionName = "SendSESEmail",
                 InvocationType = Amazon.Lambda.InvocationType.RequestResponse,
                 LogType = "Tail",
                 Payload = JsonConvert.SerializeObject(payload)
             };
-            AmazonLambdaClient lambdaClient = new AmazonLambdaClient(RegionEndpoint.USEast1);
+            AmazonLambdaClient lambdaClient = new (RegionEndpoint.USEast1);
             try
             {
                 InvokeResponse response = await lambdaClient.InvokeAsync(ir);
@@ -68,7 +68,7 @@ namespace TranscriberAPI.Utility
             {
                 Console.WriteLine("SendEmailLambda error");
                 Console.WriteLine(ex);
-                throw ex;
+                throw;
             }
 
         }
@@ -77,48 +77,45 @@ namespace TranscriberAPI.Utility
         {
             string FROM = GetVarOrThrow("SIL_TR_EMAIL_FROM");   // This address must be verified with Amazon SES.
             Console.WriteLine("SendEmailAPIAsync " + To);
-            using (AmazonSimpleEmailServiceClient? client = new(RegionEndpoint.USEast1))
+            using AmazonSimpleEmailServiceClient? client = new(RegionEndpoint.USEast1);
+            SendEmailRequest? sendRequest = new()
             {
-                SendEmailRequest? sendRequest = new()
+                Source = FROM,
+                Destination = new Destination
                 {
-                    Source = FROM,
-                    Destination = new Destination
+                    ToAddresses = new List<string> { To }
+                },
+                Message = new Message
+                {
+                    Subject = new Content(Subject),
+                    Body = new Body
                     {
-                        ToAddresses = new List<string> { To }
-                    },
-                    Message = new Message
-                    {
-                        Subject = new Content(Subject),
-                        Body = new Body
+                        Html = new Content
                         {
-                            Html = new Content
-                            {
-                                Charset = "UTF-8",
-                                Data = body
-                            },/*
+                            Charset = "UTF-8",
+                            Data = body
+                        },/*
                             Text = new Content
                             {
                                 Charset = "UTF-8",
                                 Data = textBody
                             }*/
-                        }
-                    },
-                    // If you are not using a configuration set, comment
-                    // or remove the following line 
-                    //ConfigurationSetName = configSet
-                };
-                try
-                {
-                    SendEmailResponse? response = await client.SendEmailAsync(sendRequest);
-                    Console.WriteLine("The email was sent successfully.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("The email was not sent.");
-                    Console.WriteLine("Error message: " + ex.Message);
-                    throw ex;
-
-                }
+                    }
+                },
+                // If you are not using a configuration set, comment
+                // or remove the following line 
+                //ConfigurationSetName = configSet
+            };
+            try
+            {
+                SendEmailResponse? response = await client.SendEmailAsync(sendRequest);
+                Console.WriteLine("The email was sent successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("The email was not sent.");
+                Console.WriteLine("Error message: " + ex.Message);
+                throw;
             }
         }
     }

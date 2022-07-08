@@ -412,6 +412,12 @@ namespace SIL.Transcriber.Data
             return _currentUser;
         }
 
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            UpdateSoftDeleteStatuses();
+            AddTimestamps(this, HttpContext, CurrentUserId());
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
         public override int SaveChanges()
         {
             UpdateSoftDeleteStatuses();

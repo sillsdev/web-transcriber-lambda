@@ -40,7 +40,6 @@ namespace SIL.Transcriber.Services
         readonly private HttpContext? HttpContext;
         protected ILogger<ParatextService> Logger { get; set; }
 
-        private readonly ParatextTokenHistoryRepository TokenHistoryRepo;
         private readonly ProjectIntegrationRepository ProjectIntegrationRepository;
 
         public ParatextService(
@@ -51,13 +50,9 @@ namespace SIL.Transcriber.Services
             ICurrentUserContext currentUserContext,
             PassageService passageService,
             MediafileService mediafileService,
-            PassageStateChangeService passageStateChangeService,
             SectionService sectionService,
-            PlanService planService,
             ProjectService projectService,
-            ParatextSyncPassageService paratextSyncPassageService,
             CurrentUserRepository currentUserRepository,
-            ParatextTokenHistoryRepository tokenHistoryRepo,
             ProjectIntegrationRepository piRepo,
             ILoggerFactory loggerFactory
         )
@@ -71,7 +66,6 @@ namespace SIL.Transcriber.Services
             ProjectService = projectService;
             CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;
-            TokenHistoryRepo = tokenHistoryRepo;
             ProjectIntegrationRepository = piRepo;
             Logger = loggerFactory.CreateLogger<ParatextService>();
 
@@ -122,7 +116,9 @@ namespace SIL.Transcriber.Services
                 {
                     token.AccessToken = newPTToken.ParatextTokens.AccessToken;
                     token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
+                    Logger.LogInformation("new token newer than saved token");
                     _ = dbContext.Paratexttokens.Update(token);
+                    dbContext.SaveChanges();
                     //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
                 }
                 else
@@ -133,7 +129,9 @@ namespace SIL.Transcriber.Services
             }
             else
             {
+                Logger.LogInformation("no saved token");
                 _ = dbContext.Paratexttokens.Add(newPTToken.ParatextTokens);
+                dbContext.SaveChanges();
                 //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, newPTToken.ParatextTokens.AccessToken, newPTToken.ParatextTokens.RefreshToken, "From First Login"));
             }
             return newPTToken;
@@ -142,7 +140,7 @@ namespace SIL.Transcriber.Services
         private Claim? GetClaim(string AccessToken, string claimtype)
         {
             User? currentUser = CurrentUserRepository.GetCurrentUser();
-            JwtSecurityToken accessToken = new JwtSecurityToken(AccessToken);
+            JwtSecurityToken accessToken = new (AccessToken);
             Claim? claim = accessToken.Claims.FirstOrDefault(c => c.Type == claimtype);
             //System.Console.WriteLine("XXX CLAIM GetClaim {0}", claim?.ToString() ?? "null");
             return claim;
@@ -234,8 +232,8 @@ namespace SIL.Transcriber.Services
                         LanguageName = "",
                         ProjectIds = projectids,
                         IsConnectable = (
-                            role == ParatextProjectRoles.Administrator
-                            || role == ParatextProjectRoles.Translator
+                            role is ParatextProjectRoles.Administrator
+                            or ParatextProjectRoles.Translator
                         ),
                         CurrentUserRole = role,
                     }
@@ -374,7 +372,7 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        private bool VerifyUserSecret(UserSecret userSecret)
+        private static bool VerifyUserSecret(UserSecret userSecret)
         {
             if (userSecret is null || userSecret.ParatextTokens is null)
                 throw new SecurityException("Paratext credentials not provided.");
@@ -575,7 +573,7 @@ namespace SIL.Transcriber.Services
                     refreshed = true;
                 }
 
-                HttpRequestMessage request = new HttpRequestMessage(method, $"api8/{url}");
+                HttpRequestMessage request = new (method, $"api8/{url}");
                 request.Headers.Authorization = new AuthenticationHeaderValue(
                     "Bearer",
                     userSecret.ParatextTokens.AccessToken
@@ -612,9 +610,11 @@ namespace SIL.Transcriber.Services
         {
             _ = VerifyUserSecret(userSecret);
 
-            ParatextChapter chapter = new();
-            chapter.Book = book;
-            chapter.Chapter = number;
+            ParatextChapter chapter = new()
+            {
+                Book = book,
+                Chapter = number
+            };
             //get the text out of paratext
             string bookText = await GetChapterTextAsync(userSecret, paratextId, book, number);
             XElement bookTextElem = XElement.Parse(bookText);
@@ -635,7 +635,19 @@ namespace SIL.Transcriber.Services
                 Book = book ?? "";
                 Chapter = chapter;
             }
+            public override bool Equals(object? obj)
+            {
+                //   http://go.microsoft.com/fwlink/?LinkID=85237  
+                // and also the guidance for operator== at
+                //   http://go.microsoft.com/fwlink/?LinkId=85238
 
+                if (obj == null || GetType() != obj.GetType())
+                {
+                    return false;
+                }
+
+                return Equals(obj as BookChapter);
+            }
             public bool Equals(BookChapter? other)
             {
                 //Check whether the compared object is null.
@@ -666,6 +678,7 @@ namespace SIL.Transcriber.Services
             {
                 return Book + ' ' + Chapter;
             }
+
         }
 
         private async Task<List<ParatextChapter>> GetPassageChaptersAsync(
@@ -674,7 +687,7 @@ namespace SIL.Transcriber.Services
             IEnumerable<BookChapter> book_chapters
         )
         {
-            List<ParatextChapter> chapterList = new List<ParatextChapter>();
+            List<ParatextChapter> chapterList = new();
 
             foreach (BookChapter bc in book_chapters)
             {
@@ -685,7 +698,7 @@ namespace SIL.Transcriber.Services
             return chapterList;
         }
 
-        private IEnumerable<BookChapter> BookChapters(IEnumerable<Passage> passages)
+        private static IEnumerable<BookChapter> BookChapters(IEnumerable<Passage> passages)
         {
             return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct();
         }
@@ -765,36 +778,36 @@ namespace SIL.Transcriber.Services
             {
                 if (p.Book == "")
                     err += string.Format(
-                        "||Empty Book|{0}|{1}",
+                        "||Empty Book|{0}|{1}|",
                         p.Section?.Sequencenum,
                         p.Sequencenum
                     );
                 else if (books == null || !books.Contains(p.Book))
                     err += string.Format(
-                        "||Missing Book|{0}|{1}|{2}",
+                        "||Missing Book|{0}|{1}|{2}|",
                         p.Section?.Sequencenum,
                         p.Sequencenum,
                         p.Book
                     );
                 if (p.StartChapter != p.EndChapter)
                     err += string.Format(
-                        "||Chapter|{0}|{1}|{2}",
+                        "||Chapter|{0}|{1}|{2}|",
                         p.Section?.Sequencenum,
                         p.Sequencenum,
                         p.Reference
                     );
                 if (p.StartVerse == 0)
                     err += string.Format(
-                        "||Reference|{0}|{1}|{2}",
+                        "||Reference|{0}|{1}|{2}|",
                         p.Section?.Sequencenum,
                         p.Sequencenum,
                         p.Reference
                     );
             }
             ;
-            if (err.Length > 0)
-                return "ReferenceError:" + err;
-            return err;
+            return err.Length > 0 
+                ? "ReferenceError:" + err 
+                : err;
         }
 
         public string GetTranscription(List<Mediafile> mediafiles)
@@ -933,7 +946,7 @@ namespace SIL.Transcriber.Services
                             {
                                 //log it
                                 Logger.LogError(
-                                    "Paratext Error passage {0} {1} {2}",
+                                    "Paratext Error passage {message} {id} {reference}",
                                     ex.Message,
                                     passage.Id,
                                     passage.Reference
@@ -951,14 +964,14 @@ namespace SIL.Transcriber.Services
                                     _ = logDbContext.SaveChanges();
                                 }
                                 transaction.Rollback();
-                                throw ex;
+                                throw;
                             }
                         }
                     }
                     catch (Exception ex)
                     {
                         Logger.LogError(
-                            "Paratext Error generating Chapter text {0} {1} {2}: {3} {4}",
+                            "Paratext Error generating Chapter text {message} {book} {chapter}: {orig} {history}",
                             ex.Message,
                             chapter.Book,
                             chapter.Chapter,
@@ -976,14 +989,14 @@ namespace SIL.Transcriber.Services
                             _ = logDbContext.SaveChanges();
                         }
                         Logger.LogError(
-                            "Paratext Error generating Chapter text {0} {1} {2}: {3}",
+                            "Paratext Error generating Chapter text {message} {book} {chapter}: {orig}",
                             ex.Message,
                             chapter.Book,
                             chapter.Chapter,
                             chapter.OriginalUSX?.ToString() ?? ""
                         );
                         transaction.Rollback();
-                        throw ex;
+                        throw;
                     }
                 }
                 foreach (ParatextChapter c in chapterList)
@@ -1026,7 +1039,7 @@ namespace SIL.Transcriber.Services
                             c.OriginalUSX?.ToString(),
                             c.NewUSX?.ToString() ?? ""
                         );
-                        throw ex;
+                        throw;
                     }
                 }
                 _ = dbContext.SaveChanges();

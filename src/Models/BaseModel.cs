@@ -24,7 +24,7 @@ namespace SIL.Transcriber.Models
         virtual public User? LastModifiedByUser { get; set; }
 
         [Attr(PublicName = "last-modified-origin")]
-        public string LastModifiedOrigin { get; set; } = "";
+        public string? LastModifiedOrigin { get; set; }
         public object ShallowCopy()
         {
             return this.MemberwiseClone();

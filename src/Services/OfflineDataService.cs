@@ -151,9 +151,7 @@ namespace SIL.Transcriber.Services
         )
         {
             Stream? s = GetStreamFromUrlAsync(url).Result;
-            if (s != null)
-                return AddStreamEntry(zipArchive, s, dir, newName);
-            return false;
+            return s != null && AddStreamEntry(zipArchive, s, dir, newName);
         }
 
         private static async Task<Stream?> GetStreamFromUrlAsync(string url)
@@ -389,14 +387,14 @@ namespace SIL.Transcriber.Services
             return true;
         }
 
-        private Fileresponse CheckProgress(int projectid, string fileName, int lastAdd, string ext)
+        private Fileresponse CheckProgress(string fileName, int lastAdd)
         {
             int startNext;
             string err = "";
             try
             {
                 Stream ms = OpenFile(fileName + ".sss");
-                StreamReader reader = new StreamReader(ms);
+                StreamReader reader = new(ms);
                 string data = reader.ReadToEnd();
                 if (data.IndexOf("|") > 0)
                 {
@@ -485,21 +483,16 @@ namespace SIL.Transcriber.Services
             s3response = _S3service
                 .UploadFileAsync(ms, true, contentType, fileName, ExportFolder)
                 .Result;
-            if (s3response.Status == HttpStatusCode.OK)
-            {
-                return new Fileresponse()
+            return s3response.Status == HttpStatusCode.OK
+                ? new Fileresponse()
                 {
                     Message = fileName,
                     FileURL = "",
                     Status = HttpStatusCode.PartialContent,
                     ContentType = contentType,
                     Id = startNext,
-                };
-            }
-            else
-            {
-                throw new Exception(s3response.Message);
-            }
+                }
+                : throw new Exception(s3response.Message);
         }
 
         private void AddBurritoMeta(
@@ -508,7 +501,7 @@ namespace SIL.Transcriber.Services
             List<Mediafile> mediafiles
         )
         {
-            Dictionary<string, string> mimeMap = new Dictionary<string, string>
+            Dictionary<string, string> mimeMap = new()
             {
                 { "mp3", "audio/mpeg" },
                 { "webm", "audio/webm;codecs=opus" },
@@ -528,8 +521,8 @@ namespace SIL.Transcriber.Services
                 CompressionLevel.Fastest
             );
             string metastr = LoadResource("burritometa.json");
-            Dictionary<string, List<string>> scopes = new Dictionary<string, List<string>>();
-            List<string> formats = new List<string>();
+            Dictionary<string, List<string>> scopes = new();
+            List<string> formats = new();
 
             dynamic? root = Newtonsoft.Json.JsonConvert.DeserializeObject(metastr);
             if (root == null)
@@ -664,7 +657,7 @@ namespace SIL.Transcriber.Services
                 CurrentUser()?.Id
             );
             if (start > LAST_ADD)
-                return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
+                return CheckProgress(fileName + ext, LAST_ADD);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
             using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
@@ -709,7 +702,7 @@ namespace SIL.Transcriber.Services
             );
 
             if (start > LAST_ADD)
-                return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
+                return CheckProgress(fileName + ext, LAST_ADD);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
             using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
@@ -745,15 +738,17 @@ namespace SIL.Transcriber.Services
             );
 
             if (start > LAST_ADD)
-                return CheckProgress(projectid, fileName + ext, LAST_ADD, ext);
+                return CheckProgress(fileName + ext, LAST_ADD);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
             using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
             {
                 if (start == 0)
                 {
-                    Dictionary<string, string> fonts = new();
-                    fonts.Add("Charis SIL", "");
+                    Dictionary<string, string> fonts = new()
+                    {
+                        { "Charis SIL", "" }
+                    };
                     DateTime exported = AddCheckEntry(
                         zipArchive,
                         dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 4
@@ -1199,24 +1194,18 @@ namespace SIL.Transcriber.Services
 
         private string SectionChangesReport(Section online, Section imported)
         {
-            if (
-                (online.EditorId != imported.EditorId && online.EditorId != null)
+            return (online.EditorId != imported.EditorId && online.EditorId != null)
                 || (online.TranscriberId != imported.TranscriberId && online.TranscriberId != null)
                 || online.State != imported.State
-            )
-            {
-                return ChangesReport("section", Serialize(online), Serialize(imported));
-            }
-            return "";
+                ? ChangesReport("section", Serialize(online), Serialize(imported))
+                : "";
         }
 
         private string PassageChangesReport(Passage online, Passage imported)
         {
-            if (online.StepComplete != imported.StepComplete)
-            {
-                return ChangesReport("passage", Serialize(online), Serialize(imported));
-            }
-            return "";
+            return online.StepComplete != imported.StepComplete 
+                ? ChangesReport("passage", Serialize(online), Serialize(imported)) 
+                : "";
         }
 
         private string MediafileChangesReport(Mediafile online, Mediafile imported)
@@ -1232,36 +1221,26 @@ namespace SIL.Transcriber.Services
 
         private string DiscussionChangesReport(Discussion online, Discussion imported)
         {
-            if (
-                online.ArtifactCategoryId != imported.ArtifactCategoryId
+            return online.ArtifactCategoryId != imported.ArtifactCategoryId
                 || online.GroupId != imported.GroupId
                 || online.Resolved != imported.Resolved
-            )
-            {
-                return ChangesReport("discussion", Serialize(online), Serialize(imported));
-            }
-            return "";
+                ? ChangesReport("discussion", Serialize(online), Serialize(imported))
+                : "";
         }
 
         private string CommentChangesReport(Comment online, Comment imported)
         {
-            if (
-                online.CommentText != imported.CommentText
+            return online.CommentText != imported.CommentText
                 || online.MediafileId != imported.MediafileId
-            )
-            {
-                return ChangesReport("comment", Serialize(online), Serialize(imported));
-            }
-            return "";
+                ? ChangesReport("comment", Serialize(online), Serialize(imported))
+                : "";
         }
 
         private string GrpMemChangesReport(Groupmembership online, Groupmembership imported)
         {
-            if (online.FontSize != imported.FontSize)
-            {
-                return ChangesReport("groupmembership", Serialize(online), Serialize(imported));
-            }
-            return "";
+            return online.FontSize != imported.FontSize 
+                ? ChangesReport("groupmembership", Serialize(online), Serialize(imported)) 
+                : "";
         }
 
         public async Task<Fileresponse> ImportFileAsync(string sFile)
@@ -1629,6 +1608,15 @@ namespace SIL.Transcriber.Services
                     {
                         object? p = dbContext.Find(myTypeRelationship.Property.PropertyType, id);
                         myTypeRelationship.SetValue(s, p);
+                        AttrAttribute? myIdAttribute = attrs.FirstOrDefault(
+                        a => a.PublicName == myTypeRelationship.PublicName + "-id"
+                    );
+                        if (myIdAttribute == null && myTypeRelationship.PublicName == "last-modified-by-user")
+                            myIdAttribute = attrs.FirstOrDefault(a => a.PublicName == "last-modified-by");
+                        if (myIdAttribute != null)
+                            myIdAttribute.SetValue(s, id);
+                        else
+                            Logger.LogWarning("unable to find id attribute for {r}", myTypeRelationship.PublicName);
                     }
                 }
             return s;
@@ -1794,7 +1782,7 @@ namespace SIL.Transcriber.Services
                                         section.EditorId = s.Editor?.Id;
                                         section.TranscriberId = s.Transcriber?.Id;
                                         section.State = s.State;
-                                        section.LastModifiedBy = s.LastModifiedBy;
+                                        section.LastModifiedBy = s.LastModifiedByUser?.Id;
                                         section.DateUpdated = DateTime.UtcNow;
                                         _ = dbContext.Sections.Update(section);
                                     }
@@ -1823,7 +1811,7 @@ namespace SIL.Transcriber.Services
                                         }
                                         passage.State = p.State; //backward compatibility
                                         passage.StepComplete = p.StepComplete;
-                                        passage.LastModifiedBy = p.LastModifiedBy;
+                                        passage.LastModifiedBy = p.LastModifiedByUser?.Id;
                                         passage.DateUpdated = DateTime.UtcNow;
                                         _ = dbContext.Passages.Update(passage);
                                         Passagestatechange psc =

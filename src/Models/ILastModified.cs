@@ -4,6 +4,6 @@
     {
         int? LastModifiedBy { get; set; }
         User? LastModifiedByUser { get; set; }
-        string LastModifiedOrigin { get; set; }
+        string? LastModifiedOrigin { get; set; }
     }
 }

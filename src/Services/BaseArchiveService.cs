@@ -92,11 +92,9 @@ namespace SIL.Transcriber.Services
         {
             //return unarchived
             TResource? existing = await base.GetAsync(id, new CancellationToken());
-            if (existing?.Archived ?? true && !entity.Archived)
-            {
-                throw new Exception("Entity has been deleted. Unable to update.");
-            }
-            return await base.UpdateAsync(id, entity, cancellationToken);
+            return (existing?.Archived ?? true) && !entity.Archived
+                ? throw new Exception("Entity has been deleted. Unable to update.")
+                : await base.UpdateAsync(id, entity, cancellationToken);
         }
     }
 }

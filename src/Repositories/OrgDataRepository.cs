@@ -23,7 +23,6 @@ namespace SIL.Transcriber.Repositories
         protected readonly IMetaBuilder _metaBuilder;
 
         public OrgDataRepository(
-            IHttpContextAccessor httpContextAccessor,
             ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph,
@@ -73,7 +72,6 @@ namespace SIL.Transcriber.Repositories
         private IQueryable<Orgdata> GetData(
             IQueryable<Orgdata> entities,
             string start,
-            CancellationToken cancellationToken,
             int version = 1
         )
         {
@@ -90,7 +88,7 @@ namespace SIL.Transcriber.Repositories
                 if (
                     !CheckAdd(
                         0,
-                        ToJson<Activitystate>(dbContext.Activitystates),
+                        ToJson(dbContext.Activitystates),
                         dtBail,
                         ref iStartNext,
                         ref data
@@ -100,7 +98,7 @@ namespace SIL.Transcriber.Repositories
                 if (
                     !CheckAdd(
                         1,
-                        ToJson<Projecttype>(dbContext.Projecttypes),
+                        ToJson(dbContext.Projecttypes),
                         dtBail,
                         ref iStartNext,
                         ref data
@@ -110,19 +108,19 @@ namespace SIL.Transcriber.Repositories
                 if (
                     !CheckAdd(
                         2,
-                        ToJson<Plantype>(dbContext.Plantypes),
+                        ToJson(dbContext.Plantypes),
                         dtBail,
                         ref iStartNext,
                         ref data
                     )
                 )
                     break;
-                if (!CheckAdd(3, ToJson<Role>(dbContext.Roles), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(3, ToJson(dbContext.Roles), dtBail, ref iStartNext, ref data))
                     break;
                 if (
                     !CheckAdd(
                         4,
-                        ToJson<Integration>(dbContext.Integrations),
+                        ToJson(dbContext.Integrations),
                         dtBail,
                         ref iStartNext,
                         ref data
@@ -132,17 +130,16 @@ namespace SIL.Transcriber.Repositories
 
                 IQueryable<Organization> orgs = organizationRepository.GetMine(); //this limits to current user
 
-                if (!CheckAdd(6, ToJson<Organization>(orgs), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(6, ToJson(orgs), dtBail, ref iStartNext, ref data))
                     break;
                 IQueryable<Groupmembership> gms = gmRepository.GetMine();
-                if (!CheckAdd(7, ToJson<Groupmembership>(gms), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(7, ToJson(gms), dtBail, ref iStartNext, ref data))
                     break;
                 //invitations
                 if (
                     !CheckAdd(
                         8,
-                        ToJson<Invitation>(
-                            dbContext.InvitationsData.Join(
+                        ToJson(dbContext.InvitationsData.Join(
                                 orgs,
                                 i => i.OrganizationId,
                                 o => o.Id,
@@ -159,8 +156,7 @@ namespace SIL.Transcriber.Repositories
                 if (
                     !CheckAdd(
                         9,
-                        ToJson<Group>(
-                            dbContext.GroupsData.Join(
+                        ToJson(dbContext.GroupsData.Join(
                                 gms,
                                 g => g.Id,
                                 gm => gm.GroupId,
@@ -177,22 +173,14 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Organizationmembership> oms = dbContext.OrganizationmembershipsData
                     .Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om)
                     .Where(x => !x.Archived);
-                if (
-                    !CheckAdd(
-                        10,
-                        ToJson<Organizationmembership>(oms),
-                        dtBail,
-                        ref iStartNext,
-                        ref data
-                    )
-                )
+                if (!CheckAdd(10, ToJson(oms), dtBail, ref iStartNext, ref data))
                     break;
                 int userid = CurrentUser?.Id ?? -1;
                 //users
                 if (
                     !CheckAdd(
                         11,
-                        ToJson<User>(
+                        ToJson(
                             oms.Any()
                                 ? dbContext.Users
                                     .Join(oms, u => u.Id, om => om.UserId, (u, om) => u)
@@ -210,13 +198,13 @@ namespace SIL.Transcriber.Repositories
                 IEnumerable<Project> projects = dbContext.ProjectsData
                     .Join(gms, p => p.GroupId, gm => gm.GroupId, (p, gm) => p)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(12, ToJson<Project>(projects), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(12, ToJson(projects), dtBail, ref iStartNext, ref data))
                     break;
                 //projectintegrations
                 if (
                     !CheckAdd(
                         13,
-                        ToJson<Projectintegration>(
+                        ToJson(
                             dbContext.ProjectintegrationsData
                                 .Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl)
                                 .Where(x => !x.Archived)
@@ -231,7 +219,7 @@ namespace SIL.Transcriber.Repositories
                 if (
                     !CheckAdd(
                         14,
-                        ToJson<Plan>(
+                        ToJson(
                             dbContext.PlansData
                                 .Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl)
                                 .Where(x => !x.Archived)
@@ -248,7 +236,7 @@ namespace SIL.Transcriber.Repositories
                     if (
                         !CheckAdd(
                             15,
-                            ToJson<Workflowstep>(dbContext.Workflowsteps.Where(x => !x.Archived)),
+                            ToJson(dbContext.Workflowsteps.Where(x => !x.Archived)),
                             dtBail,
                             ref iStartNext,
                             ref data
@@ -264,7 +252,7 @@ namespace SIL.Transcriber.Repositories
                     if (
                         !CheckAdd(
                             16,
-                            ToJson<Artifactcategory>(cats),
+                            ToJson(cats),
                             dtBail,
                             ref iStartNext,
                             ref data
@@ -277,12 +265,12 @@ namespace SIL.Transcriber.Repositories
                                 (c.OrganizationId == null || ids.Contains((int)c.OrganizationId))
                                 && !c.Archived
                         );
-                    if (!CheckAdd(17, ToJson<Artifacttype>(typs), dtBail, ref iStartNext, ref data))
+                    if (!CheckAdd(17, ToJson(typs), dtBail, ref iStartNext, ref data))
                         break;
                     if (
                         !CheckAdd(
                             18,
-                            ToJson<Orgworkflowstep>(
+                            ToJson(
                                 dbContext.OrgworkflowstepsData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived)
@@ -328,7 +316,6 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Orgdata> result = GetData(
                 entities ?? GetAll(),
                 startIndex,
-                new CancellationToken(),
                 filterVersion
             );
             return result;

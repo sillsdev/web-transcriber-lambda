@@ -101,7 +101,7 @@ namespace SIL.Transcriber.Controllers
                                 ex.Message,
                                 languageTag,
                                 userSecret.ParatextTokens.IssuedAt.ToString());
-                throw ex;
+                throw;
                 //return NoContent();
             }
         }

@@ -12,8 +12,6 @@ namespace SIL.Transcriber.Services
     public class BaseService<TResource> : JsonApiResourceService<TResource, int>
         where TResource : BaseModel
     {
-        protected IResourceRepositoryAccessor RepositoryAssessor { get; }
-        protected IJsonApiOptions Options { get; }
         protected ILogger<TResource> Logger { get; set; }
         protected readonly BaseRepository<TResource> Repo;
 
@@ -39,9 +37,7 @@ namespace SIL.Transcriber.Services
                 resourceDefinitionAccessor
             )
         {
-            Options = options;
             Logger = loggerFactory.CreateLogger<TResource>();
-            RepositoryAssessor = repositoryAccessor;
             Repo = baseRepo;
         }
         //GetAsync will apply FromCurrentUser - so do that first to see if the id is in that result set
@@ -60,19 +56,9 @@ namespace SIL.Transcriber.Services
             int project
         )
         {
-            if (currentuser > 0)
-            {
-                return GetChanges(entities, currentuser, origin, since);
-            }
-            else
-            {
-                return GetChanges(
-                    Repo.FromProjectList(entities, project.ToString()),
-                    currentuser,
-                    origin,
-                    since
-                );
-            }
+            return currentuser > 0
+                ? GetChanges(Repo.FromCurrentUser(entities), currentuser, origin, since)
+                : GetChanges(Repo.FromProjectList(entities, project.ToString()), currentuser, origin, since);
         }
 
         public IEnumerable<TResource> GetChanges(
