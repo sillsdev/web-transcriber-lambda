@@ -528,7 +528,7 @@ namespace SIL.Transcriber.Services
             if (root == null)
                 throw new Exception("Bad Meta" + metastr);
             root.meta.version = "0.3.1";
-            root.meta.meta.category = "source";
+            root.meta.category = "source";
             root.meta.generator.softwareName = "SIL Transcriber";
             root.meta.generator.softwareVersion =
                 dbContext.Currentversions.FirstOrDefault()?.DesktopVersion ?? "unknown";
