@@ -535,11 +535,13 @@ namespace SIL.Transcriber.Services
             //log it
             //requestObj["client_secret"] = "XXX";
             //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, (string)responseObj["access_token"], (string)responseObj["refresh_token"], requestObj.ToString(), response.ReasonPhrase + responseObj));
+            if (responseObj?.Count > 0 && (responseObj ["error_description"]?.ToString()?.Contains("refresh token") ?? false))
+                throw new Exception("401 RefreshTokenInvalid.  Expected on Dev and QA.  Login again with Paratext connection.");
 
             _ = response.EnsureSuccessStatusCode();
 
-            userSecret.ParatextTokens.AccessToken = (string?)responseObj ["access_token"] ?? "";
-            userSecret.ParatextTokens.RefreshToken = (string?)responseObj ["refresh_token"] ?? "";
+            userSecret.ParatextTokens.AccessToken = (string?)responseObj?["access_token"] ?? "";
+            userSecret.ParatextTokens.RefreshToken = (string?)responseObj?["refresh_token"] ?? "";
             if (userSecret.ParatextTokens.RefreshToken != null)
                 _ = dbContext.Paratexttokens.Update(userSecret.ParatextTokens);
             else

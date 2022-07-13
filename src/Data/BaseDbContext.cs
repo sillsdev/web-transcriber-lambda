@@ -72,10 +72,8 @@ namespace SIL.Transcriber.Data
                         if (trackDate.DateCreated == null) //if the front end set it, leave it.  We're using this to catch duplicates
                         {
                             trackDate.DateCreated = now;
-                            trackDate.DateUpdated = now;
                         }
-                        else
-                            trackDate.DateUpdated = trackDate.DateUpdated?.SetKindUtc();
+                        trackDate.DateUpdated = trackDate.DateUpdated == null ? now : (trackDate.DateUpdated?.SetKindUtc());
                     }
                     else
                     {
