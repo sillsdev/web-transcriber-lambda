@@ -1,7 +1,7 @@
 using Amazon.S3;
 using JsonApiDotNetCore.Configuration;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using SIL.Logging.Repositories;
@@ -153,7 +153,7 @@ namespace SIL.Transcriber
         public static IServiceCollection AddAuthenticationServices(this IServiceCollection services)
         {
             services
-                .AddAuthentication()
+                .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options => {
                     options.Authority = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
                     options.Audience = GetVarOrThrow("SIL_TR_AUTH0_AUDIENCE");
@@ -191,17 +191,12 @@ namespace SIL.Transcriber
                     options.LoginPath = "/Account/Login/";
                 });
 
+
             services.AddAuthorization(options => {
-                options.AddPolicy(
-                    "Authenticated",
-                    policy =>
-                        policy
-                            .AddAuthenticationSchemes(
-                                JwtBearerDefaults.AuthenticationScheme,
-                                CookieAuthenticationDefaults.AuthenticationScheme
-                            )
-                            .RequireAuthenticatedUser()
-                );
+                options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                  .RequireAuthenticatedUser()
+                  .Build();
+
             });
 
             return services;

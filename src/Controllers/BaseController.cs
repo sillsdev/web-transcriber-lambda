@@ -30,7 +30,6 @@ namespace SIL.Transcriber.Controllers
         { }
     }
 
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class BaseController<T, TId> : JsonApiController<T, TId>
         where T : class, IIdentifiable<TId>
     {

@@ -1,5 +1,6 @@
 using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
@@ -10,6 +11,7 @@ using System.Text.Json;
 
 namespace SIL.Transcriber.Controllers
 {
+
     public class MediafilesController : BaseController<Mediafile>
     {
         private readonly MediafileService _service;
@@ -41,7 +43,20 @@ namespace SIL.Transcriber.Controllers
         //AllowAnonymous
         //GET/"fromfile/{s3File}" will return mediafile associated with s3 filename
         //PATCH/{id}/fileinfo/{filesize}/{duration}") will update filesize and duration in mediafile
+        //called from s3 trigger - no auth
+        [AllowAnonymous]
+        [HttpGet("fromfile/{plan}/{s3File}")]
+        public  IActionResult  GetFromFile(
+            [FromRoute] int plan,
+            [FromRoute] string s3File
+        )
+        {
+            Mediafile? response = _service.GetFromFile(plan, s3File);
+            return response == null ? NotFound() : Ok(response);
+        }
 
+
+        [Authorize]
         [HttpGet("{id}/fileurl")]
         public IActionResult GetFile([FromRoute] int id)
         {
@@ -87,10 +102,7 @@ namespace SIL.Transcriber.Controllers
         public async Task<IActionResult> DeleteFile([FromRoute] int id)
         {
             S3Response response = await _service.DeleteFile(id);
-            if (response.Status == HttpStatusCode.OK || response.Status == HttpStatusCode.NoContent)
-                return Ok();
-            else
-                return NotFound();
+            return response.Status is HttpStatusCode.OK or HttpStatusCode.NoContent ? Ok() : NotFound();
         }
 
         [HttpPost("file")]
@@ -106,17 +118,7 @@ namespace SIL.Transcriber.Controllers
             return Created("/api/mediafiles/" + entity?.Id.ToString(), entity);
         }
 
-        //called from s3 trigger - no auth
-        [AllowAnonymous]
-        [HttpGet("fromfile/{plan}/{s3File}")]
-        public async Task<IActionResult> GetFromFile(
-            [FromRoute] int plan,
-            [FromRoute] string s3File
-        )
-        {
-            Mediafile? response = await _service.GetFromFile(plan, s3File);
-            return response == null ? NotFound() : Ok(response);
-        }
+
 
         [AllowAnonymous]
         [HttpPatch("{id}/fileinfo/{filesize}/{duration}")]

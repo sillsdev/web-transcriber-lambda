@@ -55,9 +55,9 @@ namespace SIL.Transcriber.Services
             dbContext = (AppDbContext)contextResolver.GetContext();
         }
 
-        public async Task<Mediafile?> GetFromFile(int plan, string s3File)
+        public Mediafile? GetFromFile(int plan, string s3File)
         {
-            IEnumerable<Mediafile> files = await base.GetAsync(new CancellationToken());
+            IEnumerable<Mediafile> files = MyRepository.Get(); //bypass user check
             return files.SingleOrDefault(p => p.S3File == s3File && p.PlanId == plan);
         }
 
@@ -261,7 +261,7 @@ namespace SIL.Transcriber.Services
                 return null;
             p.Filesize = filesize;
             p.Duration = (int)duration;
-            _ = await base.UpdateAsync(id, p, new CancellationToken());
+            _ = await base.UpdateArchivedAsync(id, p, new CancellationToken());
             return p;
         }
 
