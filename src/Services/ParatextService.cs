@@ -100,7 +100,7 @@ namespace SIL.Transcriber.Services
 
             if (newPTToken == null)
             {
-                throw new Exception("User is not logged in to Paratext-Transcriber");
+                throw new SecurityException("User is not logged in to Paratext-Transcriber");
             }
             //get existing
             IEnumerable<ParatextToken>? tokens = dbContext.Paratexttokens.Where(
@@ -376,12 +376,10 @@ namespace SIL.Transcriber.Services
         {
             if (userSecret is null || userSecret.ParatextTokens is null)
                 throw new SecurityException("Paratext credentials not provided.");
-            if (
-                userSecret.ParatextTokens.AccessToken is null
+            return userSecret.ParatextTokens.AccessToken is null
                 || userSecret.ParatextTokens.AccessToken.Length == 0
-            )
-                throw new SecurityException("Current user is not logged in to Paratext.");
-            return true;
+                ? throw new SecurityException("Current user is not logged in to Paratext.")
+                : true;
         }
 
         public string? GetParatextUsername(UserSecret userSecret)
@@ -510,7 +508,7 @@ namespace SIL.Transcriber.Services
             _ = VerifyUserSecret(userSecret);
             if (userSecret.ParatextTokens.RefreshToken == null)
             {
-                throw new Exception("401 RefreshTokenNull");
+                throw new SecurityException("401 RefreshTokenNull");
             }
             HttpRequestMessage request = new(HttpMethod.Post, "api8/token");
             JObject requestObj =
@@ -536,7 +534,7 @@ namespace SIL.Transcriber.Services
             //requestObj["client_secret"] = "XXX";
             //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, (string)responseObj["access_token"], (string)responseObj["refresh_token"], requestObj.ToString(), response.ReasonPhrase + responseObj));
             if (responseObj?.Count > 0 && (responseObj ["error_description"]?.ToString()?.Contains("refresh token") ?? false))
-                throw new Exception("401 RefreshTokenInvalid.  Expected on Dev and QA.  Login again with Paratext connection.");
+                throw new SecurityException("401 RefreshTokenInvalid.  Expected on Dev and QA.  Login again with Paratext connection.");
 
             _ = response.EnsureSuccessStatusCode();
 
@@ -545,7 +543,7 @@ namespace SIL.Transcriber.Services
             if (userSecret.ParatextTokens.RefreshToken != null)
                 _ = dbContext.Paratexttokens.Update(userSecret.ParatextTokens);
             else
-                throw new Exception(
+                throw new SecurityException(
                     "401 RefreshTokenNull.  Expected on Dev and QA.  Login again with Paratext connection."
                 );
 

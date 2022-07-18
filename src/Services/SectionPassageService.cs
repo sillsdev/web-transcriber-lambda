@@ -157,7 +157,7 @@ namespace SIL.Transcriber.Services
                                         item [1] ["id"] != null && item [1] ["id"].ToString() != ""
                                             ? MyRepository
                                                 .GetPassage((int)item [1] ["id"])
-                                                .UpdateFrom(item [1])
+                                                .UpdateFrom(item [1], lastSectionId)
                                             : new Passage().UpdateFrom(item [1], lastSectionId)
                                     );
                                 }
@@ -177,7 +177,7 @@ namespace SIL.Transcriber.Services
                         updpass.Add(item);
                         updpassages.Add(
                             (item [0]? ["id"]?.ToString() ?? "") != ""
-                                ? MyRepository.GetPassage((int)item [0] ["id"]).UpdateFrom(item [0])
+                                ? MyRepository.GetPassage((int)item [0] ["id"]).UpdateFrom(item [0], lastSectionId)
                                 : new Passage().UpdateFrom(item [0], lastSectionId)
                         );
                     }

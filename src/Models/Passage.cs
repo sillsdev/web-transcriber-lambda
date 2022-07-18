@@ -12,13 +12,6 @@ namespace SIL.Transcriber.Models
             Hold = false;
         }
 
-        /*
-        public Passage(JToken item, int sectionId) : base()
-        {
-            UpdateFrom(item);
-            SectionId = sectionId;
-        }
-        */
         public Passage UpdateFrom(JToken item)
         {
             Book = item ["book"]?.ToString() ?? "";
@@ -156,12 +149,12 @@ namespace SIL.Transcriber.Models
             }
         }
 
-        private bool ParseReferencePart(string reference, out int chapter, out int verse)
+        private static bool ParseReferencePart(string reference, out int chapter, out int verse)
         {
             int colon = reference.IndexOf(':');
             if (colon >= 0)
             {
-                _ = int.TryParse(reference.Substring(0, colon), out chapter);
+                _ = int.TryParse(reference[..colon], out chapter);
                 reference = reference [(colon + 1)..];
             }
             else
@@ -171,7 +164,7 @@ namespace SIL.Transcriber.Models
             return int.TryParse(reference, out verse);
         }
 
-        private bool ParseReference(
+        private static bool ParseReference(
             string reference,
             out int startChapter,
             out int endChapter,
@@ -181,7 +174,7 @@ namespace SIL.Transcriber.Models
         {
             bool ok;
             int dash = reference.IndexOf("-");
-            string firstsection = dash > 0 ? reference.Substring(0, dash) : reference;
+            string firstsection = dash > 0 ? reference[..dash] : reference;
             ok = ParseReferencePart(firstsection, out startChapter, out startVerse);
 
             if (startChapter == 0)
