@@ -30,6 +30,8 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "user")]
         public User? User { get; set; }
+
+        [Attr(PublicName = "org-workflow-step-id")]
         public int OrgWorkflowStepId { get; set; }
 
         [HasOne(PublicName = "org-workflow-step")]

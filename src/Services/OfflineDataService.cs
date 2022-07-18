@@ -940,9 +940,11 @@ namespace SIL.Transcriber.Services
                     IQueryable<Mediafile> mediafiles = plans
                         .Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m)
                         .Where(x => !x.Archived);
-                    IQueryable<Mediafile> attachedmediafiles = passages
-                        .Join(dbContext.Mediafiles, p => p.Id, m => m.PassageId, (p, m) => m)
-                        .Where(x => x.ResourcePassageId == null && !x.Archived);
+
+                    //only limit vernacular to those with passageids
+                    IQueryable<Mediafile> attachedmediafiles = mediafiles
+                        .Where(x => (x.PassageId != null || x.ArtifactTypeId != null) && 
+                            x.ResourcePassageId == null && !x.Archived);
 
                     //I need my mediafiles plus any shared resource mediafiles
                     IQueryable<Sectionresource> sectionresources = dbContext.Sectionresources
@@ -1117,20 +1119,17 @@ namespace SIL.Transcriber.Services
                     )
                         break;
                     //Now I need the media list of just those files to download...
-                    //pick just the highest version media per passage (vernacular only)
+                    //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
                     IQueryable<Mediafile> vernmediafiles =
                         from m in attachedmediafiles
                         where m.ArtifactTypeId == null
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                    List<Mediafile> mediaList = vernmediafiles.ToList();
-                    if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, mediaList))
+                    
+                    if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
                         break;
-                    mediaList = mediaList.Concat(sourcemediafiles).ToList();
-                    //this should get comments and uploaded resources - not accounting for edited comments for now...
-                    mediaList = mediaList
-                        .Concat(mediafiles.Where(m => m.ArtifactTypeId != null))
-                        .ToList();
+                    List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
+
                     AddAttachedMedia(zipArchive, mediaList);
                     startNext++;
                 } while (false);
@@ -1377,9 +1376,9 @@ namespace SIL.Transcriber.Services
         private void UpdateOfflineIds()
         {
             /* fix comment ids */
-            IQueryable<Comment> comments = dbContext.Comments.Where(
+            List<Comment> comments = dbContext.Comments.Where(
                 c => c.OfflineMediafileId != null
-            );
+            ).ToList();
             foreach (Comment c in comments)
             {
                 Mediafile? mediafile = dbContext.Mediafiles
@@ -1396,7 +1395,7 @@ namespace SIL.Transcriber.Services
             dbContext.Comments.UpdateRange(comments);
             comments = dbContext.Comments.Where(
                 c => c.DiscussionId == null && c.OfflineDiscussionId != null
-            );
+            ).ToList();
             foreach (Comment c in comments)
             {
                 Discussion? discussion = dbContext.Discussions
@@ -1428,9 +1427,9 @@ namespace SIL.Transcriber.Services
             }
             dbContext.Discussions.UpdateRange(discussions);
 
-            IQueryable<Mediafile> mediafiles = dbContext.Mediafiles.Where(
+            List<Mediafile> mediafiles = dbContext.Mediafiles.Where(
                 c => c.SourceMediaId == null && c.SourceMediaOfflineId != null
-            );
+            ).ToList();
             foreach (Mediafile m in mediafiles)
             {
                 Mediafile? sourcemedia = dbContext.Mediafiles
@@ -1962,7 +1961,7 @@ namespace SIL.Transcriber.Services
                                                         .Where(p =>
                                                                 p.PassageId == m.PassageId
                                                                 && !p.Archived
-                                                                && p.IsVernacular
+                                                                && p.ArtifactTypeId == null //IsVernacular
                                                         )
                                                         .OrderByDescending(p => p.VersionNumber)
                                                         .FirstOrDefault();

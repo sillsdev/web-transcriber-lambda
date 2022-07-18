@@ -43,7 +43,7 @@ namespace SIL.Transcriber.Definitions
                         Mediafile? mfs = AppDbContext.Mediafiles
                             .Where(mf => mf.PassageId == resource.Passage.Id && !mf.Archived)
                             .ToList()
-                            .Where(mf => mf.IsVernacular)
+                            .Where(mf => mf.ArtifactTypeId is null) //mf.IsVernacular)
                             .OrderBy(m => m.VersionNumber)
                             .LastOrDefault();
                         if (mfs != null)
