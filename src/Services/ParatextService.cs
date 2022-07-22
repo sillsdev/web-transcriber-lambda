@@ -93,12 +93,12 @@ namespace SIL.Transcriber.Services
             User? currentUser = CurrentUserRepository.GetCurrentUser();
             if (currentUser == null)
                 throw new Exception("Unable to get current user information");
-            UserSecret? newPTToken = CurrentUserContext.ParatextLogin(
+            UserSecret? tokenFromAuth0 = CurrentUserContext.ParatextLogin(
                 GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"),
                 currentUser.Id
             );
 
-            if (newPTToken == null)
+            if (tokenFromAuth0 == null)
             {
                 throw new SecurityException("User is not logged in to Paratext-Transcriber");
             }
@@ -108,33 +108,33 @@ namespace SIL.Transcriber.Services
             );
             if (tokens != null && tokens.Any())
             {
-                ParatextToken token = tokens.First();
+                ParatextToken savedToken = tokens.First();
                 if (
-                    newPTToken.ParatextTokens.IssuedAt > token.IssuedAt
-                    && newPTToken.ParatextTokens.RefreshToken != null
+                    tokenFromAuth0.ParatextTokens.IssuedAt > savedToken.IssuedAt
+                    //&& newPTToken.ParatextTokens.RefreshToken != null
                 )
                 {
-                    token.AccessToken = newPTToken.ParatextTokens.AccessToken;
-                    token.RefreshToken = newPTToken.ParatextTokens.RefreshToken;
+                    savedToken.AccessToken = tokenFromAuth0.ParatextTokens.AccessToken;
+                    savedToken.RefreshToken = tokenFromAuth0.ParatextTokens.RefreshToken ?? "";
                     Logger.LogInformation("new token newer than saved token");
-                    _ = dbContext.Paratexttokens.Update(token);
+                    _ = dbContext.Paratexttokens.Update(savedToken);
                     dbContext.SaveChanges();
                     //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
                 }
                 else
                 {
-                    newPTToken.ParatextTokens = token;
+                    tokenFromAuth0.ParatextTokens = savedToken;
                     //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From DB"));
                 }
             }
             else
             {
                 Logger.LogInformation("no saved token");
-                _ = dbContext.Paratexttokens.Add(newPTToken.ParatextTokens);
+                _ = dbContext.Paratexttokens.Add(tokenFromAuth0.ParatextTokens);
                 dbContext.SaveChanges();
                 //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, newPTToken.ParatextTokens.AccessToken, newPTToken.ParatextTokens.RefreshToken, "From First Login"));
             }
-            return newPTToken;
+            return tokenFromAuth0;
         }
 
         private Claim? GetClaim(string AccessToken, string claimtype)
@@ -506,7 +506,7 @@ namespace SIL.Transcriber.Services
         private async Task<UserSecret> RefreshAccessTokenAsync(UserSecret userSecret)
         {
             _ = VerifyUserSecret(userSecret);
-            if (userSecret.ParatextTokens.RefreshToken == null)
+            if (userSecret.ParatextTokens.RefreshToken == null || userSecret.ParatextTokens.RefreshToken == "")
             {
                 throw new SecurityException("401 RefreshTokenNull");
             }
@@ -540,10 +540,10 @@ namespace SIL.Transcriber.Services
 
             userSecret.ParatextTokens.AccessToken = (string?)responseObj?["access_token"] ?? "";
             userSecret.ParatextTokens.RefreshToken = (string?)responseObj?["refresh_token"] ?? "";
-            if (userSecret.ParatextTokens.RefreshToken != null)
-                _ = dbContext.Paratexttokens.Update(userSecret.ParatextTokens);
-            else
-                throw new SecurityException(
+
+            _ = userSecret.ParatextTokens.RefreshToken != ""
+                ? dbContext.Paratexttokens.Update(userSecret.ParatextTokens)
+                : throw new SecurityException(
                     "401 RefreshTokenNull.  Expected on Dev and QA.  Login again with Paratext connection."
                 );
 

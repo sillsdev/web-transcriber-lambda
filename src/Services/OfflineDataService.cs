@@ -63,10 +63,8 @@ namespace SIL.Transcriber.Services
 
         private static void WriteEntry(ZipArchiveEntry entry, string contents)
         {
-            using (StreamWriter sw = new StreamWriter(entry.Open()))
-            {
-                sw.WriteLine(contents);
-            }
+            using StreamWriter sw = new (entry.Open());
+            sw.WriteLine(contents);
         }
 
         private static DateTime AddCheckEntry(ZipArchive zipArchive, int version)
@@ -159,17 +157,15 @@ namespace SIL.Transcriber.Services
             byte[]? imageData = null;
             try
             {
-                using HttpClient client = new HttpClient();
+                using HttpClient client = new ();
                 using HttpResponseMessage response = await client.GetAsync(
                     url,
                     HttpCompletionOption.ResponseHeadersRead
                 );
                 using Stream streamToReadFrom = await response.Content.ReadAsStreamAsync();
                 string fileToWriteTo = Path.GetTempFileName();
-                using (Stream streamToWriteTo = File.Open(fileToWriteTo, FileMode.Create))
-                {
-                    await streamToReadFrom.CopyToAsync(streamToWriteTo);
-                }
+                using Stream streamToWriteTo = File.Open(fileToWriteTo, FileMode.Create);
+                await streamToReadFrom.CopyToAsync(streamToWriteTo);
             }
             catch
             {
@@ -265,7 +261,6 @@ namespace SIL.Transcriber.Services
                     src: url('https://s3.amazonaws.com/fonts.siltranscriber.org/CharisSIL-R.ttf')
                   }
                 */
-                int err = "abc".IndexOf("d");
                 //extract the url
                 int start = css.IndexOf("url('") + 4;
                 if (start != 3)
@@ -275,7 +270,7 @@ namespace SIL.Transcriber.Services
                     string fontfile = url[(url.LastIndexOf("/") + 1)..];
                     url = bucket + fontfile;
                     _ = AddStreamEntry(zipArchive, url, "fonts/", fontfile);
-                    css = css.Substring(0, start + 1) + fontfile + css [end..];
+                    css = css[..(start + 1)] + fontfile + css [end..];
                 }
                 ZipArchiveEntry entry = zipArchive.CreateEntry(
                     "fonts/" + cssfile,
@@ -292,13 +287,11 @@ namespace SIL.Transcriber.Services
 
         private static void AddFonts(ZipArchive zipArchive, IEnumerable<string> fonts)
         {
-            using (HttpClient client = new HttpClient())
+            using HttpClient client = new ();
+            foreach (string f in fonts)
             {
-                foreach (string f in fonts)
-                {
-                    string cssfile = f.Split(',')[0].Replace(" ", "") + ".css";
-                    AddFont(zipArchive, client, cssfile);
-                }
+                string cssfile = f.Split(',')[0].Replace(" ", "") + ".css";
+                AddFont(zipArchive, client, cssfile);
             }
         }
 
@@ -376,7 +369,7 @@ namespace SIL.Transcriber.Services
             char sort
         ) where TResource : class, IIdentifiable
         {
-            Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            Logger.LogInformation("{check} : {dt} {dtBail}", check, DateTime.Now, dtBail);
             if (DateTime.Now > dtBail)
                 return false;
             if (completed <= check)
@@ -399,7 +392,7 @@ namespace SIL.Transcriber.Services
                 if (data.IndexOf("|") > 0)
                 {
                     err = data [(data.IndexOf("|") + 1)..];
-                    data = data.Substring(0, data.IndexOf("|"));
+                    data = data[..data.IndexOf("|")];
                 }
                 if (!int.TryParse(data, out startNext))
                     startNext = 0;
@@ -584,10 +577,9 @@ namespace SIL.Transcriber.Services
 
         private static string ScriptureFullPath(string? language, Passage? passage, Mediafile m)
         {
-            if (passage == null || language == null)
-                return "";
-
-            return "release/audio/"
+            return passage == null || language == null
+                ? ""
+                : "release/audio/"
                 + passage.Book
                 + "/"
                 + string.Format(
@@ -957,14 +949,14 @@ namespace SIL.Transcriber.Services
                         .Where(x => !x.Archived);
 
                     //now get any shared resource mediafiles associated with those mediafiles
-                    IQueryable<Mediafile> sourcemediafiles = dbContext.Mediafiles
+                    IEnumerable<Mediafile> sourcemediafiles = dbContext.Mediafiles
                         .Join(
                             resourcemediafiles,
                             m => m.PassageId,
                             r => r.ResourcePassageId,
                             (m, r) => m
                         )
-                        .Where(x => x.ReadyToShare && !x.Archived);
+                        .Where(x => x.ReadyToShare && !x.Archived).ToList();
                     //pick just the highest version media per passage
                     sourcemediafiles =
                         from m in sourcemediafiles
@@ -972,7 +964,7 @@ namespace SIL.Transcriber.Services
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
                     foreach (
-                        Mediafile mf in resourcemediafiles.Where(m => m.ResourcePassageId != null)
+                        Mediafile mf in resourcemediafiles.ToList().Where(m => m.ResourcePassageId != null)
                     )
                     { //make sure we have the latest
                         Mediafile? res = sourcemediafiles
@@ -1263,7 +1255,7 @@ namespace SIL.Transcriber.Services
                 if (fr.Status == HttpStatusCode.OK)
                 { //remove beginning and ending brackets
                     string msg = fr.Message.StartsWith("[")
-                        ? fr.Message.Substring(1, fr.Message.Length - 2)
+                        ? fr.Message[1..^1]  //.Substring(1, fr.Message.Length - 2)
                         : fr.Message;
                     report.Add(msg);
                 }
@@ -1308,17 +1300,17 @@ namespace SIL.Transcriber.Services
             return await ProcessImportFileAsync(archive, projectid, sFile);
         }
 
-        private Fileresponse ProjectDeletedResponse(string msg, string sFile)
+        private static Fileresponse ProjectDeletedResponse(string msg, string sFile)
         {
             return ErrorResponse(msg, sFile, System.Net.HttpStatusCode.MovedPermanently);
         }
 
-        private Fileresponse NotCurrentProjectResponse(string msg, string sFile)
+        private static Fileresponse NotCurrentProjectResponse(string msg, string sFile)
         {
             return ErrorResponse(msg, sFile, System.Net.HttpStatusCode.NotAcceptable);
         }
 
-        private Fileresponse ErrorResponse(
+        private static Fileresponse ErrorResponse(
             string msg,
             string sFile,
             HttpStatusCode status = System.Net.HttpStatusCode.UnprocessableEntity
@@ -1410,9 +1402,9 @@ namespace SIL.Transcriber.Services
             }
             dbContext.Comments.UpdateRange(comments);
             /* fix discussion ids */
-            IQueryable<Discussion> discussions = dbContext.Discussions.Where(
+            List<Discussion> discussions = dbContext.Discussions.Where(
                 d => d.MediafileId == null && d.OfflineMediafileId != null
-            );
+            ).ToList();
             foreach (Discussion d in discussions)
             {
                 Mediafile? mediafile = dbContext.Mediafiles
@@ -1632,7 +1624,7 @@ namespace SIL.Transcriber.Services
                     snake.AsSpan(ix + 2)
                 );
             }
-            return string.Concat(snake.Substring(0, 1).ToUpper(), snake.AsSpan(1));
+            return string.Concat(snake[..1].ToUpper(), snake.AsSpan(1));
         }
 
         private async Task<Fileresponse> ProcessImportFileAsync(

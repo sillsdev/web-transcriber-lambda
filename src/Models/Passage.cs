@@ -27,7 +27,6 @@ namespace SIL.Transcriber.Models
         {
             _ = UpdateFrom(item);
             SectionId = sectionId;
-            State = "noMedia";
             return this;
         }
 
