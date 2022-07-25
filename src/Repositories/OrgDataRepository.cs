@@ -15,6 +15,7 @@ namespace SIL.Transcriber.Repositories
     {
         protected readonly OrganizationRepository organizationRepository;
         protected readonly GroupMembershipRepository gmRepository;
+        protected readonly GroupRepository groupRepository;
         protected readonly IResourceGraph _resourceGraph;
         protected readonly IResourceFactory _resourceFactory;
         protected readonly IEnumerable<IQueryConstraintProvider> _constraintProviders;
@@ -33,6 +34,7 @@ namespace SIL.Transcriber.Repositories
             CurrentUserRepository currentUserRepository,
             OrganizationRepository orgRepository,
             GroupMembershipRepository grpMemRepository,
+            GroupRepository grpRepository,
             IMetaBuilder metaBuilder,
             IJsonApiOptions options
         )
@@ -49,6 +51,7 @@ namespace SIL.Transcriber.Repositories
         {
             organizationRepository = orgRepository;
             gmRepository = grpMemRepository;
+            groupRepository = grpRepository;
             _resourceGraph = resourceGraph;
             _resourceFactory = resourceFactory;
             _constraintProviders = constraintProviders;
@@ -132,13 +135,17 @@ namespace SIL.Transcriber.Repositories
 
                 if (!CheckAdd(6, ToJson(orgs), dtBail, ref iStartNext, ref data))
                     break;
-                IQueryable<Groupmembership> gms = gmRepository.GetMine();
+                IQueryable<Group> groups = groupRepository.GetMine();
+                IQueryable<Groupmembership> gms = gmRepository.GetMine(groups);
                 if (!CheckAdd(7, ToJson(gms), dtBail, ref iStartNext, ref data))
+                    break;
+                //groups
+                if (!CheckAdd(8, ToJson(groups), dtBail, ref iStartNext, ref data))
                     break;
                 //invitations
                 if (
                     !CheckAdd(
-                        8,
+                        9,
                         ToJson(dbContext.InvitationsData.Join(
                                 orgs,
                                 i => i.OrganizationId,
@@ -152,23 +159,8 @@ namespace SIL.Transcriber.Repositories
                     )
                 )
                     break;
-                //groups
-                if (
-                    !CheckAdd(
-                        9,
-                        ToJson(dbContext.GroupsData.Join(
-                                gms,
-                                g => g.Id,
-                                gm => gm.GroupId,
-                                (g, gm) => g
-                            )
-                        ),
-                        dtBail,
-                        ref iStartNext,
-                        ref data
-                    )
-                )
-                    break;
+
+
                 //orgmems
                 IQueryable<Organizationmembership> oms = dbContext.OrganizationmembershipsData
                     .Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om)

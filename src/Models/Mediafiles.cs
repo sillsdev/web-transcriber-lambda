@@ -21,6 +21,7 @@ namespace SIL.Transcriber.Models
         public int? ArtifactTypeId { get; set; }
         [HasOne(PublicName = "artifact-type")]
         public Artifacttype? ArtifactType { get; set; }
+        [Attr(PublicName = "artifact-category-id")]
         public int? ArtifactCategoryId { get; set; }
         [HasOne(PublicName = "artifact-category")]
         public Artifactcategory? ArtifactCategory { get; set; }

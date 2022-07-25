@@ -10,7 +10,6 @@ namespace SIL.Transcriber.Repositories
     public class GroupMembershipRepository : BaseRepository<Groupmembership>
     {
         private readonly GroupRepository GroupRepository;
-        readonly private HttpContext? HttpContext;
 
         public GroupMembershipRepository(
             IHttpContextAccessor httpContextAccessor,
@@ -35,7 +34,6 @@ namespace SIL.Transcriber.Repositories
                 currentUserRepository
             )
         {
-            HttpContext = httpContextAccessor.HttpContext;
             GroupRepository = groupRepository;
         }
 
@@ -68,9 +66,9 @@ namespace SIL.Transcriber.Repositories
             return GroupsGroupMemberships(entities, groups);
         }
 
-        public IQueryable<Groupmembership> GetMine()
+        public IQueryable<Groupmembership> GetMine(IQueryable<Group> groups)
         {
-            return FromCurrentUser()
+            return GroupsGroupMemberships(GetAll(), groups)
                 .Include(gm => gm.Group)
                 .Include(gm => gm.User)
                 .Include(gm => gm.Role);

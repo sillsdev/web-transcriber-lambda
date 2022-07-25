@@ -1478,7 +1478,7 @@ namespace SIL.Transcriber.Services
                 || existing.ArtifactCategoryId != importing.ArtifactCategoryId
                 || existing.Resolved != importing.Resolved
                 || existing.GroupId != importing.GroupId
-                )
+                || existing.UserId != importing.UserId)
             )
             {
                 if (existing.DateUpdated > sourceDate)
@@ -1607,7 +1607,7 @@ namespace SIL.Transcriber.Services
                         if (myIdAttribute != null)
                             myIdAttribute.SetValue(s, id);
                         else
-                            Logger.LogWarning("unable to find id attribute for {r}", myTypeRelationship.PublicName);
+                           Logger.LogWarning("unable to find id attribute for {r}", myTypeRelationship.PublicName);
                     }
                 }
             return s;
