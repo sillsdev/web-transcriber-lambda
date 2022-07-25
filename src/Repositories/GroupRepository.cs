@@ -1,6 +1,7 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using static SIL.Transcriber.Utility.IEnumerableExtensions;
@@ -31,6 +32,10 @@ namespace SIL.Transcriber.Repositories
             )
         { }
 
+        public IQueryable<Group> GetMine()
+        {
+            return FromCurrentUser().Include(g => g.Owner);
+        }
         public IQueryable<Group> UsersGroups(IQueryable<Group> entities)
         {
             if (CurrentUser == null)

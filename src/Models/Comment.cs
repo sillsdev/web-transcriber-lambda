@@ -5,9 +5,11 @@ namespace SIL.Transcriber.Models
 {
     public class Comment : BaseModel, IArchive
     {
+        [Attr(PublicName = "discussion-id")]
         public int? DiscussionId { get; set; }
         [HasOne(PublicName = "discussion")]
         public Discussion? Discussion { get; set; }
+        [Attr(PublicName = "mediafile-id")] 
         public int? MediafileId { get; set; }
         [HasOne(PublicName = "mediafile")]
         public Mediafile? Mediafile { get; set; }

@@ -7,6 +7,7 @@ namespace SIL.Transcriber.Models
     {
         [Attr(PublicName = "subject")]
         public string? Subject { get; set; }
+        [Attr(PublicName = "mediafile-id")]
         public int? MediafileId { get; set; }
 
         [HasOne(PublicName = "mediafile")]
@@ -20,12 +21,14 @@ namespace SIL.Transcriber.Models
         public bool Resolved { get; set; }
         public int? RoleId { get; set; }
 
-        [HasOne(PublicName = "role")]
+        [HasOne(PublicName = "role")] //not used anymore
         public Role? Role { get; set; }
+        [Attr(PublicName = "group-id")]
         public int? GroupId { get; set; }
 
         [HasOne(PublicName = "group")]
         public Group? Group { get; set; }
+        [Attr(PublicName = "user-id")]
         public int? UserId { get; set; }
 
         [HasOne(PublicName = "user")]
@@ -36,6 +39,7 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "org-workflow-step")]
         public Orgworkflowstep? OrgWorkflowStep { get; set; }
+        [Attr(PublicName = "artifact-category-id")]
         public int? ArtifactCategoryId { get; set; }
 
         [HasOne(PublicName = "artifact-category")]
