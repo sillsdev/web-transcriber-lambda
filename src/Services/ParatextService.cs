@@ -541,11 +541,7 @@ namespace SIL.Transcriber.Services
             userSecret.ParatextTokens.AccessToken = (string?)responseObj?["access_token"] ?? "";
             userSecret.ParatextTokens.RefreshToken = (string?)responseObj?["refresh_token"] ?? "";
 
-            _ = userSecret.ParatextTokens.RefreshToken != ""
-                ? dbContext.Paratexttokens.Update(userSecret.ParatextTokens)
-                : throw new SecurityException(
-                    "401 RefreshTokenNull.  Expected on Dev and QA.  Login again with Paratext connection."
-                );
+            _ = dbContext.Paratexttokens.Update(userSecret.ParatextTokens);
 
             //log it
             //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
