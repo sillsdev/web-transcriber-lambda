@@ -773,10 +773,10 @@ namespace SIL.Transcriber.Services
 
                     //groups
                     IQueryable<Group> groups = dbContext.Groups.Join(
-                        projects,
-                        g => g.Id,
-                        p => p.GroupId,
-                        (g, p) => g
+                        orgs,
+                        g => g.OwnerId,
+                        o => o.Id,
+                        (g, o) => g
                     );
                     List<Groupmembership> gms = groups
                         .Join(
