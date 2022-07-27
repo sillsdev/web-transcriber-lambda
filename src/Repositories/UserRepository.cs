@@ -10,7 +10,6 @@ namespace SIL.Transcriber.Repositories
 {
     public class UserRepository : BaseRepository<User>
     {
-        private ICurrentUserContext CurrentUserContext { get; }
         readonly private OrganizationMembershipRepository OrgMemRepository;
 
         public UserRepository(
@@ -22,7 +21,6 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             CurrentUserRepository currentUserRepository,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
-            ICurrentUserContext currentUserContext,
             OrganizationMembershipRepository orgmemRepository
         )
             : base(
@@ -36,7 +34,6 @@ namespace SIL.Transcriber.Repositories
                 currentUserRepository
             )
         {
-            CurrentUserContext = currentUserContext;
             OrgMemRepository = orgmemRepository;
         }
 

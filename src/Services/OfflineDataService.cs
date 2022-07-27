@@ -83,13 +83,21 @@ namespace SIL.Transcriber.Services
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
         {
-            return SerializerHelpers.ResourceListToJson<TResource>(
+            var withIncludes = 
+            SerializerHelpers.ResourceListToJson<TResource>(
                 resources,
                 _resourceGraph,
                 _options,
                 _resourceDefinitionAccessor,
                 _metaBuilder
             );
+            if (withIncludes.Contains("included"))
+            {
+                dynamic tmp = JObject.Parse(withIncludes);
+                tmp.Remove("included");
+                return tmp.ToString();
+            }
+            return withIncludes;
         }
 
         private void AddJsonEntry<TResource>(
@@ -772,7 +780,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
                     //groups
-                    IQueryable<Group> groups = dbContext.Groups.Join(
+                    IQueryable<Group> groups = dbContext.GroupsData.Join(
                         orgs,
                         g => g.OwnerId,
                         o => o.Id,
@@ -930,7 +938,7 @@ namespace SIL.Transcriber.Services
                         break;
                     //mediafiles
                     IQueryable<Mediafile> mediafiles = plans
-                        .Join(dbContext.Mediafiles, p => p.Id, m => m.PlanId, (p, m) => m)
+                        .Join(dbContext.MediafilesData, p => p.Id, m => m.PlanId, (p, m) => m)
                         .Where(x => !x.Archived);
 
                     //only limit vernacular to those with passageids

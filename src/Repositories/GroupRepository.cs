@@ -44,14 +44,9 @@ namespace SIL.Transcriber.Repositories
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                //if I'm an admin in the org, give me all groups in that org
-                //otherwise give me just the groups I'm a member of
-                IEnumerable<int> orgadmins = orgIds.Where(
-                    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
-                );
 
                 return entities.Where(
-                    g => orgadmins.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id)
+                    g => orgIds.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id)
                 );
             }
             return entities;
@@ -62,7 +57,9 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Project> projects = dbContext.Projects.Where(
                 p => p.Id.ToString() == projectid
             );
-            return entities.Join(projects, g => g.Id, p => p.GroupId, (g, p) => g);
+            int orgId = projects.First().OrganizationId;
+            
+            return entities.Where(g => g.OwnerId == orgId);
         }
 
         public override IQueryable<Group> FromCurrentUser(IQueryable<Group>? entities = null)
