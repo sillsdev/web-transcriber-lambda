@@ -75,6 +75,9 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "news-preference")]
         public bool? NewsPreference { get; set; }
 
+        [HasOne(PublicName = "last-modified-by-user")]
+        [JsonIgnore]
+        override public User? LastModifiedByUser { get; set; }
         public bool Archived { get; set; }
 
         //[HasManyThrough(nameof(OrganizationMemberships))]   these cause issues...don't use

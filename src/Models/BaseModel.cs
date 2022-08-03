@@ -20,7 +20,6 @@ namespace SIL.Transcriber.Models
         public int? LastModifiedBy { get; set; }
 
         [HasOne(PublicName = "last-modified-by-user")]
-        [JsonIgnore]
         virtual public User? LastModifiedByUser { get; set; }
 
         [Attr(PublicName = "last-modified-origin")]

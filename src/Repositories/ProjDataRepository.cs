@@ -3,6 +3,7 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.Response;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
@@ -17,6 +18,7 @@ namespace SIL.Transcriber.Repositories
         protected readonly IJsonApiOptions _options;
         protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
         protected readonly IMetaBuilder _metaBuilder;
+        protected readonly IResourceGraph _resourceGraph;
 
         public ProjDataRepository(
             ITargetedFields targetedFields,
@@ -48,18 +50,27 @@ namespace SIL.Transcriber.Repositories
             _options = options;
             _resourceDefinitionAccessor = resourceDefinitionAccessor;
             _metaBuilder = metaBuilder;
+            _resourceGraph = resourceGraph;
         }
 
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
         {
-            return SerializerHelpers.ResourceListToJson<TResource>(
+            string? withIncludes = 
+            SerializerHelpers.ResourceListToJson<TResource>(
                 resources,
-                ResourceGraph,
+                _resourceGraph,
                 _options,
                 _resourceDefinitionAccessor,
                 _metaBuilder
             );
+            if (withIncludes.Contains("included"))
+            {
+                dynamic tmp = JObject.Parse(withIncludes);
+                tmp.Remove("included");
+                return tmp.ToString();
+            }
+            return withIncludes;
         }
 
         private IQueryable<Projdata> GetData(
@@ -222,7 +233,8 @@ namespace SIL.Transcriber.Repositories
 
         protected override IQueryable<Projdata> GetAll()
         {
-            List<Projdata> entities = new List<Projdata> { new Projdata() };
+            List<Projdata> entities = new()
+            { new Projdata() };
             return entities.AsAsyncQueryable();
         }
 

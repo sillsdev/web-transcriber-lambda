@@ -36,14 +36,14 @@ namespace SIL.Transcriber.Repositories
             string idList
         )
         {
-            return entities ?? GetAll();
+            return (entities ?? GetAll()).Where(e => !e.Archived);
         }
 
         public override IQueryable<Workflowstep> FromCurrentUser(
             IQueryable<Workflowstep>? entities = null
         )
         {
-            return entities ?? GetAll();
+            return (entities ?? GetAll()).Where(e => !e.Archived);
         }
         #endregion
     }

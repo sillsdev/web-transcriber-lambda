@@ -52,10 +52,10 @@ namespace SIL.Transcriber.Repositories
                     o => CurrentUser.HasOrgRole(RoleName.Admin, o)
                 );
                 entities = entities.Where(
-                    om => orgadmins.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id
+                    om => !om.Archived && (orgadmins.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id)
                 );
             }
-            return entities;
+            return entities.Where(e => !e.Archived);
         }
 
         public IQueryable<Organizationmembership> ProjectOrganizationMemberships(
@@ -67,7 +67,7 @@ namespace SIL.Transcriber.Repositories
                 dbContext.Organizations,
                 projectid
             );
-            return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
+            return entities.Where(e => !e.Archived).Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
         }
 
         #region overrides

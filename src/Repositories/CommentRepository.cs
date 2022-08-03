@@ -70,7 +70,7 @@ namespace SIL.Transcriber.Repositories
                 m => m.Id,
                 (d, m) => d
             );
-            return entities.Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c);
+            return entities.Where(e=> !e.Archived).Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c);
         }
 
         private IQueryable<Comment> UsersComments(
@@ -96,7 +96,9 @@ namespace SIL.Transcriber.Repositories
             string idList
         )
         {
-            return ProjectsComments(entities ?? GetAll(), idList);
+            if (entities == null)
+                entities = GetAll();
+            return ProjectsComments(entities.Where(e => !e.Archived), idList);
         }
 
         public override IQueryable<Comment> FromCurrentUser(IQueryable<Comment>? entities = null)

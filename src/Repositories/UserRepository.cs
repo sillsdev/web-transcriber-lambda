@@ -42,7 +42,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Organizationmembership> orgmems
         )
         {
-            IQueryable<User>? mems = entities.Join(
+            IQueryable<User>? mems = entities.Where(e=> !e.Archived).Join(
                 orgmems,
                 u => u.Id,
                 om => om.UserId,
@@ -72,7 +72,7 @@ namespace SIL.Transcriber.Repositories
                     )
                 );
             }
-            return entities;
+            return entities.Where(e => !e.Archived);
         }
 
         public IQueryable<User> ProjectUsers(IQueryable<User> entities, string projectid)

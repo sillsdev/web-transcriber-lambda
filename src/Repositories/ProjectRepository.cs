@@ -56,12 +56,12 @@ namespace SIL.Transcriber.Repositories
                     o => CurrentUserRepository.IsOrgAdmin(CurrentUser, o)
                 );
 
-                entities = entities.Where(p =>
+                entities = entities.Where(p => !p.Archived && (
                         orgadmins.Contains(p.OrganizationId)
-                        || CurrentUser.GroupIds.Contains(p.GroupId)
+                        || CurrentUser.GroupIds.Contains(p.GroupId))
                 );
             }
-            return entities;
+            return entities.Where(e => !e.Archived);
         }
 
         //TODO?

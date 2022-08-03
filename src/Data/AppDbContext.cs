@@ -435,8 +435,10 @@ namespace SIL.Transcriber.Data
             Artifactcategorys.Include(c => c.Organization);
         public IQueryable<Artifacttype> ArtifacttypesData =>
             Artifacttypes.Include(c => c.Organization);
-        public IQueryable<Comment> CommentsData =>
-            Comments.Include(c => c.Mediafile).Include(c => c.Discussion);
+        public IQueryable<Comment> CommentsData => Comments
+            .Include(c => c.Mediafile)
+            .Include(c => c.Discussion)
+            .Include(c => c.LastModifiedByUser);
         public IQueryable<Discussion> DiscussionsData =>
             Discussions
                 .Include(d => d.ArtifactCategory)
@@ -467,8 +469,9 @@ namespace SIL.Transcriber.Data
             Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
             Passages.Include(x => x.Section).Include(x => x.OrgWorkflowStep);
-        public IQueryable<Passagestatechange> PassagestatechangesData =>
-            Passagestatechanges.Include(x => x.Passage);
+        public IQueryable<Passagestatechange> PassagestatechangesData => Passagestatechanges
+            .Include(x => x.Passage)
+            .Include(x => x.LastModifiedByUser);
         public IQueryable<Plan> PlansData =>
             Plans.Include(x => x.Owner).Include(x => x.Plantype).Include(x => x.Project);
         public IQueryable<Projectintegration> ProjectintegrationsData =>
