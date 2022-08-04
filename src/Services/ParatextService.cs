@@ -754,7 +754,7 @@ namespace SIL.Transcriber.Services
         {
             Project? project = await ProjectService.GetWithPlansAsync(projectId);
             int total = 0;
-            if (project != null)
+            if (project != null && project.Plans != null)
                 foreach (Plan p in project.Plans)
                 {
                     total += MediafileService.ReadyToSync(p.Id, artifactTypeid).Count();
@@ -1052,7 +1052,7 @@ namespace SIL.Transcriber.Services
         {
             Project? project = await ProjectService.GetWithPlansAsync(projectId);
             List<ParatextChapter> chapters = new();
-            if (project != null)
+            if (project != null && project.Plans != null)
                 foreach (Plan p in project.Plans)
                 {
                     if (!p.Archived)

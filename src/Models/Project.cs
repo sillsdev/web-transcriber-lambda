@@ -76,7 +76,7 @@ namespace SIL.Transcriber.Models
 
         [JsonIgnore]
         [HasMany(PublicName = "plans")]
-        public virtual List<Plan> Plans { get; set; }
+        public virtual List<Plan>? Plans { get; set; } 
         //[HasManyThrough("tasks")]
         //public virtual List<Task> Tasks { get; set; }
         public bool Archived { get; set; }
