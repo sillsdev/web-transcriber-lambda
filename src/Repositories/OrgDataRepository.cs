@@ -4,6 +4,7 @@ using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.Response;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
@@ -63,13 +64,21 @@ namespace SIL.Transcriber.Repositories
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
         {
-            return SerializerHelpers.ResourceListToJson<TResource>(
+            string? withIncludes =
+            SerializerHelpers.ResourceListToJson<TResource>(
                 resources,
-                ResourceGraph,
+                _resourceGraph,
                 _options,
                 _resourceDefinitionAccessor,
                 _metaBuilder
             );
+            if (withIncludes.Contains("included"))
+            {
+                dynamic tmp = JObject.Parse(withIncludes);
+                tmp.Remove("included");
+                return tmp.ToString();
+            }
+            return withIncludes;
         }
 
         private IQueryable<Orgdata> GetData(

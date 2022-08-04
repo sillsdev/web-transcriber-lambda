@@ -42,7 +42,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Group> groups
         )
         {
-            return entities.Join(groups, gm => gm.GroupId, g => g.Id, (gm, g) => gm);
+            return entities.Where(e => !e.Archived).Join(groups, gm => gm.GroupId, g => g.Id, (gm, g) => gm);
         }
 
         public IQueryable<Groupmembership> UsersGroupMemberships(

@@ -46,10 +46,10 @@ namespace SIL.Transcriber.Repositories
             {
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty() ?? new List<int>();
                 entities = entities.Where(
-                    om => om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId)
+                    om => !om.Archived && (om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId))
                 );
             }
-            return entities;
+            return entities.Where(om => !om.Archived);
         }
 
         public IQueryable<Artifactcategory> ProjectArtifactCategorys(
@@ -63,7 +63,7 @@ namespace SIL.Transcriber.Repositories
             );
             IQueryable<int> ids = orgs.Select(o => o.Id);
             return entities.Where(
-                om => om.OrganizationId == null || ids.Contains((int)om.OrganizationId)
+                om => !om.Archived && (om.OrganizationId == null || ids.Contains((int)om.OrganizationId))
             );
         }
 

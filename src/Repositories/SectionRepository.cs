@@ -52,7 +52,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans
         )
         {
-            return entities.Join(plans, s => s.PlanId, p => p.Id, (s, p) => s);
+            return entities.Where(e => !e.Archived).Join(plans, s => s.PlanId, p => p.Id, (s, p) => s);
         }
 
         public IQueryable<Section> UsersSections(

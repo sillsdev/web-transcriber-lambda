@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Project> projects
         )
         {
-            return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
+            return entities.Where(e => !e.Archived).Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
         }
 
         public IQueryable<Projectintegration> UsersProjectIntegrations(

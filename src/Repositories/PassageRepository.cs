@@ -54,7 +54,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Section> sections
         )
         {
-            return entities.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
+            return entities.Where(e => !e.Archived).Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
         }
 
         public IQueryable<Passage> UsersPassages(

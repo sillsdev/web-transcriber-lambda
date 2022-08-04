@@ -47,7 +47,7 @@ namespace SIL.Transcriber.Repositories
                     dbContext.Sectionresources,
                     projects
                 );
-            return entities.Join(
+            return entities.Where(e => !e.Archived).Join(
                 sectionresources,
                 u => u.SectionResourceId,
                 sr => sr.Id,

@@ -26,6 +26,9 @@ namespace SIL.Transcriber.Models
         public virtual Organization Owner { get; set; }
         [Attr(PublicName = "owner-id")]
         public int OwnerId { get; set; }
+        [Attr(PublicName = "permissions")]
+        [Column(TypeName = "jsonb")]
+        public string? Permissions { get; set; }
 
         [JsonIgnore]
         [HasMany(PublicName = "projects")]

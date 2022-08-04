@@ -1,5 +1,6 @@
 ﻿
 using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
@@ -21,8 +22,9 @@ namespace SIL.Transcriber.Models
         public string? OfflineDiscussionId { get; set; }
         [Attr(PublicName = "offline-mediafile-id")]
         public string? OfflineMediafileId { get; set; }
-        [Attr(PublicName = "hidden")]
-        public bool Hidden { get; set; }
+        [Attr(PublicName = "visible")]
+        [Column(TypeName = "jsonb")]
+        public string? Visible { get; set; }
         public bool Archived { get; set; }
     }
 }

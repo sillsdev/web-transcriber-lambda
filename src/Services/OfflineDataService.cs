@@ -83,7 +83,7 @@ namespace SIL.Transcriber.Services
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
         {
-            var withIncludes = 
+            string? withIncludes = 
             SerializerHelpers.ResourceListToJson<TResource>(
                 resources,
                 _resourceGraph,
@@ -651,7 +651,7 @@ namespace SIL.Transcriber.Services
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
             string fileName = string.Format(
-                "Audio{0}_{1}_{2}",
+                "Audio{0}_{1}_{2}{3}",
                 CoerceValidFileName(project.Name + artifactType),
                 project.Id.ToString(),
                 CurrentUser()?.Id
