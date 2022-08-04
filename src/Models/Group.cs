@@ -9,9 +9,6 @@ namespace SIL.Transcriber.Models
         public Group() : base()
         {
             Name = "";
-            GroupMemberships = new List<Groupmembership>();
-            Projects = new List<Project>();
-            Owner = new Organization();
         }
         [Attr(PublicName = "name")]
         public string Name { get; set; }
@@ -30,6 +27,7 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         public string? Permissions { get; set; }
 
+        /*
         [JsonIgnore]
         [HasMany(PublicName = "projects")]
         public virtual List<Project> Projects { get; set; }
@@ -37,19 +35,17 @@ namespace SIL.Transcriber.Models
         [JsonIgnore]
         [HasMany(PublicName = "group-memberships")]
         public virtual List<Groupmembership> GroupMemberships { get; set; }
-
+        [NotMapped]
+        public IEnumerable<int> UserIds => GroupMemberships.Select(g => g.UserId);
+        [JsonIgnore]
+        [NotMapped]
+        public IEnumerable<User> Users => GroupMemberships.Select(g => g.User);
+        */
         [NotMapped]
         public int OrganizationId { get => OwnerId; set { } }
 
         [NotMapped]
         public Organization Organization { get => Owner; set { } }
-
-        [NotMapped]
-        public IEnumerable<int> UserIds => GroupMemberships.Select(g => g.UserId);
-
-        [JsonIgnore]
-        [NotMapped]
-        public IEnumerable<User> Users => GroupMemberships.Select(g => g.User);
 
         public bool Archived { get; set; }
     }

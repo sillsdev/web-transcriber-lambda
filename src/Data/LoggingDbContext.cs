@@ -68,17 +68,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = orgEntity
-                .HasMany(o => o.OrganizationMemberships)
-                .WithOne(om => om.Organization)
-                .HasForeignKey(om => om.OrganizationId);
-
-            _ = orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
-
-            _ = orgEntity
-                .HasMany(o => o.Projects)
-                .WithOne(p => p.Organization)
-                .HasForeignKey(p => p.OrganizationId);
 
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(true);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);

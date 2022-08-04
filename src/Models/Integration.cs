@@ -18,10 +18,6 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "url")]
         public string? Url { get; set; }
 
-        [JsonIgnore]
-        [HasMany(PublicName = "project-integrations")]
-        public virtual List<Projectintegration>? ProjectIntegrations { get; set; }
-
         public bool Archived { get; set; }
     }
 }

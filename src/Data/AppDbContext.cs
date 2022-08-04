@@ -295,11 +295,6 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
 
-            _ = modelBuilder
-                .Entity<Group>()
-                .HasMany(g => g.GroupMemberships)
-                .WithOne(gm => gm.Group)
-                .HasForeignKey(gm => gm.GroupId);
 
             EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
             _ = userEntity
@@ -316,37 +311,18 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
 
             EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
-            _ = orgEntity
-                .HasMany(o => o.OrganizationMemberships)
-                .WithOne(om => om.Organization)
-                .HasForeignKey(om => om.OrganizationId);
-            _ = orgEntity.HasMany(o => o.Groups).WithOne(g => g.Owner).HasForeignKey(g => g.OwnerId);
 
-            _ = orgEntity
-                .HasMany(o => o.Projects)
-                .WithOne(p => p.Organization)
-                .HasForeignKey(p => p.OrganizationId);
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
 
-            _ = modelBuilder
-                .Entity<Section>()
-                .HasOne(s => s.Plan)
-                .WithMany(p => p.Sections)
-                .HasForeignKey(sectionEntity => sectionEntity.PlanId);
-
             _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
+            _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);
 
             _ = modelBuilder
                 .Entity<Orgworkflowstep>()
                 .HasOne(s => s.Parent)
                 .WithMany()
                 .HasForeignKey(s => s.ParentId);
-            _ = modelBuilder
-                .Entity<Sectionresource>()
-                .HasMany(r => r.SectionResourceUsers)
-                .WithOne(srow => srow.SectionResource)
-                .HasForeignKey(x => x.SectionResourceId);
         }
 
         public async Task<int> SaveChangesNoTimestampAsync(
@@ -375,7 +351,7 @@ namespace SIL.Transcriber.Data
         {
             List<EntityEntry> entries = ChangeTracker
                 .Entries()
-                .Where(e => e.State == EntityState.Added || e.State == EntityState.Deleted)
+                .Where(e => e.State is EntityState.Added or EntityState.Deleted)
                 .ToList();
             for (int ix = entries.Count - 1; ix >= 0; ix--)
             {
