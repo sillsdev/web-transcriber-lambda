@@ -59,9 +59,6 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "editor")]
         public virtual User? Editor { get; set; }
 
-        [JsonIgnore]
-        [HasMany(PublicName = "passages")]
-        public List<Passage>? Passages { get; set; }
         public bool Archived { get; set; }
 
         public string SectionHeader(bool addNumbers = true)

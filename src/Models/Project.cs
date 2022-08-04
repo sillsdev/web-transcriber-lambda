@@ -12,8 +12,6 @@ namespace SIL.Transcriber.Models
         {
             Name = "";
             IsPublic = false;
-            Plans = new List<Plan>();
-            ProjectIntegrations = new List<Projectintegration>();
         }
         [Attr(PublicName = "name")]
         public string Name { get; set; }
@@ -75,12 +73,6 @@ namespace SIL.Transcriber.Models
         private DateTime? _archived;
         [Attr(PublicName = "date-archived")]
         public DateTime? DateArchived { get { return _archived; } set { _archived = value.SetKindUtc(); } }
-
-        [JsonIgnore]
-        [HasMany(PublicName = "project-integrations")]
-        public virtual List<Projectintegration> ProjectIntegrations { get; set; }
-        //[HasManyThrough(nameof(ProjectIntegrations))]
-        //public virtual List<Integration> Integrations { get; set; }
 
         [JsonIgnore]
         [HasMany(PublicName = "plans")]

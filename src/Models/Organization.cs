@@ -10,8 +10,6 @@ namespace SIL.Transcriber.Models
         public Organization() : base()
         {
             Slug = "";
-            Groups = new List<Group>();
-            Projects = new List<Project>();
         }
         [Attr(PublicName = "name")]
         public string? Name { get; set; }
@@ -43,18 +41,6 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "owner")]
         public virtual User? Owner { get; set; }
         public int? OwnerId { get; set; }
-
-        [HasMany(PublicName = "organization-memberships")]
-        [JsonIgnore]
-        public List<Organizationmembership>? OrganizationMemberships { get; set; }
-
-        [JsonIgnore]
-        [HasMany(PublicName = "groups")]
-        public List<Group> Groups { get; set; }
-
-        [JsonIgnore]
-        [HasMany(PublicName = "projects")]
-        public List<Project> Projects { get; set; }
 
         public bool Archived { get; set; }
     }

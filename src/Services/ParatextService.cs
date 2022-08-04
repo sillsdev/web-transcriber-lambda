@@ -506,7 +506,7 @@ namespace SIL.Transcriber.Services
         private async Task<UserSecret> RefreshAccessTokenAsync(UserSecret userSecret)
         {
             _ = VerifyUserSecret(userSecret);
-            if (userSecret.ParatextTokens.RefreshToken == null || userSecret.ParatextTokens.RefreshToken == "")
+            if (userSecret.ParatextTokens.RefreshToken is null or "")
             {
                 throw new SecurityException("401 RefreshTokenNull");
             }

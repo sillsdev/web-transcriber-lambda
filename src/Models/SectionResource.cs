@@ -40,10 +40,6 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "org-workflow-step")]
         public Orgworkflowstep? OrgWorkflowStep { get; set; }
 
-        [JsonIgnore]
-        [HasMany(PublicName = "section-resource-users")]
-        public List<Sectionresourceuser>? SectionResourceUsers { get; set; }
-
         public bool Archived { get; set; }
     }
 }

@@ -44,9 +44,6 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "plantype")]
         public Plantype Plantype { get; set; } = null!;
 
-        [JsonIgnore]
-        [HasMany(PublicName = "sections")]
-        public List<Section>? Sections { get; set; }
         public bool Archived { get; set; }
     }
 }
