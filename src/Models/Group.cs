@@ -1,15 +1,12 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
     public partial class Group : BaseModel, IBelongsToOrganization, IArchive
     {
-        public Group() : base()
-        {
-            Name = "";
-        }
+        public Group() : base() => Name = "";
+
         [Attr(PublicName = "name")]
         public string Name { get; set; }
 
@@ -20,7 +17,7 @@ namespace SIL.Transcriber.Models
         public bool AllUsers { get; set; }
 
         [HasOne(PublicName = "owner")]
-        public virtual Organization Owner { get; set; }
+        public virtual Organization? Owner { get; set; }
         [Attr(PublicName = "owner-id")]
         public int OwnerId { get; set; }
         [Attr(PublicName = "permissions")]
@@ -45,7 +42,7 @@ namespace SIL.Transcriber.Models
         public int OrganizationId { get => OwnerId; set { } }
 
         [NotMapped]
-        public Organization Organization { get => Owner; set { } }
+        public Organization Organization { get => Owner ?? new Organization(); set { } }
 
         public bool Archived { get; set; }
     }

@@ -651,7 +651,7 @@ namespace SIL.Transcriber.Services
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
             string fileName = string.Format(
-                "Audio{0}_{1}_{2}{3}",
+                "Audio{0}_{1}_{2}",
                 CoerceValidFileName(project.Name + artifactType),
                 project.Id.ToString(),
                 CurrentUser()?.Id

@@ -38,12 +38,9 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("since/{since}")]
         public ActionResult<List<Statehistory>> GetSince([FromRoute] string since)
         {
-            if (DateTime.TryParse(since, out DateTime dateValue))
-            {
-                return Ok(myService.GetHistorySince(dateValue));
-            }
-            else
-                throw new JsonApiException(
+            return DateTime.TryParse(since, out DateTime dateValue)
+                ? (ActionResult<List<Statehistory>>)Ok(myService.GetHistorySince(dateValue))
+                : throw new JsonApiException(
                     new ErrorObject(System.Net.HttpStatusCode.BadRequest),
                     new Exception($"Invalid Date")
                 );

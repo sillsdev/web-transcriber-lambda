@@ -109,7 +109,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<string> GetNewFileNameAsync(Mediafile mf)
         {
-            if (await S3service.FileExistsAsync(mf.OriginalFile ?? "", DirectoryName(mf)))
+            if (mf.SourceMedia == null && await S3service.FileExistsAsync(mf.OriginalFile ?? "", DirectoryName(mf)))
             {
                 return Path.GetFileNameWithoutExtension(mf.OriginalFile)
                     + "__"
