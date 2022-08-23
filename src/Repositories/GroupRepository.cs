@@ -57,7 +57,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Project> projects = dbContext.Projects.Where(
                 p => p.Id.ToString() == projectid
             );
-            int orgId = projects.First().OrganizationId;
+            int orgId = projects.FirstOrDefault()?.OrganizationId ?? 0;
             
             return entities.Where(g => !g.Archived && g.OwnerId == orgId);
         }

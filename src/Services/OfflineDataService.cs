@@ -1905,6 +1905,7 @@ namespace SIL.Transcriber.Services
                                                     LastModifiedBy = c.LastModifiedBy,
                                                     DateCreated = c.DateCreated,
                                                     DateUpdated = DateTime.UtcNow,
+                                                    Visible = c.Visible,
                                                 }
                                             );
                                             //mediafileid will be updated when mediafiles are processed if 0;
