@@ -79,6 +79,7 @@ namespace SIL.Transcriber
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
+            services.AddScoped<IntellectualPropertyService>();
             services.AddScoped<InvitationService>();
             services.AddScoped<MediafileService>();
             services.AddScoped<IOfflineDataService, OfflineDataService>();
@@ -120,6 +121,7 @@ namespace SIL.Transcriber
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();
             services.AddScoped<IntegrationRepository>();
+            services.AddScoped<IntellectualPropertyRepository>();
             services.AddScoped<InvitationRepository>();
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationMembershipRepository>();

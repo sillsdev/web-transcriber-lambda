@@ -35,6 +35,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Group> Groups => Set<Group>();
         public DbSet<Groupmembership> Groupmemberships => Set<Groupmembership>();
         public DbSet<Integration> Integrations => Set<Integration>();
+        public DbSet<Intellectualproperty> IntellectualPropertys => Set<Intellectualproperty>();
         public DbSet<Invitation> Invitations => Set<Invitation>();
         public DbSet<Mediafile> Mediafiles => Set<Mediafile>();
         public DbSet<Organization> Organizations => Set<Organization>();
@@ -152,6 +153,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Integration>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Intellectualproperty>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -422,6 +428,7 @@ namespace SIL.Transcriber.Data
                 .Include(d => d.OrgWorkflowStep)
                 .Include(d => d.Group)
                 .Include(d => d.User);
+        public IQueryable<Intellectualproperty> IntellectualPropertyData => IntellectualPropertys.Include(x => x.Organization).Include(x => x.ReleaseMediafile);
         public IQueryable<Groupmembership> GroupmembershipsData =>
             Groupmemberships.Include(x => x.Group).Include(x => x.User).Include(x => x.Role);
         public IQueryable<Group> GroupsData => Groups.Include(x => x.Owner);

@@ -35,7 +35,7 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "project")]
         public Project? Project { get; set; }
 
-        public int orgWorkflowStepId { get; set; }
+        public int OrgWorkflowStepId { get; set; }
 
         [HasOne(PublicName = "org-workflow-step")]
         public Orgworkflowstep? OrgWorkflowStep { get; set; }

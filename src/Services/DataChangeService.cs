@@ -24,6 +24,7 @@ namespace SIL.Transcriber.Services
         private readonly DiscussionService DiscussionService;
         private readonly GroupMembershipService GMService;
         private readonly GroupService GroupService;
+        private readonly IntellectualPropertyService IntellectualPropertyService;
         private readonly InvitationService InvitationService;
         private readonly MediafileService MediafileService;
         private readonly OrganizationMembershipService OrgMemService;
@@ -61,6 +62,7 @@ namespace SIL.Transcriber.Services
             DiscussionService discussionService,
             GroupMembershipService gmService,
             GroupService groupService,
+            IntellectualPropertyService intellectualPropertyService,
             InvitationService invitationService,
             MediafileService mediafileService,
             OrganizationMembershipService omService,
@@ -99,6 +101,7 @@ namespace SIL.Transcriber.Services
             DiscussionService = discussionService;
             GMService = gmService;
             GroupService = groupService;
+            IntellectualPropertyService = intellectualPropertyService;
             InvitationService = invitationService;
             MediafileService = mediafileService;
             OrgMemService = omService;
@@ -266,7 +269,7 @@ namespace SIL.Transcriber.Services
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
-            const int LAST_ADD = 20;
+            const int LAST_ADD = 21;
             int startNext = start;
             if (CheckStart(dtBail, startNext) == 0)
             {
@@ -387,10 +390,16 @@ namespace SIL.Transcriber.Services
                     BuildList(SectionResourceUserService.GetDeletedSince(dbContext.Sectionresourceusers, currentUser, origin, dtSince), "sectionresourceuser", deleted, false);
                     startNext++;
                 }
-                if (CheckStart(dtBail, startNext) == LAST_ADD)
+                if (CheckStart(dtBail, startNext) == 20)
                 {
                     BuildList(WorkflowStepService.GetChanges(dbContext.Workflowsteps, currentUser, origin, dtSince, project), "workflowstep", changes);
                     BuildList(WorkflowStepService.GetDeletedSince(dbContext.Workflowsteps, currentUser, origin, dtSince), "workflowstep", deleted, false);
+                    startNext++;
+                }
+                if (CheckStart(dtBail, startNext) == LAST_ADD)
+                {
+                    BuildList(IntellectualPropertyService.GetChanges(dbContext.IntellectualPropertys, currentUser, origin, dtSince, project), "intellectualproperty", changes);
+                    BuildList(IntellectualPropertyService.GetDeletedSince(dbContext.IntellectualPropertys, currentUser, origin, dtSince), "intellectualproperty", deleted, false);
                     startNext++;
                 }
             }

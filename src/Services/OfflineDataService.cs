@@ -601,7 +601,11 @@ namespace SIL.Transcriber.Services
                     Path.GetExtension(m.S3File)
                 );
         }
-
+        private static string IPFullPath(Mediafile m)
+        {
+            //todo...what should go here?
+            return string.Format("ip/{0}-{1}", m.PerformedBy, Path.GetExtension(m.S3File));
+        }
         private List<Mediafile> AddBurritoMedia(
             ZipArchive zipArchive,
             Project project,
@@ -620,7 +624,13 @@ namespace SIL.Transcriber.Services
                 m.AudioUrl = ScriptureFullPath(project?.Language, passage, m);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
-            AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles, 'Z');
+            IEnumerable<Intellectualproperty>? ip = mediafiles.Join(dbContext.IntellectualPropertys, m=> m.PerformedBy, i => i.RightsHolder, (m, i) => i);
+            List<Mediafile>? ipMedia = ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
+            ipMedia.ForEach(m => {
+                m.AudioUrl = IPFullPath(m);
+                m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
+            });
+            AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles.Concat(ipMedia).ToList<Mediafile>(), 'Z');
             return mediafiles;
         }
 
@@ -743,6 +753,14 @@ namespace SIL.Transcriber.Services
             Stream ms = GetMemoryStream(start, fileName, ext);
             using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
             {
+                IQueryable<Organization> orgs = dbContext.Organizations.Where(
+                        o => o.Id == project.OrganizationId
+                    );
+                IQueryable<Intellectualproperty>? ip = dbContext.IntellectualPropertyData.Where(x => !x.Archived).Join(
+                        orgs,
+                        i => i.OrganizationId,
+                        o => o.Id,
+                        (i, o) => i);
                 if (start == 0)
                 {
                     Dictionary<string, string> fonts = new()
@@ -769,11 +787,7 @@ namespace SIL.Transcriber.Services
                         dbContext.Workflowsteps.ToList(),
                         'B'
                     );
-
                     //org
-                    IQueryable<Organization> orgs = dbContext.Organizations.Where(
-                        o => o.Id == project.OrganizationId
-                    );
                     List<Organization> orgList = orgs.ToList();
 
                     AddOrgLogos(zipArchive, orgList);
@@ -822,6 +836,12 @@ namespace SIL.Transcriber.Services
                     List<User> userList = users.ToList();
                     AddUserAvatars(zipArchive, userList);
 
+                    AddJsonEntry(
+                        zipArchive,
+                        "intellectualpropertys",
+                        ip.ToList(),
+                        'C'
+                    );
                     AddJsonEntry(
                         zipArchive,
                         "groups",
@@ -937,12 +957,14 @@ namespace SIL.Transcriber.Services
                     )
                         break;
                     //mediafiles
-                    IQueryable<Mediafile> mediafiles = plans
+                    IQueryable<Mediafile> xmediafiles = plans
                         .Join(dbContext.MediafilesData, p => p.Id, m => m.PlanId, (p, m) => m)
                         .Where(x => !x.Archived);
+                    IQueryable<Mediafile>? ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m);
+                    IQueryable<Mediafile>? myMedia = xmediafiles.Concat(ipmedia);
 
                     //only limit vernacular to those with passageids
-                    IQueryable<Mediafile> attachedmediafiles = mediafiles
+                    IQueryable<Mediafile> attachedmediafiles = myMedia
                         .Where(x => (x.PassageId != null || x.ArtifactTypeId != null) && 
                             x.ResourcePassageId == null && !x.Archived);
 
@@ -995,7 +1017,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             "mediafiles",
-                            mediafiles.OrderBy(m => m.Id).ToList(),
+                            myMedia.OrderBy(m => m.Id).ToList(),
                             'H'
                         )
                     )
@@ -1514,6 +1536,7 @@ namespace SIL.Transcriber.Services
             if (
                 existing.CommentText != importing.CommentText
                 || existing.MediafileId != importing.MediafileId
+                 || existing.Visible != importing.Visible
             )
             {
                 if (existing.DateUpdated > sourceDate)
@@ -1521,6 +1544,7 @@ namespace SIL.Transcriber.Services
                 existing.CommentText = importing.CommentText;
                 existing.MediafileId = importing.MediafileId;
                 existing.OfflineMediafileId = importing.OfflineMediafileId;
+                existing.Visible = importing.Visible;
                 existing.DateUpdated = DateTime.UtcNow;
                 existing.Archived = false;
                 _ = dbContext.Comments.Update(existing);
