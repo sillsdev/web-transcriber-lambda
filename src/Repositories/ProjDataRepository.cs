@@ -116,7 +116,9 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Mediafile> mediafiles = dbContext.MediafilesData
                     .Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(3, ToJson<Mediafile>(mediafiles), dtBail, ref iStartNext, ref data))
+                IEnumerable<Intellectualproperty>? ip = mediafiles.Join(dbContext.IntellectualPropertys, m=> m.PerformedBy, i => i.RightsHolder, (m, i) => i);
+                List<Mediafile>? ipMedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
+                if (!CheckAdd(3, ToJson<Mediafile>(mediafiles.ToList().Concat(ipMedia)), dtBail, ref iStartNext, ref data))
                     break;
 
                 //passagestatechanges
