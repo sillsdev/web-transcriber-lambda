@@ -1296,17 +1296,16 @@ namespace SIL.Transcriber.Services
             }
             _ = report.RemoveAll(s => s.Length == 0);
             _ = errors.RemoveAll(s => s.Length == 0);
-            if (errors.Count > 0)
-                return ErrorResponse(
+            return errors.Count > 0
+                ? ErrorResponse(
                     "{\"errors\": ["
                         + string.Join(",", errors)
                         + "], \"report\": ["
                         + string.Join(", ", report)
                         + "]}",
                     sFile
-                );
-
-            return new Fileresponse()
+                )
+                : new Fileresponse()
             {
                 Message = "[" + string.Join(",", report) + "]",
                 FileURL = sFile,
@@ -1521,6 +1520,7 @@ namespace SIL.Transcriber.Services
                 existing.MediafileId = importing.MediafileId;
                 existing.OfflineMediafileId = importing.OfflineMediafileId;
                 existing.LastModifiedBy = importing.LastModifiedBy;
+                existing.LastModifiedByUser = importing.LastModifiedByUser;
                 existing.DateUpdated = DateTime.UtcNow;
                 _ = dbContext.Discussions.Update(existing);
             }
@@ -1533,6 +1533,7 @@ namespace SIL.Transcriber.Services
             List<string> report
         )
         {
+            
             if (
                 existing.CommentText != importing.CommentText
                 || existing.MediafileId != importing.MediafileId
@@ -1547,6 +1548,7 @@ namespace SIL.Transcriber.Services
                 existing.Visible = importing.Visible;
                 existing.DateUpdated = DateTime.UtcNow;
                 existing.Archived = false;
+                existing.LastModifiedByUser = importing.LastModifiedByUser;
                 _ = dbContext.Comments.Update(existing);
             }
         }
@@ -1785,6 +1787,7 @@ namespace SIL.Transcriber.Services
                                         user.Timezone = u.Timezone;
                                         user.UILanguageBCP47 = u.UILanguageBCP47;
                                         user.LastModifiedBy = u.LastModifiedBy;
+                                        user.LastModifiedByUser = u.LastModifiedByUser;
                                         user.DateUpdated = DateTime.UtcNow;
                                         /* TODO: figure out if the avatar needs uploading */
                                         _ = dbContext.Users.Update(user);
@@ -1806,6 +1809,7 @@ namespace SIL.Transcriber.Services
                                         section.TranscriberId = s.Transcriber?.Id;
                                         section.State = s.State;
                                         section.LastModifiedBy = s.LastModifiedByUser?.Id;
+                                        section.LastModifiedByUser = s.LastModifiedByUser;
                                         section.DateUpdated = DateTime.UtcNow;
                                         _ = dbContext.Sections.Update(section);
                                     }
@@ -1835,6 +1839,7 @@ namespace SIL.Transcriber.Services
                                         passage.State = p.State; //backward compatibility
                                         passage.StepComplete = p.StepComplete;
                                         passage.LastModifiedBy = p.LastModifiedByUser?.Id;
+                                        passage.LastModifiedByUser = p.LastModifiedByUser;
                                         passage.DateUpdated = DateTime.UtcNow;
                                         _ = dbContext.Passages.Update(passage);
                                         Passagestatechange psc =
@@ -1885,6 +1890,7 @@ namespace SIL.Transcriber.Services
                                                     Subject = d.Subject,
                                                     UserId = d.User?.Id,
                                                     LastModifiedBy = d.LastModifiedBy,
+                                                    LastModifiedByUser = d.LastModifiedByUser,
                                                     DateCreated = d.DateCreated,
                                                     DateUpdated = DateTime.UtcNow,
                                                 }
@@ -1927,6 +1933,7 @@ namespace SIL.Transcriber.Services
                                                     CommentText = c.CommentText,
                                                     MediafileId = c.MediafileId,
                                                     LastModifiedBy = c.LastModifiedBy,
+                                                    LastModifiedByUser = c.LastModifiedByUser,
                                                     DateCreated = c.DateCreated,
                                                     DateUpdated = DateTime.UtcNow,
                                                     Visible = c.Visible,
@@ -2037,10 +2044,11 @@ namespace SIL.Transcriber.Services
                                                     SourceMediaOfflineId = m.SourceMediaOfflineId,
                                                     SourceSegments = m.SourceSegments,
                                                     LastModifiedBy = m.LastModifiedBy,
+                                                    LastModifiedByUser = m.LastModifiedByUser,
                                                     DateCreated = m.DateCreated,
                                                     DateUpdated = DateTime.UtcNow,
                                                 }
-                                            );
+                                            ) ;
                                         }
                                         else
                                             UpdateMediafile(mediafile, m, sourceDate, report);
@@ -2069,6 +2077,7 @@ namespace SIL.Transcriber.Services
                                             report.Add(GrpMemChangesReport(grpmem, gm));
                                         grpmem.FontSize = gm.FontSize;
                                         grpmem.LastModifiedBy = gm.LastModifiedBy;
+                                        grpmem.LastModifiedByUser = gm.LastModifiedByUser;
                                         grpmem.DateUpdated = DateTime.UtcNow;
                                         _ = dbContext.Groupmemberships.Update(grpmem);
                                     }
@@ -2106,6 +2115,7 @@ namespace SIL.Transcriber.Services
                                                 DateCreated = psc.DateCreated,
                                                 Comments = psc.Comments,
                                                 LastModifiedBy = psc.LastModifiedBy,
+                                                LastModifiedByUser = psc.LastModifiedByUser,
                                                 DateUpdated = DateTime.UtcNow,
                                             }
                                         );
