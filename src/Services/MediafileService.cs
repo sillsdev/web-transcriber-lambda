@@ -276,5 +276,10 @@ namespace SIL.Transcriber.Services
             resource.AudioUrl = GetAudioUrl(resource);
             return await base.CreateAsync(resource, cancellationToken);
         }
+        public List<Mediafile> GetIPMedia(int organizationId)
+        {
+            IEnumerable<Intellectualproperty>? ip = dbContext.IntellectualPropertys.Where(ip => ip.OrganizationId == organizationId).ToList();
+            return ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace SIL.Transcriber.Repositories
     {
         protected readonly SectionService SectionService;
         protected readonly SectionRepository SectionRepository;
+        protected readonly MediafileService MediaService;
         protected readonly IJsonApiOptions _options;
         protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
         protected readonly IMetaBuilder _metaBuilder;
@@ -31,6 +32,7 @@ namespace SIL.Transcriber.Repositories
             CurrentUserRepository currentUserRepository,
             SectionService sectionService,
             SectionRepository sectionRepository,
+            MediafileService mediaService,
             IMetaBuilder metaBuilder,
             IJsonApiOptions options
         )
@@ -47,6 +49,7 @@ namespace SIL.Transcriber.Repositories
         {
             SectionService = sectionService;
             SectionRepository = sectionRepository;
+            MediaService = mediaService;
             _options = options;
             _resourceDefinitionAccessor = resourceDefinitionAccessor;
             _metaBuilder = metaBuilder;
@@ -116,9 +119,9 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Mediafile> mediafiles = dbContext.MediafilesData
                     .Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m)
                     .Where(x => !x.Archived);
-                IEnumerable<Intellectualproperty>? ip = mediafiles.Join(dbContext.IntellectualPropertys, m=> m.PerformedBy, i => i.RightsHolder, (m, i) => i).ToList();
-                List<Mediafile>? ipMedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
-                if (!CheckAdd(3, ToJson<Mediafile>(mediafiles.ToList().Concat(ipMedia)), dtBail, ref iStartNext, ref data))
+                Project? proj = dbContext.Projects.Where(p => p.Id == projectid).FirstOrDefault();
+                List<Mediafile>? ipMedia = MediaService.GetIPMedia(proj?.OrganizationId??0);
+                if (!CheckAdd(3, ToJson(mediafiles.ToList().Concat(ipMedia).Distinct()), dtBail, ref iStartNext, ref data))
                     break;
 
                 //passagestatechanges

@@ -612,6 +612,9 @@ namespace SIL.Transcriber.Services
             List<Mediafile> mediafiles
         )
         {
+            IEnumerable<Intellectualproperty>? ip = mediafiles.Join(dbContext.IntellectualPropertys.Where(ip => ip.OrganizationId == project.OrganizationId), m=> m.PerformedBy, i => i.RightsHolder, (m, i) => i);
+            List<Mediafile>? ipMedia = ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
+
             mediafiles.ForEach(m => {
                 Passage? passage = dbContext.Passages
                     .Where(p => p.Id == m.PassageId)
@@ -624,8 +627,6 @@ namespace SIL.Transcriber.Services
                 m.AudioUrl = ScriptureFullPath(project?.Language, passage, m);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
-            IEnumerable<Intellectualproperty>? ip = mediafiles.Join(dbContext.IntellectualPropertys, m=> m.PerformedBy, i => i.RightsHolder, (m, i) => i);
-            List<Mediafile>? ipMedia = ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
             ipMedia.ForEach(m => {
                 m.AudioUrl = IPFullPath(m);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
@@ -961,7 +962,7 @@ namespace SIL.Transcriber.Services
                         .Join(dbContext.MediafilesData, p => p.Id, m => m.PlanId, (p, m) => m)
                         .Where(x => !x.Archived);
                     IQueryable<Mediafile>? ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m);
-                    IQueryable<Mediafile>? myMedia = xmediafiles.Concat(ipmedia);
+                    IQueryable<Mediafile>? myMedia = xmediafiles.Concat(ipmedia).Distinct();
 
                     //only limit vernacular to those with passageids
                     IQueryable<Mediafile> attachedmediafiles = myMedia
@@ -1578,6 +1579,7 @@ namespace SIL.Transcriber.Services
                 existing.Link = importing.Link != null ? importing.Link : false;
                 existing.Position = importing.Position;
                 existing.RecordedbyUserId = importing.RecordedbyUserId;
+                existing.PerformedBy = importing.PerformedBy;
                 existing.Segments = importing.Segments;
                 existing.SourceSegments = importing.SourceSegments;
                 existing.SourceMediaOfflineId = importing.SourceMediaOfflineId;
@@ -1586,6 +1588,7 @@ namespace SIL.Transcriber.Services
                 if (importing.Transcriptionstate != null) //from old desktop
                     existing.Transcriptionstate = importing.Transcriptionstate;
                 existing.LastModifiedBy = importing.LastModifiedBy;
+                existing.LastModifiedByUser = importing.LastModifiedByUser;
                 existing.DateUpdated = DateTime.UtcNow;
                 _ = dbContext.Mediafiles.Update(existing);
             }
