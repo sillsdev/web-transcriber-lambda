@@ -90,9 +90,9 @@ namespace SIL.Transcriber.Services
             CancellationToken cancellationToken
         )
         {
-            IQueryable<TResource> all = Repo.Get();
+            
             //orbit sometimes sends two in a row...see if we already know about this one
-            TResource? x = all.Where(t =>
+            TResource? x = resource.DateCreated == null ? null : Repo.Get().Where(t =>
                         t.DateCreated == resource.DateCreated
                         && t.LastModifiedBy == resource.LastModifiedBy
                 )

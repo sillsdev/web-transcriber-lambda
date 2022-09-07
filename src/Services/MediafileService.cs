@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Utility;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -22,7 +23,7 @@ namespace SIL.Transcriber.Services
         private PlanRepository PlanRepository { get; set; }
         private MediafileRepository MyRepository { get; set; }
         private readonly AppDbContext dbContext;
-
+        readonly private HttpContext? HttpContext;
         public MediafileService(
             IResourceRepositoryAccessor repositoryAccessor,
             IQueryLayerComposer queryLayerComposer,
@@ -35,6 +36,7 @@ namespace SIL.Transcriber.Services
             PlanRepository planRepository,
             IS3Service service,
             MediafileRepository myRepository,
+                        IHttpContextAccessor httpContextAccessor,
             AppDbContextResolver contextResolver
         )
             : base(
@@ -52,6 +54,7 @@ namespace SIL.Transcriber.Services
             S3service = service;
             PlanRepository = planRepository;
             MyRepository = myRepository;
+            HttpContext = httpContextAccessor.HttpContext;
             dbContext = (AppDbContext)contextResolver.GetContext();
         }
 
@@ -60,7 +63,11 @@ namespace SIL.Transcriber.Services
             IEnumerable<Mediafile> files = MyRepository.Get(); //bypass user check
             return files.SingleOrDefault(p => p.S3File == s3File && p.PlanId == plan);
         }
-
+        public IEnumerable<Mediafile>? WBTUpdate()
+        {
+            HttpContext?.SetFP("api");
+            return MyRepository.WBTUpdate();
+        }
         private string DirectoryName(Plan? plan)
         {
             if (plan == null)

@@ -1,6 +1,5 @@
 using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
@@ -118,7 +117,11 @@ namespace SIL.Transcriber.Controllers
             return Created("/api/mediafiles/" + entity?.Id.ToString(), entity);
         }
 
-
+        [HttpGet("wbt")]
+        public IActionResult WBTUpdateAsync()
+        {
+            return Ok(_service.WBTUpdate());
+        }
 
         [AllowAnonymous]
         [HttpPatch("{id}/fileinfo/{filesize}/{duration}")]

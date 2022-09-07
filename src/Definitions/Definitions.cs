@@ -57,7 +57,14 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-
+    public class IntegrationDefinition : BaseDefinition<Integration>
+    {
+        public IntegrationDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
     public class IntellectualPropertyDefinition : BaseDefinition<Intellectualproperty>
     {
         public IntellectualPropertyDefinition(

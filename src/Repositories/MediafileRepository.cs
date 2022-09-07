@@ -65,6 +65,19 @@ namespace SIL.Transcriber.Repositories
             return entities.Where(e => !e.Archived).Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
         }
 
+        public IEnumerable<Mediafile>? WBTUpdate()
+        {
+            Artifacttype? newAT = dbContext.Artifacttypes.Where(at => at.Typename == "wholebacktranslation").FirstOrDefault();
+            if (newAT == null) return null;
+            IEnumerable<Mediafile>? entities = FromCurrentUser().Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), m => m.ArtifactTypeId, a => a.Id, (m, a) => m).Where(m => m.SourceSegments == null).ToList();
+            foreach (Mediafile m in entities)
+            {
+                m.ArtifactTypeId = newAT.Id;
+                dbContext.Update(m);
+            }
+            dbContext.SaveChanges();
+            return entities;
+        }
         private IQueryable<Mediafile> UsersMediafiles(
             IQueryable<Mediafile> entities,
             IQueryable<Plan>? plans = null

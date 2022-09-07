@@ -13,7 +13,7 @@ namespace SIL.Transcriber.Services
     public class AuthService : IAuthService
     {
         private readonly HttpClient _httpClient;
-        private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _lock = new(1, 1);
         private string? _accessToken;
         private ManagementApiClient? managementApiClient;
 
@@ -45,7 +45,8 @@ namespace SIL.Transcriber.Services
 
         public Task ResendVerification(string authId)
         {
-            VerifyEmailJobRequest content = new VerifyEmailJobRequest { UserId = authId };
+            VerifyEmailJobRequest content = new()
+            { UserId = authId };
             return ManagementApiClient.Jobs.SendVerificationEmailAsync(content);
         }
 
