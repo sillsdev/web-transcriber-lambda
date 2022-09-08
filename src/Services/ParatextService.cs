@@ -719,7 +719,10 @@ namespace SIL.Transcriber.Services
         {
             return MediafileService.ReadyToSync(planId, artifactTypeId).Count();
         }
-
+        public int PassageToSyncCount(int passageid, int artifactTypeId)
+        {
+            return MediafileService.PassageReadyToSync(passageid, artifactTypeId).Count();
+        }
         public async Task<string?> PassageTextAsync(int passageId, int typeId)
         {
             IEnumerable<Passage> passages = PassageService.Get(passageId).ToList();
@@ -814,45 +817,17 @@ namespace SIL.Transcriber.Services
             string pattern = @"\([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?\)";
             return Regex.Replace(transcription, pattern, "");
         }
-
-        public async Task<List<ParatextChapter>> SyncPlanAsync(
-            UserSecret userSecret,
-            int planId,
-            int artifactTypeId
-        )
+        private async Task<List<ParatextChapter>> SyncPassages(UserSecret userSecret, 
+            List<Passage> passages, IEnumerable<Mediafile> mediafiles, int artifactTypeId)
         {
             User? currentUser = CurrentUserRepository.GetCurrentUser();
-            Plan? plan = dbContext.Plans.Find(planId);
             Artifacttype? type = dbContext.Artifacttypes.Find(artifactTypeId);
+            Plan? plan = mediafiles.First()?.Passage?.Section?.Plan;
             string paratextId = ParatextHelpers.ParatextProject(
                 plan?.ProjectId,
                 type?.Typename ?? "",
                 ProjectIntegrationRepository
             );
-            IEnumerable<Mediafile> mediafiles = MediafileService.ReadyToSync(
-                planId,
-                artifactTypeId
-            );
-            List<Passage> passages = new();
-            foreach (Mediafile m in mediafiles)
-            {
-                if (passages.FindIndex(p => p.Id == m.PassageId) < 0 && m.Passage != null)
-                    passages.Add(m.Passage);
-            }
-            ;
-
-            if (artifactTypeId == 0)
-            {
-                IEnumerable<Passage> backwardCompatibilityPassages = PassageService.ReadyToSync(
-                    planId
-                );
-                foreach (Passage bc in backwardCompatibilityPassages)
-                {
-                    if (passages.FindIndex(p => p.Id == bc.Id) < 0)
-                        passages.Add(bc);
-                }
-                ;
-            }
             string err = VerifyReferences(userSecret, passages, paratextId);
             if (err.Length > 0)
                 throw new Exception(err);
@@ -880,7 +855,7 @@ namespace SIL.Transcriber.Services
                     Paratextsync history =
                         new(
                             currentUser?.Id ?? 0,
-                            planId,
+                            plan.Id,
                             paratextId,
                             bookchapter.ToString(),
                             chapter.OriginalUSX?.ToString() ?? ""
@@ -1018,7 +993,7 @@ namespace SIL.Transcriber.Services
                         Paratextsync? history =
                             new(
                                 currentUser?.Id ?? 0,
-                                planId,
+                                plan.Id,
                                 paratextId,
                                 c.Book + c.Chapter,
                                 c.NewUSX?.ToString() ?? "",
@@ -1042,6 +1017,56 @@ namespace SIL.Transcriber.Services
                 transaction.Commit();
             }
             return chapterList;
+
+        }
+        public async Task<List<ParatextChapter>> SyncPlanAsync(
+            UserSecret userSecret,
+            int planId,
+            int artifactTypeId
+        )
+        {
+            IEnumerable<Mediafile> mediafiles = MediafileService.ReadyToSync(
+                planId,
+                artifactTypeId
+            );
+            List<Passage> passages = new();
+            foreach (Mediafile m in mediafiles)
+            {
+                if (passages.FindIndex(p => p.Id == m.PassageId) < 0 && m.Passage != null)
+                    passages.Add(m.Passage);
+            }
+            if (artifactTypeId == 0)
+            {
+                IEnumerable<Passage> backwardCompatibilityPassages = PassageService.ReadyToSync(
+                    planId
+                );
+                foreach (Passage bc in backwardCompatibilityPassages)
+                {
+                    if (passages.FindIndex(p => p.Id == bc.Id) < 0)
+                        passages.Add(bc);
+                }
+            }
+            return await SyncPassages(userSecret, passages, mediafiles, artifactTypeId);
+        }
+        public async Task<List<ParatextChapter>> SyncPassageAsync(
+            UserSecret userSecret,
+            int passageId,
+            int artifactTypeId
+        )
+        {
+            IEnumerable<Mediafile> mediafiles = MediafileService.PassageReadyToSync(
+                passageId,
+                artifactTypeId
+            );
+            if (!mediafiles.Any()) return new List<ParatextChapter>();
+
+#pragma warning disable CS8604 // Possible null reference argument.
+            List<Passage> passages = new()
+            {
+                mediafiles.First().Passage
+            };
+            return await SyncPassages(userSecret, passages, mediafiles, artifactTypeId);
+#pragma warning restore CS8604 // Possible null reference argument.
         }
 
         public async Task<List<ParatextChapter>> SyncProjectAsync(

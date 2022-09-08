@@ -106,6 +106,41 @@ namespace SIL.Transcriber.Repositories
                 .OrderBy(m => m.VersionNumber)
                 .LastOrDefault();
         }
+        public IEnumerable<Mediafile> PassageReadyToSync(int PassageId, int artifactTypeId = 0)
+        {
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            IEnumerable<Mediafile> media =
+                artifactTypeId == 0 ?
+                    dbContext.Mediafiles
+                    .Where(m => m.PassageId == PassageId
+                             && m.ArtifactTypeId == null)
+                    .Include(m => m.Passage)
+                    .ThenInclude(p => p.Section)
+                    .ThenInclude(s => s.Plan)
+                    .OrderBy(m => m.VersionNumber)
+                :
+                    dbContext.Mediafiles
+                    .Where(m =>
+                            m.PassageId == PassageId
+                            && m.ArtifactTypeId == artifactTypeId)
+                    .Include(m => m.Passage)
+                    .ThenInclude(p => p.Section)
+                    .ThenInclude(s => s.Plan)
+                    .ToList()
+                    .Where(m => m.ReadyToSync)
+                    .OrderBy(m => m.VersionNumber);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+
+            if (artifactTypeId == 0)
+            {
+                List<Mediafile> ret = new ();
+                if (media.Any() && media.Last().ReadyToSync)
+                    ret.Add(media.Last());
+                return ret;
+            }
+            return media;
+        }
+
 
         public IEnumerable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId = 0)
         {

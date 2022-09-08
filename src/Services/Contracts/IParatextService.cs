@@ -21,8 +21,10 @@ namespace SIL.Transcriber.Services
         Task<List<ParatextChapter>> GetSectionChaptersAsync(UserSecret userSecret, int sectionId, int artifactTypeId);
         Task<int> ProjectPassagesToSyncCountAsync(int projectId, int artifactTypeId);
         int PlanPassagesToSyncCount(int planId, int artifactTypeId);
+        int PassageToSyncCount(int passageid, int artifactTypeId);
         Task<List<ParatextChapter>> SyncPlanAsync(UserSecret userSecret, int planId, int artifactTypeId);
         Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId, int artifactTypeId);
+        Task<List<ParatextChapter>> SyncPassageAsync(UserSecret userSecret, int passageId, int artifactTypeId);
         Task<string?> PassageTextAsync(int passageId, int type);
     }
 }

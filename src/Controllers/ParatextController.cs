@@ -214,6 +214,13 @@ namespace SIL.Transcriber.Controllers
             string text = await _paratextService.PassageTextAsync(passageid, type) ?? "";
             return Ok(text);
         }
+        [HttpGet("passage/{passageid}/{type}/count")]
+        public ActionResult<int> PassageToSyncCount([FromRoute] int passageid,
+                                                                [FromRoute] int type)
+        {
+            int passages = _paratextService.PassageToSyncCount(passageid, type);
+            return Ok(passages);
+        }
 
         [HttpPost("plan/{planid}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostPlanAsync([FromRoute] int planId)
@@ -302,6 +309,26 @@ namespace SIL.Transcriber.Controllers
             _ = await _paratextService.SyncProjectAsync(
                 userSecret,
                 projectId,
+                type
+            );
+            return Ok();
+        }
+        [HttpPost("passage/{passageid}/{type}")]
+        public async Task<ActionResult<List<ParatextChapter>>> PostPassageAsync([FromRoute] int passageId,
+                                                                                [FromRoute] int type)
+        {
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch (Exception e)
+            {
+                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
+            }
+            List<ParatextChapter> chapters = await _paratextService.SyncPassageAsync(
+                userSecret,
+                passageId,
                 type
             );
             return Ok();

@@ -133,6 +133,10 @@ namespace SIL.Transcriber.Services
         {
             return MyRepository.ReadyToSync(PlanId, artifactTypeId);
         }
+        public IEnumerable<Mediafile> PassageReadyToSync(int PassageId, int artifactTypeId)
+        {
+            return MyRepository.PassageReadyToSync(PassageId, artifactTypeId);
+        }
 
         //I don't think we use this and I also don't think this will work now because edited fields
         //are ignored unless set in the definition OnWritingAsync
