@@ -350,7 +350,7 @@ namespace SIL.Transcriber.Data
                     trackDate.DateUpdated = trackDate.DateUpdated?.SetKindUtc();
                 }
             }
-            return await base.SaveChangesAsync(cancellationToken);
+            return await base.SaveChangesAsync(true, cancellationToken);
         }
 
         private void UpdateSoftDeleteStatuses()

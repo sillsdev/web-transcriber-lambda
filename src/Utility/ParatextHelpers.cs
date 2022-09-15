@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using TranscriberAPI.Utility.Extensions;
@@ -14,7 +15,7 @@ namespace SIL.Transcriber.Utility
             if (projectId == null)
                 return "";
             string? paratextSettings = piRepo.IntegrationSettings(projectId??0, "paratext"+ artifactType);
-            if (paratextSettings == null || paratextSettings == "")
+            if (paratextSettings is null or "")
             {
                 throw new Exception("No Paratext Integration Settings for this project " + projectId.ToString());
             }
@@ -60,7 +61,7 @@ namespace SIL.Transcriber.Utility
             string[] lines = transcription.Split('\n');
             if (lines.Length == 1 && !lines [0].EndsWith('\n'))
                 lines [0] += '\n';
-            XText newverse = new XText(lines[0]);
+            XText newverse = new (lines[0]);
             value.AddAfterSelf(newverse);
             XNode ?last = value.Parent.IsPara() ? value.Parent : value.NextNode;
 
@@ -133,6 +134,14 @@ namespace SIL.Transcriber.Utility
                     }
                     _ = verse.RemoveVerse();  //remove the verse and its text
                     return newVerse;
+                }
+                else if (verse.NextNode != null)
+                {
+                    var next = verse.NextNode;
+                    while (next?.IsText() ?? false)
+                        next = next.NextNode;
+                    if (next?.IsVerse()??false)
+                        MoveToPara((XElement)next);
                 }
                 return verse.Parent;
             }
@@ -265,9 +274,9 @@ namespace SIL.Transcriber.Utility
         private static IEnumerable<Passage> ParseTranscription(Passage currentPassage, string transcription)
         {
             string pattern = @"(\\v\s*[1-9+]-*[1-9+]*)";
-            List<Passage> ret = new List<Passage>();
+            List<Passage> ret = new ();
             // Create a Regex  
-            Regex rg = new Regex(pattern);
+            Regex rg = new (pattern);
 
             // Get all matches  
             MatchCollection internalverses = rg.Matches(transcription);
@@ -281,10 +290,10 @@ namespace SIL.Transcriber.Utility
             {
                 Match match = internalverses[ix];
                 int start = match.Index + match.Value.Length;
-                string t =  ix < internalverses.Count-1 ? transcription.Substring(start, internalverses[ix+1].Index - start) : transcription.Substring(start);
+                string t =  ix < internalverses.Count-1 ? transcription[start..internalverses[ix+1].Index ] : transcription[start..];
                 if (t.EndsWith('\n'))
                     t = t.Remove(t.Length - 1);
-                Passage p = new Passage
+                Passage p = new ()
                 {
                     Book = currentPassage.Book,
                     Reference = currentPassage.StartChapter.ToString() + ":" + match.Value.Replace("\\v", ""),
@@ -313,6 +322,7 @@ namespace SIL.Transcriber.Utility
         }
         public static XElement? GenerateParatextData(XElement? chapterContent, Passage currentPassage, string transcription, bool addNumbers)
         {
+            Debug.WriteLine(transcription);
             IEnumerable<Passage> parsedPassages = ParseTranscription(currentPassage, transcription);
             bool first = true;
             if (parsedPassages.Count() > 1)
@@ -339,7 +349,7 @@ namespace SIL.Transcriber.Utility
 
                 if (thisVerse != null)
                 {
-                    ReplaceText(thisVerse, (p.LastComment ?? ""));
+                    ReplaceText(MoveToPara(thisVerse)??thisVerse, (p.LastComment ?? ""));
                 }
                 else
                 {

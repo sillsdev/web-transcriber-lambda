@@ -1069,7 +1069,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             "orgworkflowsteps",
-                            dbContext.Orgworkflowsteps
+                            dbContext.OrgworkflowstepsData
                                 .Where(
                                     a => (a.OrganizationId == project.OrganizationId) && !a.Archived
                                 )
@@ -1465,6 +1465,22 @@ namespace SIL.Transcriber.Services
                 }
             }
             dbContext.Mediafiles.UpdateRange(mediafiles);
+            List<Intellectualproperty> ips = dbContext.IntellectualPropertys.Where(
+                c => c.OfflineMediafileId != null
+            ).ToList();
+            foreach (Intellectualproperty c in ips)
+            {
+                Mediafile? mediafile = dbContext.Mediafiles
+                    .Where(m => m.OfflineId == c.OfflineMediafileId)
+                    .FirstOrDefault();
+                if (mediafile != null)
+                {
+                    c.ReleaseMediafileId = mediafile.Id;
+                    c.LastModifiedOrigin = "electron";
+                    c.DateUpdated = DateTime.UtcNow;
+                }
+            }
+            dbContext.IntellectualPropertys.UpdateRange(ips);
             _ = dbContext.SaveChanges();
         }
 
@@ -2126,6 +2142,44 @@ namespace SIL.Transcriber.Services
                                     ;
                                 }
                                 ;
+                                break;
+                            case "intellectualpropertys":
+                                foreach (ResourceObject ro in lst)
+                                {
+                                    Intellectualproperty ip = ResourceObjectToResource(ro, new Intellectualproperty());
+                                    if (ip.Id > 0)
+                                    {
+                                        Intellectualproperty? existing = dbContext.IntellectualPropertys.Find(ip.Id);
+                                        if (existing != null)
+                                            ; //do nothing no updateIP currently...
+                                    }
+                                    else
+                                    {
+                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                        Intellectualproperty? existing = dbContext.IntellectualPropertys
+                                            .Where(x => x.OfflineId == ip.OfflineId)
+                                            .FirstOrDefault();
+                                        if (existing == null)
+                                        {
+                                            _ = dbContext.IntellectualPropertys.Add(
+                                                new Intellectualproperty
+                                                {
+                                                    RightsHolder = ip.RightsHolder,
+                                                    Notes = ip.Notes,
+                                                    OfflineMediafileId = ip.OfflineMediafileId,
+                                                    OrganizationId = ip.Organization?.Id ??0,
+                                                    OfflineId = ip.OfflineId,
+                                                    ReleaseMediafileId = ip.ReleaseMediafile?.Id,
+                                                    LastModifiedBy = ip.LastModifiedBy,
+                                                    LastModifiedByUser = ip.LastModifiedByUser,
+                                                    DateCreated = ip.DateCreated,
+                                                    DateUpdated = DateTime.UtcNow,
+                                                }
+                                            );
+                                        }
+                                   
+                                    }
+                                }
                                 break;
                         }
                     }

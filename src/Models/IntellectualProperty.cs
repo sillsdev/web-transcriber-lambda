@@ -19,7 +19,7 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "notes")]
         public string? Notes { get; set; }
-        public int ReleaseMediafileId { get; set; }
+        public int? ReleaseMediafileId { get; set; }
         [HasOne(PublicName = "release-mediafile")]
         public Mediafile? ReleaseMediafile { get; set; }
 

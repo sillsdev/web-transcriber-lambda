@@ -855,7 +855,7 @@ namespace SIL.Transcriber.Services
                     Paratextsync history =
                         new(
                             currentUser?.Id ?? 0,
-                            plan.Id,
+                            plan?.Id??0,
                             paratextId,
                             bookchapter.ToString(),
                             chapter.OriginalUSX?.ToString() ?? ""

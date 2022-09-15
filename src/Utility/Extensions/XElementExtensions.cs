@@ -8,9 +8,7 @@ namespace TranscriberAPI.Utility.Extensions
         public static string? Verses(this XElement value)
         {
             Debug.Assert(IsVerse(value));
-            if (!IsVerse(value))
-                return null;
-            return value.Attribute("number")?.Value;
+            return !IsVerse(value) ? null : (value.Attribute("number")?.Value);
         }
         public static string SortableVerses(this XElement value)
         {
