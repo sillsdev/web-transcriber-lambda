@@ -234,13 +234,26 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-            /* get all the sections that are ready to sync */
-            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(
+            try
+            {
+                /* get all the sections that are ready to sync */
+                List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(
                 userSecret,
                 planId,
                 0
             );
-            return Ok(chapters);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult(new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "SyncPlanAsync error",
+                    Detail = ex.Message,
+                    Instance = HttpContext.Request.Path
+                });
+            }
         }
 
         [HttpPost("plan/{planid}/{type}")]
@@ -258,13 +271,25 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-            /* get all the sections that are ready to sync */
-            List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(
+            try
+            {
+                /* get all the sections that are ready to sync */
+                List<ParatextChapter> chapters = await _paratextService.SyncPlanAsync(
                 userSecret,
                 planId,
-                type
-            );
-            return Ok(chapters);
+                type);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult(new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "SyncPlanAsync error",
+                    Detail = ex.Message,
+                    Instance = HttpContext.Request.Path
+                });
+            }
         }
 
         [HttpPost("project/{projectid}")]
@@ -281,13 +306,25 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-
-            _ = await _paratextService.SyncProjectAsync(
-                userSecret,
-                projectId,
-                0
-            );
-            return Ok();
+            try
+            {
+                _ = await _paratextService.SyncProjectAsync(
+                    userSecret,
+                    projectId,
+                    0
+                );
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult(new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "SyncProjectAsync error",
+                    Detail = ex.Message,
+                    Instance = HttpContext.Request.Path
+                });
+            }
         }
 
         [HttpPost("project/{projectid}/{type}")]
@@ -305,13 +342,25 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-
-            _ = await _paratextService.SyncProjectAsync(
-                userSecret,
-                projectId,
-                type
-            );
-            return Ok();
+            try
+            {
+                _ = await _paratextService.SyncProjectAsync(
+                    userSecret,
+                    projectId,
+                    type
+                );
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult(new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "SyncProjectAsync error",
+                    Detail = ex.Message,
+                    Instance = HttpContext.Request.Path
+                });
+            }
         }
         [HttpPost("passage/{passageid}/{type}")]
         public async Task<ActionResult<List<ParatextChapter>>> PostPassageAsync([FromRoute] int passageId,
@@ -326,12 +375,25 @@ namespace SIL.Transcriber.Controllers
             {
                 return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
             }
-            List<ParatextChapter> chapters = await _paratextService.SyncPassageAsync(
+            try
+            {
+
+                List<ParatextChapter> chapters = await _paratextService.SyncPassageAsync(
                 userSecret,
                 passageId,
-                type
-            );
-            return Ok();
+                type);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult(new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "SyncPassageAsync error",
+                    Detail = ex.Message,
+                    Instance = HttpContext.Request.Path
+                });
+            }
         }
     }
 }
