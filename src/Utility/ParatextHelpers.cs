@@ -106,7 +106,7 @@ namespace SIL.Transcriber.Utility
             if (verse.IsPara())
                 return verse;
             string text = verse.VerseText();
-            if (verse.Parent.IsPara())
+            if (verse.Parent?.IsPara()??false)
             {
                 if (verse.PreviousNode != null)
                 {
@@ -349,7 +349,10 @@ namespace SIL.Transcriber.Utility
 
                 if (thisVerse != null)
                 {
-                    ReplaceText(MoveToPara(thisVerse)??thisVerse, (p.LastComment ?? ""));
+                    thisVerse = MoveToPara(thisVerse);
+#pragma warning disable CS8604 // Possible null reference argument.
+                    ReplaceText(thisVerse, (p.LastComment ?? ""));
+#pragma warning restore CS8604 // Possible null reference argument.
                 }
                 else
                 {
