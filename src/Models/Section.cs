@@ -1,55 +1,69 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using Newtonsoft.Json.Linq;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
+    [Table("sections")]
     public class Section : BaseModel, IArchive
-    { 
-        public Section() : base ()
-        { }
-        public Section(JToken item, int planId) : base()
+    {
+        public Section() : base()
         {
-            UpdateFrom(item);
-            PlanId = planId;
+            Name = "";
         }
+
         public Section UpdateFrom(JToken item)
         {
-            Name = item["title"] != null ? (string)item["title"] : "";
-            Sequencenum = int.TryParse((string)item["sequencenum"], out int tryint) ? tryint : 0;
+            Name = item ["title"]?.ToString() ?? "";
+            Sequencenum = int.TryParse(item ["sequencenum"]?.ToString() ?? "", out int tryint)
+                ? tryint
+                : 0;
             return this;
         }
-        [Attr("sequencenum")]
-        public int Sequencenum { get; set; }
-        [Attr("name")]
-        public string Name { get; set; }
-        [Attr("state")]
-        public string State { get; set; }
 
-        [Attr("plan-id")]
+        public Section UpdateFrom(JToken item, int planId)
+        {
+            _ = UpdateFrom(item);
+            PlanId = planId;
+            return this;
+        }
+
+        [Attr(PublicName = "sequencenum")]
+        public int Sequencenum { get; set; }
+
+        [Attr(PublicName = "name")]
+        public string Name { get; set; }
+
+        [Attr(PublicName = "state")]
+        public string? State { get; set; }
+
+        [Attr(PublicName = "plan-id")]
         public int PlanId { get; set; }
 
-        [HasOne("plan", Link.None)]
-        public virtual Plan Plan { get; set; }
+        [EagerLoad]
+        [HasOne(PublicName = "plan")]
+        public virtual Plan? Plan { get; set; }
 
-        [Attr("transcriber-id")]
+        [Attr(PublicName = "transcriber-id")]
         public int? TranscriberId { get; set; }
 
-        [HasOne("transcriber", Link.None)]
-        public virtual User Transcriber { get; set; }
+        [EagerLoad]
+        [HasOne(PublicName = "transcriber")]
+        public virtual User? Transcriber { get; set; }
 
-        [Attr("editor-id")]
+        [Attr(PublicName = "editor-id")]
         public int? EditorId { get; set; }
 
-        [HasOne("editor", Link.None)]
-        public virtual User Editor { get; set; }
+        [EagerLoad]
+        [HasOne(PublicName = "editor")]
+        public virtual User? Editor { get; set; }
 
-        [HasMany("passages", Link.None)]
-        public List<Passage> Passages { get; set; }
         public bool Archived { get; set; }
 
-        public string SectionHeader(bool addNumbers = true) { return (addNumbers ? Sequencenum.ToString() + " - " : "") + Name; }
-
+        public string SectionHeader(bool addNumbers = true)
+        {
+            return (addNumbers ? Sequencenum.ToString() + " - " : "") + Name;
+        }
     }
 }

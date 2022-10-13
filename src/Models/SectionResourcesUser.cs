@@ -1,19 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class SectionResourceUser : BaseModel, IArchive
+    public partial class Sectionresourceuser : BaseModel, IArchive
     {
 
-        [HasOne("sectionresource", Link.None)]
-        public virtual SectionResource SectionResource { get; set; }
+        [HasOne(PublicName = "sectionresource")]
+        public virtual Sectionresource? SectionResource { get; set; }
 
         //[Attr("section-resource-id")]
         public int SectionResourceId { get; set; }
 
-        [HasOne("user", Link.None)]
-        public virtual User User { get; set; }
+        [HasOne(PublicName = "user")]
+        public virtual User? User { get; set; }
 
         //[Attr("user-id")]
         public int UserId { get; set; }

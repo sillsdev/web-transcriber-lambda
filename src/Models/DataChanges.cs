@@ -1,23 +1,27 @@
-﻿using System;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class DataChanges : BaseModel
+    public partial class Datachanges : BaseModel
     {
+        public Datachanges() : base()
+        {
+            Changes = new OrbitId [0];
+            Deleted = new OrbitId [0];
+        }
         [NotMapped]
-        [Attr("startnext")]
+        [Attr(PublicName = "startnext")]
         public int Startnext { get; set; }
         [NotMapped]
-        [Attr("querydate")] 
+        [Attr(PublicName = "querydate")]
         public DateTime Querydate { get; set; }
         [NotMapped]
-        [Attr("changes")]  
-        public OrbitId[] Changes { get; set; }
+        [Attr(PublicName = "changes")]
+        public OrbitId [] Changes { get; set; }
         [NotMapped]
-        [Attr("deleted")]  
-        public OrbitId[] Deleted { get; set; }
+        [Attr(PublicName = "deleted")]
+        public OrbitId [] Deleted { get; set; }
     }
 }
 

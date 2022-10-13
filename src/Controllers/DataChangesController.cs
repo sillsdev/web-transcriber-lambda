@@ -1,4 +1,4 @@
-using System;
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -10,38 +10,54 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
+    //[HttpReadOnly]
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class DatachangesController : JsonApiController<DataChanges, int>
+    public class DatachangesController : JsonApiController<Datachanges, int>
     {
-        DataChangeService service;
+        private readonly DataChangeService service;
 
         public DatachangesController(
-            IJsonApiContext jsonApiContext,
-            IResourceService<DataChanges> resourceService)
-         : base(jsonApiContext, resourceService)
+            ILoggerFactory loggerFactory,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Datachanges, int> resourceService
+        ) : base(
+                options,
+                resourceGraph,
+                loggerFactory,
+                resourceService
+            )
         {
             service = (DataChangeService)resourceService;
         }
+
         [HttpGet("since/{since}")]
-        public ActionResult GetDataChanges([FromRoute] string since, string origin)
+        public ActionResult GetDatachanges([FromRoute] string since, string origin)
         {
-            DateTime dtSince;
-            if (!DateTime.TryParse(since, out dtSince))
+            if (!DateTime.TryParse(since, out DateTime dtSince))
                 return new UnprocessableEntityResult();
             dtSince = dtSince.ToUniversalTime();
             return Ok(service.GetUserChanges(origin, dtSince));
         }
 
         [HttpGet("projects/{origin}")]
-        public IActionResult GetProjectDataChanges([FromRoute] string origin, string projList)
+        public IActionResult GetProjectDatachanges([FromRoute] string origin, string projList)
         {
-            ProjDate[] x = JsonConvert.DeserializeObject<ProjDate[]>(projList);
-            return Ok(service.GetProjectChanges(origin, x));
+            ProjDate[]? x = JsonConvert.DeserializeObject<ProjDate[]>(projList);
+            if (x != null)
+                return Ok(service.GetProjectChanges(origin, x));
+            return BadRequest();
         }
+
         [HttpGet("v{version}/{start}/since/{since}")]
-        public ActionResult GetDataChangesVersion([FromRoute] string version,int start, string since, string origin)
+        public ActionResult GetDatachangesVersion(
+            [FromRoute] string version,
+            int start,
+            string since,
+            string origin
+        )
         {
             if (!DateTime.TryParse(since, out DateTime dtSince))
                 return new UnprocessableEntityResult();
@@ -50,10 +66,15 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpGet("v{version}/{start}/project/{origin}")]
-        public IActionResult GetProjectDataChangesVersion([FromRoute] string version,int start,string origin, string projList)
+        public IActionResult GetProjectDatachangesVersion(
+            [FromRoute] string version,
+            int start,
+            string origin,
+            string projList
+        )
         {
-            ProjDate x = JsonConvert.DeserializeObject<ProjDate>(projList);
-            ProjDate[] pd = { x };
+            ProjDate? x = JsonConvert.DeserializeObject<ProjDate>(projList);
+            ProjDate?[] pd = { x };
             return Ok(service.GetProjectChanges(origin, pd, version, start));
         }
     }

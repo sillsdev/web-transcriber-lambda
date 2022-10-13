@@ -1,20 +1,27 @@
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using Microsoft.Extensions.Logging;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class ProjecttypesController : BaseController<ProjectType>
+    public class ProjecttypesController : BaseController<Projecttype>
     {
-         public ProjecttypesController(
+        public ProjecttypesController(
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            IResourceService<ProjectType> resourceService,
+            IJsonApiOptions options,
+            IResourceGraph resourceGraph,
+            IResourceService<Projecttype, int> resourceService,
             ICurrentUserContext currentUserContext,
-            OrganizationService organizationService,
-            UserService userService)
-          : base(loggerFactory, jsonApiContext, resourceService, currentUserContext, organizationService, userService)
+            UserService userService
+        ) : base(
+                loggerFactory,
+                options,
+                resourceGraph,
+                resourceService,
+                currentUserContext,
+                userService
+            )
         { }
     }
 }

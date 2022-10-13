@@ -1,70 +1,87 @@
-using System.Collections.Generic;
-using System.Linq;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
     public class OrganizationRepository : BaseRepository<Organization>
     {
-        private ProjectRepository ProjectRepository;
+        private readonly ProjectRepository ProjectRepository;
+
         public OrganizationRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            ProjectRepository projectRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            ProjectRepository projectRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
-            ProjectRepository = projectRepository;
+            ProjectRepository =
+                projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         }
+
         public IQueryable<Organization> UsersOrganizations(IQueryable<Organization> entities)
         {
+            if (CurrentUser == null)
+                return entities.Where(e => e.Id == -1);
+
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                return entities.Join(dbContext.Organizationmemberships.Where(om => om.UserId == CurrentUser.Id && !om.Archived), o => o.Id, om => om.OrganizationId, (o, om) => o).GroupBy(o => o.Id).Select(g => g.First());
+                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
+                return entities.Where(o => !o.Archived && orgIds.Contains(o.Id));
             }
-            return entities;
+            return entities.Where(e => !e.Archived);
         }
-        public IQueryable<Organization>ProjectOrganizations(IQueryable<Organization> entities, string projectid)
+
+        public IQueryable<Organization> ProjectOrganizations(
+            IQueryable<Organization> entities,
+            string projectid
+        )
         {
-            IQueryable<Project> projects = ProjectRepository.ProjectProjects(dbContext.Projects, projectid);
-            return entities.Join(projects, o => o.Id, p => p.OrganizationId, (o, p) => o); //.GroupBy(o => o.Id).Select(g => g.First());
+            IQueryable<Project> projects = ProjectRepository.ProjectProjects(
+                dbContext.Projects,
+                projectid
+            );
+            return entities.Where(e => !e.Archived).Join(projects, o => o.Id, p => p.OrganizationId, (o, p) => o); //.GroupBy(o => o.Id).Select(g => g.First());
         }
+
+        public IQueryable<Organization> GetMine()
+        {
+            return FromCurrentUser().Include(o => o.Owner);
+        }
+
         #region Overrides
-        public override IQueryable<Organization> Filter(IQueryable<Organization> entities, FilterQuery filterQuery)
+        public override IQueryable<Organization> FromCurrentUser(
+            IQueryable<Organization>? entities = null
+        )
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    bool hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out int specifiedOrgId);
-                    return UsersOrganizations(entities).Where(om => om.Id == specifiedOrgId) ;
-                }
-                return UsersOrganizations(entities);
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersOrganizations(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectOrganizations(entities, filterQuery.Value);
-            }
-            if (filterQuery.Has(DATA_START_INDEX)) //ignore
-            {
-                return entities;
-            }
-            if (filterQuery.Has(PROJECT_SEARCH_TERM)) //ignore
-            {
-                return entities;
-            }
-            return base.Filter(entities, filterQuery);
+            return UsersOrganizations(entities ?? GetAll());
+        }
+
+        public override IQueryable<Organization> FromProjectList(
+            IQueryable<Organization>? entities,
+            string idList
+        )
+        {
+            return ProjectOrganizations(entities ?? GetAll(), idList);
         }
         #endregion
     }

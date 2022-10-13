@@ -1,59 +1,66 @@
-﻿using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using TranscriberAPI.Utility;
-using static SIL.Transcriber.Utility.ServiceExtensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
-using System.Linq;
 
 namespace SIL.Transcriber.Services
 {
     public class InvitationService : BaseService<Invitation>
     {
-        private ILoggerFactory LoggerFactory;
-        private OrganizationService OrganizationService;
-        private UserRepository UserRepository;
-        private GroupMembershipRepository GroupMembershipRepository;
+        readonly private OrganizationRepository OrganizationRepository;
+        readonly private OrganizationService OrganizationService;
+        readonly private GroupMembershipService GroupMembershipService;
+        readonly private UserRepository UserRepository;
         public CurrentUserRepository CurrentUserRepository { get; }
 
         public InvitationService(
-            IJsonApiContext jsonApiContext,
-            InvitationRepository invitationRepository,
-            OrganizationService organizationService,
-            UserRepository userRepository,
-            GroupMembershipRepository groupMembershipRepository,
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Invitation> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            GroupMembershipService groupMembershipService,
             CurrentUserRepository currentUserRepository,
-            ILoggerFactory loggerFactory
-        ) : base(jsonApiContext, invitationRepository, loggerFactory)
+            OrganizationService organizationService,
+            OrganizationRepository organizationRepository,
+            UserRepository userRepository,
+            InvitationRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            )
         {
-            LoggerFactory = loggerFactory;
             CurrentUserRepository = currentUserRepository;
             OrganizationService = organizationService;
+            OrganizationRepository = organizationRepository;
             UserRepository = userRepository;
-            GroupMembershipRepository = groupMembershipRepository;
+            GroupMembershipService = groupMembershipService;
         }
-        public override async Task<IEnumerable<Invitation>> GetAsync()
-        {
-            return await GetScopedToCurrentUser(
-                base.GetAsync,
-                JsonApiContext);
-        }
-        public Invitation Get(int id)
-        {
-            return MyRepository.Get().Where(p => p.Id == id).FirstOrDefault(); ;
-        }
-        private string BuildEmailBody(dynamic strings, Invitation entity)
+
+        private static string BuildEmailBody(dynamic strings, Invitation entity)
         {
             //localize...
-            string app = strings["App"] ?? "missing App: SIL Transcriber";
+            string app = strings["App"] ?? "missing App: Audio Project Manager";
             string invite = strings["Invitation"] ?? "missing Invitation: has invited you to join";
-            string instructions = strings["Instructions"] ?? "missing Instructions: Please click the following link to accept the invitation.";
+            string instructions =
+                strings["Instructions"]
+                ?? "missing Instructions: Please click the following link to accept the invitation.";
             string SILorg = strings["SILOrg"] ?? "missing SILOrg: SIL International";
             string questions = strings["Questions"] ?? "missing Questions: Questions? Contact ";
             string join = strings["Join"] ?? "missing Join: Join ";
@@ -61,77 +68,118 @@ namespace SIL.Transcriber.Services
             string link = entity.LoginLink + "?inviteId=" + entity.Id;
 
             string html = LoadResource("invitation.html");
-            
+
             return html.Replace("{{App}}", app)
-                        .Replace("{Invitation}", string.Format("{0} {1} '{2}'.", entity.InvitedBy, invite, entity.Organization.Name))
-                        .Replace("{{Instructions}}", instructions)
-                        .Replace("{Button}", join + ' ' + entity.Organization.Name) //TODO
-                        .Replace("{Link}", link)
-                        .Replace("{Questions}", questions + ' ' + entity.InvitedBy)
-                        .Replace("{Year}", DateTime.Today.Year.ToString())
-                        .Replace("{{SIL}}", SILorg);
+                .Replace(
+                    "{Invitation}",
+                    string.Format(
+                        "{0} {1} '{2}'.",
+                        entity.InvitedBy,
+                        invite,
+                        entity.Organization.Name
+                    )
+                )
+                .Replace("{{Instructions}}", instructions)
+                .Replace("{Button}", join + ' ' + entity.Organization.Name) //TODO
+                .Replace("{Link}", link)
+                .Replace("{Questions}", questions + ' ' + entity.InvitedBy)
+                .Replace("{Year}", DateTime.Today.Year.ToString())
+                .Replace("{{SIL}}", SILorg);
         }
 
-        public override async Task<Invitation> CreateAsync(Invitation entity)
+        public override async Task<Invitation?> CreateAsync(
+            Invitation entity,
+            CancellationToken cancellationToken
+        )
         {
-            //call the Identity api and receive an invitation id
-            Organization org = await OrganizationService.GetAsync(entity.OrganizationId);
-            entity.Organization = org;
-            //entity.SilId = SendInvitation(entity);
-            entity = await base.CreateAsync(entity);
-            entity.SilId = entity.Id;
-            await base.UpdateAsync(entity.Id, entity);
+            if (entity.Organization == null)
+                throw new Exception("Organization must be set");
             try
             {
                 dynamic strings = JObject.Parse(entity.Strings);
-                string subject = strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
-                await TranscriberAPI.Utility.Email.SendEmailAsync(entity.Email, subject, BuildEmailBody(strings, entity));
-                return entity;
+
+                Invitation? dbentity = await base.CreateAsync(entity, cancellationToken);
+                if (dbentity == null)
+                    return null;
+
+                string subject =
+                    strings["Subject"] ?? "missing subject: Audio Project Manager Invitation";
+                await TranscriberAPI.Utility.Email.SendEmailAsync(
+                    entity.Email,
+                    subject,
+                    BuildEmailBody(strings, dbentity)
+                );
+                return dbentity;
             }
             catch (Exception ex)
             {
-                await base.DeleteAsync(entity.Id); 
                 Console.WriteLine("The email was not sent so invitation was deleted.");
                 Console.WriteLine("Error message: " + ex.Message);
-                throw ex;
+                throw new Exception(
+                    "The email was not sent so invitation was deleted.\n" + ex.Message
+                );
             }
         }
 
-        public override async Task<Invitation> UpdateAsync(int id, Invitation entity)
+        public override async Task<Invitation?> UpdateAsync(
+            int id,
+            Invitation entity,
+            CancellationToken cancellationToken
+        )
         {
-            User currentUser = CurrentUserRepository.GetCurrentUser();
-            Invitation oldentity = MyRepository.GetAsync(id).Result;
+            User? currentUser = CurrentUserRepository.GetCurrentUser();
+            Invitation? oldentity = GetAsync(id, cancellationToken).Result;
+            if (oldentity == null)
+                return null;
+
             //verify current user is logged in with invitation email
-            if ((entity.Email ?? oldentity.Email ?? "").ToLower() != currentUser.Email.ToLower())
+            if (
+                (entity.Email ?? oldentity.Email ?? "").ToLower()
+                != (currentUser?.Email ?? "").ToLower()
+            )
             {
-                throw new System.Exception("Unauthorized.  User must be logged in with invitation email: " + oldentity.Email + "  Currently logged in as " + currentUser.Email);
+                throw new System.Exception(
+                    "Unauthorized.  User must be logged in with invitation email: "
+                        + oldentity?.Email
+                        + "  Currently logged in as "
+                        + currentUser?.Email
+                );
             }
-            if (entity.Accepted && !oldentity.Accepted)
+            Organization? org;
+            if (
+                currentUser != null
+                && entity.Accepted
+                && !oldentity.Accepted
+                && (
+                    org = OrganizationRepository
+                        .Get()
+                        .Where(o => o.Id == oldentity.OrganizationId)
+                        .FirstOrDefault()
+                ) != null
+            )
             {
                 //add the user to the org
-                Organization org = await OrganizationService.GetAsync(oldentity.OrganizationId);
-                OrganizationService.JoinOrg(org, currentUser, (RoleName)oldentity.RoleId, (RoleName)oldentity.AllUsersRoleId);
-                if (oldentity.GroupId != null)
+                OrganizationService.JoinOrg(
+                    org,
+                    currentUser,
+                    (RoleName)oldentity.RoleId,
+                    (RoleName)oldentity.AllUsersRoleId
+                );
+                if (entity.GroupId != null)
                 {
-                    if (oldentity.GroupRoleId == null)
-                        oldentity.GroupRoleId = (int)RoleName.Transcriber;
-                    GroupMembershipRepository.JoinGroup(currentUser.Id, (int)oldentity.GroupId, (RoleName)oldentity.GroupRoleId);
+                    if (entity.GroupRoleId == null)
+                        entity.GroupRoleId = (int)RoleName.Transcriber;
+                    _ = GroupMembershipService.JoinGroup(
+                        currentUser.Id,
+                        (int)entity.GroupId,
+                        (RoleName)entity.GroupRoleId
+                    );
                 }
                 //update the user so all other users in the new org get the user downloaded with the next datachange
-                UserRepository.Refresh( currentUser);
+                UserRepository.Refresh(currentUser);
             }
-            return await base.UpdateAsync(id, entity);
+            //updateAsync now returns null if no changes were actually made :/
+            return await base.UpdateAsync(id, entity, cancellationToken) ?? entity;
         }
-        /*
-        public int SendInvitation(Invitation entity)
-        {
-            User current = CurrentUserRepository.GetCurrentUser().Result;
-            if (entity.Organization == null || entity.Organization.SilId == 0)
-            {
-                throw new Exception("Organization does not exist in SIL Identity.");
-            }
-            return SILIdentity.CreateInvite(entity.Email, entity.Organization.Name, entity.Organization.SilId,current.SilUserid ?? 1);
-        }
-        */
     }
 }

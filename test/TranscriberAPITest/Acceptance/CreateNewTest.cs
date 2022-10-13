@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Data;
-using Newtonsoft.Json;
 using Xunit;
-using JsonApiDotNetCore.Models;
-using TranscriberAPI.Tests.Utilities;
 using System.Net.Http;
+using JsonApiDotNetCore.Resources;
 
 namespace TranscriberAPI.Tests.Acceptance
 {

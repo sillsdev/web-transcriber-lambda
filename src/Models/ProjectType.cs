@@ -1,17 +1,16 @@
-﻿using JsonApiDotNetCore.Models;
-using System.Collections.Generic;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class ProjectType : BaseModel
+    [Table("projecttypes")]
+    public partial class Projecttype : BaseModel
     {
-        [Attr("name")]
-        public string Name { get; set; }
+        [Attr(PublicName = "name")]
+        public string? Name { get; set; }
 
-        [Attr("description")]
-        public string Description { get; set; }
+        [Attr(PublicName = "description")]
+        public string? Description { get; set; }
 
-        [HasMany("projects", Link.None)]
-        public virtual List<Project> Projects { get; set; }
     }
 }

@@ -1,8 +1,5 @@
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using System.Linq;
 
 
 namespace SIL.Transcriber.Utility
@@ -12,7 +9,7 @@ namespace SIL.Transcriber.Utility
         public static async Task<string> GetJWT(this HttpContext context)
         {
             string scheme = JwtBearerDefaults.AuthenticationScheme;
-            string token = await context.GetTokenAsync(scheme, "access_token");
+            string token = await context.GetTokenAsync(scheme, "access_token") ?? "";
 
             return token;
         }
@@ -27,7 +24,7 @@ namespace SIL.Transcriber.Utility
         }
         public static void SetFP(this HttpContext context, string value)
         {
-            context.Request.Headers["x-fp"]  = value;
+            context.Request.Headers ["x-fp"] = value;
         }
 
         // NOTE: User Claims of Interest:
@@ -43,7 +40,7 @@ namespace SIL.Transcriber.Utility
             return context
                 .User.Claims
                 .FirstOrDefault(c => c.Type == TYPE_NAME_IDENTIFIER)
-                ?.Value;
+                ?.Value ?? "";
         }
 
         public static string GetAuth0Type(this HttpContext context)
@@ -51,7 +48,7 @@ namespace SIL.Transcriber.Utility
             return context
                 .User.Claims
                 .FirstOrDefault(c => c.Type == TYPE_NAME_IDENTIFIER)
-                ?.Value;
+                ?.Value ?? "Bearer";
         }
 
 
@@ -61,7 +58,7 @@ namespace SIL.Transcriber.Utility
             return context
                 .User.Claims
                 .FirstOrDefault(c => c.Type == TYPE_NAME_EMAIL)  //should be there but isnt...
-                ?.Value;
+                ?.Value ?? "";
         }
 
         public static string TYPE_NAME_GIVEN_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname";
@@ -70,7 +67,7 @@ namespace SIL.Transcriber.Utility
             return context
                 .User.Claims
                 .FirstOrDefault(c => c.Type == TYPE_NAME_GIVEN_NAME)
-                ?.Value;
+                ?.Value ?? "";
         }
 
         public static string TYPE_NAME_SUR_NAME = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname";
@@ -79,7 +76,7 @@ namespace SIL.Transcriber.Utility
             return context
                 .User.Claims
                 .FirstOrDefault(c => c.Type == TYPE_NAME_SUR_NAME)
-                ?.Value;
+                ?.Value ?? "";
         }
 
         public static string TYPE_NAME_NAME = "name";
@@ -88,7 +85,7 @@ namespace SIL.Transcriber.Utility
             return context
                 .User.Claims
                 .FirstOrDefault(c => c.Type == TYPE_NAME_NAME)
-                ?.Value;
+                ?.Value ?? "";
         }
     }
 }

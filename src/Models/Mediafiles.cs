@@ -1,97 +1,110 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 
 namespace SIL.Transcriber.Models
 {
+    [Table("mediafiles")]
     public partial class Mediafile : BaseModel, IArchive
     {
-        [Attr("passage-id")]
+        [Attr(PublicName = "passage-id")]
         public int? PassageId { get; set; }
-        [HasOne("passage", JsonApiDotNetCore.Models.Link.None)]
-        public Passage Passage { get; set; }
+        [HasOne(PublicName = "passage")]
+        public virtual Passage? Passage { get; set; }
 
-        [Attr("plan-id")]
+        [Attr(PublicName = "plan-id")]
         public int PlanId { get; set; }
-        [HasOne("plan", JsonApiDotNetCore.Models.Link.None)]
-        public Plan Plan { get; set; }
+        [HasOne(PublicName = "plan")]
+        public virtual Plan? Plan { get; set; }
 
-        [Attr("artifact-type-id")]
+        [Attr(PublicName = "artifact-type-id")]
         public int? ArtifactTypeId { get; set; }
-        [HasOne("artifact-type", JsonApiDotNetCore.Models.Link.None)]
-        public ArtifactType ArtifactType { get; set; }
+        [HasOne(PublicName = "artifact-type")]
+        public Artifacttype? ArtifactType { get; set; }
+        [Attr(PublicName = "artifact-category-id")]
         public int? ArtifactCategoryId { get; set; }
-        [HasOne("artifact-category", JsonApiDotNetCore.Models.Link.None)]
-        public ArtifactCategory ArtifactCategory { get; set; }
+        [HasOne(PublicName = "artifact-category")]
+        public Artifactcategory? ArtifactCategory { get; set; }
 
-        [Attr("version-number")]
+        [Attr(PublicName = "version-number")]
         public int? VersionNumber { get; set; }
-
-        [Attr("eaf-url")]
-        public string EafUrl { get; set; }
-        [Attr("audio-url")]
-        public string AudioUrl { get; set; }
-        [Attr("duration")]
+        [Attr(PublicName = "eaf-url")]
+        public string? EafUrl { get; set; }
+        [Attr(PublicName = "audio-url")]
+        public string? AudioUrl { get; set; }
+        [Attr(PublicName = "duration")]
         public int? Duration { get; set; }
-        [Attr("content-type")]
-        public string ContentType { get; set; }
-        [Attr("audio-quality")]
-        public string AudioQuality { get; set; }
-        [Attr("text-quality")]
-        public string TextQuality { get; set; }
-        [Attr("transcription")]
-        public string Transcription { get; set; }
+        [Attr(PublicName = "content-type")]
+        public string? ContentType { get; set; }
+        [Attr(PublicName = "audio-quality")]
+        public string? AudioQuality { get; set; }
+        [Attr(PublicName = "text-quality")]
+        public string? TextQuality { get; set; }
+        [Attr(PublicName = "transcription")]
+        public string? Transcription { get; set; }
 
-        [Attr("original-file")]
-        public string OriginalFile { get; set; }
-        [Attr("s3file")]
-        public string S3File { get; set; }
-        [Attr("filesize")]
+        [Attr(PublicName = "original-file")]
+        public string? OriginalFile { get; set; }
+        [Attr(PublicName = "s3file")]
+        public string? S3File { get; set; }
+        [Attr(PublicName = "filesize")]
         public long Filesize { get; set; }
-        [Attr("position")]
+        [Attr(PublicName = "position")]
         public double Position { get; set; }
-        [Attr("topic")]
-        public string Topic { get; set; }
-        [Attr("transcriptionstate")]
-        public string Transcriptionstate { get; set; }
+        [Attr(PublicName = "topic")]
+        public string? Topic { get; set; }
+        [Attr(PublicName = "transcriptionstate")]
+        public string? Transcriptionstate { get; set; }
         public bool Archived { get; set; }
 
-        [Attr("segments")]
+        [Attr(PublicName = "segments")]
         [Column(TypeName = "jsonb")]
-        public string Segments { get; set; }
-        public int? RecordedbyUserId { get; set; }
+        public string? Segments { get; set; }
 
-        [Attr("languagebcp47")]
-        public string Languagebcp47 { get; set; }
-        
-        [Attr("performed-by")]
-        public string PerformedBy { get; set; }
-        [Attr("ready-to-share")]
+        public int? RecordedbyUserId { get; set; }
+        [HasOne(PublicName = "recordedby-user")]
+        public User? RecordedbyUser { get; set; }
+
+        [Attr(PublicName = "languagebcp47")]
+        public string? Languagebcp47 { get; set; }
+
+        [Attr(PublicName = "performed-by")]
+        public string? PerformedBy { get; set; }
+        [Attr(PublicName = "ready-to-share")]
         public bool ReadyToShare { get; set; }
-        [Attr("resource-passage-id")]
+        [Attr(PublicName = "resource-passage-id")]
         public int? ResourcePassageId { get; set; }
-        [HasOne("resource-passage", JsonApiDotNetCore.Models.Link.None)]
-        public Passage ResourcePassage { get; set; }
-        [Attr("link")]
+        [HasOne(PublicName = "resource-passage")]
+        public Passage? ResourcePassage { get; set; }
+        [Attr(PublicName = "link")]
         public bool? Link { get; set; }
 
-        [Attr("offline-id")]
-        public string OfflineId { get; set; }
-        [Attr("source-media-offline-id")]
-        public string SourceMediaOfflineId { get; set; }
+        [Attr(PublicName = "offline-id")]
+        public string? OfflineId { get; set; }
+        [Attr(PublicName = "source-media-offline-id")]
+        public string? SourceMediaOfflineId { get; set; }
 
-        [Attr("source-media-id")]
+        [Attr(PublicName = "source-media-id")]
         public int? SourceMediaId { get; set; }
-        [HasOne("source-media", JsonApiDotNetCore.Models.Link.None)]
-        public Mediafile SourceMedia { get; set; }
+        [HasOne(PublicName = "source-media")]
+        public Mediafile? SourceMedia { get; set; }
 
-        [Attr("source-segments")]
+        [Attr(PublicName = "source-segments")]
         [Column(TypeName = "jsonb")]
-        public string SourceSegments { get; set; }
+        public string? SourceSegments { get; set; }
 
-        public bool ReadyToSync
-        {
+        public bool ReadyToSync {
             get { return Transcriptionstate == "approved" && !Archived; }
+        }
+        public bool IsVernacular {
+            get { return ArtifactTypeId is null; }
         }
 
     }
+    [Table("mediafiles")]
+    public partial class SourceMediafile : Mediafile
+    {
+
+    }
+
 }

@@ -1,60 +1,102 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Internal;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
-    public class GroupMembershipService : BaseArchiveService<GroupMembership>
+    public class GroupMembershipService : BaseArchiveService<Groupmembership>
     {
+        readonly private HttpContext? HttpContext;
+        private readonly AppDbContext dbContext;
+
         public GroupMembershipService(
-            IJsonApiContext jsonApiContext,
-            UserRepository userRepository,
-            ProjectRepository projectRepository,
-            ICurrentUserContext currentUserContext,
-            IEntityRepository<GroupMembership> groupMembershipRepository,
-            ILoggerFactory loggerFactory
-        ) : base(jsonApiContext, groupMembershipRepository, loggerFactory)
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Groupmembership> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            GroupMembershipRepository repository,
+            IHttpContextAccessor httpContextAccessor,
+            AppDbContextResolver contextResolver
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            )
         {
-            UserRepository = userRepository;
-            ProjectRepository = projectRepository;
-            CurrentUserContext = currentUserContext;
-            GroupMembershipRepository = (GroupMembershipRepository) groupMembershipRepository;
+            HttpContext = httpContextAccessor.HttpContext;
+            dbContext = (AppDbContext)contextResolver.GetContext();
         }
 
-        public UserRepository UserRepository { get; }
-        public ProjectRepository ProjectRepository { get; }
-        public ICurrentUserContext CurrentUserContext { get; }
-        public GroupMembershipRepository GroupMembershipRepository { get; }
-
-
-        public override async Task<IEnumerable<GroupMembership>> GetAsync()
+        public override async Task<Groupmembership?> CreateAsync(
+            Groupmembership entity,
+            CancellationToken cancellationToken
+        )
         {
-            var gms = await base.GetAsync();
-            return GroupMembershipRepository.UsersGroupMemberships(gms.AsQueryable());
-        }
-        public override async Task<GroupMembership> CreateAsync(GroupMembership entity)
-        {
-            GroupMembership newEntity = GroupMembershipRepository.Get().Where(gm => gm.GroupId == entity.GroupId && gm.UserId == entity.UserId).FirstOrDefault();
+            Groupmembership? newEntity = Repo.Get()
+                .Include(gm => gm.User)
+                .Include(gm => gm.Group)
+                .Include(gm => gm.Role)
+                .Include(gm => gm.LastModifiedByUser)
+                .Where(gm => gm.GroupId == entity.Group.Id && gm.UserId == entity.User.Id)
+                .FirstOrDefault();
             if (newEntity == null)
-               newEntity = await base.CreateAsync(entity);
+                newEntity = await base.CreateAsync(entity, cancellationToken);
             else
             {
                 if (newEntity.Archived)
                 {
                     newEntity.Archived = false;
-                    newEntity = base.UpdateAsync(newEntity.Id, newEntity).Result;
+                    _ = await base.UpdateArchivedAsync(newEntity.Id, newEntity, cancellationToken);
                 }
-
             }
             return newEntity;
         }
 
+        public Groupmembership? JoinGroup(int UserId, int groupId, RoleName groupRole)
+        {
+            Group? group = dbContext.Groups.Where(g => g.Id == groupId).FirstOrDefault();
+            if (group?.Archived ?? true)
+                return null;
+            Groupmembership? groupmembership = dbContext.Groupmemberships
+                .Where(gm => gm.GroupId == groupId && gm.UserId == UserId)
+                .FirstOrDefault();
+            if (groupmembership == null)
+            {
+                HttpContext?.SetFP("api joingroup");
+                groupmembership = new Groupmembership
+                {
+                    GroupId = groupId,
+                    UserId = UserId,
+                    RoleId = (int)groupRole,
+                };
+                _ = dbContext.Groupmemberships.Add(groupmembership);
+                //dbContext.SaveChanges();
+            }
+            else if (groupmembership.Archived)
+            {
+                groupmembership.Archived = false;
+                _ = dbContext.Groupmemberships.Update(groupmembership);
+                //dbContext.SaveChanges();
+            }
+            return groupmembership;
+        }
     }
 }

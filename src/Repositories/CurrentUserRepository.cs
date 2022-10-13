@@ -1,9 +1,8 @@
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
@@ -11,49 +10,45 @@ using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class CurrentUserRepository : DefaultEntityRepository<User>
+    public class CurrentUserRepository : EntityFrameworkCoreRepository<CurrentUser, int>
     {
-        public CurrentUserRepository() :base(null,null) //try to avoid debugging errors
-        {
-        }
         // NOTE: this repository MUST not rely on any other repositories or services
+        protected readonly AppDbContext dbContext;
+
         public CurrentUserRepository(
+            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            AppDbContextResolver contextResolver,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             ICurrentUserContext currentUserContext
-       ) : base(loggerFactory, jsonApiContext, contextResolver)
+       ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
+           loggerFactory, resourceDefinitionAccessor)
         {
-            this.DBContext = (AppDbContext)contextResolver.GetContext();
-            this.CurrentUserContext = currentUserContext;
-            this.Logger = loggerFactory.CreateLogger<User>();
+            dbContext = (AppDbContext)contextResolver.GetContext();
+            CurrentUserContext = currentUserContext;
+            Logger = loggerFactory.CreateLogger<User>();
         }
 
-        private AppDbContext DBContext { get; }
+        //private AppDbContext DBContext { get; }
         private ICurrentUserContext CurrentUserContext { get; }
         protected ILogger<User> Logger { get; set; }
-        private User curUser;
+        private User? curUser;
         // memoize once per local thread,
         // since the current user can't change in a single request
         // this should be ok.
-        public User GetCurrentUser(bool checkForUpdate = false)
+        public User? GetCurrentUser()
         {
             if (curUser == null)
             {
-                string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
+                string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", CurrentUserContext.Auth0Id);
 
-                User currentUser = Get()
-                    .Where(user => !user.Archived && user.ExternalId.Equals(auth0Id))
-                    .Include(user => user.OrganizationMemberships)
-                    .Include(user => user.GroupMemberships).FirstOrDefault();
+                curUser = dbContext.Users
+                    .Where(user => !user.Archived && (user.ExternalId ?? "").Equals(auth0Id))
+                    .Include(user => user.OrganizationMemberships.Where(om => !om.Archived))
+                    .Include(user => user.GroupMemberships.Where(gm => !gm.Archived))
+                    .FirstOrDefault();
 
-                if (currentUser != null)
-                {
-                    User copy = (User)currentUser.ShallowCopy();
-                    copy.OrganizationMemberships = currentUser.OrganizationMemberships.Where(om => !om.Archived).ToList();
-                    copy.GroupMemberships = currentUser.GroupMemberships.Where(gm => !gm.Archived).ToList();
-                    curUser = copy;
-                }
             }
             return curUser;
         }
@@ -64,6 +59,20 @@ namespace SIL.Transcriber.Repositories
         public bool IsOrgAdmin(User currentuser, int orgId)
         {
             return currentuser.HasOrgRole(RoleName.Admin, orgId);
+        }
+
+        public CurrentUser? Get()
+        {
+            string auth0Id = GetVarOrDefault("SIL_TR_DEBUGUSER", this.CurrentUserContext.Auth0Id);
+            User? user= dbContext.Users
+                     .Where(user => !user.Archived && (user.ExternalId??"").Equals(auth0Id)).FirstOrDefault();
+            if (user == null)
+                return null;
+            CurrentUser cu = new(user)
+            {
+                LastModifiedByUser = null
+            };
+            return cu;
         }
     }
 }

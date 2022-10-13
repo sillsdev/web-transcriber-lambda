@@ -1,25 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace SIL.Transcriber.Utility
+﻿namespace SIL.Transcriber.Utility
 {
     public static class Attempt
     {
-        public static Attempt<T> Success<T>(T result)
+        public static Attempt<T?> Success<T>(T? result)
         {
-            return new Attempt<T>(true, result);
+            return new Attempt<T?>(true, result);
         }
 
-        public static Attempt<T> Failure<T>(T result)
+        public static Attempt<T?> Failure<T>(T? result)
         {
-            return new Attempt<T>(false, result);
+            return new Attempt<T?>(false, result);
         }
 
-        public static Attempt<T> Failure<T>(T result, string err)
+        public static Attempt<T?> Failure<T>(T? result, string err)
         {
-            return new Attempt<T>(false, result, err);
+            return new Attempt<T?>(false, result, err);
         }
     }
 
@@ -32,18 +27,18 @@ namespace SIL.Transcriber.Utility
         {
         }
 
-        public Attempt(bool success, T result = default(T), string err = "")
+        public Attempt(bool success, T? result = default, string err = "")
         {
             Success = success;
             Result = result;
             Err = err;
         }
 
-        public T Result { get; }
+        public T? Result { get; }
         public bool Success { get; }
         public string Err { get; }
 
-        public bool TryResult(out T result)
+        public bool TryResult(out T? result)
         {
             result = Result;
             return Success;

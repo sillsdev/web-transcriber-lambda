@@ -1,70 +1,89 @@
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using System.Linq;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using SIL.Transcriber.Data;
-using System.Collections.Generic;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrganizationMembershipRepository : BaseRepository<OrganizationMembership>
+    public class OrganizationMembershipRepository : BaseRepository<Organizationmembership>
     {
-        private OrganizationRepository OrganizationRepository;
+        readonly private OrganizationRepository OrganizationRepository;
+
         public OrganizationMembershipRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            OrganizationRepository organizationRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            OrganizationRepository organizationRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             OrganizationRepository = organizationRepository;
         }
-        public IQueryable<OrganizationMembership> UsersOrganizationMemberships(IQueryable<OrganizationMembership> entities)
+
+        public IQueryable<Organizationmembership> UsersOrganizationMemberships(
+            IQueryable<Organizationmembership> entities
+        )
         {
-            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
+            if (CurrentUser == null)
+                return entities.Where(e => e.Id == -1);
+
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
+                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
                 //if I'm an admin in the org, give me all oms in that org
                 //otherwise give me just the oms I'm a member of
-                IEnumerable<int> orgadmins = orgIds.Where(o => CurrentUser.HasOrgRole(RoleName.Admin, o));
-                entities = entities
-                       .Where(om => orgadmins.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id);
+                IEnumerable<int> orgadmins = orgIds.Where(
+                    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
+                );
+                entities = entities.Where(
+                    om => !om.Archived && (orgadmins.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id)
+                );
             }
-            return entities;
-        }
-        public IQueryable<OrganizationMembership> ProjectOrganizationMemberships(IQueryable<OrganizationMembership> entities, string projectid)
-        {
-            IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(dbContext.Organizations, projectid);
-            return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
+            return entities.Where(e => !e.Archived);
         }
 
-        #region Overrides
-        public override IQueryable<OrganizationMembership> Filter(IQueryable<OrganizationMembership> entities, FilterQuery filterQuery)
+        public IQueryable<Organizationmembership> ProjectOrganizationMemberships(
+            IQueryable<Organizationmembership> entities,
+            string projectid
+        )
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    int specifiedOrgId;
-                    bool hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
-                    return UsersOrganizationMemberships(entities).Where(om => om.Id == specifiedOrgId) ;
-                }
-                return UsersOrganizationMemberships(entities);
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersOrganizationMemberships(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectOrganizationMemberships(entities, filterQuery.Value);
-            }
-            return base.Filter(entities, filterQuery);
+            IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(
+                dbContext.Organizations,
+                projectid
+            );
+            return entities.Where(e => !e.Archived).Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
+        }
+
+        #region overrides
+        public override IQueryable<Organizationmembership> FromCurrentUser(
+            IQueryable<Organizationmembership>? entities = null
+        )
+        {
+            return UsersOrganizationMemberships(entities ?? GetAll());
+        }
+
+        public override IQueryable<Organizationmembership> FromProjectList(
+            IQueryable<Organizationmembership>? entities,
+            string idList
+        )
+        {
+            return ProjectOrganizationMemberships(entities ?? GetAll(), idList);
         }
         #endregion
     }

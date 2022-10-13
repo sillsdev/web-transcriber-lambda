@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 
 namespace SIL.Transcriber.Utility
 {
@@ -9,6 +8,19 @@ namespace SIL.Transcriber.Utility
         public static IEnumerable<T> OrEmpty<T>(this IEnumerable<T> list)
         {
             return list ?? Enumerable.Empty<T>();
+        }
+        [Pure]
+        public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this IEnumerable<T>? source)
+        {
+            return source == null || !source.Any();
+        }
+
+        public static void AddRange<T>(this ICollection<T> source, IEnumerable<T> itemsToAdd)
+        {
+            foreach (T item in itemsToAdd)
+            {
+                source.Add(item);
+            }
         }
     }
 }

@@ -1,27 +1,23 @@
-﻿using JsonApiDotNetCore.Models;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 
 namespace SIL.Transcriber.Models
 {
-    
-    public class ProjData : BaseModel
+
+    public class Projdata : BaseModel
     {
 
-           public ProjData()
-            {
-                Id = 1;
-            }
-            [NotMapped]
-            [Attr("json")]
-            public string Json { get; set; }
-            [NotMapped]
-            [Attr("startnext")]
-            public int Startnext { get; set; }
-            [NotMapped]
-            [Attr("projectid")]
-            public int ProjectId { get; set; }
-            [NotMapped]
-            [Attr("snapshotdate")]
-            public string SnapshotDate { get; set; }
+        public Projdata()
+        {
+            Id = 1;
+            Json = "{}";
+        }
+        [Attr(PublicName = "json")]
+        public string Json { get; set; }
+        [Attr(PublicName = "start-index")]
+        public int StartIndex { get; set; }
+        [Attr(PublicName = "project-id")]
+        public int ProjectId { get; set; }
+        [Attr(PublicName = "snapshotdate")]
+        public string? SnapshotDate { get; set; }
     }
 }

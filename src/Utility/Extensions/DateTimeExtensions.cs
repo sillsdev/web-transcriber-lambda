@@ -1,11 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Utility.Extensions
 {
@@ -14,11 +7,28 @@ namespace SIL.Transcriber.Utility.Extensions
 
         public static string ToISO8601(this DateTime value)
         {
-            var dt = value.ToString("yyyy-MM-ddTHH:mm:ssK");
+            string dt = value.ToString("yyyy-MM-ddTHH:mm:ssK");
             // remove timezone offset if it's UTC
-            var result = Regex.Replace(dt, @"00:00$", "");
+            string result = Regex.Replace(dt, @"00:00$", "");
 
             return result;
+        }
+        public static DateTime? SetKindUtc(this DateTime? dateTime)
+        {
+            if (dateTime.HasValue)
+            {
+                return dateTime.Value.SetKindUtc();
+            }
+            else
+            {
+                return null;
+            }
+        }
+        public static DateTime SetKindUtc(this DateTime dateTime)
+        {
+            if (dateTime.Kind == DateTimeKind.Utc)
+            { return dateTime; }
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
         }
     }
 }

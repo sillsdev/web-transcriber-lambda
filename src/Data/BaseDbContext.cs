@@ -1,70 +1,68 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
-using System;
-using System.Linq;
+using SIL.Transcriber.Utility.Extensions;
 
 namespace SIL.Transcriber.Data
 {
-    public class BaseDbContext : DbContext
+    public static class DbContextExtentions
     {
-        public HttpContext HttpContext { get; }
-        public DbContextOptions Options { get; }
-        public IHttpContextAccessor HttpContextAccessor { get; }
-        public BaseDbContext(DbContextOptions options, IHttpContextAccessor httpContextAccessor) : base(options)
-        {
-            HttpContext = httpContextAccessor.HttpContext;
-            HttpContextAccessor = httpContextAccessor;
-            Options = options;
-        }
-        protected void LowerCaseDB(ModelBuilder builder)
+        public static void LowerCaseDB(ModelBuilder builder)
         {
             foreach (IMutableEntityType entity in builder.Model.GetEntityTypes())
             {
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                if (entity is EntityType { IsImplicitlyCreatedJoinEntityType: true })
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                {
+                    continue;
+                }
                 // Replace table names
-                entity.Relational().TableName = entity.Relational().TableName.ToLower();
+                //05/16/22 This doesn't work anymore so use the [Table] schema notation--and now it does...
+                entity.SetTableName(entity.GetTableName()?.ToLower());
 
-                // Replace column names            
+                // Replace column names
                 foreach (IMutableProperty property in entity.GetProperties())
                 {
-                    property.Relational().ColumnName = property.Name.ToLower();
+                    property.SetColumnName(property.Name.ToLower());
                 }
 
                 foreach (IMutableKey key in entity.GetKeys())
                 {
-                    key.Relational().Name = key.Relational().Name.ToLower();
+                    key.SetName(key.GetName() ?? "".ToLower());
                 }
 
                 foreach (IMutableForeignKey key in entity.GetForeignKeys())
                 {
-                    key.Relational().Name = key.Relational().Name.ToLower();
+                    key.SetConstraintName(key.GetConstraintName() ?? "".ToLower());
                 }
 
                 foreach (IMutableIndex index in entity.GetIndexes())
                 {
-                    index.Relational().Name = index.Relational().Name.ToLower();
+                    index.SetDatabaseName(index.GetDatabaseName().ToLower());
                 }
             }
         }
-        protected override void OnModelCreating(ModelBuilder builder)
+
+        public static string GetFingerprint(HttpContext? http)
         {
-            base.OnModelCreating(builder);
-            builder.HasPostgresExtension("uuid-ossp");
-            //make all query items lowercase to send to postgres...
-            LowerCaseDB(builder);
+            return http?.GetFP() ?? "noFP";
         }
-        public string GetFingerprint()
-        {
-            return HttpContext.GetFP() ?? "noFP";
-        }
+
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
-        protected void AddTimestamps(int userid)
+        public static void AddTimestamps(DbContext dbc, HttpContext? http, int userid)
         {
-            System.Collections.Generic.IEnumerable<EntityEntry> entries = ChangeTracker.Entries().Where(e => e.Entity is ITrackDate && (e.State == EntityState.Added || e.State == EntityState.Modified));
-            DateTime now = DateTime.UtcNow.AddSeconds(2);
+            System.Collections.Generic.IEnumerable<EntityEntry> entries = dbc.ChangeTracker
+                .Entries()
+                .Where(e =>
+                        e.Entity is ITrackDate
+                        && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                );
+            DateTime now = DateTime.UtcNow.AddSeconds(2).SetKindUtc();
+
             foreach (EntityEntry entry in entries)
             {
                 if (entry.Entity is ITrackDate trackDate)
@@ -74,30 +72,40 @@ namespace SIL.Transcriber.Data
                         if (trackDate.DateCreated == null) //if the front end set it, leave it.  We're using this to catch duplicates
                         {
                             trackDate.DateCreated = now;
-                            trackDate.DateUpdated = now;
                         }
+                        trackDate.DateUpdated = trackDate.DateUpdated == null ? now : (trackDate.DateUpdated?.SetKindUtc());
                     }
                     else
+                    {
                         trackDate.DateUpdated = now;
+                    }
+                    trackDate.DateCreated = trackDate.DateCreated.SetKindUtc();
                 }
             }
             if (userid > 0) // we allow s3 trigger anonymous access
             {
-                entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+                entries = dbc.ChangeTracker
+                    .Entries()
+                    .Where(e =>
+                            e.Entity is ILastModified
+                            && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                    );
                 foreach (EntityEntry entry in entries)
                 {
-                    entry.CurrentValues["LastModifiedBy"] = userid;
+                    entry.CurrentValues ["LastModifiedBy"] = userid;
                 }
-
             }
-            string origin = GetFingerprint();
-            entries = ChangeTracker.Entries().Where(e => e.Entity is ILastModified && (e.State == EntityState.Added || e.State == EntityState.Modified));
+            string origin = GetFingerprint(http);
+            entries = dbc.ChangeTracker
+                .Entries()
+                .Where(e =>
+                        e.Entity is ILastModified
+                        && (e.State == EntityState.Added || e.State == EntityState.Modified)
+                );
             foreach (EntityEntry entry in entries)
             {
-                entry.CurrentValues["LastModifiedOrigin"] = origin;
+                entry.CurrentValues ["LastModifiedOrigin"] = origin;
             }
         }
-
     }
-
 }

@@ -1,32 +1,48 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
-using SIL.Transcriber.Models;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using JsonApiDotNetCore.Internal.Query;
-using System.Linq;
+using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
     public class IntegrationRepository : BaseRepository<Integration>
     {
         public IntegrationRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
+        { }
+
+        public override IQueryable<Integration> FromCurrentUser(
+            IQueryable<Integration>? entities = null
+        )
         {
+            return (entities ?? GetAll()).Where(e => !e.Archived);
         }
-        #region Overrides
-        public override IQueryable<Integration> Filter(IQueryable<Integration> entities, FilterQuery filterQuery)
+
+        public override IQueryable<Integration> FromProjectList(
+            IQueryable<Integration>? entities,
+            string idList
+        )
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER) || filterQuery.Has(ALLOWED_CURRENTUSER) || filterQuery.Has(PROJECT_LIST))
-            {
-                return entities;
-            }
-            return base.Filter(entities, filterQuery);
+            return (entities ?? GetAll()).Where(e => !e.Archived);
         }
-        #endregion
     }
 }

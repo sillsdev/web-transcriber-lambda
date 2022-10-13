@@ -1,5 +1,4 @@
-﻿using System;
-namespace SIL.Transcriber.Models
+﻿namespace SIL.Transcriber.Models
 {
     public interface ITrackDate
     {

@@ -1,3 +1,3 @@
 ﻿dotnet build
-dotnet lambda package --configuration release --framework netcoreapp2.1 --output-package bin/release/netcoreapp2.1/deploy-package_prod.zip
-serverless deploy -v -s prod
+dotnet lambda package --configuration release  --output-package bin/release/net6.0/deploy-package_prod.zip
+serverless deploy --verbose -s prod

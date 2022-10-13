@@ -1,44 +1,48 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using JsonApiDotNetCore.Models;
-using System.Linq;
 
 namespace SIL.Transcriber.Models
 {
     public partial class Group : BaseModel, IBelongsToOrganization, IArchive
     {
-        [Attr("name")]
+        public Group() : base() => Name = "";
+
+        [Attr(PublicName = "name")]
         public string Name { get; set; }
 
-        [Attr("abbreviation")]
-        public string Abbreviation { get; set; }
+        [Attr(PublicName = "abbreviation")]
+        public string? Abbreviation { get; set; }
 
-        [Attr("all-users")]
+        [Attr(PublicName = "all-users")]
         public bool AllUsers { get; set; }
 
-        [HasOne("owner", Link.None)]
-        public virtual Organization Owner { get; set; }
-        [Attr("owner-id")]
+        [HasOne(PublicName = "owner")]
+        public virtual Organization? Owner { get; set; }
+        [Attr(PublicName = "owner-id")]
         public int OwnerId { get; set; }
-        
-        [HasMany("projects", Link.None)]
+        [Attr(PublicName = "permissions")]
+        [Column(TypeName = "jsonb")]
+        public string? Permissions { get; set; }
+
+        /*
+        [JsonIgnore]
+        [HasMany(PublicName = "projects")]
         public virtual List<Project> Projects { get; set; }
 
-        [HasMany("group-memberships", Link.None)]
-        public virtual List<GroupMembership> GroupMemberships { get; set; }
-
+        [JsonIgnore]
+        [HasMany(PublicName = "group-memberships")]
+        public virtual List<Groupmembership> GroupMemberships { get; set; }
+        [NotMapped]
+        public IEnumerable<int> UserIds => GroupMemberships.Select(g => g.UserId);
+        [JsonIgnore]
+        [NotMapped]
+        public IEnumerable<User> Users => GroupMemberships.Select(g => g.User);
+        */
         [NotMapped]
         public int OrganizationId { get => OwnerId; set { } }
-        
-        [NotMapped]
-        public Organization Organization { get => Owner; set { } }
 
         [NotMapped]
-        public IEnumerable<int> UserIds => GroupMemberships?.Select(g => g.UserId);
-
-        [NotMapped]
-        public IEnumerable<User> Users => GroupMemberships?.Select(g => g.User);
+        public Organization Organization { get => Owner ?? new Organization(); set { } }
 
         public bool Archived { get; set; }
     }

@@ -1,36 +1,37 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Repositories;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using static SIL.Transcriber.Utility.ServiceExtensions;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionResourceService : BaseArchiveService<SectionResource>
+    public class SectionResourceService : BaseArchiveService<Sectionresource>
     {
         public SectionResourceService(
-            IJsonApiContext jsonApiContext,
-           SectionResourceRepository SectionResourceRepository,
-            ILoggerFactory loggerFactory) : base(jsonApiContext, SectionResourceRepository, loggerFactory)
-        {
-        }
-        public override async Task<IEnumerable<SectionResource>> GetAsync()
-        {
-            return await GetScopedToCurrentUser(
-                base.GetAsync,
-                JsonApiContext);
-        }
-
-        public override async Task<SectionResource> GetAsync(int id)
-        {
-            IEnumerable<SectionResource> SectionResources = await GetAsync();
-
-            return SectionResources.SingleOrDefault(g => g.Id == id);
-        }
+            IResourceRepositoryAccessor repositoryAccessor,
+            IQueryLayerComposer queryLayerComposer,
+            IPaginationContext paginationContext,
+            IJsonApiOptions options,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest request,
+            IResourceChangeTracker<Sectionresource> resourceChangeTracker,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            SectionResourceRepository repository
+        )
+            : base(
+                repositoryAccessor,
+                queryLayerComposer,
+                paginationContext,
+                options,
+                loggerFactory,
+                request,
+                resourceChangeTracker,
+                resourceDefinitionAccessor,
+                repository
+            )
+        { }
     }
 }

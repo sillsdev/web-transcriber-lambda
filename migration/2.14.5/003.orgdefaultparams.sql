@@ -1,0 +1,1 @@
+alter table organizations add defaultparams jsonb;

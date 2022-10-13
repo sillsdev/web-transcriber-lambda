@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>SIL.Transcriber</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -21,6 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\ActivitystatesController.cs" />
+    <Compile Remove="Controllers\ArtifactCategorysController.cs" />
+    <Compile Remove="Controllers\CurrentUsersController.cs" />
     <Compile Remove="Controllers\HomeController.cs" />
     <Compile Remove="Controllers\PassagesectionsController.cs" />
     <Compile Remove="Controllers\ProjectusersController.cs" />
@@ -28,12 +34,16 @@
     <Compile Remove="Controllers\UserrolesController.cs" />
     <Compile Remove="Data\IRepository.cs" />
     <Compile Remove="Data\IUpdateBuilder.cs" />
+    <Compile Remove="Definitions\FIlterQueryStringParameterReader.cs" />
     <Compile Remove="Models\Chapter.cs" />
+    <Compile Remove="Models\ErrorViewModel.cs" />
+    <Compile Remove="Models\IBurritoMeta.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ParatextVerse.cs" />
     <Compile Remove="Models\PassageSection.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\SFProject.cs" />
+    <Compile Remove="Models\SILAuthModels.cs" />
     <Compile Remove="Models\TextInfo.cs" />
     <Compile Remove="Models\transcriberContext.cs" />
     <Compile Remove="Models\UserRole.cs" />
@@ -70,48 +80,52 @@
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
     <Compile Remove="Repositories\PassageSectionRepository.cs" />
+    <Compile Remove="Serializers\ArgumentGuard.cs" />
+    <Compile Remove="Serializers\CollectionConverter.cs" />
+    <Compile Remove="Serializers\JsonInvalidAttributeInfo.cs" />
+    <Compile Remove="Serializers\MyResponseModelAdapter.cs" />
+    <Compile Remove="Serializers\MyResponseResourceObjectBuilder.cs" />
+    <Compile Remove="Serializers\ResourceObjectConverter.cs" />
+    <Compile Remove="Serializers\SingleOrManyDataConverterFactory.cs" />
+    <Compile Remove="Serializers\TranscriberConverter.cs" />
+    <Compile Remove="Serializers\TranscriberSerializer.cs" />
     <Compile Remove="Services\Auth0ManagementApiTokenService.cs" />
+    <Compile Remove="Services\CurrentUserService.cs" />
     <Compile Remove="Services\PassageSectionService.cs" />
     <Compile Remove="Services\PlantypeService.cs" />
     <Compile Remove="Services\ProjecttypeService.cs" />
     <Compile Remove="Services\RoleService.cs" />
+    <Compile Remove="Utility\ServiceExtensions.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="resources\EafTemplate.xml" />
     <None Remove="resources\invitation.html" />
+    <None Remove="resources\burritometa.json" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="resources\EafTemplate.xml" />
     <EmbeddedResource Include="resources\invitation.html" />
+    <EmbeddedResource Include="resources\burritometa.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Auth0.ManagementApi" Version="6.0.0" />
-    <PackageReference Include="AWS.Logger.AspNetCore" Version="2.0.0" />
-    <PackageReference Include="AWSSDK.Core" Version="3.3.103.66" />
-    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.100.1" />
-    <PackageReference Include="AWSSDK.Lambda" Version="3.3.104.1" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.101.11" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.69" />
-    <PackageReference Include="IdentityModel" Version="3.10.10" />
-    <PackageReference Include="idunno.Authentication.Basic" Version="2.2.2" />
-    <PackageReference Include="JsonApiDotNetCore" Version="3.1.0" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
-    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.22" />
-    <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="2.1.8" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.10" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="2.1.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.1.3" /> 
-    <PackageReference Include="Amazon.Lambda.Core" Version="1.1.0" />
-    <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="3.0.3" />
-    <PackageReference Include="RestSharp" Version="106.12.0" />
-    <PackageReference Include="SIL.Core" Version="7.0.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
-    <PackageReference Include="System.Text.Json" Version="4.7.2" />
-	</ItemGroup>
- 
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer" Version="7.2.0" />
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="1.3.1" />
+    <PackageReference Include="Amazon.Lambda.Core" Version="2.1.0" />
+    <PackageReference Include="Auth0.ManagementApi" Version="7.16.0" />
+    <PackageReference Include="AWS.Logger.AspNetCore" Version="3.3.0" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.2" />
+    <PackageReference Include="AWSSDK.Lambda" Version="3.7.13.13" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.9.15" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.171" />
+    <PackageReference Include="IdentityModel" Version="6.0.0" />
+    <PackageReference Include="JsonApiDotNetCore" Version="5.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.5" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.1" />
+    <PackageReference Include="System.Runtime" Version="4.3.1" />
+  </ItemGroup>
 
 </Project>

@@ -1,45 +1,69 @@
-﻿using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class CurrentVersionRepository : BaseRepository<CurrentVersion>
+    public class CurrentversionRepository : BaseRepository<Currentversion>
     {
-         public CurrentVersionRepository(
+        public CurrentversionRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
+        { }
+
+        public Currentversion CreateOrUpdate(string version)
         {
-        }
-        public CurrentVersion CreateOrUpdate(string version)
-        {
-            CurrentVersion cv = Get().FirstOrDefault();
+            Currentversion? cv = GetAll().FirstOrDefault();
             if (cv != null)
             {
                 if (cv.DesktopVersion != version)
                 {
                     cv.DesktopVersion = version;
-                    dbContext.Update(cv);
-                    dbContext.SaveChanges();
+                    _ = dbContext.Update(cv);
+                    _ = dbContext.SaveChanges();
                 }
             }
             else
             {
-                cv = new CurrentVersion
-                {
-                    DesktopVersion = version
-                };
-                dbContext.CurrentVersions.Add(cv);
-                dbContext.SaveChanges();
+                cv = new Currentversion { DesktopVersion = version };
+                _ = dbContext.Currentversions.Add(cv);
+                _ = dbContext.SaveChanges();
             }
             return cv;
+        }
+
+        public override IQueryable<Currentversion> FromCurrentUser(
+            IQueryable<Currentversion>? entities = null
+        )
+        {
+            return entities ?? GetAll();
+        }
+
+        public override IQueryable<Currentversion> FromProjectList(
+            IQueryable<Currentversion>? entities,
+            string idList
+        )
+        {
+            return entities ?? GetAll();
         }
     }
 }

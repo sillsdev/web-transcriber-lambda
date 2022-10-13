@@ -1,59 +1,79 @@
-using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.Threading.Tasks;
 
 namespace SIL.Transcriber.Controllers
 {
     /* This has to be a BaseController of some sort to force JsonApiDotNetCore to serialize our objects so they are in right format in the zip file */
 
-    [Route("api/[controller]")]
     [ApiController]
-    public class OfflinedataController : BaseController<FileResponse>
+    [Route("api/offlineData")]
+    public class OfflinedataController : ControllerBase
     {
         private readonly IOfflineDataService _service;
 
         public OfflinedataController(
-           ILoggerFactory loggerFactory,
-           IJsonApiContext jsonApiContext,
-           FileResponseService frService,
-           ICurrentUserContext currentUserContext,
-           OrganizationService organizationService,
-           UserService userService,
-           IOfflineDataService service)
-        :base(loggerFactory, jsonApiContext, frService, currentUserContext, organizationService, userService)
+            //ILoggerFactory loggerFactory,
+            //IJsonApiOptions options,
+            //IResourceGraph resourceGraph,
+            //JsonApiResourceService<Fileresponse, int> frService,
+            //ICurrentUserContext currentUserContext,
+            //UserService userService,
+            IOfflineDataService service
+        ) : base()
         {
             _service = service;
         }
 
         [HttpGet("project/export/{id}/{start}")]
-        public ActionResult<FileResponse> Export([FromRoute] int id, int start)
+        public ActionResult<Fileresponse> Export([FromRoute] int id, int start)
         {
-            FileResponse response = _service.ExportProject(id, start);
+            Fileresponse response = _service.ExportProjectPTF(id, start);
             return Ok(response);
         }
+
+        [HttpPost("project/export/{exporttype}/{id}/{start}")]
+        public ActionResult<Fileresponse> Export(
+            [FromRoute] string exportType,
+            int id,
+            int start,
+            [FromForm] string? ids,
+            [FromForm] string? artifactType
+        )
+        {
+            Fileresponse response = exportType switch
+            {
+                "ptf" => _service.ExportProjectPTF(id, start),
+                "audio" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start),
+                "burrito" => _service.ExportBurrito(id, ids, start),
+                _ => _service.ExportProjectPTF(id, start),
+            };
+            return Ok(response);
+        }
+
         [HttpGet("project/import/{filename}")]
-        public ActionResult<FileResponse> ImportFileUpload([FromRoute] string filename)
+        public ActionResult<Fileresponse> ImportFileUpload([FromRoute] string filename)
         {
             /* get a signed PUT url */
-            FileResponse response = _service.ImportFileURL(filename);
+            Fileresponse response = _service.ImportFileURL(filename);
             return response;
         }
 
         [HttpPut("project/import/{projectid}/{filename}")]
-        public async Task<ActionResult<FileResponse>> ProcessImportFileAsync([FromRoute] int projectid, string filename)
+        public async Task<ActionResult<Fileresponse>> ProcessImportFileAsync(
+            [FromRoute] int projectid,
+            string filename
+        )
         {
             return await _service.ImportFileAsync(projectid, filename);
         }
 
         [HttpPut("sync/{filename}")]
-        public async Task<ActionResult<FileResponse>> ProcessSyncFileAsync([FromRoute] string filename)
+        public async Task<ActionResult<Fileresponse>> ProcessSyncFileAsync(
+            [FromRoute] string filename
+        )
         {
             return await _service.ImportFileAsync(filename);
         }
-
     }
 }

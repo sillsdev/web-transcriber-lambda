@@ -1,32 +1,42 @@
-﻿using System;
-using System.Linq;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
-using static SIL.Transcriber.Utility.RepositoryExtensions;
-using Microsoft.EntityFrameworkCore;
 
 namespace SIL.Transcriber.Repositories
 {
     public class MediafileRepository : BaseRepository<Mediafile>
     {
-
-        private PlanRepository PlanRepository;
+        readonly private PlanRepository PlanRepository;
+        readonly private ProjectRepository ProjectRepository;
 
         public MediafileRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
             PlanRepository planRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            ProjectRepository projectRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             PlanRepository = planRepository;
+            ProjectRepository = projectRepository;
         }
 
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, int project)
@@ -35,70 +45,158 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == project);
             return UsersMediafiles(entities, projects);
         }
+
         //get my Mediafiles in these projects
-        public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Project> projects)
+        public IQueryable<Mediafile> UsersMediafiles(
+            IQueryable<Mediafile> entities,
+            IQueryable<Project> projects
+        )
         {
             //this gets just the passages I have access to in these projects
             IQueryable<Plan> plans = PlanRepository.UsersPlans(dbContext.Plans, projects);
             return UsersMediafiles(entities, plans);
         }
-        private IQueryable<Mediafile> PlansMediafiles(IQueryable<Mediafile> entities, IQueryable<Plan> plans)
+
+        private static IQueryable<Mediafile> PlansMediafiles(
+            IQueryable<Mediafile> entities,
+            IQueryable<Plan> plans
+        )
         {
-            return entities.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
+            return entities.Where(e => !e.Archived).Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
         }
 
-        private IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, IQueryable<Plan> plans = null)
+        public IEnumerable<Mediafile>? WBTUpdate()
+        {
+            Artifacttype? newAT = dbContext.Artifacttypes.Where(at => at.Typename == "wholebacktranslation").FirstOrDefault();
+            if (newAT == null) return null;
+            IEnumerable<Mediafile>? entities = FromCurrentUser().Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), m => m.ArtifactTypeId, a => a.Id, (m, a) => m).Where(m => m.SourceSegments == null).ToList();
+            foreach (Mediafile m in entities)
+            {
+                m.ArtifactTypeId = newAT.Id;
+                dbContext.Update(m);
+            }
+            dbContext.SaveChanges();
+            return entities;
+        }
+        private IQueryable<Mediafile> UsersMediafiles(
+            IQueryable<Mediafile> entities,
+            IQueryable<Plan>? plans = null
+        )
         {
             if (plans == null)
                 plans = PlanRepository.UsersPlans(dbContext.Plans);
 
             return PlansMediafiles(entities, plans);
         }
-        private IQueryable<Mediafile> ProjectsMediafiles(IQueryable<Mediafile> entities, string projectid)
+
+        private IQueryable<Mediafile> ProjectsMediafiles(
+            IQueryable<Mediafile> entities,
+            string idlist
+        )
         {
-            IQueryable<Plan> plans = PlanRepository.ProjectPlans(dbContext.Plans, projectid);
+            IQueryable<Project> projects = ProjectRepository.FromIdList(dbContext.Projects, idlist);
+            IQueryable<Plan> plans = PlanRepository.ProjectPlans(dbContext.Plans, projects);
             return PlansMediafiles(entities, plans);
         }
-        public override IQueryable<Mediafile> Filter(IQueryable<Mediafile> entities, FilterQuery filterQuery)
+
+        public Mediafile? GetLatestShared(int passageId)
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                IQueryable<Project> projects = dbContext.Projects.FilterByOrganization(filterQuery, allowedOrganizationIds: CurrentUser.OrganizationIds.OrEmpty());
-				return UsersMediafiles(entities, projects);
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersMediafiles(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectsMediafiles(entities, filterQuery.Value);
-            }
-            if (filterQuery.Has(PROJECT_SEARCH_TERM))
-            {
-                int projectid;
-                if (!int.TryParse(filterQuery.Value, out projectid))
-                    return entities;
-                return UsersMediafiles(entities, projectid);
-            }
-            return base.Filter(entities, filterQuery);
+            return GetAll()
+                .Where(p => p.PassageId == passageId && p.ReadyToShare)
+                .OrderBy(m => m.VersionNumber)
+                .LastOrDefault();
         }
-        public Mediafile GetLatestShared(int passageId)
+        public IEnumerable<Mediafile> PassageReadyToSync(int PassageId, int artifactTypeId = 0)
         {
-            return Get().Where(p => p.PassageId == passageId && p.ReadyToShare).OrderBy(m => m.VersionNumber).LastOrDefault();
-        }
-        public IQueryable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId = 0)
-        {
-            //this should disqualify media that has a new version that isn't ready...but doesn't (yet)
-            IQueryable<Mediafile> media = dbContext.Mediafiles
-                .Where(m => m.PlanId == PlanId && (artifactTypeId == 0 ? m.ArtifactTypeId == null : m.ArtifactTypeId == artifactTypeId) && m.ReadyToSync)
-                .Include(m => m.Passage).ThenInclude(p => p.Section)
-                .OrderBy(m => m.PassageId).ThenBy(m => m.VersionNumber);
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            IEnumerable<Mediafile> media =
+                artifactTypeId == 0 ?
+                    dbContext.Mediafiles
+                    .Where(m => m.PassageId == PassageId
+                             && m.ArtifactTypeId == null)
+                    .Include(m => m.Passage)
+                    .ThenInclude(p => p.Section)
+                    .ThenInclude(s => s.Plan)
+                    .OrderBy(m => m.VersionNumber)
+                :
+                    dbContext.Mediafiles
+                    .Where(m =>
+                            m.PassageId == PassageId
+                            && m.ArtifactTypeId == artifactTypeId)
+                    .Include(m => m.Passage)
+                    .ThenInclude(p => p.Section)
+                    .ThenInclude(s => s.Plan)
+                    .ToList()
+                    .Where(m => m.ReadyToSync)
+                    .OrderBy(m => m.VersionNumber);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+
+            if (artifactTypeId == 0)
+            {
+                List<Mediafile> ret = new ();
+                if (media.Any() && media.Last().ReadyToSync)
+                    ret.Add(media.Last());
+                return ret;
+            }
             return media;
         }
-        public Mediafile Get(int id)
+
+
+        public IEnumerable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId = 0)
         {
-            return Get().SingleOrDefault(p => p.Id == id);
+            //this should disqualify media that has a new version that isn't ready...but doesn't (yet)
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            IEnumerable<Mediafile> media = dbContext.Mediafiles
+                .Where(m =>
+                        m.PlanId == PlanId
+                        && (
+                            artifactTypeId == 0
+                                ? m.ArtifactTypeId == null
+                                : m.ArtifactTypeId == artifactTypeId
+                        )
+                        && m.PassageId != null
+                )
+                .Include(m => m.Passage)
+                .ThenInclude(p => p.Section)
+                .ToList()
+                .Where(m => m.ReadyToSync)
+                .OrderBy(m => m.PassageId)
+                .ThenBy(m => m.VersionNumber);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+            return media;
+        }
+
+        public override IQueryable<Mediafile> FromCurrentUser(
+            IQueryable<Mediafile>? entities = null
+        )
+        {
+            return UsersMediafiles(entities ?? GetAll());
+        }
+
+        //handles PROJECT_SEARCH_TERM and PROJECT_LIST
+        public override IQueryable<Mediafile> FromProjectList(
+            IQueryable<Mediafile>? entities,
+            string idList
+        )
+        {
+            return ProjectsMediafiles(entities ?? GetAll(), idList);
+        }
+
+        public Mediafile? Get(int id)
+        {
+            return dbContext.MediafilesData.SingleOrDefault(p => p.Id == id);
+        }
+
+        public override Task CreateAsync(
+            Mediafile resourceFromRequest,
+            Mediafile resourceForDatabase,
+            CancellationToken cancellationToken
+        )
+        {
+            //copy the values we set manually in the service CreateAsync
+            resourceForDatabase.S3File = resourceFromRequest.S3File;
+            resourceForDatabase.AudioUrl = resourceFromRequest.AudioUrl;
+            return base.CreateAsync(resourceFromRequest, resourceForDatabase, cancellationToken);
         }
     }
 }

@@ -1,67 +1,82 @@
-﻿using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Services;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Utility;
-using SIL.Transcriber.Utility.Extensions.JSONAPI;
-using System.Linq;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-using SIL.Transcriber.Data;
-using System.Collections.Generic;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgWorkflowStepRepository : BaseRepository<OrgWorkflowStep>
+    public class OrgWorkflowStepRepository : BaseRepository<Orgworkflowstep>
     {
-        private OrganizationRepository OrganizationRepository;
+        private readonly OrganizationRepository OrganizationRepository;
+
         public OrgWorkflowStepRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            OrganizationRepository organizationRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
+            OrganizationRepository organizationRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
         {
             OrganizationRepository = organizationRepository;
         }
-        public IQueryable<OrgWorkflowStep> UsersOrgWorkflowSteps(IQueryable<OrgWorkflowStep> entities)
+
+        public IQueryable<Orgworkflowstep> UsersOrgWorkflowSteps(
+            IQueryable<Orgworkflowstep> entities
+        )
         {
+            if (CurrentUser == null)
+                return entities.Where(e => e.Id == -1);
+
             IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                entities = entities
-                       .Where(om => orgIds.Contains(om.OrganizationId));
+                entities = entities.Where(om => !om.Archived && orgIds.Contains(om.OrganizationId));
             }
-            return entities;
+            return entities.Where(e => !e.Archived);
         }
-        public IQueryable<OrgWorkflowStep> ProjectOrgWorkflowSteps(IQueryable<OrgWorkflowStep> entities, string projectid)
+
+        public IQueryable<Orgworkflowstep> ProjectOrgWorkflowSteps(
+            IQueryable<Orgworkflowstep> entities,
+            string projectid
+        )
         {
-            IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(dbContext.Organizations, projectid);
+            IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(
+                dbContext.Organizations,
+                projectid
+            );
             return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
         }
 
         #region Overrides
-        public override IQueryable<OrgWorkflowStep> Filter(IQueryable<OrgWorkflowStep> entities, FilterQuery filterQuery)
+        public override IQueryable<Orgworkflowstep> FromProjectList(
+            IQueryable<Orgworkflowstep>? entities,
+            string idList
+        )
         {
-            if (filterQuery.Has(ORGANIZATION_HEADER))
-            {
-                if (filterQuery.HasSpecificOrg())
-                {
-                    int specifiedOrgId;
-                    bool hasSpecifiedOrgId = int.TryParse(filterQuery.Value, out specifiedOrgId);
-                    return UsersOrgWorkflowSteps(entities).Where(om => om.Id == specifiedOrgId);
-                }
-                return UsersOrgWorkflowSteps(entities);
-            }
-            if (filterQuery.Has(ALLOWED_CURRENTUSER))
-            {
-                return UsersOrgWorkflowSteps(entities);
-            }
-            if (filterQuery.Has(PROJECT_LIST))
-            {
-                return ProjectOrgWorkflowSteps(entities, filterQuery.Value);
-            }
-            return base.Filter(entities, filterQuery);
+            return ProjectOrgWorkflowSteps(entities ?? GetAll(), idList);
+        }
+
+        public override IQueryable<Orgworkflowstep> FromCurrentUser(
+            IQueryable<Orgworkflowstep>? entities = null
+        )
+        {
+            return UsersOrgWorkflowSteps(entities ?? GetAll());
         }
         #endregion
     }

@@ -1,42 +1,52 @@
-﻿using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using Microsoft.IdentityModel.Tokens;
-using System;
+using SIL.Transcriber.Utility.Extensions;
 using System.IdentityModel.Tokens.Jwt;
-
 
 namespace SIL.Logging.Models
 {
-    public class ParatextTokenHistory : LogBaseModel
+    public class Paratexttokenhistory : LogBaseModel
     {
-        public ParatextTokenHistory() : base() { }
-        public ParatextTokenHistory(int userid, string access, string refresh, string msg, string errmsg="") : base(userid) {
+        public Paratexttokenhistory() : base()
+        {
+            AccessToken = "";
+            RefreshToken = "";
+            Msg = "";
+            UserId = 0;
+        }
+        public Paratexttokenhistory(int userid, string access, string refresh, string msg, string errmsg = "") : base(userid)
+        {
             AccessToken = access;
             RefreshToken = refresh;
             Msg = msg;
             ErrMsg = errmsg;
             if (access != null)
             {
-                JwtSecurityToken jwt = new JwtSecurityToken(access);
+                JwtSecurityToken jwt = new (access);
                 IssuedAt = jwt.Payload.Iat != null ? EpochTime.DateTime((long)jwt.Payload.Iat) : DateTime.MinValue;
                 ValidTo = jwt.ValidTo;
                 Console.WriteLine(IssuedAt.ToString(), ValidTo.ToString());
             }
         }
 
-        [Attr("access-token")]
-        public string AccessToken { get; set; }
-        [Attr("refresh-token")]
-        public string RefreshToken { get; set; }
+        [Attr(PublicName = "access-token")]
+        public string AccessToken { get; set; } = "";
 
-        [Attr("msg")]
-        public string Msg { get; set; }
-        [Attr("err-msg")]
-        public string ErrMsg { get; set; }
-        [Attr("issued-at")]
-        public DateTime IssuedAt { get; set; }
+        [Attr(PublicName = "refresh-token")]
+        public string RefreshToken { get; set; } = "";
 
-        [Attr("valid-to")]
-        public DateTime ValidTo { get; set; }
+        [Attr(PublicName = "msg")]
+        public string Msg { get; set; } = "";
+        [Attr(PublicName = "err-msg")]
+        public string? ErrMsg { get; set; }
+        private DateTime _issued;
+        [Attr(PublicName = "issued-at")]
+        public DateTime IssuedAt { get { return _issued; } set { _issued = value.SetKindUtc(); } }
+
+        private DateTime _validto;
+        [Attr(PublicName = "valid-to")]
+        public DateTime ValidTo { get { return _validto; } set { _validto = value.SetKindUtc(); } }
+
 
     }
 }

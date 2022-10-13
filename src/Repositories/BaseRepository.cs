@@ -1,113 +1,221 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using JsonApiDotNetCore.Data;
-using JsonApiDotNetCore.Internal.Query;
-using JsonApiDotNetCore.Models;
-using JsonApiDotNetCore.Serialization;
-using JsonApiDotNetCore.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Queries;
+using JsonApiDotNetCore.Queries.Expressions;
+using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Serialization.JsonConverters;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using static SIL.Transcriber.Utility.Extensions.JSONAPI.FilterQueryExtensions;
-
+using SIL.Transcriber.Utility.Extensions.JSONAPI;
+using System.Text.Json;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class BaseRepository<TEntity> : BaseRepository<TEntity, int>, IEntityRepository<TEntity> where TEntity : BaseModel
+    public abstract class BaseRepository<TEntity> : BaseRepository<TEntity, int>
+        where TEntity : BaseModel
     {
-        public BaseRepository(ILoggerFactory loggerFactory,
-                              IJsonApiContext jsonApiContext,
-                              CurrentUserRepository currentUserRepository,
-                              //EntityHooksService<TEntity, int> statusUpdateService,
-                              AppDbContextResolver contextResolver)
-            : base(loggerFactory, jsonApiContext, currentUserRepository, contextResolver)
-        {
-        }
+        public BaseRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
+            ILoggerFactory loggerFactory,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor,
+                currentUserRepository
+            )
+        { }
     }
 
-    public class BaseRepository<TEntity, TId> : DefaultEntityRepository<TEntity, TId>
+    public abstract class BaseRepository<TEntity, TId> : AppDbContextRepository<TEntity>
         where TEntity : BaseModel, IIdentifiable<TId>
     {
-        //protected readonly DbSet<TEntity> dbSet;
-        protected readonly CurrentUserRepository currentUserRepository;
-        //protected readonly EntityHooksService<TEntity, TId> statusUpdateService;
+        protected readonly IResourceDefinitionAccessor ResourceDefinitionAccessor;
+        protected readonly IResourceGraph ResourceGraph;
+        protected readonly CurrentUserRepository CurrentUserRepository;
         protected readonly AppDbContext dbContext;
         protected ILogger<TEntity> Logger { get; set; }
+        protected readonly IEnumerable<IQueryConstraintProvider> ConstraintProviders;
+        protected readonly JsonSerializerOptions Options =
+            new()
+            {
+                // WriteIndented = true,
+                //PropertyNamingPolicy = new CamelToDashNamingPolicy(),
+            };
 
         public BaseRepository(
+            ITargetedFields targetedFields,
+            AppDbContextResolver contextResolver,
+            IResourceGraph resourceGraph,
+            IResourceFactory resourceFactory,
+            IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IJsonApiContext jsonApiContext,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-            ) : base(loggerFactory, jsonApiContext, contextResolver)
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            CurrentUserRepository currentUserRepository
+        )
+            : base(
+                targetedFields,
+                contextResolver,
+                resourceGraph,
+                resourceFactory,
+                constraintProviders,
+                loggerFactory,
+                resourceDefinitionAccessor
+            )
         {
-            this.dbContext = (AppDbContext)contextResolver.GetContext();
-            //this.dbSet = contextResolver.GetDbSet<TEntity>();
-            this.currentUserRepository = currentUserRepository;
-            this.Logger = loggerFactory.CreateLogger<TEntity>();
+            dbContext = (AppDbContext)contextResolver.GetContext();
+            CurrentUserRepository = currentUserRepository;
+            Logger = loggerFactory.CreateLogger<TEntity>();
+            ConstraintProviders = constraintProviders;
+            Options.Converters.Add(new ResourceObjectConverter(resourceGraph));
+            Options.Converters.Add(new WriteOnlyRelationshipObjectConverter());
+            Options.Converters.Add(new SingleOrManyDataConverterFactory());
+            ResourceDefinitionAccessor = resourceDefinitionAccessor;
+            ResourceGraph = resourceGraph;
         }
+
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {
             return dbContext.Database.BeginTransaction();
         }
-        public User CurrentUser {
-            get {
-                return currentUserRepository.GetCurrentUser();
-            }
+
+        public User? CurrentUser {
+            get { return CurrentUserRepository.GetCurrentUser(); }
         }
-        public override async Task<TEntity> CreateAsync(TEntity entity)
-        {
-            try
-            {
-                TEntity x = base.Get().Where(t => t.DateCreated == entity.DateCreated && t.LastModifiedBy == entity.LastModifiedBy).FirstOrDefault();
-                if (x == null)
-                    return await base.CreateAsync(entity);
-                return x;
-            }
-            catch (DbUpdateException ex)
-            {
-                throw ex;  //does this go back to my controller?  Nope...eaten by JsonApiExceptionFilter.  TODO: Figure out a way to capture it and return a 400 instead
-            }
-        }
+
         #region MultipleData //orgdata, projdata
-        protected string InitData()
+        protected string InitData(bool withBracket = true)
         {
-            return "{\"data\":[";
+            return "{\"data\":" + (withBracket ? "[" : "");
         }
-        protected string FinishData()
+
+        protected string FinishData(bool withBracket = true)
         {
-            return "]}";
+            return (withBracket ? "]" : "") + "}";
         }
-        protected bool CheckAdd(int check, object entity, DateTime dtBail, IJsonApiSerializer jsonApiSerializer, ref int start, ref string data)
+
+        protected bool CheckAdd(
+            int check,
+            string thisData,
+            DateTime dtBail,
+            ref int start,
+            ref string data
+        )
         {
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
-            if (DateTime.Now > dtBail) return false;
+            if (DateTime.Now > dtBail)
+                return false;
             if (start <= check)
             {
-                string thisdata = jsonApiSerializer.Serialize(entity);
-                if (data.Length + thisdata.Length > (1000000 * 4))
+                if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
-                data += (data.Length > 0 ? "," : InitData()) + thisdata;
+                data += (data.Length > 0 ? "," : InitData()) + thisData;
                 start++;
             }
             return true;
         }
         #endregion
 
-        public override IQueryable<TEntity> Filter(IQueryable<TEntity> entities, FilterQuery filterQuery)
+        //public version of GetAll which avoids current user checks
+        public IQueryable<TEntity> Get()
         {
-            if (filterQuery.Has(IDLIST))
-            {
-                string[] idList = filterQuery.Value.Split("|");
-                return entities.Where(e => idList.Any(i => i == e.Id.ToString()));
-            }
-
-            if (filterQuery.Has(VERSION))
-                return entities;
-            
-            return base.Filter(entities, filterQuery);
+            return GetAll();
         }
+
+        #region filters
+        public IQueryable<TEntity> FromIdList(IQueryable<TEntity> entities, string idList)
+        {
+            string[] ids = idList.Replace("'", "").Split("|");
+            return entities.Where(e => ids.Any(i => i == e.Id.ToString()));
+        }
+
+        public abstract IQueryable<TEntity> FromCurrentUser(IQueryable<TEntity>? entities); //force this one
+        public abstract IQueryable<TEntity> FromProjectList(
+            IQueryable<TEntity>? entities,
+            string idList
+        );
+
+        protected virtual IQueryable<TEntity> FromStartIndex(
+            IQueryable<TEntity>? entities,
+            string startIndex,
+            string version = "",
+            string projectid = ""
+        )
+        {
+            return entities ?? Enumerable.Empty<TEntity>().AsQueryable();
+        }
+
+        protected virtual IQueryable<TEntity> FromPlan(QueryLayer layer, string planId)
+        {
+            return base.ApplyQueryLayer(layer);
+        }
+
+        protected override IQueryable<TEntity> ApplyQueryLayer(QueryLayer layer)
+        {
+            ExpressionInScope[] expressions = ConstraintProviders
+                .SelectMany(provider => provider.GetConstraints())
+                .Where(expressionInScope => expressionInScope.Scope == null)
+                .ToArray();
+
+            if (layer.Filter?.Has(FilterConstants.ID) ?? false) //internal call after insert...if external, we caught it in GetAsync
+                return base.ApplyQueryLayer(layer);
+
+            foreach (ExpressionInScope ex in expressions)
+            {
+                /* multiple filters on the request will be or'd together */
+                /* note this is not an all purpose solution, but one very specific to our case
+                 * we only use multiples on orgdata,projdata */
+                if (ex.Expression.GetType().IsAssignableFrom(typeof(LogicalExpression)))
+                {
+                    LogicalExpression logex = (LogicalExpression)ex.Expression;
+                    IReadOnlyCollection<FilterExpression> terms = logex.Terms;
+                    string projectid = "",
+                        startid = "",
+                        version = "";
+                    foreach (FilterExpression term in terms)
+                    {
+                        if (term.Field() == FilterConstants.PROJECT_SEARCH_TERM)
+                            projectid = term.Value().Replace("'", "");
+                        else if (term.Field() == FilterConstants.DATA_START_INDEX)
+                            startid = term.Value().Replace("'", "");
+                        else if (term.Field() == FilterConstants.JSONFILTER)
+                            version = term.Value().Replace("'", "");
+                    }
+                    if (startid != "")
+                    {
+                        layer.Filter = null;
+                        return FromStartIndex(
+                            base.ApplyQueryLayer(layer),
+                            startid,
+                            version,
+                            projectid
+                        );
+                    }
+                }
+                else
+                    switch (ex.Field())
+                    {
+                        case FilterConstants.IDLIST:
+                            layer.Filter = null;
+                            return FromIdList(base.ApplyQueryLayer(layer), ex.Value());
+                        case FilterConstants.PROJECT_LIST:
+                            layer.Filter = null;
+                            return FromProjectList(base.ApplyQueryLayer(layer), ex.Value());
+                    }
+                ;
+            }
+            return FromCurrentUser(base.ApplyQueryLayer(layer));
+        }
+        #endregion
+
     }
 }

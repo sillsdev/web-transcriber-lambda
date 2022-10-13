@@ -1,19 +1,20 @@
-﻿
-using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    public class ArtifactCategory : BaseModel, IArchive
+    [Table("artifactcategorys")]
+    public class Artifactcategory : BaseModel, IArchive
     {
-        [Attr("categoryname")]
-        public string Categoryname { get; set; }
-        [Attr("discussion")]
+        [Attr(PublicName = "categoryname")]
+        public string? Categoryname { get; set; }
+        [Attr(PublicName = "discussion")]
         public bool Discussion { get; set; }
-        [Attr("resource")]
+        [Attr(PublicName = "resource")]
         public bool Resource { get; set; }
         public bool Archived { get; set; }
         public int? OrganizationId { get; set; }
-        [HasOne("organization", Link.None)]
-        public Organization Organization { get; set; }
+        [HasOne(PublicName = "organization")]
+        public Organization? Organization { get; set; }
     }
 }

@@ -1,40 +1,35 @@
-﻿using System;
-using JsonApiDotNetCore.Models;
+﻿using JsonApiDotNetCore.Resources;
+using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    public class BaseModel : Identifiable<int>, ITrackDate, ILastModified
+    public partial class BaseModel : Identifiable<int>, ITrackDate, ILastModified
     {
-        [Attr("date-created")]
+        [NotMapped]
+        [Attr(PublicName = "id-list")]
+        public string? IdList { get; set; }
+
+        [Attr(PublicName = "date-created")]
         public DateTime? DateCreated { get; set; }
-        [Attr("date-updated")]
+        [Attr(PublicName = "date-updated")]
         public DateTime? DateUpdated { get; set; }
-        [Attr("last-modified-by")]
+
+        [Attr(PublicName = "last-modified-by")]
         public int? LastModifiedBy { get; set; }
 
-        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-        [HasOne("last-modified-by-user", Link.None)]
-        public User LastModifiedByUser { get; set; }
+        [HasOne(PublicName = "last-modified-by-user")]
+        virtual public User? LastModifiedByUser { get; set; }
 
-        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-        public int? LastModifiedByUserId
-        {
-            get
-            {
-                return LastModifiedBy;
-            }
-            set
-            {
-                LastModifiedBy = value;
-            }
-        }
-        [Attr("last-modified-origin")]
-        public string LastModifiedOrigin { get; set; }
+        [Attr(PublicName = "last-modified-origin")]
+        public string? LastModifiedOrigin { get; set; }
         public object ShallowCopy()
         {
             return this.MemberwiseClone();
         }
     }
+
 
 
 }

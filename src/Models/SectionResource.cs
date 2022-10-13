@@ -1,35 +1,44 @@
-﻿using JsonApiDotNetCore.Models;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    public partial class SectionResource : BaseModel, IArchive
+    public partial class Sectionresource : BaseModel, IArchive
     {
-        [Attr("sequence-num")]
+        [Attr(PublicName = "sequence-num")]
         public int SequenceNum { get; set; }
 
-        [Attr("description")]
-        public string Description { get; set; }
+        [Attr(PublicName = "description")]
+        public string? Description { get; set; }
 
-        [Attr("section-id")]
+        [Attr(PublicName = "section-id")]
         public int SectionId { get; set; }
 
-        [HasOne("section", Link.None)]
-        public Section Section { get; set; }
-        [Attr("mediafile-id")]
+        [HasOne(PublicName = "section")]
+        public Section? Section { get; set; }
+
+        [Attr(PublicName = "mediafile-id")]
         public int? MediafileId { get; set; }
 
-        [HasOne("mediafile", Link.None)]
-        public Mediafile Mediafile { get; set; }
+        [HasOne(PublicName = "mediafile")]
+        public Mediafile? Mediafile { get; set; }
 
-        public int orgWorkflowStepId { get; set; }
-        [HasOne("org-workflow-step", Link.None)]
-        public OrgWorkflowStep OrgWorkflowStep { get; set; }
+        [Attr(PublicName = "passage-id")]
+        public int? PassageId { get; set; }
 
-        [HasMany("section-resource-users", Link.None)]
-        public List<SectionResourceUser> SectionResourceUsers { get; set; }
+        [HasOne(PublicName = "passage")]
+        public Passage? Passage { get; set; }
+
+        [Attr(PublicName = "project-id")]
+        public int? ProjectId { get; set; }
+
+        [HasOne(PublicName = "project")]
+        public Project? Project { get; set; }
+
+        public int OrgWorkflowStepId { get; set; }
+
+        [HasOne(PublicName = "org-workflow-step")]
+        public Orgworkflowstep? OrgWorkflowStep { get; set; }
 
         public bool Archived { get; set; }
     }

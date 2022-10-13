@@ -1,25 +1,23 @@
-﻿using JsonApiDotNetCore.Models;
-using System.Collections.Generic;
+﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
+    [Table("integrations")]
     public partial class Integration : BaseModel, IArchive
     {
-        public enum Integrations
+        public Integration() : base()
         {
-            Paratext = 1
+            Name = "";
         }
 
-        [Attr("name")]
+        [Attr(PublicName = "name")]
         public string Name { get; set; }
 
-        [Attr("url")]
-        public string Url { get; set; }
+        [Attr(PublicName = "url")]
+        public string? Url { get; set; }
 
-        [HasMany("project-integrations", Link.None)]
-        public virtual List<ProjectIntegration> ProjectIntegrations { get; set; }
-
-        //public ICollection<ProjectIntegration> Projectintegrations { get; set; }
         public bool Archived { get; set; }
     }
 }
