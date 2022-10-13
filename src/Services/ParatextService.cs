@@ -243,6 +243,7 @@ namespace SIL.Transcriber.Services
             //get more info for those projects that are registered
             response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "projects");
             JArray projectArray = JArray.Parse(response);
+            Logger.LogInformation($"TTY D: {DateTime.Now} {projectArray}");
 
             foreach (JToken projectObj in projectArray)
             {
@@ -283,8 +284,8 @@ namespace SIL.Transcriber.Services
                     sp.LanguageName += (sp.LanguageName.Length > 0 ? "," : "") + proj.LanguageName;
                     sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
-            }
 
+            }
             return projects;
         }
 
