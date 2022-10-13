@@ -56,7 +56,7 @@ namespace SIL.Transcriber.Services
         private static string BuildEmailBody(dynamic strings, Invitation entity)
         {
             //localize...
-            string app = strings["App"] ?? "missing App: SIL Transcriber";
+            string app = strings["App"] ?? "missing App: Audio Project Manager";
             string invite = strings["Invitation"] ?? "missing Invitation: has invited you to join";
             string instructions =
                 strings["Instructions"]
@@ -103,7 +103,7 @@ namespace SIL.Transcriber.Services
                     return null;
 
                 string subject =
-                    strings["Subject"] ?? "missing subject: SIL Transcriber Invitation";
+                    strings["Subject"] ?? "missing subject: Audio Project Manager Invitation";
                 await TranscriberAPI.Utility.Email.SendEmailAsync(
                     entity.Email,
                     subject,

@@ -10,7 +10,7 @@ namespace SIL.Transcriber.Models
         {
             Id = 1;
             Json = "{}";
-            LastModifiedOrigin = "api";
+            LastModifiedOrigin = "apix";
         }
         [Attr(PublicName = "json")]
         public string Json { get; set; }

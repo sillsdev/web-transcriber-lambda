@@ -80,7 +80,7 @@ namespace SIL.Transcriber.Services
                 .FirstOrDefault();
             if (groupmembership == null)
             {
-                HttpContext?.SetFP("api");
+                HttpContext?.SetFP("api joingroup");
                 groupmembership = new Groupmembership
                 {
                     GroupId = groupId,

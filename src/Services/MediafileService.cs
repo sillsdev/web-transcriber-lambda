@@ -95,9 +95,7 @@ namespace SIL.Transcriber.Services
                 .ThenInclude(p => p.Organization)
                 .Where(p => p.Id == id)
                 .First();
-            if (plan != null)
-                return DirectoryName(plan);
-            return "";
+            return plan != null ? DirectoryName(plan) : "";
         }
 
         public string? GetAudioUrl(Mediafile mf)

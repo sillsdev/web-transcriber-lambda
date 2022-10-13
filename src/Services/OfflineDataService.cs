@@ -530,7 +530,7 @@ namespace SIL.Transcriber.Services
                 throw new Exception("Bad Meta" + metastr);
             root.meta.version = "0.3.1";
             root.meta.category = "source";
-            root.meta.generator.softwareName = "SIL Transcriber";
+            root.meta.generator.softwareName = "SIL Audio Project Manager";
             root.meta.generator.softwareVersion =
                 dbContext.Currentversions.FirstOrDefault()?.DesktopVersion ?? "unknown";
             root.meta.generator.userName = CurrentUser()?.Name ?? "unknown";
@@ -677,7 +677,7 @@ namespace SIL.Transcriber.Services
                 {
                     DateTime exported = AddCheckEntry(
                         zipArchive,
-                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 4
+                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 5
                     );
                     List<Mediafile> mediafiles = dbContext.Mediafiles
                         .Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))
@@ -2151,7 +2151,9 @@ namespace SIL.Transcriber.Services
                                     {
                                         Intellectualproperty? existing = dbContext.IntellectualPropertys.Find(ip.Id);
                                         if (existing != null)
+#pragma warning disable CS0642 // Possible mistaken empty statement
                                             ; //do nothing no updateIP currently...
+#pragma warning restore CS0642 // Possible mistaken empty statement
                                     }
                                     else
                                     {

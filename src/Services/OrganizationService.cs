@@ -54,7 +54,7 @@ namespace SIL.Transcriber.Services
                 .FirstOrDefault();
 
             if (HttpContext != null)
-                HttpContext.SetFP("api");
+                HttpContext.SetFP("api join org");
             Organizationmembership? membership = dbContext.Organizationmemberships
                 .Where(om => om.OrganizationId == entity.Id && om.UserId == user.Id)
                 .FirstOrDefault();

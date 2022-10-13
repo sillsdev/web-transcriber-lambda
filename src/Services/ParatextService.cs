@@ -637,12 +637,7 @@ namespace SIL.Transcriber.Services
                 // and also the guidance for operator== at
                 //   http://go.microsoft.com/fwlink/?LinkId=85238
 
-                if (obj == null || GetType() != obj.GetType())
-                {
-                    return false;
-                }
-
-                return Equals(obj as BookChapter);
+                return obj != null && GetType() == obj.GetType() && Equals(obj as BookChapter);
             }
             public bool Equals(BookChapter? other)
             {
@@ -993,7 +988,7 @@ namespace SIL.Transcriber.Services
                         Paratextsync? history =
                             new(
                                 currentUser?.Id ?? 0,
-                                plan.Id,
+                                plan?.Id??0,
                                 paratextId,
                                 c.Book + c.Chapter,
                                 c.NewUSX?.ToString() ?? "",
