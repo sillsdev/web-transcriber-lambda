@@ -273,7 +273,7 @@ namespace SIL.Transcriber.Repositories
                 throw new System.Exception("Single table is too large to return data");
 
             orgData.Json = data + FinishData();
-            orgData.StartIndex = iStartNext;
+            orgData.StartNext = iStartNext;
             return entities;
         }
 
