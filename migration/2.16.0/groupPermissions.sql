@@ -1,0 +1,1 @@
+alter table groups add permissions jsonb;

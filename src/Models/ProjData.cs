@@ -11,13 +11,15 @@ namespace SIL.Transcriber.Models
             Id = 1;
             Json = "{}";
         }
-        [Attr(PublicName = "json")]
-        public string Json { get; set; }
         [Attr(PublicName = "start-index")]
         public int StartIndex { get; set; }
+        [Attr(PublicName = "startnext")]
+        public int StartNext { get; set; }
         [Attr(PublicName = "project-id")]
         public int ProjectId { get; set; }
         [Attr(PublicName = "snapshotdate")]
         public string? SnapshotDate { get; set; }
+        [Attr(PublicName = "json")]
+        public string Json { get; set; }
     }
 }
