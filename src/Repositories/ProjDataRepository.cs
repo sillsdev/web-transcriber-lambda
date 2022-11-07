@@ -210,7 +210,7 @@ namespace SIL.Transcriber.Repositories
 
             Projdata ProjData = entities.First();
             ProjData.Json = data + FinishData();
-            ProjData.StartIndex = iStartNext;
+            ProjData.StartNext = iStartNext;
             ProjData.SnapshotDate = snapshotDate;
             return entities;
         }
