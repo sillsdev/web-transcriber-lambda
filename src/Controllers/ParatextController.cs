@@ -101,8 +101,13 @@ namespace SIL.Transcriber.Controllers
                                 ex.Message,
                                 languageTag,
                                 userSecret.ParatextTokens.IssuedAt.ToString());
-                throw;
-                //return NoContent();
+                return new ObjectResult(new ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "Projects error",
+                    Detail = ex.Message,
+                    Instance = HttpContext.Request.Path
+                });
             }
         }
 
