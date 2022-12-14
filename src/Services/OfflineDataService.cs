@@ -652,17 +652,19 @@ namespace SIL.Transcriber.Services
             int projectid,
             string artifactType,
             string? idList,
-            int start
+            int start,
+            bool addElan = false
         )
         {
             int LAST_ADD = 0;
-            const string ext = ".audio";
+            const string ext = ".zip";
             int startNext = start;
 
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
             string fileName = string.Format(
-                "Audio{0}_{1}_{2}",
+                "{0}{1}_{2}_{3}",
+                addElan ? "Elan" : "Audio",
                 CoerceValidFileName(project.Name + artifactType),
                 project.Id.ToString(),
                 CurrentUser()?.Id
@@ -683,13 +685,14 @@ namespace SIL.Transcriber.Services
                         .Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))
                         .ToList();
                     AddJsonEntry(zipArchive, "mediafiles", mediafiles, 'H');
-                    _ = AddMediaEaf(
-                        0,
-                        DateTime.Now.AddSeconds(15),
-                        ref startNext,
-                        zipArchive,
-                        mediafiles
-                    );
+                    if (addElan)
+                        _ = AddMediaEaf(
+                            0,
+                            DateTime.Now.AddSeconds(15),
+                            ref startNext,
+                            zipArchive,
+                            mediafiles
+                        );
                     AddAttachedMedia(zipArchive, mediafiles);
                     startNext = 1;
                 }
@@ -700,13 +703,13 @@ namespace SIL.Transcriber.Services
         public Fileresponse ExportBurrito(int projectid, string? idList, int start)
         {
             int LAST_ADD = 0;
-            const string ext = ".burrito";
+            const string ext = ".zip";
             int startNext = start;
 
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
             string fileName = string.Format(
-                "{0}_{1}_{2}",
+                "Burrito{0}_{1}_{2}",
                 CoerceValidFileName(project.Name),
                 project.Id.ToString(),
                 CurrentUser()?.Id
@@ -752,56 +755,56 @@ namespace SIL.Transcriber.Services
                 return CheckProgress(fileName + ext, LAST_ADD);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
-            using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
-            {
-                IQueryable<Organization> orgs = dbContext.Organizations.Where(
+                using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
+                {
+                    IQueryable<Organization> orgs = dbContext.Organizations.Where(
                         o => o.Id == project.OrganizationId
                     );
-                IQueryable<Intellectualproperty>? ip = dbContext.IntellectualPropertyData.Where(x => !x.Archived).Join(
+                    IQueryable<Intellectualproperty>? ip = dbContext.IntellectualPropertyData.Where(x => !x.Archived).Join(
                         orgs,
                         i => i.OrganizationId,
                         o => o.Id,
                         (i, o) => i);
-                if (start == 0)
-                {
-                    Dictionary<string, string> fonts = new()
+                    if (start == 0)
+                    {
+                        Dictionary<string, string> fonts = new()
                     {
                         { "Charis SIL", "" }
                     };
-                    DateTime exported = AddCheckEntry(
+                        DateTime exported = AddCheckEntry(
                         zipArchive,
                         dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 4
                     );
-                    AddJsonEntry(
-                        zipArchive,
-                        "activitystates",
-                        dbContext.Activitystates.ToList(),
-                        'B'
-                    );
-                    AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
-                    AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
-                    AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
-                    AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
-                    AddJsonEntry(
-                        zipArchive,
-                        "workflowsteps",
-                        dbContext.Workflowsteps.ToList(),
-                        'B'
-                    );
-                    //org
-                    List<Organization> orgList = orgs.ToList();
+                        AddJsonEntry(
+                            zipArchive,
+                            "activitystates",
+                            dbContext.Activitystates.ToList(),
+                            'B'
+                        );
+                        AddJsonEntry(zipArchive, "integrations", dbContext.Integrations.ToList(), 'B');
+                        AddJsonEntry(zipArchive, "plantypes", dbContext.Plantypes.ToList(), 'B');
+                        AddJsonEntry(zipArchive, "projecttypes", dbContext.Projecttypes.ToList(), 'B');
+                        AddJsonEntry(zipArchive, "roles", dbContext.Roles.ToList(), 'B');
+                        AddJsonEntry(
+                            zipArchive,
+                            "workflowsteps",
+                            dbContext.Workflowsteps.ToList(),
+                            'B'
+                        );
+                        //org
+                        List<Organization> orgList = orgs.ToList();
 
-                    AddOrgLogos(zipArchive, orgList);
-                    AddJsonEntry(zipArchive, "organizations", orgList, 'B');
+                        AddOrgLogos(zipArchive, orgList);
+                        AddJsonEntry(zipArchive, "organizations", orgList, 'B');
 
-                    //groups
-                    IQueryable<Group> groups = dbContext.GroupsData.Join(
+                        //groups
+                        IQueryable<Group> groups = dbContext.GroupsData.Join(
                         orgs,
                         g => g.OwnerId,
                         o => o.Id,
                         (g, o) => g
                     );
-                    List<Groupmembership> gms = groups
+                        List<Groupmembership> gms = groups
                         .Join(
                             dbContext.Groupmemberships,
                             g => g.Id,
@@ -810,7 +813,7 @@ namespace SIL.Transcriber.Services
                         )
                         .Where(gm => !gm.Archived)
                         .ToList();
-                    IEnumerable<User> users = gms.Join(
+                        IEnumerable<User> users = gms.Join(
                             dbContext.Users,
                             gm => gm.UserId,
                             u => u.Id,
@@ -818,43 +821,43 @@ namespace SIL.Transcriber.Services
                         )
                         .Where(x => !x.Archived);
 
-                    foreach (string? font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
-                    {
-                        if (font != null)
-                            fonts [font] = ""; //add it if it's not there
-                    }
-                    foreach (
-                        string? font in projects
-                            .Where(p => p.DefaultFont != null)
-                            .Select(p => p.DefaultFont)
-                    )
-                    {
-                        if (font != null)
-                            fonts [font] = ""; //add it if it's not there
-                    }
-                    AddFonts(zipArchive, fonts.Keys);
-                    //users
-                    List<User> userList = users.ToList();
-                    AddUserAvatars(zipArchive, userList);
+                        foreach (string? font in gms.Where(gm => gm.Font != null).Select(gm => gm.Font))
+                        {
+                            if (font != null)
+                                fonts [font] = ""; //add it if it's not there
+                        }
+                        foreach (
+                            string? font in projects
+                                .Where(p => p.DefaultFont != null)
+                                .Select(p => p.DefaultFont)
+                        )
+                        {
+                            if (font != null)
+                                fonts [font] = ""; //add it if it's not there
+                        }
+                        AddFonts(zipArchive, fonts.Keys);
+                        //users
+                        List<User> userList = users.ToList();
+                        AddUserAvatars(zipArchive, userList);
 
-                    AddJsonEntry(
-                        zipArchive,
-                        "intellectualpropertys",
-                        ip.ToList(),
-                        'C'
-                    );
-                    AddJsonEntry(
-                        zipArchive,
-                        "groups",
-                        groups.Where(g => !g.Archived).ToList(),
-                        'C'
-                    );
-                    //groupmemberships
-                    AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
-                    AddJsonEntry(zipArchive, "users", userList, 'A');
+                        AddJsonEntry(
+                            zipArchive,
+                            "intellectualpropertys",
+                            ip.ToList(),
+                            'C'
+                        );
+                        AddJsonEntry(
+                            zipArchive,
+                            "groups",
+                            groups.Where(g => !g.Archived).ToList(),
+                            'C'
+                        );
+                        //groupmemberships
+                        AddJsonEntry(zipArchive, "groupmemberships", gms, 'D');
+                        AddJsonEntry(zipArchive, "users", userList, 'A');
 
-                    //organizationmemberships
-                    IEnumerable<Organizationmembership> orgmems = users
+                        //organizationmemberships
+                        IEnumerable<Organizationmembership> orgmems = users
                         .Join(
                             dbContext.Organizationmemberships,
                             u => u.Id,
@@ -862,125 +865,125 @@ namespace SIL.Transcriber.Services
                             (u, om) => om
                         )
                         .Where(om => om.OrganizationId == project.OrganizationId && !om.Archived);
-                    AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
+                        AddJsonEntry(zipArchive, "organizationmemberships", orgmems.ToList(), 'C');
 
-                    //projects
-                    AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
-                    startNext = 1;
-                }
-                do //give me something to break out of
-                {
-                    if (
-                        !CheckAdd(
-                            1,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "projectintegrations",
-                            projects
-                                .Join(
-                                    dbContext.Projectintegrations,
-                                    p => p.Id,
-                                    pi => pi.ProjectId,
-                                    (p, pi) => pi
-                                )
-                                .Where(x => !x.Archived)
-                                .ToList(),
-                            'E'
+                        //projects
+                        AddJsonEntry(zipArchive, "projects", projects.ToList(), 'D');
+                        startNext = 1;
+                    }
+                    do //give me something to break out of
+                    {
+                        if (
+                            !CheckAdd(
+                                1,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "projectintegrations",
+                                projects
+                                    .Join(
+                                        dbContext.Projectintegrations,
+                                        p => p.Id,
+                                        pi => pi.ProjectId,
+                                        (p, pi) => pi
+                                    )
+                                    .Where(x => !x.Archived)
+                                    .ToList(),
+                                'E'
+                            )
                         )
-                    )
-                        break;
-                    //plans
-                    IQueryable<Plan> plans = projects
+                            break;
+                        //plans
+                        IQueryable<Plan> plans = projects
                         .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
                         .Where(x => !x.Archived);
-                    if (
-                        !CheckAdd(
-                            2,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "plans",
-                            plans.ToList(),
-                            'E'
+                        if (
+                            !CheckAdd(
+                                2,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "plans",
+                                plans.ToList(),
+                                'E'
+                            )
                         )
-                    )
-                        break;
-                    //sections
-                    IQueryable<Section> sections = plans
+                            break;
+                        //sections
+                        IQueryable<Section> sections = plans
                         .Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s)
                         .Where(x => !x.Archived);
-                    if (
-                        !CheckAdd(
-                            3,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "sections",
-                            sections.ToList(),
-                            'F'
+                        if (
+                            !CheckAdd(
+                                3,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "sections",
+                                sections.ToList(),
+                                'F'
+                            )
                         )
-                    )
-                        break;
-                    //passages
-                    IQueryable<Passage> passages = sections
+                            break;
+                        //passages
+                        IQueryable<Passage> passages = sections
                         .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
                         .Where(x => !x.Archived);
-                    if (
-                        !CheckAdd(
-                            4,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "passages",
-                            passages.ToList(),
-                            'G'
+                        if (
+                            !CheckAdd(
+                                4,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "passages",
+                                passages.ToList(),
+                                'G'
+                            )
                         )
-                    )
-                        break;
-                    //passagestatechange
-                    IQueryable<Passagestatechange> passagestatechanges = passages.Join(
+                            break;
+                        //passagestatechange
+                        IQueryable<Passagestatechange> passagestatechanges = passages.Join(
                         dbContext.Passagestatechanges,
                         p => p.Id,
                         psc => psc.PassageId,
                         (p, psc) => psc
                     );
-                    if (
-                        !CheckAdd(
-                            5,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "passagestatechanges",
-                            passagestatechanges.ToList(),
-                            'H'
+                        if (
+                            !CheckAdd(
+                                5,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "passagestatechanges",
+                                passagestatechanges.ToList(),
+                                'H'
+                            )
                         )
-                    )
-                        break;
-                    //mediafiles
-                    IQueryable<Mediafile> xmediafiles = plans
+                            break;
+                        //mediafiles
+                        IQueryable<Mediafile> xmediafiles = plans
                         .Join(dbContext.MediafilesData, p => p.Id, m => m.PlanId, (p, m) => m)
                         .Where(x => !x.Archived);
-                    IQueryable<Mediafile>? ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m);
-                    IQueryable<Mediafile>? myMedia = xmediafiles.Concat(ipmedia).Distinct();
+                        IQueryable<Mediafile>? ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m);
+                        IQueryable<Mediafile>? myMedia = xmediafiles.Concat(ipmedia).Distinct();
 
-                    //only limit vernacular to those with passageids
-                    IQueryable<Mediafile> attachedmediafiles = myMedia
-                        .Where(x => (x.PassageId != null || x.ArtifactTypeId != null) && 
+                        //only limit vernacular to those with passageids
+                        IQueryable<Mediafile> attachedmediafiles = myMedia
+                        .Where(x => (x.PassageId != null || x.ArtifactTypeId != null) &&
                             x.ResourcePassageId == null && !x.Archived);
 
-                    //I need my mediafiles plus any shared resource mediafiles
-                    IQueryable<Sectionresource> sectionresources = dbContext.Sectionresources
+                        //I need my mediafiles plus any shared resource mediafiles
+                        IQueryable<Sectionresource> sectionresources = dbContext.Sectionresources
                         .Join(sections, r => r.SectionId, s => s.Id, (r, s) => r)
                         .Where(x => !x.Archived);
 
-                    //get the mediafiles associated with section resources
-                    IQueryable<Mediafile> resourcemediafiles = dbContext.Mediafiles
+                        //get the mediafiles associated with section resources
+                        IQueryable<Mediafile> resourcemediafiles = dbContext.Mediafiles
                         .Join(sectionresources, m => m.Id, r => r.MediafileId, (m, r) => m)
                         .Where(x => !x.Archived);
 
-                    //now get any shared resource mediafiles associated with those mediafiles
-                    IEnumerable<Mediafile> sourcemediafiles = dbContext.Mediafiles
+                        //now get any shared resource mediafiles associated with those mediafiles
+                        IEnumerable<Mediafile> sourcemediafiles = dbContext.Mediafiles
                         .Join(
                             resourcemediafiles,
                             m => m.PassageId,
@@ -988,175 +991,175 @@ namespace SIL.Transcriber.Services
                             (m, r) => m
                         )
                         .Where(x => x.ReadyToShare && !x.Archived).ToList();
-                    //pick just the highest version media per passage
-                    sourcemediafiles =
-                        from m in sourcemediafiles
-                        group m by m.PassageId into grp
-                        select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                        //pick just the highest version media per passage
+                        sourcemediafiles =
+                            from m in sourcemediafiles
+                            group m by m.PassageId into grp
+                            select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                    foreach (
-                        Mediafile mf in resourcemediafiles.ToList().Where(m => m.ResourcePassageId != null)
-                    )
-                    { //make sure we have the latest
-                        Mediafile? res = sourcemediafiles
+                        foreach (
+                            Mediafile mf in resourcemediafiles.ToList().Where(m => m.ResourcePassageId != null)
+                        )
+                        { //make sure we have the latest
+                            Mediafile? res = sourcemediafiles
                             .Where(s => s.PassageId == mf.ResourcePassageId)
                             .FirstOrDefault();
-                        if (res?.S3File != null)
-                            mf.AudioUrl = _S3service
-                                .SignedUrlForGet(
-                                    res.S3File,
-                                    mediaService.DirectoryName(res),
-                                    res.ContentType ?? ""
-                                )
-                                .Message;
-                        _ = dbContext.Mediafiles.Update(mf);
-                    }
-                    if (
-                        !CheckAdd(
-                            6,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "mediafiles",
-                            myMedia.OrderBy(m => m.Id).ToList(),
-                            'H'
+                            if (res?.S3File != null)
+                                mf.AudioUrl = _S3service
+                                    .SignedUrlForGet(
+                                        res.S3File,
+                                        mediaService.DirectoryName(res),
+                                        res.ContentType ?? ""
+                                    )
+                                    .Message;
+                            _ = dbContext.Mediafiles.Update(mf);
+                        }
+                        if (
+                            !CheckAdd(
+                                6,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "mediafiles",
+                                myMedia.OrderBy(m => m.Id).ToList(),
+                                'H'
+                            )
                         )
-                    )
-                        break;
+                            break;
 
-                    if (
-                        !CheckAdd(
-                            7,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "artifactcategorys",
-                            dbContext.Artifactcategorys
-                                .Where(a =>
-                                        (
-                                            a.OrganizationId == null
-                                            || a.OrganizationId == project.OrganizationId
-                                        ) && !a.Archived
-                                )
-                                .ToList(),
-                            'C'
+                        if (
+                            !CheckAdd(
+                                7,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "artifactcategorys",
+                                dbContext.Artifactcategorys
+                                    .Where(a =>
+                                            (
+                                                a.OrganizationId == null
+                                                || a.OrganizationId == project.OrganizationId
+                                            ) && !a.Archived
+                                    )
+                                    .ToList(),
+                                'C'
+                            )
                         )
-                    )
-                        break;
-                    if (
-                        !CheckAdd(
-                            8,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "artifacttypes",
-                            dbContext.Artifacttypes
-                                .Where(a =>
-                                        (
-                                            a.OrganizationId == null
-                                            || a.OrganizationId == project.OrganizationId
-                                        ) && !a.Archived
-                                )
-                                .ToList(),
-                            'C'
+                            break;
+                        if (
+                            !CheckAdd(
+                                8,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "artifacttypes",
+                                dbContext.Artifacttypes
+                                    .Where(a =>
+                                            (
+                                                a.OrganizationId == null
+                                                || a.OrganizationId == project.OrganizationId
+                                            ) && !a.Archived
+                                    )
+                                    .ToList(),
+                                'C'
+                            )
                         )
-                    )
-                        break;
-                    if (
-                        !CheckAdd(
-                            9,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "orgworkflowsteps",
-                            dbContext.OrgworkflowstepsData
-                                .Where(
-                                    a => (a.OrganizationId == project.OrganizationId) && !a.Archived
-                                )
-                                .ToList(),
-                            'C'
+                            break;
+                        if (
+                            !CheckAdd(
+                                9,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "orgworkflowsteps",
+                                dbContext.OrgworkflowstepsData
+                                    .Where(
+                                        a => (a.OrganizationId == project.OrganizationId) && !a.Archived
+                                    )
+                                    .ToList(),
+                                'C'
+                            )
                         )
-                    )
-                        break;
-                    IQueryable<Discussion> discussions = dbContext.Discussions
+                            break;
+                        IQueryable<Discussion> discussions = dbContext.Discussions
                         .Join(attachedmediafiles, d => d.MediafileId, m => m.Id, (d, m) => d)
                         .Where(x => !x.Archived);
-                    if (
-                        !CheckAdd(
-                            10,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "discussions",
-                            discussions.ToList(),
-                            'I'
+                        if (
+                            !CheckAdd(
+                                10,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "discussions",
+                                discussions.ToList(),
+                                'I'
+                            )
                         )
-                    )
-                        break;
-                    if (
-                        !CheckAdd(
-                            11,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "comments",
-                            dbContext.Comments
-                                .Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c)
-                                .Where(x => !x.Archived)
-                                .ToList(),
-                            'J'
+                            break;
+                        if (
+                            !CheckAdd(
+                                11,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "comments",
+                                dbContext.Comments
+                                    .Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c)
+                                    .Where(x => !x.Archived)
+                                    .ToList(),
+                                'J'
+                            )
                         )
-                    )
-                        break;
+                            break;
 
-                    if (
-                        !CheckAdd(
-                            12,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "sectionresources",
-                            sectionresources.ToList(),
-                            'G'
+                        if (
+                            !CheckAdd(
+                                12,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "sectionresources",
+                                sectionresources.ToList(),
+                                'G'
+                            )
                         )
-                    )
-                        break;
-                    if (
-                        !CheckAdd(
-                            13,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            "sectionresourceusers",
-                            sectionresources
-                                .Join(
-                                    dbContext.Sectionresourceusers,
-                                    r => r.Id,
-                                    u => u.SectionResourceId,
-                                    (r, u) => u
-                                )
-                                .Where(x => !x.Archived)
-                                .ToList(),
-                            'H'
+                            break;
+                        if (
+                            !CheckAdd(
+                                13,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "sectionresourceusers",
+                                sectionresources
+                                    .Join(
+                                        dbContext.Sectionresourceusers,
+                                        r => r.Id,
+                                        u => u.SectionResourceId,
+                                        (r, u) => u
+                                    )
+                                    .Where(x => !x.Archived)
+                                    .ToList(),
+                                'H'
+                            )
                         )
-                    )
-                        break;
-                    //Now I need the media list of just those files to download...
-                    //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
-                    IQueryable<Mediafile> vernmediafiles =
+                            break;
+                        //Now I need the media list of just those files to download...
+                        //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
+                        IQueryable<Mediafile> vernmediafiles =
                         from m in attachedmediafiles
                         where m.ArtifactTypeId == null
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                    
-                    if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
-                        break;
-                    List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
 
-                    AddAttachedMedia(zipArchive, mediaList);
-                    startNext++;
-                } while (false);
-            }
+                        if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
+                            break;
+                        List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
+
+                        AddAttachedMedia(zipArchive, mediaList);
+                        startNext++;
+                    } while (false);
+                }
 
             return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
         }

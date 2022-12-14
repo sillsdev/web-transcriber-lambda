@@ -45,6 +45,7 @@ namespace SIL.Transcriber.Controllers
             {
                 "ptf" => _service.ExportProjectPTF(id, start),
                 "audio" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start),
+                "elan" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start, true),
                 "burrito" => _service.ExportBurrito(id, ids, start),
                 _ => _service.ExportProjectPTF(id, start),
             };
