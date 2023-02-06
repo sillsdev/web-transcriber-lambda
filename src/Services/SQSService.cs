@@ -37,7 +37,7 @@ namespace SIL.Transcriber.Services
         }
         public string SendMessage(string body, string? deDup,  string? groupId)
         {
-            string url = "https://sqs.us-east-1.amazonaws.com/620141372223/APMExportQueue-dev.fifo";
+            string url = GetVarOrDefault("SIL_TR_EXPORT_QUEUE", "https://sqs.us-east-1.amazonaws.com/620141372223/APMExportQueue-dev.fifo");
             try
             {
                 SendMessageRequest sendMessageRequest = new ()
