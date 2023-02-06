@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using static SIL.Transcriber.Utility.ResourceHelpers;
+using System;
 
 namespace SIL.Transcriber.Services
 {
@@ -23,6 +24,7 @@ namespace SIL.Transcriber.Services
         protected CurrentUserRepository CurrentUserRepository { get; }
 
         readonly private IS3Service _S3service;
+        readonly private ISQSService _SQSservice;
         private const string ImportFolder = "imports";
         private const string ExportFolder = "exports";
 
@@ -38,6 +40,7 @@ namespace SIL.Transcriber.Services
             MediafileService MediaService,
             CurrentUserRepository currentUserRepository,
             IS3Service service,
+            ISQSService sqsService,
             ILoggerFactory loggerFactory,
             IResourceGraph resourceGraph,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
@@ -49,6 +52,7 @@ namespace SIL.Transcriber.Services
             mediaService = MediaService;
             CurrentUserRepository = currentUserRepository;
             _S3service = service;
+            _SQSservice = sqsService;
             Logger = loggerFactory.CreateLogger<OfflineDataService>();
             _resourceGraph = resourceGraph;
             _resourceDefinitionAccessor = resourceDefinitionAccessor;
@@ -83,7 +87,7 @@ namespace SIL.Transcriber.Services
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
         {
-            string? withIncludes = 
+            string? withIncludes =
             SerializerHelpers.ResourceListToJson<TResource>(
                 resources,
                 _resourceGraph,
@@ -278,7 +282,7 @@ namespace SIL.Transcriber.Services
                     string fontfile = url[(url.LastIndexOf("/") + 1)..];
                     url = bucket + fontfile;
                     _ = AddStreamEntry(zipArchive, url, "fonts/", fontfile);
-                    css = css[..(start + 1)] + fontfile + css [end..];
+                    css = css [..(start + 1)] + fontfile + css [end..];
                 }
                 ZipArchiveEntry entry = zipArchive.CreateEntry(
                     "fonts/" + cssfile,
@@ -400,15 +404,20 @@ namespace SIL.Transcriber.Services
                 if (data.IndexOf("|") > 0)
                 {
                     err = data [(data.IndexOf("|") + 1)..];
-                    data = data[..data.IndexOf("|")];
+                    data = data [..data.IndexOf("|")];
                 }
+                bool media = data.Contains(" media");
+                if (media)
+                    data = data.Substring(0, data.IndexOf(" media"));
                 if (!int.TryParse(data, out startNext))
                     startNext = 0;
+                if (media)
+                    startNext += lastAdd;
             }
             catch
             {
                 //it's not there yet...
-                Logger.LogInformation("status file not available");
+                Logger.LogInformation("{sf} status file not available", fileName + ".sss");
                 startNext = lastAdd + 1;
             }
             if (startNext < 0)
@@ -423,7 +432,8 @@ namespace SIL.Transcriber.Services
             }
             else
                 startNext = Math.Max(startNext, lastAdd + 1);
-            string contentType = "application/zip";
+
+            string contentType = string.Concat("application/", (Path.GetExtension(fileName))[1..]);
             return new Fileresponse()
             {
                 Message = startNext == -2 ? err : fileName,
@@ -473,14 +483,13 @@ namespace SIL.Transcriber.Services
             Stream ms,
             string fileName,
             int startNext,
-            int lastAdd,
             string ext
         )
         {
             S3Response s3response;
-            string contentType = "application/zip";
+            string contentType = string.Concat("application/", ext[1..]);
             ms.Position = 0;
-            fileName += ext + (startNext == lastAdd + 1 ? ".tmp" : ""); //tmp signals the trigger to add mediafiles
+            fileName += ext;
             s3response = _S3service
                 .UploadFileAsync(ms, true, contentType, fileName, ExportFolder)
                 .Result;
@@ -491,7 +500,7 @@ namespace SIL.Transcriber.Services
                     FileURL = "",
                     Status = HttpStatusCode.PartialContent,
                     ContentType = contentType,
-                    Id = startNext,
+                    Id = Math.Abs(startNext),
                 }
                 : throw new Exception(s3response.Message);
         }
@@ -671,11 +680,10 @@ namespace SIL.Transcriber.Services
             );
             if (start > LAST_ADD)
                 return CheckProgress(fileName + ext, LAST_ADD);
-
-            Stream ms = GetMemoryStream(start, fileName, ext);
-            using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
+            if (start == 0)
             {
-                if (start == 0)
+                Stream ms = GetMemoryStream(start, fileName, ext);
+                using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
                 {
                     DateTime exported = AddCheckEntry(
                         zipArchive,
@@ -696,8 +704,17 @@ namespace SIL.Transcriber.Services
                     AddAttachedMedia(zipArchive, mediafiles);
                     startNext = 1;
                 }
+                WriteMemoryStream(ms, fileName, startNext, ext);
             }
-            return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
+            string id= _SQSservice.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
+            return new()
+            {
+                Message = fileName + ext,
+                FileURL = "",
+                Status = HttpStatusCode.PartialContent,
+                ContentType = "application/zip",
+                Id = Math.Abs(startNext),
+            };
         }
 
         public Fileresponse ExportBurrito(int projectid, string? idList, int start)
@@ -716,7 +733,7 @@ namespace SIL.Transcriber.Services
             );
 
             if (start > LAST_ADD)
-                return CheckProgress(fileName + ext, LAST_ADD);
+                return CheckProgress(fileName+ext, LAST_ADD);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
             using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
@@ -731,7 +748,7 @@ namespace SIL.Transcriber.Services
                     startNext = 1;
                 }
             }
-            return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
+            return WriteMemoryStream(ms, fileName, startNext, ext);
         }
 
         public Fileresponse ExportProjectPTF(int projectid, int start)
@@ -752,9 +769,11 @@ namespace SIL.Transcriber.Services
             );
 
             if (start > LAST_ADD)
-                return CheckProgress(fileName + ext, LAST_ADD);
+                return CheckProgress(fileName+ext, LAST_ADD);
 
             Stream ms = GetMemoryStream(start, fileName, ext);
+            if (start >= 0)
+            {
                 using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
                 {
                     IQueryable<Organization> orgs = dbContext.Organizations.Where(
@@ -1160,17 +1179,22 @@ namespace SIL.Transcriber.Services
                         startNext++;
                     } while (false);
                 }
-
-            return WriteMemoryStream(ms, fileName, startNext, LAST_ADD, ext);
+            }
+            Fileresponse response = WriteMemoryStream(ms, fileName, startNext, ext);
+            if (startNext == LAST_ADD+1)
+            {   //add the mediafiles
+                string id= _SQSservice.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
+            }
+            return response;
         }
 
         public Fileresponse ImportFileURL(string sFile)
         {
             string extension = Path.GetExtension(sFile);
-            string ContentType = "application/" + extension;
+            string ContentType = "application/" + extension[1..];
             // Project project = dbContext.Projects.Where(p => p.Id == id).First();
             string fileName = string.Format(
-                "{0}_{1}.{2}",
+                "{0}_{1}{2}",
                 Path.GetFileNameWithoutExtension(sFile),
                 DateTime.Now.Ticks,
                 extension
@@ -1228,8 +1252,8 @@ namespace SIL.Transcriber.Services
 
         private string PassageChangesReport(Passage online, Passage imported)
         {
-            return online.StepComplete != imported.StepComplete 
-                ? ChangesReport("passage", Serialize(online), Serialize(imported)) 
+            return online.StepComplete != imported.StepComplete
+                ? ChangesReport("passage", Serialize(online), Serialize(imported))
                 : "";
         }
 
@@ -1263,8 +1287,8 @@ namespace SIL.Transcriber.Services
 
         private string GrpMemChangesReport(Groupmembership online, Groupmembership imported)
         {
-            return online.FontSize != imported.FontSize 
-                ? ChangesReport("groupmembership", Serialize(online), Serialize(imported)) 
+            return online.FontSize != imported.FontSize
+                ? ChangesReport("groupmembership", Serialize(online), Serialize(imported))
                 : "";
         }
 
@@ -1310,12 +1334,12 @@ namespace SIL.Transcriber.Services
                     sFile
                 )
                 : new Fileresponse()
-            {
-                Message = "[" + string.Join(",", report) + "]",
-                FileURL = sFile,
-                Status = HttpStatusCode.OK,
-                ContentType = "application/itf",
-            };
+                {
+                    Message = "[" + string.Join(",", report) + "]",
+                    FileURL = sFile,
+                    Status = HttpStatusCode.OK,
+                    ContentType = "application/itf",
+                };
         }
 
         public async Task<Fileresponse> ImportFileAsync(int projectid, string sFile)
@@ -1521,7 +1545,7 @@ namespace SIL.Transcriber.Services
             List<string> report
         )
         {
-            if (!existing.Archived && 
+            if (!existing.Archived &&
                 (existing.Subject != importing.Subject
                 || existing.MediafileId != importing.MediafileId
                 || existing.ArtifactCategoryId != importing.ArtifactCategoryId
@@ -1553,7 +1577,7 @@ namespace SIL.Transcriber.Services
             List<string> report
         )
         {
-            
+
             if (
                 existing.CommentText != importing.CommentText
                 || existing.MediafileId != importing.MediafileId
@@ -1663,7 +1687,7 @@ namespace SIL.Transcriber.Services
                         if (myIdAttribute != null)
                             myIdAttribute.SetValue(s, id);
                         else
-                           Logger.LogWarning("unable to find id attribute for {r}", myTypeRelationship.PublicName);
+                            Logger.LogWarning("unable to find id attribute for {r}", myTypeRelationship.PublicName);
                     }
                 }
             return s;
@@ -1680,7 +1704,7 @@ namespace SIL.Transcriber.Services
                     snake.AsSpan(ix + 2)
                 );
             }
-            return string.Concat(snake[..1].ToUpper(), snake.AsSpan(1));
+            return string.Concat(snake [..1].ToUpper(), snake.AsSpan(1));
         }
 
         private async Task<Fileresponse> ProcessImportFileAsync(
@@ -2070,7 +2094,7 @@ namespace SIL.Transcriber.Services
                                                     DateCreated = m.DateCreated,
                                                     DateUpdated = DateTime.UtcNow,
                                                 }
-                                            ) ;
+                                            );
                                         }
                                         else
                                             UpdateMediafile(mediafile, m, sourceDate, report);
@@ -2172,7 +2196,7 @@ namespace SIL.Transcriber.Services
                                                     RightsHolder = ip.RightsHolder,
                                                     Notes = ip.Notes,
                                                     OfflineMediafileId = ip.OfflineMediafileId,
-                                                    OrganizationId = ip.Organization?.Id ??0,
+                                                    OrganizationId = ip.Organization?.Id ?? 0,
                                                     OfflineId = ip.OfflineId,
                                                     ReleaseMediafileId = ip.ReleaseMediafile?.Id,
                                                     LastModifiedBy = ip.LastModifiedBy,
@@ -2182,7 +2206,7 @@ namespace SIL.Transcriber.Services
                                                 }
                                             );
                                         }
-                                   
+
                                     }
                                 }
                                 break;

@@ -1,4 +1,5 @@
 using Amazon.S3;
+using Amazon.SQS;
 using JsonApiDotNetCore.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -63,7 +64,9 @@ namespace SIL.Transcriber
             services.RegisterRepositories();
             services.RegisterServices();
             services.AddSingleton<IS3Service, S3Service>();
+            services.AddSingleton<ISQSService, SQSService>();
             services.AddAWSService<IAmazonS3>();
+            services.AddAWSService<IAmazonSQS>();
             return services;
         }
 
