@@ -89,3 +89,8 @@ add trigger for s3
 
 change timeout to 30 secs
 add environment variables SIL_TR_HOST and SIL_TR_URLPATH as in serverless.env.yml
+
+ROLES:
+transcriberAPI-dev-us-east-1-lambdaRole
+transcriberAPI-qa-us-east-1-lambdaRole
+transcriberAPI-prod-us-east-1-lambdaRole
