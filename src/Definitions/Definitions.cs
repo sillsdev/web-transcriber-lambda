@@ -99,7 +99,22 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-
+    public class OrgKeytermDefinition : BaseDefinition<Orgkeyterm>
+    {
+        public OrgKeytermDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class OrgKeytermTargetDefinition : BaseDefinition<Orgkeytermtarget>
+    {
+        public OrgKeytermTargetDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
     public class OrgworkflowstepDefinition : BaseDefinition<Orgworkflowstep>
     {
         public OrgworkflowstepDefinition(

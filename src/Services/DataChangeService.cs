@@ -29,6 +29,8 @@ namespace SIL.Transcriber.Services
         private readonly MediafileService MediafileService;
         private readonly OrganizationMembershipService OrgMemService;
         private readonly OrganizationService OrganizationService;
+        private readonly OrgKeytermService OrgKeytermService;
+        private readonly OrgKeytermTargetService OrgKeytermTargetService;
         private readonly OrgWorkflowStepService OrgWorkflowStepService;
         private readonly PassageService PassageService;
         private readonly PassageStateChangeService PassageStateChangeService;
@@ -68,6 +70,8 @@ namespace SIL.Transcriber.Services
             OrganizationMembershipService omService,
             OrganizationService organizationService,
             OrgWorkflowStepService orgWorkflowStepService,
+            OrgKeytermService orgKeytermService,
+            OrgKeytermTargetService orgKeytermTargetService,
             PassageService passageService,
             PassageStateChangeService passageStateChangeService,
             PlanService planService,
@@ -106,6 +110,8 @@ namespace SIL.Transcriber.Services
             MediafileService = mediafileService;
             OrgMemService = omService;
             OrganizationService = organizationService;
+            OrgKeytermService = orgKeytermService;
+            OrgKeytermTargetService = orgKeytermTargetService;
             OrgWorkflowStepService = orgWorkflowStepService;
             PassageService = passageService;
             PassageStateChangeService = passageStateChangeService;
@@ -269,7 +275,7 @@ namespace SIL.Transcriber.Services
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
-            const int LAST_ADD = 21;
+            int LAST_ADD = (dbVersion > 4) ? 23 : (dbVersion > 3) ? 21 : 12;
             int startNext = start;
             if (CheckStart(dtBail, startNext) == 0)
             {
@@ -396,10 +402,25 @@ namespace SIL.Transcriber.Services
                     BuildList(WorkflowStepService.GetDeletedSince(dbContext.Workflowsteps, currentUser, origin, dtSince), "workflowstep", deleted, false);
                     startNext++;
                 }
-                if (CheckStart(dtBail, startNext) == LAST_ADD)
+                if (CheckStart(dtBail, startNext) == 21)
                 {
                     BuildList(IntellectualPropertyService.GetChanges(dbContext.IntellectualPropertys, currentUser, origin, dtSince, project), "intellectualproperty", changes);
                     BuildList(IntellectualPropertyService.GetDeletedSince(dbContext.IntellectualPropertys, currentUser, origin, dtSince), "intellectualproperty", deleted, false);
+                    startNext++;
+                }
+            }
+            if (dbVersion > 4)
+            { 
+                if (CheckStart(dtBail, startNext) == 22)
+                {
+                    BuildList(OrgKeytermService.GetChanges(dbContext.Orgkeyterms, currentUser, origin, dtSince, project), "orgkeyterm", changes);
+                    BuildList(OrgKeytermService.GetDeletedSince(dbContext.Orgkeyterms, currentUser, origin, dtSince), "orgkeyterm", deleted, false);
+                    startNext++;
+                }
+                if (CheckStart(dtBail, startNext) == LAST_ADD)
+                {
+                    BuildList(OrgKeytermTargetService.GetChanges(dbContext.Orgkeytermtargets, currentUser, origin, dtSince, project), "orgkeytermtarget", changes);
+                    BuildList(OrgKeytermTargetService.GetDeletedSince(dbContext.Orgkeytermtargets, currentUser, origin, dtSince), "orgkeytermtarget", deleted, false);
                     startNext++;
                 }
             }

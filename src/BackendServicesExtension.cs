@@ -89,6 +89,8 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipService>();
             services.AddScoped<OrganizationService>();
             services.AddScoped<OrgDataService>();
+            services.AddScoped<OrgKeytermService>();
+            services.AddScoped<OrgKeytermTargetService>();
             services.AddScoped<OrgWorkflowStepService>();
             services.AddScoped<IParatextService, ParatextService>();
             services.AddScoped<ParatextSyncPassageService>();
@@ -130,6 +132,8 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<OrgDataRepository>();
+            services.AddScoped<OrgKeytermRepository>();
+            services.AddScoped<OrgKeytermTargetRepository>();
             services.AddScoped<OrgWorkflowStepRepository>();
             services.AddScoped<ParatextSyncRepository>();
             services.AddScoped<ParatextSyncPassageRepository>();

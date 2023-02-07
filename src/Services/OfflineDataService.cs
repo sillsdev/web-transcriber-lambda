@@ -408,7 +408,7 @@ namespace SIL.Transcriber.Services
                 }
                 bool media = data.Contains(" media");
                 if (media)
-                    data = data.Substring(0, data.IndexOf(" media"));
+                    data = data[..data.IndexOf(" media")];
                 if (!int.TryParse(data, out startNext))
                     startNext = 0;
                 if (media)
@@ -753,7 +753,7 @@ namespace SIL.Transcriber.Services
 
         public Fileresponse ExportProjectPTF(int projectid, int start)
         {
-            const int LAST_ADD = 15;
+            const int LAST_ADD = 17;
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
@@ -1163,6 +1163,38 @@ namespace SIL.Transcriber.Services
                             )
                         )
                             break;
+                        if (
+                            !CheckAdd(
+                                14,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "orgkeyterms",
+                                dbContext.OrgKeytermsData
+                                    .Where(
+                                        a => (a.OrganizationId == project.OrganizationId) && !a.Archived
+                                    )
+                                    .ToList(),
+                                'C'
+                            )
+                        )
+                            break;
+                        if (
+                            !CheckAdd(
+                                15,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "orgkeytermtargets",
+                                dbContext.OrgKeytermTargetsData
+                                    .Where(
+                                        a => (a.OrganizationId == project.OrganizationId) && !a.Archived
+                                    )
+                                    .ToList(),
+                                'C'
+                            )
+                        )
+                            break;
                         //Now I need the media list of just those files to download...
                         //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
                         IQueryable<Mediafile> vernmediafiles =
@@ -1171,7 +1203,7 @@ namespace SIL.Transcriber.Services
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                        if (!AddMediaEaf(14, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
+                        if (!AddMediaEaf(16, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
                             break;
                         List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
 

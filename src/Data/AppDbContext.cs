@@ -42,6 +42,8 @@ namespace SIL.Transcriber.Data
         public DbSet<Organizationmembership> Organizationmemberships =>
             Set<Organizationmembership>();
         public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
+        public DbSet<Orgkeyterm> Orgkeyterms => Set<Orgkeyterm>();
+        public DbSet<Orgkeytermtarget> Orgkeytermtargets => Set<Orgkeytermtarget>();
         public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
         public DbSet<Passage> Passages => Set<Passage>();
@@ -193,6 +195,16 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Organizationmembership>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Orgkeyterm>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Orgkeytermtarget>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -448,6 +460,10 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.Role)
                 .Include(x => x.User);
         public IQueryable<Organization> OrganizationsData => Organizations.Include(x => x.Owner);
+        public IQueryable<Orgkeyterm> OrgKeytermsData =>
+            Orgkeyterms.Include(x => x.Organization);
+        public IQueryable<Orgkeytermtarget> OrgKeytermTargetsData =>
+    Orgkeytermtargets.Include(x => x.Organization).Include(x => x.Mediafile); 
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
             Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
