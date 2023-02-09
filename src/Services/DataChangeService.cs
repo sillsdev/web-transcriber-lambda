@@ -20,6 +20,7 @@ namespace SIL.Transcriber.Services
         public ICurrentUserContext CurrentUserContext { get; }
         private readonly ArtifactCategoryService ArtifactCategoryService;
         private readonly ArtifactTypeService ArtifactTypeService;
+        private readonly BookService BookService;
         private readonly CommentService CommentService;
         private readonly DiscussionService DiscussionService;
         private readonly GroupMembershipService GMService;
@@ -30,6 +31,7 @@ namespace SIL.Transcriber.Services
         private readonly OrganizationMembershipService OrgMemService;
         private readonly OrganizationService OrganizationService;
         private readonly OrgKeytermService OrgKeytermService;
+        private readonly OrgKeytermReferenceService OrgKeytermReferenceService;
         private readonly OrgKeytermTargetService OrgKeytermTargetService;
         private readonly OrgWorkflowStepService OrgWorkflowStepService;
         private readonly PassageService PassageService;
@@ -40,6 +42,8 @@ namespace SIL.Transcriber.Services
         private readonly SectionResourceService SectionResourceService;
         private readonly SectionResourceUserService SectionResourceUserService;
         private readonly SectionService SectionService;
+        private readonly SharedResourceService SharedResourceService;
+        private readonly SharedResourceReferenceService SharedResourceReferenceService;
         private readonly UserService UserService;
         private readonly WorkflowStepService WorkflowStepService;
         private readonly CurrentUserRepository CurrentUserRepository;
@@ -60,6 +64,7 @@ namespace SIL.Transcriber.Services
             DatachangesRepository repository,
             ArtifactCategoryService artifactCategoryService,
             ArtifactTypeService artifactTypeService,
+            BookService bookService,
             CommentService commentService,
             DiscussionService discussionService,
             GroupMembershipService gmService,
@@ -71,6 +76,7 @@ namespace SIL.Transcriber.Services
             OrganizationService organizationService,
             OrgWorkflowStepService orgWorkflowStepService,
             OrgKeytermService orgKeytermService,
+            OrgKeytermReferenceService orgKeytermReferenceService,
             OrgKeytermTargetService orgKeytermTargetService,
             PassageService passageService,
             PassageStateChangeService passageStateChangeService,
@@ -80,6 +86,8 @@ namespace SIL.Transcriber.Services
             SectionService sectionService,
             SectionResourceService sectionResourceService,
             SectionResourceUserService sectionResourceUserService,
+            SharedResourceService sharedResourceService,
+            SharedResourceReferenceService sharedResourceReferenceService,
             UserService userService,
             WorkflowStepService workflowStepService,
             CurrentUserRepository currentUserRepository,
@@ -101,6 +109,7 @@ namespace SIL.Transcriber.Services
             CurrentUserContext = currentUserContext;
             ArtifactCategoryService = artifactCategoryService;
             ArtifactTypeService = artifactTypeService;
+            BookService = bookService;
             CommentService = commentService;
             DiscussionService = discussionService;
             GMService = gmService;
@@ -111,6 +120,7 @@ namespace SIL.Transcriber.Services
             OrgMemService = omService;
             OrganizationService = organizationService;
             OrgKeytermService = orgKeytermService;
+            OrgKeytermReferenceService = orgKeytermReferenceService;
             OrgKeytermTargetService = orgKeytermTargetService;
             OrgWorkflowStepService = orgWorkflowStepService;
             PassageService = passageService;
@@ -121,6 +131,8 @@ namespace SIL.Transcriber.Services
             SectionService = sectionService;
             SectionResourceService = sectionResourceService;
             SectionResourceUserService = sectionResourceUserService;
+            SharedResourceService = sharedResourceService;
+            SharedResourceReferenceService = sharedResourceReferenceService;
             UserService = userService;
             WorkflowStepService = workflowStepService;
             CurrentUserRepository = currentUserRepository;
@@ -275,7 +287,7 @@ namespace SIL.Transcriber.Services
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
-            int LAST_ADD = (dbVersion > 4) ? 23 : (dbVersion > 3) ? 21 : 12;
+            int LAST_ADD = (dbVersion > 4) ? 27 : (dbVersion > 3) ? 21 : 12;
             int startNext = start;
             if (CheckStart(dtBail, startNext) == 0)
             {
@@ -417,10 +429,33 @@ namespace SIL.Transcriber.Services
                     BuildList(OrgKeytermService.GetDeletedSince(dbContext.Orgkeyterms, currentUser, origin, dtSince), "orgkeyterm", deleted, false);
                     startNext++;
                 }
-                if (CheckStart(dtBail, startNext) == LAST_ADD)
+                if (CheckStart(dtBail, startNext) == 23)
+                {
+                    BuildList(OrgKeytermReferenceService.GetChanges(dbContext.Orgkeytermreferences, currentUser, origin, dtSince, project), "orgkeytermreference", changes);
+                    BuildList(OrgKeytermReferenceService.GetDeletedSince(dbContext.Orgkeytermreferences, currentUser, origin, dtSince), "orgkeytermreference", deleted, false);
+                    startNext++;
+                }
+                if (CheckStart(dtBail, startNext) == 24)
                 {
                     BuildList(OrgKeytermTargetService.GetChanges(dbContext.Orgkeytermtargets, currentUser, origin, dtSince, project), "orgkeytermtarget", changes);
                     BuildList(OrgKeytermTargetService.GetDeletedSince(dbContext.Orgkeytermtargets, currentUser, origin, dtSince), "orgkeytermtarget", deleted, false);
+                    startNext++;
+                }
+                if (CheckStart(dtBail, startNext) == 25)
+                {
+                    BuildList(SharedResourceService.GetChanges(dbContext.Sharedresources, currentUser, origin, dtSince, project), "sharedresource", changes);
+                    BuildList(SharedResourceService.GetDeletedSince(dbContext.Sharedresources, currentUser, origin, dtSince), "sharedresource", deleted, false);
+                    startNext++;
+                }
+                if (CheckStart(dtBail, startNext) == 26)
+                {
+                    BuildList(SharedResourceReferenceService.GetChanges(dbContext.Sharedresourcereferences, currentUser, origin, dtSince, project), "sharedresourcereference", changes);
+                    BuildList(SharedResourceReferenceService.GetDeletedSince(dbContext.Sharedresourcereferences, currentUser, origin, dtSince), "sharedresourcereference", deleted, false);
+                    startNext++;
+                }
+                if (CheckStart(dtBail, startNext) == LAST_ADD)
+                {
+                    BuildList(BookService.GetChanges(dbContext.Books, currentUser, origin, dtSince, project), "book", changes);
                     startNext++;
                 }
             }

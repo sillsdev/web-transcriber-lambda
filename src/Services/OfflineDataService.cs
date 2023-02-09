@@ -753,7 +753,7 @@ namespace SIL.Transcriber.Services
 
         public Fileresponse ExportProjectPTF(int projectid, int start)
         {
-            const int LAST_ADD = 17;
+            const int LAST_ADD = 20;
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
@@ -1163,6 +1163,10 @@ namespace SIL.Transcriber.Services
                             )
                         )
                             break;
+                        IQueryable<Orgkeyterm>? orgkeyterms = dbContext.OrgKeytermsData
+                                    .Where(
+                                        a => (a.OrganizationId == project.OrganizationId) && !a.Archived
+                                    );
                         if (
                             !CheckAdd(
                                 14,
@@ -1170,11 +1174,7 @@ namespace SIL.Transcriber.Services
                                 ref startNext,
                                 zipArchive,
                                 "orgkeyterms",
-                                dbContext.OrgKeytermsData
-                                    .Where(
-                                        a => (a.OrganizationId == project.OrganizationId) && !a.Archived
-                                    )
-                                    .ToList(),
+                                orgkeyterms.ToList(),
                                 'C'
                             )
                         )
@@ -1185,16 +1185,70 @@ namespace SIL.Transcriber.Services
                                 dtBail,
                                 ref startNext,
                                 zipArchive,
+                                "books",
+                                dbContext.Books.ToList(),
+                                'A'
+                            )
+)
+                            break;
+                        if (
+                            !CheckAdd(
+                                16,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "orgkeytermreferences",
+                                dbContext.OrgKeytermReferencesData
+                                    .Join(orgkeyterms, r => r.OrgkeytermId, k => k.Id, (r, k) => r)
+                                    .ToList(),
+                                'D'
+                            )
+)
+                            break;
+                        if (
+                            !CheckAdd(
+                                17,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
                                 "orgkeytermtargets",
-                                dbContext.OrgKeytermTargetsData
-                                    .Where(
+                                dbContext.OrgKeytermTargetsData.Where(
                                         a => (a.OrganizationId == project.OrganizationId) && !a.Archived
                                     )
                                     .ToList(),
-                                'C'
+                                'D'
                             )
                         )
                             break;
+                        IQueryable<Sharedresource>? sharedresources = dbContext.SharedresourcesData
+                                    .Where(a => !a.Archived);
+                        if (
+                            !CheckAdd(
+                                18,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "sharedresources",
+                                sharedresources.ToList(),
+                                'I'
+                            )
+                        )
+                            break;
+                        if (
+                            !CheckAdd(
+                                19,
+                                dtBail,
+                                ref startNext,
+                                zipArchive,
+                                "sharedresourcereferences",
+                                dbContext.SharedresourcereferencesData
+                                    .Join(sharedresources, r => r.SharedResourceId, k => k.Id, (r, k) => r)
+                                    .ToList(),
+                                'J'
+                            )
+)
+                            break;
+
                         //Now I need the media list of just those files to download...
                         //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
                         IQueryable<Mediafile> vernmediafiles =
@@ -1203,7 +1257,7 @@ namespace SIL.Transcriber.Services
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                        if (!AddMediaEaf(16, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
+                        if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
                             break;
                         List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
 
