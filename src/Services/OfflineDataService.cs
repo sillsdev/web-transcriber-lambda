@@ -1653,7 +1653,7 @@ namespace SIL.Transcriber.Services
                     report.Add(MediafileChangesReport(existing, importing));
                 existing.Link = importing.Link != null ? importing.Link : false;
                 existing.Position = importing.Position;
-                existing.RecordedbyUserId = importing.RecordedbyUserId;
+                existing.RecordedbyUser = importing.RecordedbyUser;
                 existing.PerformedBy = importing.PerformedBy;
                 existing.Segments = importing.Segments;
                 existing.SourceSegments = importing.SourceSegments;
@@ -2110,7 +2110,8 @@ namespace SIL.Transcriber.Services
                                                     PlanId = m.PlanId,
                                                     Position = m.Position,
                                                     ReadyToShare = m.ReadyToShare,
-                                                    RecordedbyUserId = m.RecordedbyUserId,
+                                                   // RecordedbyuserId = m.RecordedbyuserId,
+                                                    RecordedbyUser = m.RecordedbyUser,
                                                     ResourcePassageId = m.ResourcePassageId,
                                                     S3File = m.S3File,
                                                     Segments = m.Segments,

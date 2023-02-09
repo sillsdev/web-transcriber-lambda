@@ -21,12 +21,12 @@ namespace SIL.Transcriber.Repositories
         {
             this.dbContext = (AppDbContext)contextResolver.GetContext();
         }
-        private static int GetMonthCount(IQueryable<BaseModel> entities, bool updated = false)
+        private static int GetMonthCount(IEnumerable<BaseModel> entities, bool updated = false)
         {
             DateTime checkDate = DateTime.Now.AddDays(-30).ToUniversalTime();
             return entities.Where(e => (updated ? e.DateUpdated : e.DateCreated) > checkDate).Count();
         }
-        private static int GetWeekCount(IQueryable<BaseModel> entities, bool updated = false)
+        private static int GetWeekCount(IEnumerable<BaseModel> entities, bool updated = false)
         {
             DateTime checkDate = DateTime.Now.AddDays(-7).ToUniversalTime();
             return entities.Where(e => (updated ? e.DateUpdated : e.DateCreated) > checkDate).Count();
@@ -37,42 +37,42 @@ namespace SIL.Transcriber.Repositories
         {
             return dbContext.Projects.Where(p => !p.Archived);
         }
-        private IQueryable<Plan> TrainingProjects()
+        private IEnumerable<Plan> TrainingPlans()
         {
-#pragma warning disable CS8604 // Possible null reference argument.
-            return Plans().Where(p => p.Tags != null && JObject.Parse(p.Tags) ["training"] != null && JObject.Parse(p.Tags) ["training"].Value<bool>() || false);
+            var plans = dbContext.Plans.Where(p => p.Tags != null).ToList();
+            return plans.Where(p=> JObject.Parse(p.Tags ?? "{}") ["training"]?.Value<bool?>() ?? false);
         }
-        private IQueryable<Plan> Plans()
+        private IEnumerable<Plan> NonTestingPlans()
         {
-            return dbContext.Plans.Where(p => !p.Archived && (p.Tags == null || JObject.Parse(p.Tags) ["testing"] == null || !JObject.Parse(p.Tags) ["testing"].Value<bool>()));
-#pragma warning restore CS8604 // Possible null reference argument.
+            var plans =  dbContext.Plans.Where(p => !p.Archived).ToList();
+            return plans.Where(p => !(JObject.Parse(p.Tags??"{}")["testing"]?.Value<bool?>() ?? false));
         }
-        private IQueryable<Passage> Passages()
+        private IEnumerable<Passage> Passages()
         {
-            return Plans().Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(p => !p.Archived);
+            return NonTestingPlans().Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s).Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p).Where(p => !p.Archived);
         }
-        private IQueryable<Plan> ScripturePlans()
+        private IEnumerable<Plan> ScripturePlans()
         {
-            return Plans().Where(p => p.PlantypeId == 1);
+            return NonTestingPlans().Where(p => p.PlantypeId == 1);
         }
-        private IQueryable<Mediafile> Transcriptions()
+        private IEnumerable<Mediafile> Transcriptions()
         {
-            return Plans().Join(dbContext.Mediafiles.Where(m => !m.Archived && m.Transcription != null && m.Transcription.Length > 0), pl => pl.Id, m => m.PlanId, (pl, m) => m);
+            return NonTestingPlans().Join(dbContext.Mediafiles.Where(m => !m.Archived && m.Transcription != null && m.Transcription.Length > 0), pl => pl.Id, m => m.PlanId, (pl, m) => m);
         }
-        private IQueryable<Mediafile> Paratext()
+        private IEnumerable<Mediafile> Paratext()
         {
             return ScripturePlans().Join(dbContext.Mediafiles, pl => pl.Id, m => m.PlanId, (pl, m) => m).Where(m => m.Transcriptionstate == "done");
         }
         public new IQueryable<Dashboard> GetAll()
         {
             List<Dashboard> entities = new();
-            IQueryable<BaseModel> projects = Projects();
-            IQueryable<BaseModel> training = TrainingProjects();
-            IQueryable<BaseModel> plans = Plans();
-            IQueryable<BaseModel> scripture = ScripturePlans();
-            IQueryable<BaseModel> passages = Passages();
-            IQueryable<BaseModel> transcriptions = Transcriptions();
-            IQueryable<BaseModel> paratext = Paratext();
+            IEnumerable<BaseModel> projects = Projects().ToList();
+            IEnumerable<BaseModel> training = TrainingPlans();
+            IEnumerable<BaseModel> plans = NonTestingPlans().ToList();
+            IEnumerable<BaseModel> scripture = ScripturePlans().ToList();
+            IEnumerable<BaseModel> passages = Passages().ToList();
+            IEnumerable<BaseModel> transcriptions = Transcriptions().ToList();
+            IEnumerable<BaseModel> paratext = Paratext().ToList();
             Dashboard d = new()
             {
                 Id = 1,
