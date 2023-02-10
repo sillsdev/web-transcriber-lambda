@@ -70,6 +70,9 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "spell-check")]
         public bool? SpellCheck { get; set; } = true;
 
+        [Attr(PublicName = "default-params")]
+        [Column(TypeName = "jsonb")]
+        public string? DefaultParams { get; set; }
         private DateTime? _archived;
         [Attr(PublicName = "date-archived")]
         public DateTime? DateArchived { get { return _archived; } set { _archived = value.SetKindUtc(); } }
