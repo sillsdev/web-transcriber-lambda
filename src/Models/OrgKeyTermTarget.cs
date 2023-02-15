@@ -1,5 +1,4 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
-using System.ComponentModel.DataAnnotations.Schema;
 namespace SIL.Transcriber.Models;
 
 public class Orgkeytermtarget : BaseModel, IArchive
@@ -8,8 +7,14 @@ public class Orgkeytermtarget : BaseModel, IArchive
     [HasOne(PublicName = "organization")]
     public Organization? Organization { get; set; }
     [Attr(PublicName = "term")] 
-    public string Term { get; set; } = "";
-        
+    public string? Term { get; set; }  //only the org specific words will be here
+
+    [Attr(PublicName = "term-index")]
+    public int? TermIndex { get; set; }  //the standard words will use this
+
+    [Attr(PublicName = "target")]
+    public string? Target { get; set; }
+
     [Attr(PublicName = "mediafile-id")]
     public int? MediafileId { get; set; }
     [HasOne(PublicName = "mediafile")]

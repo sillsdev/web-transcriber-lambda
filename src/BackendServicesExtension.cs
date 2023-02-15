@@ -90,6 +90,7 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationService>();
             services.AddScoped<OrgDataService>();
             services.AddScoped<OrgKeytermService>();
+            services.AddScoped<OrgKeytermReferenceService>();
             services.AddScoped<OrgKeytermTargetService>();
             services.AddScoped<OrgWorkflowStepService>();
             services.AddScoped<IParatextService, ParatextService>();
@@ -105,6 +106,8 @@ namespace SIL.Transcriber
             services.AddScoped<SectionPassageService>();
             services.AddScoped<SectionResourceService>();
             services.AddScoped<SectionResourceUserService>();
+            services.AddScoped<SharedResourceService>();
+            services.AddScoped<SharedResourceReferenceService>();
             services.AddScoped<UserService>();
             services.AddScoped<UserVersionService>();
             services.AddScoped<StatehistoryService>();
@@ -133,6 +136,7 @@ namespace SIL.Transcriber
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<OrgDataRepository>();
             services.AddScoped<OrgKeytermRepository>();
+            services.AddScoped<OrgKeytermReferenceRepository>();
             services.AddScoped<OrgKeytermTargetRepository>();
             services.AddScoped<OrgWorkflowStepRepository>();
             services.AddScoped<ParatextSyncRepository>();
@@ -153,6 +157,8 @@ namespace SIL.Transcriber
             services.AddScoped<SectionPassageRepository>();
             services.AddScoped<SectionResourceRepository>();
             services.AddScoped<SectionResourceUserRepository>();
+            services.AddScoped<SharedResourceRepository>();
+            services.AddScoped<SharedResourceReferenceRepository>();
             services.AddScoped<UserRepository>();
             services.AddScoped<UserVersionRepository>();
             services.AddScoped<StatehistoryRepository>();

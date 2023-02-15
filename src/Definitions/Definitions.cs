@@ -21,7 +21,6 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-
     public class CommentDefinition : BaseDefinition<Comment>
     {
         public CommentDefinition(
@@ -102,6 +101,14 @@ namespace SIL.Transcriber.Definitions
     public class OrgKeytermDefinition : BaseDefinition<Orgkeyterm>
     {
         public OrgKeytermDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class OrgKeytermreferenceDefinition : BaseDefinition<Orgkeytermreference>
+    {
+        public OrgKeytermreferenceDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request
@@ -222,6 +229,22 @@ namespace SIL.Transcriber.Definitions
     public class SectionResourceUserDefinition : BaseDefinition<Sectionresourceuser>
     {
         public SectionResourceUserDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class SharedresourceDefinition : BaseDefinition<Sharedresource>
+    {
+        public SharedresourceDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class SharedresourcereferenceDefinition : BaseDefinition<Sharedresourcereference>
+    {
+        public SharedresourcereferenceDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request
