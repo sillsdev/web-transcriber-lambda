@@ -265,12 +265,34 @@ namespace SIL.Transcriber.Repositories
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived)),dtBail,ref iStartNext, ref data ))
                         break;
+                    if (version > 5)
+                    {
+                        var orgkeyterms = dbContext.Orgkeyterms
+                                    .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
+                                    .Where(x => !x.Archived);
+                        if (!CheckAdd(20, ToJson(orgkeyterms), dtBail, ref iStartNext, ref data))
+                            break;
+                        if (!CheckAdd(21, ToJson(dbContext.OrgKeytermTargetsData
+                                        .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
+                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                            break;
+                        if (!CheckAdd(22, ToJson(dbContext.OrgKeytermReferencesData
+                                        .Join(orgkeyterms, c => c.OrgkeytermId, o => o.Id, (c, o) => c)
+                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                            break;
+                        if (!CheckAdd(23, ToJson(dbContext.SharedresourcesData
+                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                            break;
+                        if (!CheckAdd(24, ToJson(dbContext.SharedresourcereferencesData
+                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                            break;
+                    }
 
                 }
                 iStartNext = -1; //Done!
             } while (false); //do it once
             if (iStart == iStartNext)
-                throw new System.Exception("Single table is too large to return data");
+                throw new System.Exception("Single table is too large to return data " + iStart.ToString());
 
             orgData.Json = data + FinishData();
             orgData.StartNext = iStartNext;

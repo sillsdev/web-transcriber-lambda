@@ -26,6 +26,7 @@
   <ItemGroup>
     <Compile Remove="Controllers\ActivitystatesController.cs" />
     <Compile Remove="Controllers\ArtifactCategorysController.cs" />
+    <Compile Remove="Controllers\BooksController.cs" />
     <Compile Remove="Controllers\CurrentUsersController.cs" />
     <Compile Remove="Controllers\HomeController.cs" />
     <Compile Remove="Controllers\PassagesectionsController.cs" />
@@ -35,6 +36,7 @@
     <Compile Remove="Data\IRepository.cs" />
     <Compile Remove="Data\IUpdateBuilder.cs" />
     <Compile Remove="Definitions\FIlterQueryStringParameterReader.cs" />
+    <Compile Remove="Models\Book.cs" />
     <Compile Remove="Models\Chapter.cs" />
     <Compile Remove="Models\ErrorViewModel.cs" />
     <Compile Remove="Models\IBurritoMeta.cs" />
@@ -79,6 +81,7 @@
     <Compile Remove="Models\XWorkflowprocesstimer.cs" />
     <Compile Remove="Models\XWorkflowprocesstransitionhistory.cs" />
     <Compile Remove="Models\XWorkflowscheme.cs" />
+    <Compile Remove="Repositories\BookRepository.cs" />
     <Compile Remove="Repositories\PassageSectionRepository.cs" />
     <Compile Remove="Serializers\ArgumentGuard.cs" />
     <Compile Remove="Serializers\CollectionConverter.cs" />
@@ -90,6 +93,7 @@
     <Compile Remove="Serializers\TranscriberConverter.cs" />
     <Compile Remove="Serializers\TranscriberSerializer.cs" />
     <Compile Remove="Services\Auth0ManagementApiTokenService.cs" />
+    <Compile Remove="Services\BookService.cs" />
     <Compile Remove="Services\CurrentUserService.cs" />
     <Compile Remove="Services\PassageSectionService.cs" />
     <Compile Remove="Services\PlantypeService.cs" />

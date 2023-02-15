@@ -27,7 +27,6 @@ namespace SIL.Transcriber.Data
         public DbSet<Activitystate> Activitystates => Set<Activitystate>();
         public DbSet<Artifactcategory> Artifactcategorys => Set<Artifactcategory>();
         public DbSet<Artifacttype> Artifacttypes => Set<Artifacttype>();
-        public DbSet<Book> Books => Set<Book>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
         public DbSet<Dashboard> Dashboards => Set<Dashboard>();
@@ -483,7 +482,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Orgkeyterm> OrgKeytermsData =>
             Orgkeyterms.Include(x => x.Organization);
         public IQueryable<Orgkeytermreference> OrgKeytermReferencesData =>
-    Orgkeytermreferences.Include(x => x.Orgkeyterm).Include(x => x.Book);
+    Orgkeytermreferences.Include(x => x.Orgkeyterm).Include(x => x.Project).Include(x => x.Section);
         public IQueryable<Orgkeytermtarget> OrgKeytermTargetsData =>
     Orgkeytermtargets.Include(x => x.Organization).Include(x => x.Mediafile); 
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
@@ -517,7 +516,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Sharedresource> SharedresourcesData =>
            Sharedresources.Include(x => x.Mediafile).Include(x => x.ArtifactCategory);
         public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>
-                Sharedresourcereferences.Include(x => x.SharedResource).Include(x => x.Book);
+                Sharedresourcereferences.Include(x => x.SharedResource);
 
     }
 

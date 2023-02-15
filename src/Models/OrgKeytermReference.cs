@@ -7,14 +7,14 @@ public class Orgkeytermreference : BaseModel, IArchive
     [HasOne(PublicName = "orgkeyterm")]
     public Orgkeyterm? Orgkeyterm { get; set; }
 
-    public int BookId { get; set; }
-    [HasOne(PublicName = "book")]
-    public Book? Book { get; set; }
+    public int ProjectId { get; set; }
+    [HasOne(PublicName = "project")]
+    public Project? Project { get; set; }
 
-    [Attr(PublicName = "chapter")]
-    public int Chapter { get; set; }
-    [Attr(PublicName = "verse")]
-    public int Verse { get; set; }
+    public int SectionId { get; set; }
+    [HasOne(PublicName = "section")]
+    public Section? Section { get; set; }
+
     public bool Archived { get; set; }
 
     [Attr(PublicName = "offline-id")]

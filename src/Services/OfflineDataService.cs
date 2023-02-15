@@ -753,7 +753,7 @@ namespace SIL.Transcriber.Services
 
         public Fileresponse ExportProjectPTF(int projectid, int start)
         {
-            const int LAST_ADD = 20;
+            const int LAST_ADD = 19;
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
@@ -1163,6 +1163,7 @@ namespace SIL.Transcriber.Services
                             )
                         )
                             break;
+
                         IQueryable<Orgkeyterm>? orgkeyterms = dbContext.OrgKeytermsData
                                     .Where(
                                         a => (a.OrganizationId == project.OrganizationId) && !a.Archived
@@ -1185,18 +1186,6 @@ namespace SIL.Transcriber.Services
                                 dtBail,
                                 ref startNext,
                                 zipArchive,
-                                "books",
-                                dbContext.Books.ToList(),
-                                'A'
-                            )
-)
-                            break;
-                        if (
-                            !CheckAdd(
-                                16,
-                                dtBail,
-                                ref startNext,
-                                zipArchive,
                                 "orgkeytermreferences",
                                 dbContext.OrgKeytermReferencesData
                                     .Join(orgkeyterms, r => r.OrgkeytermId, k => k.Id, (r, k) => r)
@@ -1207,7 +1196,7 @@ namespace SIL.Transcriber.Services
                             break;
                         if (
                             !CheckAdd(
-                                17,
+                                16,
                                 dtBail,
                                 ref startNext,
                                 zipArchive,
@@ -1224,7 +1213,7 @@ namespace SIL.Transcriber.Services
                                     .Where(a => !a.Archived);
                         if (
                             !CheckAdd(
-                                18,
+                                17,
                                 dtBail,
                                 ref startNext,
                                 zipArchive,
@@ -1236,7 +1225,7 @@ namespace SIL.Transcriber.Services
                             break;
                         if (
                             !CheckAdd(
-                                19,
+                                18,
                                 dtBail,
                                 ref startNext,
                                 zipArchive,
@@ -1257,12 +1246,11 @@ namespace SIL.Transcriber.Services
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                        if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
+                        if (!AddMediaEaf(19, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
                             break;
                         List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
 
                         AddAttachedMedia(zipArchive, mediaList);
-                        startNext++;
                     } while (false);
                 }
             }

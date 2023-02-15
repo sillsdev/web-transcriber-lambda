@@ -54,7 +54,7 @@ namespace SIL.Transcriber.Repositories;
 
         public IQueryable<Sharedresourcereference> GetMine()
         {
-            return FromCurrentUser().Include(o => o.SharedResource).Include(o => o.Book);
+            return FromCurrentUser().Include(o => o.SharedResource);
         }
 
         #region Overrides

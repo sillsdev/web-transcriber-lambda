@@ -206,7 +206,7 @@ namespace SIL.Transcriber.Repositories
                 iStartNext = -1; //Done!
             } while (false); //do it once
             if (iStart == iStartNext)
-                throw new System.Exception("Single table is too large to return data");
+                throw new System.Exception("Single table is too large to return data" + iStart.ToString());
 
             Projdata ProjData = entities.First();
             ProjData.Json = data + FinishData();

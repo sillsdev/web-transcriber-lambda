@@ -21,14 +21,6 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class BookDefinition : BaseDefinition<Book>
-    {
-        public BookDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
-    }
     public class CommentDefinition : BaseDefinition<Comment>
     {
         public CommentDefinition(

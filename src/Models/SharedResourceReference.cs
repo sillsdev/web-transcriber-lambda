@@ -7,9 +7,8 @@ public class Sharedresourcereference : BaseModel, IArchive
     [HasOne(PublicName = "shared-resource")]
     public Sharedresource? SharedResource { get; set; }
 
-    public int BookId { get; set; }
-    [HasOne(PublicName = "book")]
-    public Book? Book { get; set; }
+    [Attr(PublicName = "book")]
+    public string Book { get; set; } = "";
 
     [Attr(PublicName = "chapter")]
     public int Chapter { get; set; }

@@ -20,7 +20,6 @@ namespace SIL.Transcriber.Services
         public ICurrentUserContext CurrentUserContext { get; }
         private readonly ArtifactCategoryService ArtifactCategoryService;
         private readonly ArtifactTypeService ArtifactTypeService;
-        private readonly BookService BookService;
         private readonly CommentService CommentService;
         private readonly DiscussionService DiscussionService;
         private readonly GroupMembershipService GMService;
@@ -64,7 +63,6 @@ namespace SIL.Transcriber.Services
             DatachangesRepository repository,
             ArtifactCategoryService artifactCategoryService,
             ArtifactTypeService artifactTypeService,
-            BookService bookService,
             CommentService commentService,
             DiscussionService discussionService,
             GroupMembershipService gmService,
@@ -109,7 +107,6 @@ namespace SIL.Transcriber.Services
             CurrentUserContext = currentUserContext;
             ArtifactCategoryService = artifactCategoryService;
             ArtifactTypeService = artifactTypeService;
-            BookService = bookService;
             CommentService = commentService;
             DiscussionService = discussionService;
             GMService = gmService;
@@ -287,7 +284,7 @@ namespace SIL.Transcriber.Services
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
-            int LAST_ADD = (dbVersion > 4) ? 27 : (dbVersion > 3) ? 21 : 12;
+            int LAST_ADD = (dbVersion > 5) ? 26 : (dbVersion > 3) ? 21 : 12;
             int startNext = start;
             if (CheckStart(dtBail, startNext) == 0)
             {
@@ -421,7 +418,7 @@ namespace SIL.Transcriber.Services
                     startNext++;
                 }
             }
-            if (dbVersion > 4)
+            if (dbVersion > 5)
             { 
                 if (CheckStart(dtBail, startNext) == 22)
                 {
@@ -447,15 +444,10 @@ namespace SIL.Transcriber.Services
                     BuildList(SharedResourceService.GetDeletedSince(dbContext.Sharedresources, currentUser, origin, dtSince), "sharedresource", deleted, false);
                     startNext++;
                 }
-                if (CheckStart(dtBail, startNext) == 26)
+                if (CheckStart(dtBail, startNext) == LAST_ADD)
                 {
                     BuildList(SharedResourceReferenceService.GetChanges(dbContext.Sharedresourcereferences, currentUser, origin, dtSince, project), "sharedresourcereference", changes);
                     BuildList(SharedResourceReferenceService.GetDeletedSince(dbContext.Sharedresourcereferences, currentUser, origin, dtSince), "sharedresourcereference", deleted, false);
-                    startNext++;
-                }
-                if (CheckStart(dtBail, startNext) == LAST_ADD)
-                {
-                    BuildList(BookService.GetChanges(dbContext.Books, currentUser, origin, dtSince, project), "book", changes);
                     startNext++;
                 }
             }
