@@ -29,6 +29,14 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
+    public class CopyProjectDefinition : BaseDefinition<CopyProject>
+    {
+        public CopyProjectDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
 
     public class DiscussionDefinition : BaseDefinition<Discussion>
     {

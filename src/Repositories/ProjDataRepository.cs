@@ -55,6 +55,40 @@ namespace SIL.Transcriber.Repositories
             _metaBuilder = metaBuilder;
             _resourceGraph = resourceGraph;
         }
+        protected bool CheckAddMedia(
+            int check,
+            IQueryable<Mediafile> media,
+            DateTime dtBail,
+            ref int start,
+            ref string data
+        )
+        {
+            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail)
+                return false;
+
+            int lastId = start == check ? 0 : start % (check * 100000);
+            if (start == check || start / 100000 == check)
+            {
+                int startId = lastId;
+                List<Mediafile>? lst = lastId > 0 ? media.Where(m => m.Id > lastId).ToList() : media.ToList();
+                string thisData = ToJson(lst);
+                lastId = 0;
+                while (thisData.Length > (1000000 * 4))
+                {
+                    int cnt = lst.Count;
+                    Mediafile mid = lst[cnt/2];
+                    lastId = mid.Id;
+                    lst = media.Where(m => m.Id > startId && m.Id <= lastId).ToList();
+                    thisData = ToJson(lst);
+                }
+                if (data.Length + thisData.Length > (1000000 * 4))
+                    return false;
+                data += (data.Length > 0 ? "," : InitData()) + thisData;
+                start = lastId > 0 ? check * 100000 + lastId : check+1;
+            }
+            return true;
+        }
 
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
@@ -99,35 +133,35 @@ namespace SIL.Transcriber.Repositories
                 IEnumerable<Plan> plans = dbContext.PlansData.Where(
                     x => x.ProjectId == projectid && !x.Archived
                 );
+                //plans moved to orgdata
                 //if (!CheckAdd(0, plans, dtBail, Serializer, ref iStartNext, ref data)) break;
 
                 //sections
                 IQueryable<Section> sections = dbContext.SectionsData
                     .Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(1, ToJson<Section>(sections), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(0, ToJson<Section>(sections), dtBail, ref iStartNext, ref data))
                     break;
 
                 //passages
                 IQueryable<Passage> passages = dbContext.PassagesData
                     .Join(sections, p => p.SectionId, s => s.Id, (p, s) => p)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(2, ToJson<Passage>(passages), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(1, ToJson<Passage>(passages), dtBail, ref iStartNext, ref data))
                     break;
 
                 //mediafiles
-                IQueryable<Mediafile> mediafiles = dbContext.MediafilesData
+                IQueryable<Mediafile>? mediafiles = dbContext.MediafilesData
                     .Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m)
                     .Where(x => !x.Archived);
-                Project? proj = dbContext.Projects.Where(p => p.Id == projectid).FirstOrDefault();
-                List<Mediafile>? ipMedia = MediaService.GetIPMedia(proj?.OrganizationId??0);
-                if (!CheckAdd(3, ToJson(mediafiles.ToList().Concat(ipMedia).Distinct()), dtBail, ref iStartNext, ref data))
+                if (!CheckAddMedia(2, mediafiles, dtBail, ref iStartNext, ref data))
                     break;
 
+                if (iStartNext > 100)
+                    break;
                 //passagestatechanges
                 if (
-                    !CheckAdd(
-                        4,
+                    !CheckAdd(3,
                         ToJson<Passagestatechange>(
                             dbContext.PassagestatechangesData.Join(
                                 passages,
@@ -149,9 +183,8 @@ namespace SIL.Transcriber.Repositories
                         .Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d)
                         .Where(x => !x.Archived);
                     if (
-                        !CheckAdd(
-                            5,
-                            ToJson<Discussion>(discussions),
+                        !CheckAdd(4,
+                            ToJson(discussions),
                             dtBail,
                             ref iStartNext,
                             ref data
@@ -161,8 +194,7 @@ namespace SIL.Transcriber.Repositories
 
                     //comments
                     if (
-                        !CheckAdd(
-                            6,
+                        !CheckAdd(5,
                             ToJson<Comment>(
                                 dbContext.CommentsData
                                     .Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c)
@@ -179,8 +211,7 @@ namespace SIL.Transcriber.Repositories
                         .Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr)
                         .Where(x => !x.Archived);
                     if (
-                        !CheckAdd(
-                            7,
+                        !CheckAdd(6,
                             ToJson<Sectionresource>(sectionresources),
                             dtBail,
                             ref iStartNext,
@@ -193,8 +224,7 @@ namespace SIL.Transcriber.Repositories
                         .Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u)
                         .Where(x => !x.Archived);
                     if (
-                        !CheckAdd(
-                            8,
+                        !CheckAdd(7,
                             ToJson<Sectionresourceuser>(srusers),
                             dtBail,
                             ref iStartNext,

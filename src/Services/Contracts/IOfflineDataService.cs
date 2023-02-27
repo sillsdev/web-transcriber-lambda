@@ -10,5 +10,8 @@ namespace SIL.Transcriber.Services
         Fileresponse ImportFileURL(string sFile);
         Task<Fileresponse> ImportFileAsync(int projectid, string filename);
         Task<Fileresponse> ImportFileAsync(string filename);
+        Task<Fileresponse> ImportCopyFileAsync(bool neworg, string filename);
+        Task<Fileresponse> ImportCopyProjectAsync(bool neworg, int projectid, int start, int? newProjId);
+        void RemoveCopyProject(int newProjId);
     }
 }
