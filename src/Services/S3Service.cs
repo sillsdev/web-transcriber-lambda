@@ -241,12 +241,10 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-
-        public async Task<S3Response> RenameFile(
-            string fileName,
-            string newFileName,
-            string folder = ""
-        )
+        public async Task<S3Response> CopyFile(string fileName,
+                                               string newFileName,
+                                               string folder = "",
+                                               string newFolder = "")
         {
             try
             {
@@ -262,8 +260,29 @@ namespace SIL.Transcriber.Services
                     true,
                     s3response.ContentType,
                     newFileName,
-                    folder
+                    newFolder
                 );
+                return S3Response(newFileName, s3response.Status);
+            }
+            catch (AmazonS3Exception e)
+            {
+                return S3Response(e.Message, e.StatusCode);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
+
+        public async Task<S3Response> RenameFile(
+            string fileName,
+            string newFileName,
+            string folder = ""
+        )
+        {
+            try
+            {
+                S3Response s3response = await CopyFile(fileName, newFileName, folder, folder);
                 if (s3response.Status == HttpStatusCode.OK)
                     _ = RemoveFile(fileName, folder);
                 return S3Response(newFileName, s3response.Status);

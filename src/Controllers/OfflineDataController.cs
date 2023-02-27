@@ -13,12 +13,6 @@ namespace SIL.Transcriber.Controllers
         private readonly IOfflineDataService _service;
 
         public OfflinedataController(
-            //ILoggerFactory loggerFactory,
-            //IJsonApiOptions options,
-            //IResourceGraph resourceGraph,
-            //JsonApiResourceService<Fileresponse, int> frService,
-            //ICurrentUserContext currentUserContext,
-            //UserService userService,
             IOfflineDataService service
         ) : base()
         {
@@ -75,6 +69,26 @@ namespace SIL.Transcriber.Controllers
         )
         {
             return await _service.ImportFileAsync(filename);
+        }
+
+        [HttpPut("project/copy/{neworg}/{filename}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportFileAsync(
+            [FromRoute] bool neworg, string filename)
+        {
+            return await _service.ImportCopyFileAsync(neworg, filename);
+        }
+        [HttpPut("project/copyp/{neworg}/{projectid}/{start}")]
+        [HttpPut("project/copyp/{neworg}/{projectid}/{start}/{newProjId}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportProjectAsync(
+    [FromRoute] bool neworg, int projectid, int start, int? newProjId)
+        {
+            return await _service.ImportCopyProjectAsync(neworg, projectid, start, newProjId);
+        }
+        [HttpPut("project/copyp/{newProjId}")]
+        public Task CopyProjectComplete([FromRoute] int newProjId)
+        {
+            _service.RemoveCopyProject(newProjId);
+            return Task.CompletedTask;
         }
     }
 }

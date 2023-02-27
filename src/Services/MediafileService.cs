@@ -112,18 +112,18 @@ namespace SIL.Transcriber.Services
             return null;
         }
 
-        public async Task<string> GetNewFileNameAsync(Mediafile mf)
+        public async Task<string> GetNewFileNameAsync(Mediafile mf, string prefix = "")
         {
-            if (mf.SourceMedia == null && await S3service.FileExistsAsync(mf.OriginalFile ?? "", DirectoryName(mf)))
+            if (mf.SourceMedia == null && await S3service.FileExistsAsync(prefix + mf.OriginalFile ?? "", DirectoryName(mf)))
             {
-                return Path.GetFileNameWithoutExtension(mf.OriginalFile)
+                return Path.GetFileNameWithoutExtension(prefix + mf.OriginalFile)
                     + "__"
                     + Guid.NewGuid()
                     + Path.GetExtension(mf.OriginalFile);
             }
             else
             {
-                return mf.OriginalFile ?? "";
+                return prefix + mf.OriginalFile ?? "";
             }
         }
 
@@ -285,9 +285,9 @@ namespace SIL.Transcriber.Services
             resource.AudioUrl = GetAudioUrl(resource);
             return await base.CreateAsync(resource, cancellationToken);
         }
-        public List<Mediafile> GetIPMedia(int organizationId)
+        public List<Mediafile> GetIPMedia(IQueryable<Organization> orgs)
         {
-            IEnumerable<Intellectualproperty>? ip = dbContext.IntellectualPropertys.Where(ip => ip.OrganizationId == organizationId).ToList();
+            IEnumerable<Intellectualproperty>? ip = dbContext.IntellectualPropertys.Join(orgs, ip => ip.OrganizationId, o => o.Id, (ip, o) => ip).ToList();
             return ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
         }
     }

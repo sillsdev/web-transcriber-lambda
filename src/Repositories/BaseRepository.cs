@@ -114,7 +114,7 @@ namespace SIL.Transcriber.Repositories
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail)
                 return false;
-            if (start <= check)
+            if (start == check)
             {
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
