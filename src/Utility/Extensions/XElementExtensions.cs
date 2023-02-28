@@ -13,9 +13,7 @@ namespace TranscriberAPI.Utility.Extensions
         public static string SortableVerses(this XElement value)
         {
             _ = ParseReference(value.Verses(), out int startVerse, out int endVerse);
-            if (endVerse == startVerse)
-                return startVerse.ToString("D4");
-            return startVerse.ToString("D4") + "-" + endVerse.ToString("D4");
+            return endVerse == startVerse ? startVerse.ToString("D4") : startVerse.ToString("D4") + "-" + endVerse.ToString("D4");
         }
         public static void SetReference(this XElement value, string reference)
         {
@@ -30,8 +28,7 @@ namespace TranscriberAPI.Utility.Extensions
             Debug.Assert(IsVerse(value));
             if (value.Verses() == null)
                 return 0;
-            int startVerse;
-            _ = ParseReference(value.Verses(), out startVerse, out _);
+            _ = ParseReference(value.Verses(), out int startVerse, out _);
             return startVerse;
         }
         public static int EndVerse(this XElement value)
@@ -39,8 +36,7 @@ namespace TranscriberAPI.Utility.Extensions
             Debug.Assert(IsVerse(value));
             if (value.Verses() == null)
                 return 0;
-            int endVerse;
-            _ = ParseReference(value.Verses(), out _, out endVerse);
+            _ = ParseReference(value.Verses(), out _, out int endVerse);
             return endVerse;
         }
         private static bool ParseReference(string? reference, out int startVerse, out int endVerse)
@@ -51,11 +47,11 @@ namespace TranscriberAPI.Utility.Extensions
             if (string.IsNullOrEmpty(reference))
                 return false;
 
-            if (reference.Contains("-"))  //TODO do other languages use something besides - ???
+            if (reference.Contains('-'))  //TODO do other languages use something besides - ???
             {
-                OK = int.TryParse(reference.Substring(0, reference.IndexOf('-')), out startVerse);
+                OK = int.TryParse(reference.AsSpan(0, reference.IndexOf('-')), out startVerse);
                 if (OK)
-                    OK = int.TryParse(reference.Substring(reference.IndexOf('-') + 1), out endVerse);
+                    OK = int.TryParse(reference.AsSpan(reference.IndexOf('-') + 1), out endVerse);
             }
             else
             {
@@ -67,57 +63,43 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static bool IsText(this XNode? value)
         {
-            if (value is null)
-                return false;
-            return value.NodeType == System.Xml.XmlNodeType.Text;
+            return value is not null && value.NodeType == System.Xml.XmlNodeType.Text;
         }
         public static bool IsPara(this XNode? value)
         {
-            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
-                return false;
-            return ((XElement)value).Name == "para";
+            return value != null && value.NodeType == System.Xml.XmlNodeType.Element 
+                && ((XElement)value).Name == "para";
         }
         public static bool IsSection(this XNode? value)
         {
-            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
-                return false;
-            return IsPara(value) && ((XElement)value).Attribute("style")?.Value == "s";
+            return IsPara(value) && (value as XElement)?.Attribute("style")?.Value == "s";
         }
         public static bool IsVerse(this XNode? value)
         {
-            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
-            {
-                return false;
-            }
-            return ((XElement)value).Name.LocalName == "verse";
+            return value != null && value.NodeType == System.Xml.XmlNodeType.Element 
+                && ((XElement)value).Name.LocalName == "verse";
         }
         public static bool IsNote(this XNode? value)
         {
-            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
-                return false;
-            return ((XElement)value).Name.LocalName == "note" || ((XElement)value).Name.LocalName == "rem";
+            return value != null && value.NodeType == System.Xml.XmlNodeType.Element
+                && (((XElement)value).Name.LocalName == "note" || ((XElement)value).Name.LocalName == "rem");
         }
         public static bool HasChildren(this XNode? value)
         {
-            if (value == null || value.NodeType != System.Xml.XmlNodeType.Element)
-                return false;
-            return ((XElement)value).FirstNode != null;
+            return value != null && value.NodeType == System.Xml.XmlNodeType.Element 
+                && ((XElement)value).FirstNode != null;
         }
 
         public static string SectionText(this XElement section)
         {
-            if (!IsText(section.FirstNode))
-                return "";
-            return ((XText?)section.FirstNode)?.Value ?? "";
+            return !IsText(section.FirstNode) ? "" : ((XText?)section.FirstNode)?.Value ?? "";
         }
         public static bool IncludesVerse(this XElement value, int number)
         {
             Debug.Assert(IsVerse(value));
             if (value.Verses() == null)
                 return false;
-            int startVerse;
-            int endVerse;
-            _ = ParseReference(value.Verses(), out startVerse, out endVerse);
+            _ = ParseReference(value.Verses(), out int startVerse, out int endVerse);
             return number >= startVerse && number <= endVerse;
         }
         public static string VerseText(this XElement value)

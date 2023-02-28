@@ -794,7 +794,17 @@ namespace SIL.Transcriber.Services
                     startNext = 1;
                 }
             }
-            return WriteMemoryStream(ms, fileName, startNext, ext);
+            WriteMemoryStream(ms, fileName, startNext, ext);
+            //add the mediafiles
+            string id= _SQSservice.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
+            return new()
+            {
+                Message = fileName + ext,
+                FileURL = "",
+                Status = HttpStatusCode.PartialContent,
+                ContentType = "application/zip",
+                Id = Math.Abs(startNext),
+            };
         }
         private IQueryable<Intellectualproperty> OrgIPs(IQueryable<Organization> orgs)
         {

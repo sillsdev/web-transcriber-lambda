@@ -137,9 +137,9 @@ namespace SIL.Transcriber.Utility
                 }
                 else if (verse.NextNode != null)
                 {
-                    var next = verse.NextNode;
+                    XNode? next = verse.NextNode;
                     while (next?.IsText() ?? false)
-                        next = next.NextNode;
+                        next = next?.NextNode;
                     if (next?.IsVerse()??false)
                         MoveToPara((XElement)next);
                 }
