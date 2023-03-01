@@ -1,5 +1,7 @@
 ﻿using JsonApiDotNetCore.Configuration;
+using Microsoft.AspNetCore.Diagnostics;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SIL.Transcriber
 {
@@ -40,15 +42,26 @@ namespace SIL.Transcriber
         {
             if (env.IsDevelopment())
             {
-                _ = app.UseDeveloperExceptionPage();
+                //always do what it will do in production
+               // _ = app.UseDeveloperExceptionPage();
                 _ = app.UseSwagger();
                 _ = app.UseSwaggerUI();
             }
-            else
+            
+            _ = app.UseExceptionHandler(exceptionHandlerApp =>
             {
-                _ = app.UseExceptionHandler("/Home/Error");
-                // app.UseHsts();
-            }
+                exceptionHandlerApp.Run(async context =>
+                {
+                    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    context.Response.ContentType = Text.Plain;
+                        
+                    IExceptionHandlerPathFeature? exceptionHandlerPathFeature =
+                                context.Features.Get<IExceptionHandlerPathFeature>();
+                    //circumvent their security features and write the damn information
+                    await context.Response.WriteAsync(exceptionHandlerPathFeature?.Error.InnerException?.Message ?? exceptionHandlerPathFeature?.Error.Message ?? "");
+                });
+            });
+                
             AWSLoggerConfigSection config = Configuration.GetAWSLoggingConfigSection();
             _ = loggerFactory.AddAWSProvider(config);
 

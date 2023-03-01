@@ -273,7 +273,7 @@ namespace SIL.Transcriber.Utility
 
         private static IEnumerable<Passage> ParseTranscription(Passage currentPassage, string transcription)
         {
-            string pattern = @"(\\v\s*[1-9+]-*[1-9+]*)";
+            string pattern = @"(\\v\s*[1-9+]-*[0-9+]*)";
             List<Passage> ret = new ();
             // Create a Regex  
             Regex rg = new (pattern);
@@ -312,7 +312,7 @@ namespace SIL.Transcriber.Utility
             //find the verses that contain verses in my range
             SortedList<string, XElement> existing = GetExistingVerses(chapterContent, currentPassage, out _);
             if (existing.Values.Count == 0)
-                throw new Exception("no range");
+                throw new ArgumentOutOfRangeException("reference", "no range");
             foreach (XElement v in existing.Values)
             {
                 if (v.IsVerse())
