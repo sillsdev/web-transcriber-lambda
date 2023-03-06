@@ -41,12 +41,13 @@ public class SharedResourceRepository : BaseRepository<Sharedresource>
         string projectid
     )
     {
+        //TODO get where (clusterid is null) + (clusterid is set and my org is in the cluster)
         return entities.Where(e => !e.Archived);
     }
 
     public IQueryable<Sharedresource> GetMine()
     {
-        return FromCurrentUser().Include(o => o.ArtifactCategory).Include(o => o.Mediafile);
+        return FromCurrentUser().Include(o => o.ArtifactCategory).Include(o => o.Passage);
     }
 
     #region Overrides

@@ -6,10 +6,15 @@ namespace SIL.Transcriber.Models;
 
 public partial class Sharedresource : BaseModel, IArchive
 {
-    [Attr(PublicName = "mediafile-id")]
-    public int? MediafileId { get; set; }
-    [HasOne(PublicName = "mediafile")]
-    public Mediafile? Mediafile { get; set; }
+    [Attr(PublicName = "passage-id")]
+    public int? PassageId { get; set; }
+    [HasOne(PublicName = "passage")]
+    public Passage? Passage { get; set; }
+
+    [Attr(PublicName = "cluster-id")]
+    public int? ClusterId { get; set; }
+    [HasOne(PublicName = "cluster")]
+    public Organization? Cluster { get; set; }
 
     [Attr(PublicName = "title")]
     public string? Title { get; set; }
@@ -28,10 +33,5 @@ public partial class Sharedresource : BaseModel, IArchive
 
     [HasOne(PublicName = "artifact-category")]
     public Artifactcategory? ArtifactCategory { get; set; }
-
-    [Attr(PublicName = "offline-id")]
-    public string? OfflineId { get; set; }
-    [Attr(PublicName = "offline-mediafile-id")]
-    public string? OfflineMediafileId { get; set; }
     public bool Archived { get; set; }
 }

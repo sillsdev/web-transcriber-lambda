@@ -1,4 +1,6 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace SIL.Transcriber.Models;
 
 public class Sharedresourcereference : BaseModel, IArchive
@@ -14,8 +16,10 @@ public class Sharedresourcereference : BaseModel, IArchive
     public int Chapter { get; set; }
     [Attr(PublicName = "verse")]
     public int Verse { get; set; }
+
+    [NotMapped]
+    [Attr(PublicName = "verse-ranges")]
+    public string? VerseRanges { get; set; }
     public bool Archived { get; set; }
 
-    [Attr(PublicName = "offline-id")]
-    public string? OfflineId { get; set; }
 }

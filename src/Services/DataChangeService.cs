@@ -134,13 +134,13 @@ namespace SIL.Transcriber.Services
             WorkflowStepService = workflowStepService;
             CurrentUserRepository = currentUserRepository;
         }
-
+        const int Divisor = 10000000;
         private User? CurrentUser()
         {
             return CurrentUserRepository.GetCurrentUser();
         }
 
-        private static void BuildList(
+        private static int BuildList(
             IEnumerable<BaseModel> recs,
             string type,
             List<OrbitId> addTo,
@@ -148,14 +148,24 @@ namespace SIL.Transcriber.Services
         )
         {
             OrbitId tblList = new(type);
-            foreach (BaseModel m in recs)
+            int ix = 0;
+            int lastId = 0;
+            int stop = Math.Min(500, recs.Count());
+            foreach(BaseModel m in recs)
             {
                 tblList.Ids.Add(m.Id);
+                ix++;
+                if (ix > stop)
+                {
+                    lastId = m.Id;
+                    break;
+                }
             }
             if (toEnd)
                 addTo.Add(tblList);
             else
                 addTo.Insert(0, tblList);
+            return lastId;
         }
 
         private static void AddNewChanges(List<OrbitId> newCh, List<OrbitId> master)
@@ -265,11 +275,13 @@ namespace SIL.Transcriber.Services
 
         private static int CheckStart(DateTime dtBail, int completed)
         {
+
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail)
                 return 1000;
             return completed;
         }
+
 
         // csharpier-ignore
         private DCReturn GetChanges(
@@ -285,7 +297,8 @@ namespace SIL.Transcriber.Services
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
             int LAST_ADD = (dbVersion > 5) ? 26 : (dbVersion > 3) ? 21 : 12;
-            int startNext = start;
+            int startNext = start / Divisor == 0 ? start : start / Divisor;
+            int lastId = start / Divisor == 0 ? 0 : start % Divisor;
             if (CheckStart(dtBail, startNext) == 0)
             {
                 BuildList(UserService.GetChanges(dbContext.Users, currentUser, origin, dtSince, project), "user", changes);
@@ -342,9 +355,15 @@ namespace SIL.Transcriber.Services
             }
             if (CheckStart(dtBail, startNext) == 9)
             {
-                BuildList(MediafileService.GetChanges(dbContext.Mediafiles, currentUser, origin, dtSince, project), "mediafile", changes);
-                BuildList(MediafileService.GetDeletedSince(dbContext.Mediafiles, currentUser, origin, dtSince), "mediafile", deleted, false);
-                startNext++;
+                lastId = BuildList(MediafileService.GetChanges(dbContext.Mediafiles, currentUser, origin, dtSince, project, lastId), "mediafile", changes);
+                if (lastId == 0)
+                {
+                    BuildList(MediafileService.GetDeletedSince(dbContext.Mediafiles, currentUser, origin, dtSince), "mediafile", deleted, false);
+                    startNext++;
+                } else
+                {
+                    startNext = 9 * Divisor + lastId;
+                }
             }
             if (CheckStart(dtBail, startNext) == 10)
             {
@@ -451,7 +470,7 @@ namespace SIL.Transcriber.Services
                     startNext++;
                 }
             }
-            DCReturn ret = new (changes, deleted, startNext > LAST_ADD ? -1 : startNext);
+            DCReturn ret = new (changes, deleted, (startNext < Divisor && startNext > LAST_ADD) ? -1 : startNext);
             return ret;
         }
     }

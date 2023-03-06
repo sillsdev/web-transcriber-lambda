@@ -63,12 +63,13 @@ namespace SIL.Transcriber.Repositories
             ref string data
         )
         {
+            int divisor = 1000000;
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail)
                 return false;
 
-            int lastId = start == check ? 0 : start % (check * 100000);
-            if (start == check || start / 100000 == check)
+            int lastId = start == check ? 0 : start % (check * divisor);
+            if (start == check || start / divisor == check)
             {
                 int startId = lastId;
                 List<Mediafile>? lst = lastId > 0 ? media.Where(m => m.Id > lastId).ToList() : media.ToList();
@@ -85,7 +86,7 @@ namespace SIL.Transcriber.Repositories
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
-                start = lastId > 0 ? check * 100000 + lastId : check+1;
+                start = lastId > 0 ? check * divisor + lastId : check+1;
             }
             return true;
         }
@@ -105,9 +106,9 @@ namespace SIL.Transcriber.Repositories
             {
                 dynamic tmp = JObject.Parse(withIncludes);
                 tmp.Remove("included");
-                return tmp.ToString();
+                return tmp.ToString(); //will this take it out of transcriptions also?? .Replace("\n", "").Replace("\r", "");
             }
-            return withIncludes;
+            return  withIncludes; //will this take it out of transcriptions also?? .Replace("\n", "").Replace("\r", "");.Replace("\n", "").Replace("\r", "");
         }
 
         private IQueryable<Projdata> GetData(

@@ -199,6 +199,11 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
+                .Entity<Organization>()
+                .HasOne(o => o.Cluster)
+                .WithMany()
+                .HasForeignKey(o => o.ClusterId);
+            _ = builder
                 .Entity<Orgdata>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -303,6 +308,11 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Sharedresource>()
+                .HasOne(o => o.Cluster)
+                .WithMany()
+                .HasForeignKey(o => o.ClusterId);
             _ = builder
                 .Entity<Sharedresourcereference>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -520,7 +530,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Section> SectionsData =>
             Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber);
         public IQueryable<Sharedresource> SharedresourcesData =>
-           Sharedresources.Include(x => x.Mediafile).Include(x => x.ArtifactCategory);
+           Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory);
         public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>
                 Sharedresourcereferences.Include(x => x.SharedResource);
 

@@ -290,5 +290,17 @@ namespace SIL.Transcriber.Services
             IEnumerable<Intellectualproperty>? ip = dbContext.IntellectualPropertys.Join(orgs, ip => ip.OrganizationId, o => o.Id, (ip, o) => ip).ToList();
             return ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
         }
+        public IEnumerable<Mediafile> GetChanges(
+                                                IQueryable<Mediafile> entities,
+                                                int currentuser,
+                                                string origin,
+                                                DateTime since,
+                                                int project, int lastId
+                                            )
+        {
+            return base.GetChanges(entities, currentuser, origin, since, project)
+                .Where(e => e.Id > lastId) 
+                .ToList();
+        }
     }
 }
