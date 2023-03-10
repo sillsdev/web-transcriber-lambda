@@ -347,7 +347,7 @@ namespace SIL.Transcriber.Services
                 stream.Position = 0;
 
                 return S3Response(
-                    fileName,
+                    (response.LastModified.AddMinutes(2) > DateTime.UtcNow).ToString(),
                     HttpStatusCode.OK,
                     stream,
                     response.Headers ["Content-Type"]

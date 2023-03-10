@@ -275,11 +275,8 @@ namespace SIL.Transcriber.Services
 
         private static int CheckStart(DateTime dtBail, int completed)
         {
-
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
-            if (DateTime.Now > dtBail)
-                return 1000;
-            return completed;
+            return DateTime.Now > dtBail ? 1000 : completed;
         }
 
 

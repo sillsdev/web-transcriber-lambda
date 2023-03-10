@@ -442,23 +442,29 @@ namespace SIL.Transcriber.Services
         {
             int startNext;
             string err = "";
+            bool recent = false;
             try
             {
-                Stream ms = OpenFile(fileName + ".sss");
-                StreamReader reader = new(ms);
-                string data = reader.ReadToEnd();
-                if (data.IndexOf("|") > 0)
+                Stream ms = OpenFile(fileName + ".sss", out recent);
+                if (recent)
                 {
-                    err = data [(data.IndexOf("|") + 1)..];
-                    data = data [..data.IndexOf("|")];
+                    StreamReader reader = new(ms);
+                    string data = reader.ReadToEnd();
+                    if (data.IndexOf("|") > 0)
+                    {
+                        err = data [(data.IndexOf("|") + 1)..];
+                        data = data [..data.IndexOf("|")];
+                    }
+                    bool media = data.Contains(" media");
+                    if (media)
+                        data = data [..data.IndexOf(" media")];
+                    if (!int.TryParse(data, out startNext))
+                        startNext = 0;
+                    if (media)
+                        startNext += lastAdd;
                 }
-                bool media = data.Contains(" media");
-                if (media)
-                    data = data [..data.IndexOf(" media")];
-                if (!int.TryParse(data, out startNext))
+                else
                     startNext = 0;
-                if (media)
-                    startNext += lastAdd;
             }
             catch
             {
@@ -499,9 +505,10 @@ namespace SIL.Transcriber.Services
             };
         }
 
-        private Stream OpenFile(string fileName)
+        private Stream OpenFile(string fileName, out bool recent)
         {
             S3Response s3response = _S3service.ReadObjectDataAsync(fileName, ExportFolder).Result;
+            _ = bool.TryParse(s3response.Message, out recent);
             return s3response.FileStream ?? throw (new Exception("Export in progress " + fileName + "not found."));
         }
 
@@ -520,7 +527,7 @@ namespace SIL.Transcriber.Services
             }
             else
             {
-                ms = OpenFile(fileName + ext);
+                ms = OpenFile(fileName + ext, out bool recent);
             }
             return ms;
         }
@@ -889,17 +896,22 @@ namespace SIL.Transcriber.Services
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
-            DateTime dtBail = DateTime.Now.AddSeconds(15);
+            DateTime dtBail = DateTime.Now.AddSeconds(1500);
 
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
             string fileName = string.Format(
-                "Transcriber{0}_{1}_{2}",
+                "APM{0}_{1}_{2}",
                 CoerceValidFileName(project.Name),
                 project.Id.ToString(),
                 CurrentUser()?.Id
             );
-
+            if (start == 0)
+            {
+                Fileresponse? going = CheckProgress(fileName + ext, -1);
+                if (going.Id != 0)
+                    return going;
+            }
             if (start > LAST_ADD)
                 return CheckProgress(fileName + ext, LAST_ADD);
 
@@ -1691,6 +1703,24 @@ namespace SIL.Transcriber.Services
                 }
             }
             dbContext.IntellectualPropertys.UpdateRange(ips);
+            /* fix Orgkeytermtarget ids */
+            List<Orgkeytermtarget> ktts = dbContext.Orgkeytermtargets.Where(
+                c => c.OfflineMediafileId != null
+            ).ToList();
+            foreach (Orgkeytermtarget c in ktts)
+            {
+                Mediafile? mediafile = dbContext.Mediafiles
+                    .Where(m => m.OfflineId == c.OfflineMediafileId)
+                    .FirstOrDefault();
+                if (mediafile != null)
+                {
+                    c.OfflineMediafileId = null;
+                    c.MediafileId = mediafile.Id;
+                    c.LastModifiedOrigin = "electron";
+                    c.DateUpdated = DateTime.UtcNow;
+                }
+            }
+            dbContext.Orgkeytermtargets.UpdateRange(ktts);
             _ = dbContext.SaveChanges();
         }
 
@@ -2386,6 +2416,40 @@ namespace SIL.Transcriber.Services
                                     }
                                 }
                                 break;
+                            case "orgkeytermtargets":
+                                foreach (ResourceObject ro in lst)
+                                {
+                                    Orgkeytermtarget tt = ResourceObjectToResource(ro, new Orgkeytermtarget());
+                                    if (tt.Id == 0)
+                                    {
+                                        //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
+                                        Orgkeytermtarget? ktt = dbContext.Orgkeytermtargets
+                                            .Where(x => x.OfflineId == tt.OfflineId)
+                                            .FirstOrDefault();
+                                        if (ktt == null)
+                                        {
+                                            _ = dbContext.Orgkeytermtargets.Add(
+                                                new Orgkeytermtarget
+                                                {
+                                                    Organization = tt.Organization,
+                                                    OrganizationId = tt.Organization.Id,
+                                                    Term = tt.Term,
+                                                    Target = tt.Target,
+                                                    TermIndex = tt.TermIndex,
+                                                    OfflineId = tt.OfflineId,
+                                                    OfflineMediafileId = tt.OfflineMediafileId,
+                                                    MediafileId = tt.Mediafile?.Id, //this won't ever happen...
+                                                    LastModifiedBy = tt.LastModifiedBy,
+                                                    LastModifiedByUser = tt.LastModifiedByUser,
+                                                    DateCreated = tt.DateCreated,
+                                                    DateUpdated = DateTime.UtcNow,
+                                                }
+                                            );
+                                            //mediafileid will be updated when mediafiles are processed if 0;
+                                        }
+                                    }
+                                }
+                                break;
                         }
                     }
                     int ret = await dbContext.SaveChangesNoTimestampAsync();
@@ -2520,6 +2584,7 @@ namespace SIL.Transcriber.Services
             await dbContext.Entry(t.Entity).ReloadAsync();
             return t.Entity;
         }
+        #region Copy
         private Dictionary<int, int> CopySections(IList<Section> lst, bool sameOrg, int planId, User currentuser)
         {
             Dictionary<int, Section> map = new();
@@ -2612,7 +2677,6 @@ namespace SIL.Transcriber.Services
             }
             return result;
         }
-
 
         private Dictionary<int, int> CopyOrgworkflowsteps(IList<Orgworkflowstep> lst, int orgId)
         {
@@ -3302,4 +3366,5 @@ namespace SIL.Transcriber.Services
             }
         }
     }
+    #endregion Copy
 }
