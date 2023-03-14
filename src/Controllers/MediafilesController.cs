@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Controllers
         [HttpGet("{id}/fileurl")]
         public IActionResult GetFile([FromRoute] int id)
         {
-            Mediafile? response = _service.GetFileSignedUrlAsync(id).Result;
+            Mediafile? response = _service.GetFileSignedUrlAsync(id);
             return Ok(response);
         }
 

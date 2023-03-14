@@ -152,7 +152,7 @@ namespace SIL.Transcriber.Services
             return await base.CreateAsync(entity, new CancellationToken());
         }
 
-        public async Task<Mediafile?> GetFileSignedUrlAsync(int id)
+        public Mediafile? GetFileSignedUrlAsync(int id)
         {
             Mediafile? mf = MyRepository.Get(id);
             if (mf == null)
@@ -171,7 +171,7 @@ namespace SIL.Transcriber.Services
                     .SignedUrlForGet(mf.S3File ?? "", DirectoryName(mf), mf.ContentType ?? "")
                     .Message;
             }
-            _ = await UpdateAsync(id, mf, new CancellationToken());
+            //_ = await UpdateAsync(id, mf, new CancellationToken());
             return mf;
         }
 
