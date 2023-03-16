@@ -169,7 +169,7 @@ namespace SIL.Transcriber.Services
             if (!string.IsNullOrEmpty(eafxml))
             {
                 ZipArchiveEntry entry = zipArchive.CreateEntry(
-                    "media/" + Path.GetFileNameWithoutExtension(name) + ".eaf",
+                    "media/" + Path.ChangeExtension(name, ".eaf"),
                     CompressionLevel.Optimal
                 );
                 WriteEntry(entry, eafxml);
@@ -266,7 +266,8 @@ namespace SIL.Transcriber.Services
             DateTime dtBail,
             ref int completed,
             ZipArchive zipArchive,
-            List<Mediafile> media
+            List<Mediafile> media,
+            bool rename
         )
         {
             if (DateTime.Now > dtBail)
@@ -274,7 +275,9 @@ namespace SIL.Transcriber.Services
             if (completed <= check)
             {
                 foreach (Mediafile m in media)
-                    AddEafEntry(zipArchive, m.S3File ?? "", mediaService.EAF(m));
+                {
+                    AddEafEntry(zipArchive, rename ? NameFromRef(m) : (m.S3File ?? ""), mediaService.EAF(m));
+                }
                 completed++;
             }
             return true;
@@ -696,15 +699,46 @@ namespace SIL.Transcriber.Services
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles.Concat(ipMedia).ToList<Mediafile>(), 'Z');
             return mediafiles;
         }
+        private string NameFromRef(Mediafile m)
+        {
+            string name = ""; 
+            if (m.PassageId != null) //do I have the passage
+            {
+                Passage? passage = dbContext.Passages.Find(m.PassageId);
+                if (passage != null)
+                {
+                    string pref = passage.StartChapter > 0
+                        ? string.Format(
+                                "{0}_{1}-{2}",
+                                passage.StartChapter.ToString().PadLeft(3, '0'),
+                                passage.StartVerse.ToString().PadLeft(3, '0'),
+                                passage.EndVerse.ToString().PadLeft(3, '0')
+                            )
+                        : passage.Reference?.Length > 0 ? passage.Reference : passage.Title??"";
+                    if (pref.Length == 0)
+                        pref = passage.Id.ToString();
 
-        private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles)
+                    name = string.Format("{0}{1}_v{2}{3}",
+                                            passage.Book,
+                                            pref,
+                                            m.VersionNumber??1,
+                                            Path.GetExtension(m.S3File));
+                }
+                else
+                {
+                    name = m.S3File??"";
+                }
+            }
+            return name;
+        }
+        private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles, bool rename =false)
         {
             mediafiles.ForEach(m => {
                 //S3File has just the filename
                 //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
                 //change the audioUrl to have the offline path + filename
-                //change the s3File to have the onlinepath + filename
-                m.AudioUrl = "media/" + m.S3File;
+                //change the s3File to have the onlinepath + filename 
+                m.AudioUrl = "media/" + (rename ? NameFromRef(m) : m.S3File);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles, 'Z');
@@ -752,9 +786,9 @@ namespace SIL.Transcriber.Services
                             DateTime.Now.AddSeconds(15),
                             ref startNext,
                             zipArchive,
-                            mediafiles
+                            mediafiles, artifactType == ""
                         );
-                    AddAttachedMedia(zipArchive, mediafiles);
+                    AddAttachedMedia(zipArchive, mediafiles, artifactType == "");
                     startNext = 1;
                 }
                 WriteMemoryStream(ms, fileName, startNext, ext);
@@ -896,7 +930,7 @@ namespace SIL.Transcriber.Services
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
-            DateTime dtBail = DateTime.Now.AddSeconds(1500);
+            DateTime dtBail = DateTime.Now.AddSeconds(15);
 
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
@@ -1340,7 +1374,7 @@ namespace SIL.Transcriber.Services
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                    if (!AddMediaEaf(19, dtBail, ref startNext, zipArchive, vernmediafiles.ToList()))
+                    if (!AddMediaEaf(19, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), false))
                         break;
                     List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
                     AddAttachedMedia(zipArchive, mediaList);
@@ -2432,7 +2466,7 @@ namespace SIL.Transcriber.Services
                                                 new Orgkeytermtarget
                                                 {
                                                     Organization = tt.Organization,
-                                                    OrganizationId = tt.Organization.Id,
+                                                    OrganizationId = tt.Organization?.Id??0,
                                                     Term = tt.Term,
                                                     Target = tt.Target,
                                                     TermIndex = tt.TermIndex,
