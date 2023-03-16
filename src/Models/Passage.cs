@@ -82,59 +82,69 @@ namespace SIL.Transcriber.Models
             endChapter = 0,
             startVerse = 0,
             endVerse = 0;
+        private bool? validScripture = null;
+        public bool ValidScripture {
+            get {
+                if (validScripture == null)
+                    validScripture = ParseReference(
+                        Reference??"",
+                        out startChapter,
+                        out endChapter,
+                        out startVerse,
+                        out endVerse
+                    );
+                return (bool)validScripture;
+            }
+        }
         public int StartChapter {
             get {
-                if (startChapter > 0 || Reference == null)
-                    return startChapter;
-                _ = ParseReference(
-                    Reference,
-                    out startChapter,
-                    out endChapter,
-                    out startVerse,
-                    out endVerse
-                );
+                if (validScripture == null)
+                    validScripture = ParseReference(
+                        Reference??"",
+                        out startChapter,
+                        out endChapter,
+                        out startVerse,
+                        out endVerse
+                    );
                 return startChapter;
             }
         }
         public int EndChapter {
             get {
-                if (endChapter > 0 || Reference == null)
-                    return endChapter;
-                _ = ParseReference(
-                    Reference,
-                    out startChapter,
-                    out endChapter,
-                    out startVerse,
-                    out endVerse
-                );
+                if (validScripture == null)
+                    validScripture = ParseReference(
+                        Reference ?? "",
+                        out startChapter,
+                        out endChapter,
+                        out startVerse,
+                        out endVerse
+                    );
                 return endChapter;
             }
         }
         public int StartVerse {
             get {
-                if (startVerse > 0 || Reference == null)
-                    return startVerse;
-                _ = ParseReference(
-                    Reference,
-                    out startChapter,
-                    out endChapter,
-                    out startVerse,
-                    out endVerse
-                );
+                if (validScripture == null)
+                    validScripture = ParseReference(
+                        Reference ?? "",
+                        out startChapter,
+                        out endChapter,
+                        out startVerse,
+                        out endVerse
+                    );
                 return startVerse;
             }
         }
         public int EndVerse {
             get {
-                if (endVerse > 0 || Reference == null)
-                    return endVerse;
-                _ = ParseReference(
-                    Reference,
-                    out startChapter,
-                    out endChapter,
-                    out startVerse,
-                    out endVerse
-                );
+                if (validScripture == null)
+                    validScripture = ParseReference(
+                        Reference ?? "",
+                        out startChapter,
+                        out endChapter,
+                        out startVerse,
+                        out endVerse
+                    );
                 return endVerse;
             }
         }
@@ -142,9 +152,7 @@ namespace SIL.Transcriber.Models
             get {
                 if (StartChapter != EndChapter)
                     return Reference ?? "";
-                if (StartVerse != EndVerse)
-                    return StartVerse.ToString() + "-" + EndVerse.ToString();
-                return StartVerse.ToString();
+                return StartVerse != EndVerse ? StartVerse.ToString() + "-" + EndVerse.ToString() : StartVerse.ToString();
             }
         }
 
@@ -171,21 +179,27 @@ namespace SIL.Transcriber.Models
             out int endVerse
         )
         {
-            bool ok;
-            int dash = reference.IndexOf("-");
-            string firstsection = dash > 0 ? reference[..dash] : reference;
-            ok = ParseReferencePart(firstsection, out startChapter, out startVerse);
-
-            if (startChapter == 0)
-                startChapter = 1;
-
-            endChapter = startChapter;
-            endVerse = startVerse;
-            if (ok && dash > 0)
+            bool ok = reference.Length > 0;
+            if (ok)
             {
-                ok = ParseReferencePart(reference [(dash + 1)..], out endChapter, out endVerse);
-                if (endChapter == 0)
-                    endChapter = startChapter;
+                int dash = reference.IndexOf("-");
+                string firstsection = dash > 0 ? reference[..dash] : reference;
+                ok = ParseReferencePart(firstsection, out startChapter, out startVerse);
+
+                endChapter = startChapter;
+                endVerse = startVerse;
+                if (ok && dash > 0)
+                {
+                    ok = ParseReferencePart(reference [(dash + 1)..], out endChapter, out endVerse);
+                    if (endChapter == 0)
+                        endChapter = startChapter;
+                }
+            } else
+            {
+                startChapter = 0;
+                endChapter = 0;
+                startVerse = 0;
+                endVerse = 0;
             }
             return ok;
         }
