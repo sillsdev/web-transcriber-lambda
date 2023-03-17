@@ -713,7 +713,7 @@ namespace SIL.Transcriber.Services
                                 passage.StartChapter.ToString().PadLeft(3, '0'),
                                 passage.StartVerse.ToString().PadLeft(3, '0'),
                                 passage.StartVerse == passage.EndVerse ? "" :
-                                '_' + passage.EndVerse.ToString().PadLeft(3, '0')
+                                '-' + passage.EndVerse.ToString().PadLeft(3, '0')
                             ) : string.Format(
                                 "{0}_{1}-{2}_{3}",
                                 passage.StartChapter.ToString().PadLeft(3, '0'),
