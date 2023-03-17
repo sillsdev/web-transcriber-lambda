@@ -362,7 +362,7 @@ namespace SIL.Transcriber.Services
         /// <remarks>
         /// http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
         /// </remarks>
-        public static string CoerceValidFileName(string filename)
+        public static string CleanFileName(string filename)
         {
             string invalidChars = System.Text.RegularExpressions.Regex.Escape(
                 new string(Path.GetInvalidFileNameChars()) + "'"
@@ -708,19 +708,24 @@ namespace SIL.Transcriber.Services
                 if (passage != null)
                 {
                     string pref = passage.StartChapter > 0
-                        ? string.Format(
+                        ? passage.StartChapter == passage.EndChapter ? string.Format(
                                 "{0}_{1}-{2}",
                                 passage.StartChapter.ToString().PadLeft(3, '0'),
                                 passage.StartVerse.ToString().PadLeft(3, '0'),
                                 passage.EndVerse.ToString().PadLeft(3, '0')
-                            )
+                            ) : string.Format(
+                                "{0}_{1}-{2}_{3}",
+                                passage.StartChapter.ToString().PadLeft(3, '0'),
+                                passage.StartVerse.ToString().PadLeft(3, '0'),
+                                passage.EndChapter.ToString().PadLeft(3, '0'),
+                                passage.EndVerse.ToString().PadLeft(3, '0'))
                         : passage.Reference?.Length > 0 ? passage.Reference : passage.Title??"";
                     if (pref.Length == 0)
                         pref = passage.Id.ToString();
 
                     name = string.Format("{0}{1}_v{2}{3}",
                                             passage.Book,
-                                            pref,
+                                            CleanFileName(pref),
                                             m.VersionNumber??1,
                                             Path.GetExtension(m.S3File));
                 }
@@ -761,7 +766,7 @@ namespace SIL.Transcriber.Services
             string fileName = string.Format(
                 "{0}{1}_{2}_{3}",
                 addElan ? "Elan" : "Audio",
-                CoerceValidFileName(project.Name + artifactType),
+                CleanFileName(project.Name + artifactType),
                 project.Id.ToString(),
                 CurrentUser()?.Id
             );
@@ -814,7 +819,7 @@ namespace SIL.Transcriber.Services
             Project project = projects.First();
             string fileName = string.Format(
                 "Burrito{0}_{1}_{2}",
-                CoerceValidFileName(project.Name),
+                CleanFileName(project.Name),
                 project.Id.ToString(),
                 CurrentUser()?.Id
             );
@@ -936,7 +941,7 @@ namespace SIL.Transcriber.Services
             Project project = projects.First();
             string fileName = string.Format(
                 "APM{0}_{1}_{2}",
-                CoerceValidFileName(project.Name),
+                CleanFileName(project.Name),
                 project.Id.ToString(),
                 CurrentUser()?.Id
             );
