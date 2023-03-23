@@ -197,6 +197,9 @@ namespace SIL.Transcriber.Services
             {
                 if (pd != null)
                 {
+                    Project? x = dbContext.Projects.Find(pd.id);
+                    if (x == null)
+                        throw new Exception("Project not found " + pd.id);
                     ret = GetChanges(origin, pd.since, 0, pd.id, dbVersion, start);
                     AddNewChanges(ret.changes, changes);
                     AddNewChanges(ret.deleted, deleted);

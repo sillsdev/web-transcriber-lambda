@@ -2414,9 +2414,7 @@ namespace SIL.Transcriber.Services
                                             }
                                         );
                                     }
-                                    ;
                                 }
-                                ;
                                 break;
                             case "intellectualpropertys":
                                 foreach (ResourceObject ro in lst)
