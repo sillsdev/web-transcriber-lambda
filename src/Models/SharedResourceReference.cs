@@ -14,12 +14,9 @@ public class Sharedresourcereference : BaseModel, IArchive
 
     [Attr(PublicName = "chapter")]
     public int Chapter { get; set; }
-    [Attr(PublicName = "verse")]
-    public int Verse { get; set; }
+    [Attr(PublicName = "verses")]
+    public string? Verses { get; set; }
 
-    [NotMapped]
-    [Attr(PublicName = "verse-ranges")]
-    public string? VerseRanges { get; set; }
     public bool Archived { get; set; }
 
 }
