@@ -32,14 +32,15 @@ namespace SIL.Transcriber.Controllers
             int id,
             int start,
             [FromForm] string? ids,
-            [FromForm] string? artifactType
+            [FromForm] string? artifactType,
+            [FromForm] string? nameTemplate
         )
         {
             Fileresponse response = exportType switch
             {
                 "ptf" => _service.ExportProjectPTF(id, start),
-                "audio" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start),
-                "elan" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start, true),
+                "audio" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start, false, nameTemplate),
+                "elan" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start, true, nameTemplate),
                 "burrito" => _service.ExportBurrito(id, ids, start),
                 _ => _service.ExportProjectPTF(id, start),
             };
