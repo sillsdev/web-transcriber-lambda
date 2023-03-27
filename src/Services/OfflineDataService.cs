@@ -267,7 +267,7 @@ namespace SIL.Transcriber.Services
             ref int completed,
             ZipArchive zipArchive,
             List<Mediafile> media,
-            bool rename
+            string? nameTemplate
         )
         {
             if (DateTime.Now > dtBail)
@@ -276,7 +276,7 @@ namespace SIL.Transcriber.Services
             {
                 foreach (Mediafile m in media)
                 {
-                    AddEafEntry(zipArchive, rename ? NameFromRef(m) : (m.S3File ?? ""), mediaService.EAF(m));
+                    AddEafEntry(zipArchive, NameFromTemplate(m, nameTemplate), mediaService.EAF(m));
                 }
                 completed++;
             }
@@ -699,15 +699,26 @@ namespace SIL.Transcriber.Services
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles.Concat(ipMedia).ToList<Mediafile>(), 'Z');
             return mediafiles;
         }
-        private string NameFromRef(Mediafile m)
+        private string NameFromTemplate(Mediafile m, string? nameTemplate)
         {
-            string name = ""; 
-            if (m.PassageId != null) //do I have the passage
+            //expecting template to have
+            //{BOOK}{SECT}{TITLE}{PASS}{REF}{VERS}
+            Passage? passage = dbContext.Passages.Find(m.PassageId??0);
+            Section? section = dbContext.Sections.Find(passage?.SectionId??0);
+
+            if (nameTemplate == null || passage == null || section == null)
+                return m.S3File ?? "";
+
+            bool flat = passage.Sequencenum == 1 && (dbContext.Plans.Find(section.PlanId)?.Flat ?? false);
+            string name = nameTemplate.Replace("{BOOK}", passage.Book)
+                                .Replace("{SECT}", section.Sequencenum.ToString().PadLeft(3, '0'))
+                                .Replace("{TITLE}", section.Name)
+                                .Replace("{VERS}", "v" + (m.VersionNumber??1).ToString());
+            if (!flat)
+                name = name.Replace("{PASS}", passage.Sequencenum.ToString().PadLeft(3, '0'));
+            if (name.Contains("{REF}"))
             {
-                Passage? passage = dbContext.Passages.Find(m.PassageId);
-                if (passage != null)
-                {
-                    string pref = passage.StartChapter > 0
+                string pref = passage.StartChapter > 0
                         ? passage.StartChapter == passage.EndChapter ? string.Format(
                                 "{0}_{1}{2}",
                                 passage.StartChapter.ToString().PadLeft(3, '0'),
@@ -720,31 +731,26 @@ namespace SIL.Transcriber.Services
                                 passage.StartVerse.ToString().PadLeft(3, '0'),
                                 passage.EndChapter.ToString().PadLeft(3, '0'),
                                 passage.EndVerse.ToString().PadLeft(3, '0'))
-                        : passage.Reference?.Length > 0 ? passage.Reference : passage.Title??"";
-                    if (pref.Length == 0)
-                        pref = passage.Id.ToString();
-
-                    name = string.Format("{0}{1}_v{2}{3}",
-                                            passage.Book,
-                                            CleanFileName(pref),
-                                            m.VersionNumber??1,
-                                            Path.GetExtension(m.S3File));
+                        : passage.Reference ?? "";
+                if (pref.Length == 0 && !nameTemplate.Contains("{PASS}"))
+                {   //do I have enough info without ref?
+                    if (flat && !nameTemplate.Contains("{SECT}") && !nameTemplate.Contains("{TITLE}"))
+                        pref = section.Name ?? "S"+section.Sequencenum.ToString().PadLeft(3, '0');
+                    else if (!flat)
+                        pref = (nameTemplate.Contains("{SECT}") ? "" : "S"+section.Sequencenum.ToString().PadLeft(3, '0')) + "_P" + passage.Sequencenum.ToString().PadLeft(3, '0');
                 }
-                else
-                {
-                    name = m.S3File??"";
-                }
+                name = name.Replace("{REF}", pref);
             }
-            return name;
+            return CleanFileName(name) + Path.GetExtension(m.S3File);
         }
-        private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles, bool rename =false)
+        private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles, string? nameTemplate)
         {
             mediafiles.ForEach(m => {
                 //S3File has just the filename
                 //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
                 //change the audioUrl to have the offline path + filename
                 //change the s3File to have the onlinepath + filename 
-                m.AudioUrl = "media/" + (rename ? NameFromRef(m) : m.S3File);
+                m.AudioUrl = "media/" + NameFromTemplate(m, nameTemplate);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles, 'Z');
@@ -755,7 +761,8 @@ namespace SIL.Transcriber.Services
             string artifactType,
             string? idList,
             int start,
-            bool addElan = false
+            bool addElan,
+            string? nameTemplate
         )
         {
             int LAST_ADD = 0;
@@ -792,9 +799,9 @@ namespace SIL.Transcriber.Services
                             DateTime.Now.AddSeconds(15),
                             ref startNext,
                             zipArchive,
-                            mediafiles, artifactType == ""
+                            mediafiles, nameTemplate
                         );
-                    AddAttachedMedia(zipArchive, mediafiles, artifactType == "");
+                    AddAttachedMedia(zipArchive, mediafiles, nameTemplate);
                     startNext = 1;
                 }
                 WriteMemoryStream(ms, fileName, startNext, ext);
@@ -1380,10 +1387,10 @@ namespace SIL.Transcriber.Services
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                    if (!AddMediaEaf(19, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), false))
+                    if (!AddMediaEaf(19, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
                         break;
                     List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
-                    AddAttachedMedia(zipArchive, mediaList);
+                    AddAttachedMedia(zipArchive, mediaList, null);
                 } while (false);
             }
             Fileresponse response = WriteMemoryStream(ms, fileName, startNext, ext);
