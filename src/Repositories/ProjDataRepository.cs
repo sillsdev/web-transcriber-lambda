@@ -90,6 +90,41 @@ namespace SIL.Transcriber.Repositories
             }
             return true;
         }
+        protected bool CheckAddPSC(
+            int check,
+            IQueryable<Passagestatechange> media,
+            DateTime dtBail,
+            ref int start,
+            ref string data
+        )
+        {
+            int divisor = 1000000;
+            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail)
+                return false;
+
+            int lastId = start == check ? 0 : start % (check * divisor);
+            if (start == check || start / divisor == check)
+            {
+                int startId = lastId;
+                List<Passagestatechange>? lst = lastId > 0 ? media.Where(m => m.Id > lastId).ToList() : media.ToList();
+                string thisData = ToJson(lst);
+                lastId = 0;
+                while (thisData.Length > (1000000 * 4))
+                {
+                    int cnt = lst.Count;
+                    Passagestatechange mid = lst[cnt/2];
+                    lastId = mid.Id;
+                    lst = media.Where(m => m.Id > startId && m.Id <= lastId).ToList();
+                    thisData = ToJson(lst);
+                }
+                if (data.Length + thisData.Length > (1000000 * 4))
+                    return false;
+                data += (data.Length > 0 ? "," : InitData()) + thisData;
+                start = lastId > 0 ? check * divisor + lastId : check + 1;
+            }
+            return true;
+        }
 
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
@@ -154,28 +189,21 @@ namespace SIL.Transcriber.Repositories
                 //mediafiles
                 IQueryable<Mediafile>? mediafiles = dbContext.MediafilesData
                     .Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m)
-                    .Where(x => !x.Archived);
+                    .Where(x => !x.Archived).OrderBy(m=>m.Id);
                 if (!CheckAddMedia(2, mediafiles, dtBail, ref iStartNext, ref data))
                     break;
 
-                if (iStartNext > 100)
-                    break;
+
                 //passagestatechanges
-                if (
-                    !CheckAdd(3,
-                        ToJson<Passagestatechange>(
-                            dbContext.PassagestatechangesData.Join(
+                if (!CheckAddPSC(3, dbContext.PassagestatechangesData.Join(
                                 passages,
                                 psc => psc.PassageId,
                                 p => p.Id,
                                 (psc, p) => psc
-                            )
-                        ),
-                        dtBail,
-                        ref iStartNext,
-                        ref data
-                    )
-                )
+                            ).OrderBy(m => m.Id), dtBail, ref iStartNext, ref data))
+                        break;
+
+                if (iStartNext > 100)
                     break;
                 if (version > 3)
                 {

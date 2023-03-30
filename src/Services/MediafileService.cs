@@ -152,7 +152,7 @@ namespace SIL.Transcriber.Services
             return await base.CreateAsync(entity, new CancellationToken());
         }
 
-        public Mediafile? GetFileSignedUrlAsync(int id)
+        public Mediafile? GetFileSignedUrl(int id)
         {
             Mediafile? mf = MyRepository.Get(id);
             if (mf == null)
