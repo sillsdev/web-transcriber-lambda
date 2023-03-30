@@ -741,6 +741,8 @@ namespace SIL.Transcriber.Services
                 }
                 name = name.Replace("{REF}", pref);
             }
+            if (name.Replace("_", "") == "" || name.StartsWith("_v"))
+                name = "S" + section.Sequencenum.ToString().PadLeft(3, '0') + (flat ? "" : "_P" + passage.Sequencenum.ToString().PadLeft(3, '0'));
             return CleanFileName(name) + Path.GetExtension(m.S3File);
         }
         private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles, string? nameTemplate)
