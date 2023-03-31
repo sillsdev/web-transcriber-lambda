@@ -275,6 +275,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Resource>()
+                .HasOne(o => o.Cluster)
+                .WithMany()
+                .HasForeignKey(o => o.ClusterId);
+            _ = builder
+                .Entity<Resource>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
