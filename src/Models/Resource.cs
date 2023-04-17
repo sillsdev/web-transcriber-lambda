@@ -85,6 +85,6 @@ namespace SIL.Transcriber.Models
         public string? Keywords { get; set; }
 
         [Attr(PublicName = "resource-id")]
-        public int ResourceId { get; set; }
+        public int? ResourceId { get; set; }
     }
 }

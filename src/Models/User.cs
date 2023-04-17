@@ -75,6 +75,11 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "news-preference")]
         public bool? NewsPreference { get; set; }
 
+        [Attr(PublicName = "shared-content-admin")]
+        public bool? SharedContentAdmin { get; set; }
+
+        [Attr(PublicName = "shared-content-creator")]
+        public bool? SharedContentCreator { get; set; }
         [HasOne(PublicName = "last-modified-by-user")]
         [JsonIgnore]
         override public User? LastModifiedByUser { get; set; }
@@ -99,9 +104,8 @@ namespace SIL.Transcriber.Models
 
             if (omSuper != null)
                 return true; //they have all the roles
-            if (this.OrganizationMemberships is null)
-                return false;
-            return this.OrganizationMemberships
+
+            return this.OrganizationMemberships?
                     .Where(r => r.OrganizationId == orgId && r.RoleName == role && !r.Archived)
                     .FirstOrDefault() != null;
         }
