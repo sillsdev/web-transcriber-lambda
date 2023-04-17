@@ -2352,6 +2352,7 @@ namespace SIL.Transcriber.Services
                                                     DateUpdated = DateTime.UtcNow,
                                                 }
                                             );
+                                            await dbContext.SaveChangesNoTimestampAsync();
                                         }
                                         else
                                             UpdateMediafile(mediafile, m, sourceDate, report);
