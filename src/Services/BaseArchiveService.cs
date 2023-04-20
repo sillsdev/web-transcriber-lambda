@@ -42,10 +42,11 @@ namespace SIL.Transcriber.Services
             int currentuser,
             string origin,
             DateTime since,
-            int project
+            int project, 
+            int startId
         )
         {
-            return base.GetChanges(entities, currentuser, origin, since, project)
+            return base.GetChanges(entities, currentuser, origin, since, project, startId)
                 .Where(t => !t.Archived)
                 .ToList();
         }
