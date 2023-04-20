@@ -61,7 +61,16 @@ namespace SIL.Transcriber.Controllers
             string filename
         )
         {
-            return await _service.ImportFileAsync(projectid, filename);
+            return await _service.ImportFileAsync(projectid, filename, 0);
+        }
+        [HttpPut("project/import/{projectid}/{filename}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessImportFileAsyncV2(
+                                                    [FromRoute] int projectid,
+                                                    string filename,
+                                                    int start
+)
+        {
+            return await _service.ImportFileAsync(projectid, filename, start);
         }
 
         [HttpPut("sync/{filename}")]
@@ -69,7 +78,13 @@ namespace SIL.Transcriber.Controllers
             [FromRoute] string filename
         )
         {
-            return await _service.ImportFileAsync(filename);
+            return await _service.ImportSyncFileAsync(filename, 0, 0);
+        }
+        [HttpPut("sync/{filename}/{fileIndex}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessSyncFileAsyncV2([FromRoute] string filename, 
+            int fileIndex, int start)
+        {
+            return await _service.ImportSyncFileAsync(filename, fileIndex, start);
         }
 
         [HttpPut("project/copy/{neworg}/{filename}")]

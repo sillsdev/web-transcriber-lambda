@@ -8,6 +8,7 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -63,30 +64,29 @@ namespace SIL.Transcriber.Repositories
             ref string data
         )
         {
-            int divisor = 1000000;
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail)
                 return false;
-
-            int lastId = start == check ? 0 : start % (check * divisor);
-            if (start == check || start / divisor == check)
+            int startId = -1;
+            StartIndex.GetStart(ref start, ref startId);
+            int lastId = -1;
+            if (start == check)
             {
-                int startId = lastId;
-                List<Mediafile>? lst = lastId > 0 ? media.Where(m => m.Id > lastId).ToList() : media.ToList();
+                List<Mediafile>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
                 string thisData = ToJson(lst);
-                lastId = 0;
+
                 while (thisData.Length > (1000000 * 4))
                 {
                     int cnt = lst.Count;
                     Mediafile mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = media.Where(m => m.Id > startId && m.Id <= lastId).ToList();
+                    lst = media.Where(m => m.Id >= startId && m.Id < lastId).ToList();
                     thisData = ToJson(lst);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
-                start = lastId > 0 ? check * divisor + lastId : check+1;
+                StartIndex.SetStart(ref start, ref lastId);
             }
             return true;
         }
@@ -98,30 +98,28 @@ namespace SIL.Transcriber.Repositories
             ref string data
         )
         {
-            int divisor = 1000000;
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail)
                 return false;
-
-            int lastId = start == check ? 0 : start % (check * divisor);
-            if (start == check || start / divisor == check)
+            int startId = -1;
+            int lastId = -1;
+            StartIndex.GetStart(ref start, ref startId);
+            if (start == check )
             {
-                int startId = lastId;
-                List<Passagestatechange>? lst = lastId > 0 ? media.Where(m => m.Id > lastId).ToList() : media.ToList();
+                List<Passagestatechange>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
                 string thisData = ToJson(lst);
-                lastId = 0;
                 while (thisData.Length > (1000000 * 4))
                 {
                     int cnt = lst.Count;
                     Passagestatechange mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = media.Where(m => m.Id > startId && m.Id <= lastId).ToList();
+                    lst = media.Where(m => m.Id >= startId && m.Id < lastId).ToList();
                     thisData = ToJson(lst);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
-                start = lastId > 0 ? check * divisor + lastId : check + 1;
+                StartIndex.SetStart(ref start, ref lastId);
             }
             return true;
         }
