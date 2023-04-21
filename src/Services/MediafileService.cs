@@ -112,19 +112,17 @@ namespace SIL.Transcriber.Services
             return null;
         }
 
-        public async Task<string> GetNewFileNameAsync(Mediafile mf, string prefix = "")
+        public async Task<string> GetNewFileNameAsync(Mediafile mf, string suffix = "")
         {
-            if (mf.SourceMedia == null && await S3service.FileExistsAsync(prefix + mf.OriginalFile ?? "", DirectoryName(mf)))
-            {
-                return Path.GetFileNameWithoutExtension(prefix + mf.OriginalFile)
+            string ext = Path.GetExtension(mf.OriginalFile)??"";
+            string newfilename = Path.GetFileNameWithoutExtension(mf.OriginalFile ?? "") +suffix + ext;
+            return mf.SourceMedia == null && await S3service.FileExistsAsync(newfilename, DirectoryName(mf))
+                ? Path.GetFileNameWithoutExtension(mf.OriginalFile)
                     + "__"
                     + Guid.NewGuid()
-                    + Path.GetExtension(mf.OriginalFile);
-            }
-            else
-            {
-                return prefix + mf.OriginalFile ?? "";
-            }
+                    + suffix
+                    + ext
+                : newfilename;
         }
 
         public IEnumerable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId)

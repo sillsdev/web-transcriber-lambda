@@ -2925,7 +2925,7 @@ namespace SIL.Transcriber.Services
             Dictionary<int, int>? artifactcategoryMap, int start, int? newProjId, DateTime? dtBail)
         {
             Dictionary<int, Mediafile> map = new();
-            string prefix = plan.Slug + "_";
+            string suffix = "_" + plan.Slug;
             for (int ix = start; ix < lst.Count && (dtBail == null || DateTime.Now < dtBail); ix++)
             {
                 Mediafile m = lst[ix];
@@ -2959,7 +2959,7 @@ namespace SIL.Transcriber.Services
                     Transcriptionstate = m.Transcriptionstate,
                     Topic = m.Topic,
                 };
-                copym.S3File = mediaService.GetNewFileNameAsync(copym, prefix).Result;
+                copym.S3File = mediaService.GetNewFileNameAsync(copym, suffix).Result;
                 EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(copym);
                 map.Add(m.Id, t.Entity);
                 //we have to save after every one because we may have a link to previous mediafiles here
@@ -3486,6 +3486,7 @@ namespace SIL.Transcriber.Services
                         CopySectionResourceUsers(ulst, SectionResourceMap);
                     }
                 }
+
                 _ = dbContext.SaveChanges();
 
                 return new Fileresponse()
