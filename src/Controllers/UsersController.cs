@@ -8,6 +8,8 @@ namespace SIL.Transcriber.Controllers
 {
     public class UsersController : BaseController<User>
     {
+        private readonly UserService _userService;
+
         public UsersController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
@@ -23,7 +25,9 @@ namespace SIL.Transcriber.Controllers
                 currentUserContext,
                 userService
             )
-        { }
+        {
+            _userService = (UserService)resourceService;
+        }
 
         /*  this makes the api not work...
         [HttpPost]
@@ -37,6 +41,11 @@ namespace SIL.Transcriber.Controllers
         {
             User? currentUser = CurrentUser;
             return currentUser != null ? await base.GetAsync(currentUser.Id, new System.Threading.CancellationToken()) : null;
+        }
+        [HttpPost("sharedcreator/{email}/{allowed}")]
+        public async Task<User?> PostSharedCreatorAsync([FromRoute] string email, bool allowed)
+        {
+            return await _userService.UpdateSharedCreator(email.ToLower(), allowed);
         }
     }
 }
