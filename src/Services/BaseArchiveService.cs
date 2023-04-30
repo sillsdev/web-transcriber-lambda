@@ -97,5 +97,12 @@ namespace SIL.Transcriber.Services
                 ? throw new Exception("Entity has been deleted. Unable to update.")
                 : await base.UpdateAsync(id, entity, cancellationToken);
         }
+
+        public async Task<TResource?> NoCheckUpdateAsync(
+            TResource entity
+        )
+        {
+            return await base.UpdateAsync(entity.Id, entity, new CancellationToken());
+        }
     }
 }
