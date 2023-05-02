@@ -2654,6 +2654,9 @@ namespace SIL.Transcriber.Services
                     OwnerId = user.Id,
                 });
             dbContext.SaveChanges();
+            //get it again because the slug should be there...
+            await dbContext.Entry(t.Entity).ReloadAsync();
+            
             dbContext.Organizationmemberships.Add(
                 new Organizationmembership
                 {
@@ -2661,8 +2664,30 @@ namespace SIL.Transcriber.Services
                     UserId = user.Id,
                     RoleId = dbContext.Roles.First(r => r.Rolename == RoleName.Admin && r.Orgrole).Id,
                 });
-            //get it again because the slug should be there...
-            await dbContext.Entry(t.Entity).ReloadAsync();
+            EntityEntry<Group>? g = dbContext.Groups.Add(new Group
+            {
+                Name = "All users of " + orgname,
+                Abbreviation= "all-users",
+                OwnerId= t.Entity.Id,
+                AllUsers = true,
+            });
+            dbContext.SaveChanges();
+            dbContext.Groupmemberships.Add(
+                new Groupmembership
+                {
+                    GroupId = g.Entity.Id,
+                    UserId = user.Id,
+                    RoleId = dbContext.Roles.First(r => r.Rolename == RoleName.Admin && r.Grouprole).Id,
+                });
+            try
+            {
+                dbContext.SaveChanges();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+
             return t.Entity;
         }
         private Project CreateNewProject(Project source, int orgId, User user)
@@ -2673,15 +2698,8 @@ namespace SIL.Transcriber.Services
             {
                 projname = source.Name + "_c" + tryn++.ToString();
             }
-            EntityEntry<Group> g = dbContext.Groups.Add(new Group
-            {
-                Name = "All users of " + projname,
-                Abbreviation= "all-users",
-                OwnerId= orgId,
-                AllUsers = true,
-            });
             dbContext.SaveChanges();
-
+            Group allusers = dbContext.Groups.First(g => g.OwnerId == orgId && g.AllUsers && !g.Archived);
             EntityEntry<Project>? t = dbContext.Projects.Add(
                 new Project
                 {
@@ -2698,17 +2716,11 @@ namespace SIL.Transcriber.Services
                     DefaultFont = source.DefaultFont,
                     DefaultFontSize = source.DefaultFontSize,
                     Rtl = source.Rtl,
-                    GroupId = g.Entity.Id,
+                    GroupId = allusers.Id,
                     SpellCheck = source.SpellCheck,
                 });
             dbContext.SaveChanges();
-            dbContext.Groupmemberships.Add(
-                new Groupmembership
-                {
-                    GroupId = g.Entity.Id,
-                    UserId = user.Id,
-                    RoleId = dbContext.Roles.First(r => r.Rolename == RoleName.Admin && r.Grouprole).Id,
-                });
+
             return t.Entity;
         }
         private async Task<Plan> CreateNewPlan(Plan source, Project project, User user)
@@ -2843,6 +2855,30 @@ namespace SIL.Transcriber.Services
             dbContext.SaveChanges();
             Dictionary<int, int> result = new();
             foreach (KeyValuePair<int, Orgworkflowstep> kvp in map)
+                result.Add(kvp.Key, kvp.Value.Id);
+            return result;
+        }
+        private Dictionary<int, int> CopyOrgkeytermtargets(IList<Orgkeytermtarget> lst, int orgId, Dictionary<int,int> mediafileMap)
+        {
+            Dictionary<int, Orgkeytermtarget> map = new();
+            foreach (Orgkeytermtarget s in lst)
+            {
+                EntityEntry<Orgkeytermtarget>? t = dbContext.Orgkeytermtargets.Add(
+                    new Orgkeytermtarget
+                    {
+                        OrganizationId= orgId,
+                        Term = s.Term,
+                        TermIndex = s.TermIndex,
+                        Target = s.Target,
+                        MediafileId = mediafileMap.GetValueOrDefault(s.MediafileId?? 0)
+                    });
+                ;
+                ;
+                map.Add(s.Id, t.Entity);
+            }
+            dbContext.SaveChanges();
+            Dictionary<int, int> result = new();
+            foreach (KeyValuePair<int, Orgkeytermtarget> kvp in map)
                 result.Add(kvp.Key, kvp.Value.Id);
             return result;
         }
@@ -3204,6 +3240,14 @@ namespace SIL.Transcriber.Services
                             {
                                 OrgworkflowstepMap = CopyOrgworkflowsteps(dbContext.Orgworkflowsteps.Where(s => s.OrganizationId == sourceproject.OrganizationId).ToList(), org.Id);
                                 SaveMap(OrgworkflowstepMap, name, newProjId);
+                            }
+                            ix++;
+                            break;
+
+                        case "orgkeytermtargets":
+                            if (!sameOrg)
+                            {
+                                CopyOrgkeytermtargets(dbContext.Orgkeytermtargets.Where(s => s.OrganizationId == sourceproject.OrganizationId).ToList(), org.Id, GetMediafileMap(newProjId));
                             }
                             ix++;
                             break;
