@@ -42,10 +42,11 @@ namespace SIL.Transcriber.Services
             int currentuser,
             string origin,
             DateTime since,
-            int project
+            int project, 
+            int startId
         )
         {
-            return base.GetChanges(entities, currentuser, origin, since, project)
+            return base.GetChanges(entities, currentuser, origin, since, project, startId)
                 .Where(t => !t.Archived)
                 .ToList();
         }
@@ -95,6 +96,13 @@ namespace SIL.Transcriber.Services
             return (existing?.Archived ?? true) && !entity.Archived
                 ? throw new Exception("Entity has been deleted. Unable to update.")
                 : await base.UpdateAsync(id, entity, cancellationToken);
+        }
+
+        public async Task<TResource?> NoCheckUpdateAsync(
+            TResource entity
+        )
+        {
+            return await base.UpdateAsync(entity.Id, entity, new CancellationToken());
         }
     }
 }

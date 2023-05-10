@@ -11,6 +11,7 @@ namespace SIL.Transcriber.Models
             Message = "";
             FileURL = "";
             ContentType = "application/json";
+            Startindex = "";
         }
 
         [Attr(PublicName = "status")]
@@ -24,6 +25,9 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "contenttype")]
         public string ContentType { get; set; }
+
+        [Attr(PublicName = "startindex")]
+        public string Startindex { get; set; }
     }
 #pragma warning disable IDE1006 // Naming Styles
     public class JFRData

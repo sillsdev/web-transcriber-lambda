@@ -53,12 +53,13 @@ namespace SIL.Transcriber.Services
             int currentuser,
             string origin,
             DateTime since,
-            int project
+            int project, int startId
         )
         {
-            return currentuser > 0
+            IEnumerable<TResource>? changes = currentuser > 0
                 ? GetChanges(Repo.FromCurrentUser(entities), currentuser, origin, since)
                 : GetChanges(Repo.FromProjectList(entities, project.ToString()), currentuser, origin, since);
+            return startId > 0 ? changes.OrderBy(r => r.Id).Where(e => e.Id >= startId) : changes.OrderBy(r => r.Id);
         }
 
         public IEnumerable<TResource> GetChanges(

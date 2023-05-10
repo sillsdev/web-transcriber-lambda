@@ -40,6 +40,7 @@ namespace SIL.Transcriber.Repositories
 
         public override IQueryable<Resource> FromCurrentUser(IQueryable<Resource>? entities = null)
         {
+            //todo filter out those with clusterids not in my org list
             return entities ?? GetAll();
         }
     }

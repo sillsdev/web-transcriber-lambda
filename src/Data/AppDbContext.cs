@@ -28,6 +28,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Artifactcategory> Artifactcategorys => Set<Artifactcategory>();
         public DbSet<Artifacttype> Artifacttypes => Set<Artifacttype>();
         public DbSet<Comment> Comments => Set<Comment>();
+        public DbSet<CopyProject> Copyprojects => Set<CopyProject>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
         public DbSet<Dashboard> Dashboards => Set<Dashboard>();
         public DbSet<Datachanges> Datachanges => Set<Datachanges>();
@@ -42,6 +43,9 @@ namespace SIL.Transcriber.Data
         public DbSet<Organizationmembership> Organizationmemberships =>
             Set<Organizationmembership>();
         public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
+        public DbSet<Orgkeyterm> Orgkeyterms => Set<Orgkeyterm>();
+        public DbSet<Orgkeytermreference> Orgkeytermreferences => Set<Orgkeytermreference>(); 
+        public DbSet<Orgkeytermtarget> Orgkeytermtargets => Set<Orgkeytermtarget>();
         public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
         public DbSet<Passage> Passages => Set<Passage>();
@@ -58,6 +62,9 @@ namespace SIL.Transcriber.Data
         public DbSet<Sectionpassage> Sectionpassages => Set<Sectionpassage>();
         public DbSet<Sectionresource> Sectionresources => Set<Sectionresource>();
         public DbSet<Sectionresourceuser> Sectionresourceusers => Set<Sectionresourceuser>();
+
+        public DbSet<Sharedresource> Sharedresources => Set<Sharedresource>();
+        public DbSet<Sharedresourcereference> Sharedresourcereferences => Set<Sharedresourcereference>();
         public DbSet<User> Users => Set<User>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
@@ -127,6 +134,11 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
+                .Entity<CopyProject>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
                 .Entity<Currentversion>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -187,12 +199,32 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
+                .Entity<Organization>()
+                .HasOne(o => o.Cluster)
+                .WithMany()
+                .HasForeignKey(o => o.ClusterId);
+            _ = builder
                 .Entity<Orgdata>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Organizationmembership>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Orgkeyterm>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Orgkeytermreference>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Orgkeytermtarget>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -243,6 +275,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Resource>()
+                .HasOne(o => o.Cluster)
+                .WithMany()
+                .HasForeignKey(o => o.ClusterId);
+            _ = builder
+                .Entity<Resource>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -268,6 +305,21 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Sectionresourceuser>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Sharedresource>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Sharedresource>()
+                .HasOne(o => o.Cluster)
+                .WithMany()
+                .HasForeignKey(o => o.ClusterId);
+            _ = builder
+                .Entity<Sharedresourcereference>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -448,6 +500,12 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.Role)
                 .Include(x => x.User);
         public IQueryable<Organization> OrganizationsData => Organizations.Include(x => x.Owner);
+        public IQueryable<Orgkeyterm> OrgKeytermsData =>
+            Orgkeyterms.Include(x => x.Organization);
+        public IQueryable<Orgkeytermreference> OrgKeytermReferencesData =>
+    Orgkeytermreferences.Include(x => x.Orgkeyterm).Include(x => x.Project).Include(x => x.Section);
+        public IQueryable<Orgkeytermtarget> OrgKeytermTargetsData =>
+    Orgkeytermtargets.Include(x => x.Organization).Include(x => x.Mediafile); 
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
             Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
@@ -476,6 +534,11 @@ namespace SIL.Transcriber.Data
             Sectionresourceusers.Include(x => x.SectionResource).Include(x => x.User);
         public IQueryable<Section> SectionsData =>
             Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber);
+        public IQueryable<Sharedresource> SharedresourcesData =>
+           Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory);
+        public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>
+                Sharedresourcereferences.Include(x => x.SharedResource);
+
     }
 
     public class AppDbContextResolver : IDbContextResolver

@@ -40,6 +40,8 @@ provider:
     SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}
     SIL_TR_WEBHOOK_PASSWORD:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_PASSWORD}
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
+    SIL_TR_EXPORT_QUEUE:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EXPORT_QUEUE}
+
 
 package:
   artifact: bin/release/net6.0/deploy-package_${self:custom.myStage}.zip

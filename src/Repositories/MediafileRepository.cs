@@ -89,7 +89,7 @@ namespace SIL.Transcriber.Repositories
             return PlansMediafiles(entities, plans);
         }
 
-        private IQueryable<Mediafile> ProjectsMediafiles(
+        public IQueryable<Mediafile> ProjectsMediafiles(
             IQueryable<Mediafile> entities,
             string idlist
         )

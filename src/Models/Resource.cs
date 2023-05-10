@@ -27,9 +27,10 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "section-sequencenum")]
         public int? SectionSequencenum { get; set; }
 
-
+        [Attr(PublicName = "mediafile-id")]
+        public int? MediafileId { get; set; }
         [Attr(PublicName = "passage-id")]
-        public int? Passageid { get; set; }
+        public int? PassageId { get; set; }
         [Attr(PublicName = "passage-sequencenum")]
         public int PassageSequencenum { get; set; }
 
@@ -67,5 +68,23 @@ namespace SIL.Transcriber.Models
         public string? TypeName { get; set; }
         [Attr(PublicName = "latest")]
         public bool Latest { get; set; }
+
+        public int? ClusterId { get; set; }
+        [HasOne(PublicName = "cluster")]
+        public Organization? Cluster { get; set; }
+
+        [Attr(PublicName = "title")]
+        public string? Title { get; set; }
+
+        [Attr(PublicName = "description")]
+        public string? Description { get; set; }
+
+        [Attr(PublicName = "terms-of-use")]
+        public string? TermsOfUse { get; set; }
+        [Attr(PublicName = "keywords")]
+        public string? Keywords { get; set; }
+
+        [Attr(PublicName = "resource-id")]
+        public int? ResourceId { get; set; }
     }
 }

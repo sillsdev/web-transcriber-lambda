@@ -61,9 +61,9 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         public string? Segments { get; set; }
 
-        public int? RecordedbyUserId { get; set; }
+        //public int? RecordedbyUserId { get; set; }
         [HasOne(PublicName = "recordedby-user")]
-        public User? RecordedbyUser { get; set; }
+        virtual public User? RecordedbyUser { get; set; }
 
         [Attr(PublicName = "languagebcp47")]
         public string? Languagebcp47 { get; set; }

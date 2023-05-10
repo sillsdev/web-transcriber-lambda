@@ -112,19 +112,17 @@ namespace SIL.Transcriber.Services
             return null;
         }
 
-        public async Task<string> GetNewFileNameAsync(Mediafile mf)
+        public async Task<string> GetNewFileNameAsync(Mediafile mf, string suffix = "")
         {
-            if (mf.SourceMedia == null && await S3service.FileExistsAsync(mf.OriginalFile ?? "", DirectoryName(mf)))
-            {
-                return Path.GetFileNameWithoutExtension(mf.OriginalFile)
+            string ext = Path.GetExtension(mf.OriginalFile)??"";
+            string newfilename = Path.GetFileNameWithoutExtension(mf.OriginalFile ?? "") +suffix + ext;
+            return mf.SourceMedia == null && await S3service.FileExistsAsync(newfilename, DirectoryName(mf))
+                ? Path.GetFileNameWithoutExtension(mf.OriginalFile)
                     + "__"
                     + Guid.NewGuid()
-                    + Path.GetExtension(mf.OriginalFile);
-            }
-            else
-            {
-                return mf.OriginalFile ?? "";
-            }
+                    + suffix
+                    + ext
+                : newfilename;
         }
 
         public IEnumerable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId)
@@ -152,7 +150,8 @@ namespace SIL.Transcriber.Services
             return await base.CreateAsync(entity, new CancellationToken());
         }
 
-        public Mediafile? GetFileSignedUrlAsync(int id)
+
+        public Mediafile? GetFileSignedUrl(int id)
         {
             Mediafile? mf = MyRepository.Get(id);
             if (mf == null)
@@ -285,10 +284,11 @@ namespace SIL.Transcriber.Services
             resource.AudioUrl = GetAudioUrl(resource);
             return await base.CreateAsync(resource, cancellationToken);
         }
-        public List<Mediafile> GetIPMedia(int organizationId)
+        public List<Mediafile> GetIPMedia(IQueryable<Organization> orgs)
         {
-            IEnumerable<Intellectualproperty>? ip = dbContext.IntellectualPropertys.Where(ip => ip.OrganizationId == organizationId).ToList();
+            IEnumerable<Intellectualproperty>? ip = dbContext.IntellectualPropertys.Join(orgs, ip => ip.OrganizationId, o => o.Id, (ip, o) => ip).ToList();
             return ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
         }
+
     }
 }

@@ -46,9 +46,8 @@ namespace SIL.Transcriber.Controllers
         public IActionResult GetProjectDatachanges([FromRoute] string origin, string projList)
         {
             ProjDate[]? x = JsonConvert.DeserializeObject<ProjDate[]>(projList);
-            if (x != null)
-                return Ok(service.GetProjectChanges(origin, x));
-            return BadRequest();
+            return x != null ? Ok(service.GetProjectChanges(origin, x)) : throw new Exception("Project not given.");
+            ;
         }
 
         [HttpGet("v{version}/{start}/since/{since}")]
@@ -74,8 +73,12 @@ namespace SIL.Transcriber.Controllers
         )
         {
             ProjDate? x = JsonConvert.DeserializeObject<ProjDate>(projList);
-            ProjDate?[] pd = { x };
-            return Ok(service.GetProjectChanges(origin, pd, version, start));
+            if (x != null && x.id > 0)
+            {
+                ProjDate?[] pd = { x };
+                return Ok(service.GetProjectChanges(origin, pd, version, start));
+            }
+            throw new Exception("Project not given.");
         }
     }
 }

@@ -29,6 +29,13 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "public-by-default")]
         public bool? PublicByDefault { get; set; }
+        [Attr(PublicName = "clusterbase")]
+        public bool ClusterBase { get; set; }
+
+        [Attr(PublicName = "cluster-id")]
+        public int? ClusterId { get; set; }
+        [HasOne(PublicName = "cluster")]
+        public virtual Organization? Cluster { get; set; }
 
         [Attr(PublicName = "default-params")]
         [Column(TypeName = "jsonb")]

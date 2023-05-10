@@ -6,4 +6,3 @@
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Style", "IDE0046:Convert to conditional expression", Justification = "<Pending>", Scope = "member", Target = "~M:SIL.Transcriber.Services.ParatextService.VerifyUserSecret(SIL.Paratext.Models.UserSecret)~System.Boolean")]
-[assembly: SuppressMessage("Style", "IDE0046:Convert to conditional expression", Justification = "<Pending>", Scope = "member", Target = "~M:SIL.Transcriber.Services.MediafileService.GetNewFileNameAsync(SIL.Transcriber.Models.Mediafile)~System.Threading.Tasks.Task{System.String}")]

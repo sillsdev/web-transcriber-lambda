@@ -13,12 +13,6 @@ namespace SIL.Transcriber.Controllers
         private readonly IOfflineDataService _service;
 
         public OfflinedataController(
-            //ILoggerFactory loggerFactory,
-            //IJsonApiOptions options,
-            //IResourceGraph resourceGraph,
-            //JsonApiResourceService<Fileresponse, int> frService,
-            //ICurrentUserContext currentUserContext,
-            //UserService userService,
             IOfflineDataService service
         ) : base()
         {
@@ -38,13 +32,15 @@ namespace SIL.Transcriber.Controllers
             int id,
             int start,
             [FromForm] string? ids,
-            [FromForm] string? artifactType
+            [FromForm] string? artifactType,
+            [FromForm] string? nameTemplate
         )
         {
             Fileresponse response = exportType switch
             {
                 "ptf" => _service.ExportProjectPTF(id, start),
-                "audio" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start),
+                "audio" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start, false, nameTemplate),
+                "elan" => _service.ExportProjectAudio(id, artifactType ?? "", ids, start, true, nameTemplate),
                 "burrito" => _service.ExportBurrito(id, ids, start),
                 _ => _service.ExportProjectPTF(id, start),
             };
@@ -65,7 +61,16 @@ namespace SIL.Transcriber.Controllers
             string filename
         )
         {
-            return await _service.ImportFileAsync(projectid, filename);
+            return await _service.ImportFileAsync(projectid, filename, 0);
+        }
+        [HttpPut("project/import/{projectid}/{filename}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessImportFileAsyncV2(
+                                                    [FromRoute] int projectid,
+                                                    string filename,
+                                                    int start
+)
+        {
+            return await _service.ImportFileAsync(projectid, filename, start);
         }
 
         [HttpPut("sync/{filename}")]
@@ -73,7 +78,33 @@ namespace SIL.Transcriber.Controllers
             [FromRoute] string filename
         )
         {
-            return await _service.ImportFileAsync(filename);
+            return await _service.ImportSyncFileAsync(filename, 0, 0);
+        }
+        [HttpPut("sync/{filename}/{fileIndex}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessSyncFileAsyncV2([FromRoute] string filename, 
+            int fileIndex, int start)
+        {
+            return await _service.ImportSyncFileAsync(filename, fileIndex, start);
+        }
+
+        [HttpPut("project/copy/{neworg}/{filename}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportFileAsync(
+            [FromRoute] bool neworg, string filename)
+        {
+            return await _service.ImportCopyFileAsync(neworg, filename);
+        }
+        [HttpPut("project/copyp/{neworg}/{projectid}/{start}")]
+        [HttpPut("project/copyp/{neworg}/{projectid}/{start}/{newProjId}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportProjectAsync(
+    [FromRoute] bool neworg, int projectid, int start, int? newProjId)
+        {
+            return await _service.ImportCopyProjectAsync(neworg, projectid, start, newProjId);
+        }
+        [HttpPut("project/copyp/{newProjId}")]
+        public Task CopyProjectComplete([FromRoute] int newProjId)
+        {
+            _service.RemoveCopyProject(newProjId);
+            return Task.CompletedTask;
         }
     }
 }

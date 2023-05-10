@@ -21,10 +21,17 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-
     public class CommentDefinition : BaseDefinition<Comment>
     {
         public CommentDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class CopyProjectDefinition : BaseDefinition<CopyProject>
+    {
+        public CopyProjectDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request
@@ -99,7 +106,30 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-
+    public class OrgKeytermDefinition : BaseDefinition<Orgkeyterm>
+    {
+        public OrgKeytermDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class OrgKeytermreferenceDefinition : BaseDefinition<Orgkeytermreference>
+    {
+        public OrgKeytermreferenceDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class OrgKeytermTargetDefinition : BaseDefinition<Orgkeytermtarget>
+    {
+        public OrgKeytermTargetDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
     public class OrgworkflowstepDefinition : BaseDefinition<Orgworkflowstep>
     {
         public OrgworkflowstepDefinition(
@@ -207,6 +237,22 @@ namespace SIL.Transcriber.Definitions
     public class SectionResourceUserDefinition : BaseDefinition<Sectionresourceuser>
     {
         public SectionResourceUserDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class SharedresourceDefinition : BaseDefinition<Sharedresource>
+    {
+        public SharedresourceDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class SharedresourcereferenceDefinition : BaseDefinition<Sharedresourcereference>
+    {
+        public SharedresourcereferenceDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request
