@@ -68,10 +68,12 @@ namespace SIL.Transcriber.Repositories
             if (DateTime.Now > dtBail)
                 return false;
             int startId = -1;
-            StartIndex.GetStart(ref start, ref startId);
+            int mystart = start;
+            StartIndex.GetStart(ref mystart, ref startId);
             int lastId = -1;
-            if (start == check)
+            if (mystart == check)
             {
+                start = mystart;
                 List<Mediafile>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
                 string thisData = ToJson(lst);
 
@@ -86,8 +88,10 @@ namespace SIL.Transcriber.Repositories
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
-                StartIndex.SetStart(ref start, ref lastId);
+                _ = StartIndex.SetStart(ref start, ref lastId);
+                return lastId == 0;
             }
+            
             return true;
         }
         protected bool CheckAddPSC(
@@ -102,10 +106,12 @@ namespace SIL.Transcriber.Repositories
             if (DateTime.Now > dtBail)
                 return false;
             int startId = -1;
+            int mystart = start;
+            StartIndex.GetStart(ref mystart, ref startId);
             int lastId = -1;
-            StartIndex.GetStart(ref start, ref startId);
-            if (start == check )
+            if (mystart == check )
             {
+                start = mystart;
                 List<Passagestatechange>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
                 string thisData = ToJson(lst);
                 while (thisData.Length > (1000000 * 4))
@@ -120,6 +126,7 @@ namespace SIL.Transcriber.Repositories
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
                 StartIndex.SetStart(ref start, ref lastId);
+                return lastId == 0;
             }
             return true;
         }
@@ -191,7 +198,6 @@ namespace SIL.Transcriber.Repositories
                 if (!CheckAddMedia(2, mediafiles, dtBail, ref iStartNext, ref data))
                     break;
 
-
                 //passagestatechanges
                 if (!CheckAddPSC(3, dbContext.PassagestatechangesData.Join(
                                 passages,
@@ -201,8 +207,7 @@ namespace SIL.Transcriber.Repositories
                             ).OrderBy(m => m.Id), dtBail, ref iStartNext, ref data))
                         break;
 
-                if (iStartNext > 100)
-                    break;
+
                 if (version > 3)
                 {
                     //discussions
