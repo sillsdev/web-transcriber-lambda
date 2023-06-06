@@ -299,7 +299,7 @@ namespace SIL.Transcriber.Services
             DateTime dtBail = DateTime.Now.AddSeconds(20);
             int LAST_ADD = (dbVersion > 5) ? 26 : (dbVersion > 3) ? 21 : 12;
             int startId = -1;
-            StartIndex.GetStart(ref start, ref startId);
+            start = StartIndex.GetStart(start, ref startId);
 
             if (CheckStart(dtBail, start) == 0)
             {
@@ -364,7 +364,7 @@ namespace SIL.Transcriber.Services
                     start++;
                 } else
                 {
-                    StartIndex.SetStart(ref start, ref startId);
+                    start = StartIndex.SetStart(start, ref startId);
                 }
             }
             if (CheckStart(dtBail, start) == 10)
@@ -376,7 +376,7 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
-                    StartIndex.SetStart(ref start, ref startId);
+                    start = StartIndex.SetStart(start, ref startId);
                 }
             }
             if (CheckStart(dtBail, start) == 11)

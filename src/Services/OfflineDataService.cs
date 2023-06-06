@@ -2515,7 +2515,7 @@ namespace SIL.Transcriber.Services
             try
             {
                 int startId = -1;
-                StartIndex.GetStart(ref start, ref startId);
+                start = StartIndex.GetStart(start, ref startId);
                 while (start < archive.Entries.Count)
                 {
                     ZipArchiveEntry entry = archive.Entries[start];
@@ -2597,7 +2597,7 @@ namespace SIL.Transcriber.Services
                             break;
 
                     }
-                    StartIndex.SetStart(ref start, ref startId);
+                    start = StartIndex.SetStart(start, ref startId);
                 };
                 int ret = await dbContext.SaveChangesNoTimestampAsync();
 
@@ -2945,7 +2945,7 @@ namespace SIL.Transcriber.Services
             int internalize = dbContext.Orgworkflowsteps.ToList().Where(s => s.OrganizationId == orgId && s.Tool.Contains("{\"tool\": \"resource")).FirstOrDefault()?.Id ?? 0;
             foreach (Sectionresource sr in lst)
             {
-                var stepId = owfsMap == null ? sr.OrgWorkflowStepId : owfsMap.GetValueOrDefault(sr.OrgWorkflowStepId);
+                int stepId = owfsMap == null ? sr.OrgWorkflowStepId : owfsMap.GetValueOrDefault(sr.OrgWorkflowStepId);
                 if (stepId == 0)
                     stepId = internalize;
                 EntityEntry<Sectionresource>? t =  dbContext.Sectionresources.Add(
@@ -3009,10 +3009,7 @@ namespace SIL.Transcriber.Services
                 Mediafile m = lst[ix];
                 int? psgId = m.PassageId == null ? null : passageMap.GetValueOrDefault(m.PassageId ?? 0);
                 if (m.PassageId != null && psgId == 0)
-                    if (m.ArtifactTypeId == null)
-                        throw new Exception("Passage not found" + m.PassageId);
-                    else
-                        psgId = null;
+                    psgId = m.ArtifactTypeId == null ? throw new Exception("Passage not found" + m.PassageId) : null;
                 Mediafile copym = new()
                 {
                     PassageId = psgId,
