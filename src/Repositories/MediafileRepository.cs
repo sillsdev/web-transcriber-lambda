@@ -113,7 +113,7 @@ namespace SIL.Transcriber.Repositories
                 artifactTypeId == 0 ?
                     dbContext.Mediafiles
                     .Where(m => m.PassageId == PassageId
-                             && m.ArtifactTypeId == null)
+                             && m.ArtifactTypeId == null && !m.Archived)
                     .Include(m => m.Passage)
                     .ThenInclude(p => p.Section)
                     .ThenInclude(s => s.Plan)
@@ -122,7 +122,7 @@ namespace SIL.Transcriber.Repositories
                     dbContext.Mediafiles
                     .Where(m =>
                             m.PassageId == PassageId
-                            && m.ArtifactTypeId == artifactTypeId)
+                            && m.ArtifactTypeId == artifactTypeId && !m.Archived)
                     .Include(m => m.Passage)
                     .ThenInclude(p => p.Section)
                     .ThenInclude(s => s.Plan)
