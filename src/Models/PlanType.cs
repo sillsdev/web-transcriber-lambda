@@ -1,9 +1,10 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("plantypes")]
+    [Table(Tables.PlanTypes)]
     public partial class Plantype : BaseModel
     {
         public Plantype() : base()

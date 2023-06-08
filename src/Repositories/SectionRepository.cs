@@ -74,7 +74,7 @@ namespace SIL.Transcriber.Repositories
             //you'd think this would work...but you'd be wrong;
             //return Include(Get(), "passages");
             //no error...but no passages either  return Get().Include(s => s.Passages);
-            IQueryable<Section> sections = UsersSections(GetAll().Include("passages"));
+            IQueryable<Section> sections = UsersSections(GetAll().Include(Tables.Passages));
             return sections;
         }
         #endregion
