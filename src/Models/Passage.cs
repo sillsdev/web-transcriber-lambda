@@ -86,8 +86,7 @@ namespace SIL.Transcriber.Models
         private bool? validScripture = null;
         public bool ValidScripture {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference??"",
                         out startChapter,
                         out endChapter,
@@ -99,8 +98,7 @@ namespace SIL.Transcriber.Models
         }
         public int StartChapter {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference??"",
                         out startChapter,
                         out endChapter,
@@ -112,8 +110,7 @@ namespace SIL.Transcriber.Models
         }
         public int EndChapter {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference ?? "",
                         out startChapter,
                         out endChapter,
@@ -125,8 +122,7 @@ namespace SIL.Transcriber.Models
         }
         public int StartVerse {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference ?? "",
                         out startChapter,
                         out endChapter,
@@ -138,8 +134,7 @@ namespace SIL.Transcriber.Models
         }
         public int EndVerse {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference ?? "",
                         out startChapter,
                         out endChapter,
@@ -151,9 +146,9 @@ namespace SIL.Transcriber.Models
         }
         public string Verses {
             get {
-                if (StartChapter != EndChapter)
-                    return Reference ?? "";
-                return StartVerse != EndVerse ? StartVerse.ToString() + "-" + EndVerse.ToString() : StartVerse.ToString();
+                return StartChapter != EndChapter
+                    ? Reference ?? ""
+                    : StartVerse != EndVerse ? StartVerse.ToString() + "-" + EndVerse.ToString() : StartVerse.ToString();
             }
         }
 

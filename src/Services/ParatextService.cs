@@ -90,18 +90,11 @@ namespace SIL.Transcriber.Services
 
         public UserSecret ParatextLogin()
         {
-            User? currentUser = CurrentUserRepository.GetCurrentUser();
-            if (currentUser == null)
-                throw new Exception("Unable to get current user information");
+            User? currentUser = CurrentUserRepository.GetCurrentUser() ?? throw new Exception("Unable to get current user information");
             UserSecret? tokenFromAuth0 = CurrentUserContext.ParatextLogin(
                 GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"),
                 currentUser.Id
-            );
-
-            if (tokenFromAuth0 == null)
-            {
-                throw new SecurityException("User is not logged in to Paratext-Transcriber");
-            }
+            ) ?? throw new SecurityException("User is not logged in to Paratext-Transcriber");
             //get existing
             IEnumerable<ParatextToken>? tokens = dbContext.Paratexttokens.Where(
                 t => t.UserId == currentUser.Id
@@ -243,7 +236,7 @@ namespace SIL.Transcriber.Services
             //get more info for those projects that are registered
             response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "projects");
             JArray projectArray = JArray.Parse(response);
-            Logger.LogInformation($"TTY D: {DateTime.Now} {projectArray}");
+            //Logger.LogInformation($"TTY D: {DateTime.Now} {projectArray}" );
 
             foreach (JToken projectObj in projectArray)
             {
@@ -279,8 +272,7 @@ namespace SIL.Transcriber.Services
                 subProjects.ForEach(sp => {
                     if (sp.Name.Length == 0)
                         sp.Name = sp.ProjectType + " " + proj.Name;
-                    if (sp.LanguageName == null)
-                        sp.LanguageName = "";
+                    sp.LanguageName ??= "";
                     sp.LanguageName += (sp.LanguageName.Length > 0 ? "," : "") + proj.LanguageName;
                     sp.LanguageTag += (sp.LanguageTag.Length > 0 ? "," : "") + proj.LanguageTag;
                 });
@@ -722,11 +714,7 @@ namespace SIL.Transcriber.Services
         public async Task<string?> PassageTextAsync(int passageId, int typeId)
         {
             IEnumerable<Passage> passages = PassageService.Get(passageId).ToList();
-            Passage? passage = passages.FirstOrDefault();
-            if (passage == null)
-            {
-                throw new Exception("Passage not found or user does not have access to passage.");
-            }
+            Passage? passage = passages.FirstOrDefault() ?? throw new Exception("Passage not found or user does not have access to passage.");
             Artifacttype? type = dbContext.Artifacttypes.Find(typeId);
 
             string paratextId = ParatextHelpers.ParatextProject(
@@ -866,8 +854,7 @@ namespace SIL.Transcriber.Services
                             chapter.Book,
                             chapter.Chapter
                         );
-                        if (HttpContext != null)
-                            HttpContext.SetFP("paratext");
+                        HttpContext?.SetFP("paratext");
                         foreach (
                             Passage passage in passages.Where(
                                 p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter

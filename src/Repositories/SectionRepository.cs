@@ -61,10 +61,7 @@ namespace SIL.Transcriber.Repositories
         )
         {
             //this gets just the plans I have access to
-            if (plans == null)
-            {
-                plans = PlanRepository.UsersPlans(dbContext.Plans);
-            }
+            plans ??= PlanRepository.UsersPlans(dbContext.Plans);
             return PlansSections(entities, plans);
         }
 
