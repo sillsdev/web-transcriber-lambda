@@ -1,10 +1,11 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("plans")]
+    [Table(Tables.Plans)]
     public partial class Plan : BaseModel, IArchive
     {
         [Attr(PublicName = "name")]

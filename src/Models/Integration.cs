@@ -1,10 +1,11 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("integrations")]
+    [Table(Tables.Integrations)]
     public partial class Integration : BaseModel, IArchive
     {
         public Integration() : base()

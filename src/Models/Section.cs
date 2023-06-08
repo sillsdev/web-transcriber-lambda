@@ -1,11 +1,11 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
 using Newtonsoft.Json.Linq;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("sections")]
+    [Table(Tables.Sections)]
     public class Section : BaseModel, IArchive
     {
         public Section() : base()

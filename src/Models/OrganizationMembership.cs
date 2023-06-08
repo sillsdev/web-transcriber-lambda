@@ -1,9 +1,10 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("organizationmemberships")]
+    [Table(Tables.OrganizationMemberships)]
     public partial class Organizationmembership : BaseModel, IArchive
     {
 

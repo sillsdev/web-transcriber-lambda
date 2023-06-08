@@ -1,9 +1,10 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("roles")]
+    [Table(Tables.Roles)]
     public partial class Role : BaseModel
     {
         [Attr(PublicName = "org-role")]
