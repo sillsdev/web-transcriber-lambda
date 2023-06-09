@@ -826,7 +826,7 @@ namespace SIL.Transcriber.Services
                 paratextId,
                 book_chapters
             );
-            chapterList.ForEach(c => c.NewUSX = new XElement(c.OriginalUSX));
+            chapterList.ForEach(c => c.NewUSX = c.OriginalUSX != null ? new XElement(c.OriginalUSX) : null);
             ParatextChapter chapter;
             using (IDbContextTransaction transaction = dbContext.Database.BeginTransaction())
             {
