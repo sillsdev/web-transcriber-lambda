@@ -5,7 +5,6 @@ namespace SIL.Transcriber.Services
     public interface IS3Service
     {
         Task<S3Response> CreateBucketAsync(string bucketName);
-        Task<S3Response> UploadFileAsync(IFormFile file, string folder = "");
         Task<S3Response> UploadFileAsync(Stream stream, bool overwriteifExists, string ContentType, string fileName, string folder = "");
         Task<S3Response> CopyFile(string fileName, string newFileName, string folder = "", string newFolder = "");
         Task<S3Response> RenameFile(string fileName, string newFileName, string folder = "");

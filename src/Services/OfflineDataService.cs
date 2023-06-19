@@ -37,7 +37,7 @@ namespace SIL.Transcriber.Services
         private readonly IMetaBuilder _metaBuilder;
         private readonly IJsonApiOptions _options;
         readonly private HttpContext? HttpContext;
-        readonly private ILambdaContext LambdaContext;
+
         private readonly Dictionary<string,char> TableOrder = new()
         {
             {Tables.Users,'A'},
@@ -92,12 +92,11 @@ namespace SIL.Transcriber.Services
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             IMetaBuilder metaBuilder,
             IJsonApiOptions options,
-            IHttpContextAccessor httpContextAccessor,
-            ILambdaContext context
+            IHttpContextAccessor httpContextAccessor
+
         )
         {
             HttpContext = httpContextAccessor.HttpContext;
-            LambdaContext = context;
             dbContext = (AppDbContext)contextResolver.GetContext();
             mediaService = MediaService;
             CurrentUserRepository = currentUserRepository;
@@ -947,7 +946,6 @@ namespace SIL.Transcriber.Services
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(15);
-            Console.WriteLine("RemainingTime: " + LambdaContext.RemainingTime);
 
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectId);
             Project project = projects.First();
@@ -2574,7 +2572,7 @@ namespace SIL.Transcriber.Services
                             break;
 
                     }
-                    StartIndex.SetStart(start, ref startId);
+                    start = StartIndex.SetStart(start, ref startId);
                 };
                 int ret = await dbContext.SaveChangesNoTimestampAsync();
 

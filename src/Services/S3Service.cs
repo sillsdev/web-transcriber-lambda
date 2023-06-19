@@ -189,36 +189,6 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        public async Task<S3Response> UploadFileAsync(IFormFile file, string folder = "")
-        {
-            try
-            {
-                byte[] fileBytes = new byte[file.Length];
-                _ = file.OpenReadStream().Read(fileBytes, 0, int.Parse(file.Length.ToString()));
-
-                // create unique file name
-                string fileName = Guid.NewGuid() + "_" + file.FileName;
-                //aws versioning on
-                //var fileName = file.FileName;
-
-                return await UploadFileAsync(
-                    new MemoryStream(fileBytes),
-                    false,
-                    file.ContentType,
-                    fileName,
-                    folder
-                );
-            }
-            catch (AmazonS3Exception e)
-            {
-                return S3Response(e.Message, e.StatusCode);
-            }
-            catch (Exception e)
-            {
-                return S3Response(e.Message, HttpStatusCode.InternalServerError);
-            }
-        }
-
         public async Task<S3Response> RemoveFile(string fileName, string folder = "")
         {
             //var client = new AmazonS3Client(accessKey, accessSecret, Amazon.RegionEndpoint.EUCentral1);
