@@ -36,9 +36,8 @@ namespace SIL.Transcriber.Services
         { 
         }
         public override async Task<Artifactcategory?> CreateAsync(
-    Artifactcategory entity,
-    CancellationToken cancellationToken
-)
+                                    Artifactcategory entity,
+                                    CancellationToken cancellationToken)
         {
             if (entity.Organization != null)
             {

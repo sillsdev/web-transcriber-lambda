@@ -24,12 +24,7 @@ namespace SIL.Transcriber.Controllers
         {
             S3Response s3response = await _service.ListObjectsAsync();
 
-            if (s3response.Status == HttpStatusCode.OK)
-            {
-                return Ok(s3response.Message);
-            }
-
-            return Ok(s3response);
+            return s3response.Status == HttpStatusCode.OK ? Ok(s3response.Message) : (IActionResult)Ok(s3response);
         }
 
         private async Task<IActionResult> GetS3File(
@@ -76,13 +71,6 @@ namespace SIL.Transcriber.Controllers
             return await GetS3File(folder, fileName);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AddFile()
-        {
-            IFormFile file = this.Request.Form.Files[0];
-            S3Response response = await _service.UploadFileAsync(file);
-            return Ok(response);
-        }
 
         [HttpDelete("{fileName}")]
         public async Task<IActionResult> RemoveFile([FromRoute] string fileName)
