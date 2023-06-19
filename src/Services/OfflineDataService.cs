@@ -1790,6 +1790,7 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
+        private int? ValidArtifactCategory(int? categoryid) { return dbContext.Artifactcategorys.First(c => c.Id == categoryid)?.Archived ?? true ? null : categoryid == 0 ? 1 : categoryid; }
 
         private void UpdateDiscussion(
             Discussion existing,
@@ -1810,7 +1811,7 @@ namespace SIL.Transcriber.Services
                 if (existing.DateUpdated > sourceDate)
                     report.Add(DiscussionChangesReport(existing, importing));
                 existing.Subject = importing.Subject;
-                existing.ArtifactCategoryId = importing.ArtifactCategoryId;
+                existing.ArtifactCategoryId = ValidArtifactCategory(importing.ArtifactCategoryId);
                 existing.GroupId = importing.GroupId;
                 existing.Resolved = importing.Resolved;
                 existing.UserId = importing.UserId;
@@ -2107,7 +2108,7 @@ namespace SIL.Transcriber.Services
                         _ = dbContext.Discussions.Add(
                             new Discussion
                             {
-                                ArtifactCategoryId = d.ArtifactCategoryId,
+                                ArtifactCategoryId = ValidArtifactCategory(d.ArtifactCategoryId),
                                 MediafileId = d.MediafileId,
                                 OfflineId = d.OfflineId,
                                 OfflineMediafileId = d.OfflineMediafileId,
@@ -2243,7 +2244,7 @@ namespace SIL.Transcriber.Services
                             new Mediafile
                             {
                                 ArtifactTypeId = m.ArtifactTypeId,
-                                ArtifactCategoryId = m.ArtifactCategoryId,
+                                ArtifactCategoryId = ValidArtifactCategory(m.ArtifactCategoryId),
                                 AudioUrl = m.AudioUrl,
                                 ContentType = m.ContentType,
                                 Duration = m.Duration,
@@ -3003,7 +3004,7 @@ namespace SIL.Transcriber.Services
                     Link = Convert.ToBoolean(m.Link),
                     PerformedBy = m.PerformedBy,
                     ReadyToShare = false,
-                    ArtifactCategoryId = m.ArtifactCategoryId == null ? null : sameOrg ? m.ArtifactCategoryId : artifactcategoryMap?.GetValueOrDefault(m.ArtifactCategoryId??0),
+                    ArtifactCategoryId = m.ArtifactCategoryId == null ? null : sameOrg ? ValidArtifactCategory(m.ArtifactCategoryId) : artifactcategoryMap?.GetValueOrDefault(m.ArtifactCategoryId??0),
                     ResourcePassageId = m.ResourcePassageId == null ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0) == 0 ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0),
                     RecordedbyUser = sameOrg ? m.RecordedbyUser : CurrentUser(),
                     OfflineId = "",

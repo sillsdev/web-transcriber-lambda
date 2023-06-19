@@ -69,9 +69,9 @@ namespace SIL.Transcriber.Services
             DateTime since
         )
         {
-            if (entities == null)
-                return new List<TResource>();
-            return currentuser > 0
+            return entities == null
+                ? new List<TResource>()
+                : currentuser > 0
                 ? entities.Where(p =>
                         (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin)
                         && p.DateUpdated > since
