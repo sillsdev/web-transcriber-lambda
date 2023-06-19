@@ -105,18 +105,6 @@ namespace SIL.Transcriber.Controllers
             return response.Status is HttpStatusCode.OK or HttpStatusCode.NoContent ? Ok() : NotFound();
         }
 
-        [HttpPost("file")]
-        public async Task<IActionResult> PostAsync(
-            [FromForm] string jsonString,
-            [FromForm] IFormFile file
-        )
-        {
-            Mediafile? entity = JsonSerializer.Deserialize<Mediafile>(jsonString);
-            if (entity == null)
-                return NotFound();
-            entity = await _service.CreateAsyncWithFile(entity, file);
-            return Created("/api/mediafiles/" + entity?.Id.ToString(), entity);
-        }
 
         [HttpGet("wbt")]
         public IActionResult WBTUpdateAsync()
