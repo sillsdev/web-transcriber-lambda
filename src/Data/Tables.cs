@@ -22,7 +22,9 @@ public static class Tables
     public const string OrgWorkflowSteps =  "orgworkflowsteps";
     public const string ParatextTokens = "paratexttokens";
     public const string Passages = "passages";
+    public const string PassageNotes = "passagenotes";
     public const string PassageStateChanges = "passagestatechanges";
+    public const string PassageTypes = "passagetypes";
     public const string Plans =     "plans";
     public const string PlanTypes = "plantypes";
     public const string ProjectIntegrations = "projectintegrations";

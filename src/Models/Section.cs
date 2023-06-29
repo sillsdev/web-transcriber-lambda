@@ -59,7 +59,21 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "editor")]
         public virtual User? Editor { get; set; }
 
+
+        public int? AssignedGroupId { get; set; }
+
+        [HasOne(PublicName = "assigned-group")]
+        public virtual Group? AssignedGroup { get; set; }
+
+        [Attr(PublicName = "graphics")]
+        [Column(TypeName = "jsonb")]
+        public string? Graphics { get; set; } //json
+
+        [Attr(PublicName = "published")]
+        public bool Published { get; set; }
+
         public bool Archived { get; set; }
+
 
         public string SectionHeader(bool addNumbers = true)
         {

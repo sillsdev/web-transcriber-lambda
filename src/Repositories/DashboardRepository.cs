@@ -39,12 +39,12 @@ namespace SIL.Transcriber.Repositories
         }
         private IEnumerable<Plan> TrainingPlans()
         {
-            var plans = dbContext.Plans.Where(p => p.Tags != null).ToList();
+            List<Plan> plans = dbContext.Plans.Where(p => p.Tags != null).ToList();
             return plans.Where(p=> JObject.Parse(p.Tags ?? "{}") ["training"]?.Value<bool?>() ?? false);
         }
         private IEnumerable<Plan> NonTestingPlans()
         {
-            var plans =  dbContext.Plans.Where(p => !p.Archived).ToList();
+            List<Plan> plans =  dbContext.Plans.Where(p => !p.Archived).ToList();
             return plans.Where(p => !(JObject.Parse(p.Tags??"{}")["testing"]?.Value<bool?>() ?? false));
         }
         private IEnumerable<Passage> Passages()

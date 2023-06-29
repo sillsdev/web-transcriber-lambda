@@ -7,7 +7,9 @@ namespace SIL.Transcriber
 {
     public class Startup
     {
+#pragma warning disable IDE0060 // Remove unused parameter
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             Configuration = configuration;
         }
