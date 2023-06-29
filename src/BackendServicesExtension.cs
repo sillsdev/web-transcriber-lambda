@@ -191,10 +191,7 @@ namespace SIL.Transcriber
                             }
                             if (context.SecurityToken is JwtSecurityToken accessToken)
                             {
-                                if (identity != null)
-                                {
-                                    identity.AddClaim(new Claim("access_token", accessToken.RawData));
-                                }
+                                identity?.AddClaim(new Claim("access_token", accessToken.RawData));
                             }
                             return System.Threading.Tasks.Task.CompletedTask;
                         }

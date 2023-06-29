@@ -67,6 +67,12 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         public string? StepComplete { get; set; } //json
 
+
+        public int? PassagetypeId { get; set; }
+
+        [HasOne(PublicName = "Passagetype")]
+        public virtual Passagetype? Passagetype { get; set; }
+
         [Attr(PublicName = "plan-id")]
         [NotMapped]
         public int PlanId {

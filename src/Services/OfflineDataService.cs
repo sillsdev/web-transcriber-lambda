@@ -16,6 +16,7 @@ using static SIL.Transcriber.Utility.ResourceHelpers;
 using SIL.Transcriber.Utility;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Amazon.Lambda.Core;
+using System.Security.Cryptography;
 
 namespace SIL.Transcriber.Services
 {
@@ -44,6 +45,7 @@ namespace SIL.Transcriber.Services
             {Tables.ActivityStates,'B'},
             {Tables.Integrations,'B'},
             {Tables.Organizations,'B'},
+            {Tables.PassageTypes,'B'},
             {Tables.PlanTypes,'B'},
             {Tables.ProjectTypes,'B'},
             {Tables.Roles,'B'},
@@ -64,6 +66,7 @@ namespace SIL.Transcriber.Services
             {Tables.Mediafiles,'H'},
             {Tables.OrgKeyTermReferences,'H'},
             {Tables.PassageStateChanges,'H'},
+            {Tables.PassageNotes,'H'},
             {Tables.OrgKeyTermTargets,'I'},
             {Tables.SectionResources,'I'},
             {Tables.Discussions,'I'},
@@ -870,13 +873,14 @@ namespace SIL.Transcriber.Services
                         o => o.Id,
                         (i, o) => i);
         }
-        private IQueryable<Mediafile> PlanMedia(IQueryable<Plan> plans, IQueryable<Intellectualproperty> ip)
+        private IQueryable<Mediafile> PlanMedia(IQueryable<Plan> plans, IQueryable<Intellectualproperty> ip, IQueryable<Passage>? supportingPassages = null)
         {
             IQueryable<Mediafile> xmediafiles = plans
                         .Join(dbContext.MediafilesData, p => p.Id, m => m.PlanId, (p, m) => m)
                         .Where(x => !x.Archived);
-            IQueryable<Mediafile>? ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m).Where(x => !x.Archived);
-            IQueryable<Mediafile>? myMedia = xmediafiles.Concat(ipmedia).Distinct();
+            IQueryable<Mediafile> ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m).Where(x => !x.Archived);
+            IQueryable<Mediafile> supportingmedia = (supportingPassages ?? dbContext.Passages.Where(p => p.Id == -1)).Join(dbContext.MediafilesData, p => p.Id, m=> m.PassageId, (p, m) => m).Where(x => !x.Archived);
+            IQueryable<Mediafile> myMedia = xmediafiles.Concat(ipmedia).Concat(supportingmedia).Distinct();
             return myMedia;
         }
         private IQueryable<Sectionresource> SectionResources(IQueryable<Section> sections)
@@ -971,6 +975,10 @@ namespace SIL.Transcriber.Services
                 IQueryable<Organization> orgs = dbContext.Organizations.Where(
                         o => o.Id == project.OrganizationId
                     );
+                IQueryable<Project> glossaryproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.GlossaryProjectId, (p, o) => p);
+                IQueryable<Project> sidebarproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.SidebarProjectId, (p, o) => p);
+                IQueryable<Project> supportingProjects = glossaryproject.Concat(sidebarproject);
+
                 IQueryable<Intellectualproperty>? ip = OrgIPs(orgs);
                 if (start == 0)
                 {
@@ -988,6 +996,7 @@ namespace SIL.Transcriber.Services
                         dbContext.Activitystates.ToList()
                     );
                     AddJsonEntry(zipArchive, Tables.Integrations, dbContext.Integrations.ToList());
+                    AddJsonEntry(zipArchive, Tables.PassageTypes, dbContext.Passagetypes.ToList());
                     AddJsonEntry(zipArchive, Tables.PlanTypes, dbContext.Plantypes.ToList());
                     AddJsonEntry(zipArchive, Tables.ProjectTypes, dbContext.Projecttypes.ToList());
                     AddJsonEntry(zipArchive, Tables.Roles, dbContext.Roles.ToList());
@@ -1071,7 +1080,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, Tables.OrganizationMemberships, orgmems.ToList());
 
                     //projects
-                    AddJsonEntry(zipArchive, Tables.Projects, projects.ToList());
+                    AddJsonEntry(zipArchive, Tables.Projects, projects.ToList());//.Concat(supportingProjects).ToList());
                     startNext = 1;
                 }
                 do //give me something to break out of
@@ -1099,6 +1108,10 @@ namespace SIL.Transcriber.Services
                     IQueryable<Plan> plans = projects
                         .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
                         .Where(x => !x.Archived);
+                    IQueryable<Plan> supportingPlans = supportingProjects
+                        .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
+                        .Where(x => !x.Archived);
+
                     if (
                         !CheckAdd(
                             2,
@@ -1106,7 +1119,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Plans,
-                            plans.ToList()
+                            plans.Concat(supportingPlans).ToList()
                         )
                     )
                         break;
@@ -1114,6 +1127,19 @@ namespace SIL.Transcriber.Services
                     IQueryable<Section> sections = plans
                         .Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s)
                         .Where(x => !x.Archived);
+                    IQueryable<Passage> passages = sections
+                        .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
+                        .Where(x => !x.Archived);
+                    IQueryable<Passagenote> passagenotes = passages.Join(
+                        dbContext.Passagenotes,
+                        p => p.Id,
+                        pg => pg.PassageId,
+                        (p, pg) => pg
+                    );
+                    IQueryable<Section> supportingSections = passagenotes
+                        .Join(dbContext.Sections, pg => pg.NoteSectionId, s => s.Id, (pg, s) => s)
+                        .Where(x => !x.Archived);
+
                     if (
                         !CheckAdd(
                             3,
@@ -1121,12 +1147,12 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Sections,
-                            sections.ToList()
+                            sections.Concat(supportingSections).ToList()
                         )
                     )
                         break;
                     //passages
-                    IQueryable<Passage> passages = sections
+                    IQueryable<Passage> supportingpassages = supportingSections
                         .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
                         .Where(x => !x.Archived);
                     if (
@@ -1136,7 +1162,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Passages,
-                            passages.ToList()
+                            passages.Concat(supportingpassages).ToList()
                         )
                     )
                         break;
@@ -1158,12 +1184,24 @@ namespace SIL.Transcriber.Services
                         )
                     )
                         break;
+                    //passagenotes                    
+                    if (
+                        !CheckAdd(
+                            6,
+                            dtBail,
+                            ref startNext,
+                            zipArchive,
+                            Tables.PassageNotes,
+                            passagenotes.ToList()
+                        )
+                    )
+                        break;
                     //mediafiles
                     //I need my mediafiles plus any shared resource mediafiles
                     IQueryable<Sectionresource> sectionresources = SectionResources(sections);
 
                     IEnumerable<Mediafile> sourcemediafiles = PlanSourceMedia(sectionresources);
-                    IQueryable<Mediafile>? myMedia = PlanMedia(plans, ip);
+                    IQueryable<Mediafile>? myMedia = PlanMedia(plans, ip, supportingpassages);
 
 
                     if (
@@ -1228,7 +1266,7 @@ namespace SIL.Transcriber.Services
                                 .ToList()
                         )
                     )
-                        break;
+                    break;
                     //only limit vernacular to those with passageids
                     IQueryable<Mediafile> attachedmediafiles = AttachedMedia(myMedia);
 

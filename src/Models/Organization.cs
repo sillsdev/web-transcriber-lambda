@@ -30,11 +30,12 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "public-by-default")]
         public bool? PublicByDefault { get; set; }
+
         [Attr(PublicName = "clusterbase")]
         public bool ClusterBase { get; set; }
 
-        [Attr(PublicName = "cluster-id")]
         public int? ClusterId { get; set; }
+
         [HasOne(PublicName = "cluster")]
         public virtual Organization? Cluster { get; set; }
 
@@ -49,7 +50,22 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "owner")]
         public virtual User? Owner { get; set; }
         public int? OwnerId { get; set; }
+        [Attr(PublicName = "publishing-data")]
+        [Column(TypeName = "jsonb")]
+        public string? PublishingData { get; set; } //json
 
+        [ForeignKey("GlossaryProject")]
+        public int? GlossaryProjectId { get; set; }
+
+        [HasOne(PublicName = "glossary-project")]
+        public virtual Project? GlossaryProject { get; set; }
+
+        [ForeignKey("SidebarProject")]
+        public int? SidebarProjectId { get; set; }
+
+        [NotMapped]
+        [HasOne(PublicName = "sidebar-project")]
+        public virtual Project? SidebarProject { get; set; }
         public bool Archived { get; set; }
     }
 }

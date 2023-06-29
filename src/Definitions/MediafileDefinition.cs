@@ -30,12 +30,9 @@ namespace SIL.Transcriber.Definitions
         {
             if (writeOperation == WriteOperationKind.CreateResource)
             {
-                if (resource.VersionNumber == null)
-                    resource.VersionNumber = 1;
-                if (resource.Link == null)
-                    resource.Link = false;
-                if (resource.Transcriptionstate == null)
-                    resource.Transcriptionstate = "transcribeReady";
+                resource.VersionNumber ??= 1;
+                resource.Link ??= false;
+                resource.Transcriptionstate ??= "transcribeReady";
                 if (resource.ResourcePassageId == null)
                 {
                     if (resource.IsVernacular && resource.Passage != null)
