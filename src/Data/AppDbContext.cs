@@ -294,7 +294,7 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Section>()
-                .HasOne(o => o.AssignedGroup)
+                .HasOne(o => o.Group)
                 .WithMany()
                 .HasForeignKey(o => o.GroupId);
             _ = builder
@@ -366,8 +366,7 @@ namespace SIL.Transcriber.Data
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
             _ = orgEntity.HasOne(o => o.Cluster).WithMany().HasForeignKey(o => o.ClusterId);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
-            _ = orgEntity.HasOne(o => o.SidebarProject).WithMany().HasForeignKey(x => x.SidebarProjectId);
-            _ = orgEntity.HasOne(o => o.GlossaryProject).WithMany().HasForeignKey(x => x.GlossaryProjectId);   
+            _ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
             
             _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
             _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);

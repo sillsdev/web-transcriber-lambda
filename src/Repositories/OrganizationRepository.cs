@@ -65,7 +65,7 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Organization> GetMine()
         {
-            return FromCurrentUser().Include(o => o.Owner).Include(o => o.GlossaryProject).Include(o => o.SidebarProject);
+            return FromCurrentUser().Include(o => o.Owner).Include(o => o.NoteProject);
         }
 
         #region Overrides
