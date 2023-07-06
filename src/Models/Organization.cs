@@ -54,18 +54,12 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         public string? PublishingData { get; set; } //json
 
-        [ForeignKey("GlossaryProject")]
-        public int? GlossaryProjectId { get; set; }
+        [ForeignKey("NoteProject")]
+        public int? NoteProjectId { get; set; }
 
-        [HasOne(PublicName = "glossary-project")]
-        public virtual Project? GlossaryProject { get; set; }
+        [HasOne(PublicName = "note-project")]
+        public virtual Project? NoteProject { get; set; }
 
-        [ForeignKey("SidebarProject")]
-        public int? SidebarProjectId { get; set; }
-
-        [NotMapped]
-        [HasOne(PublicName = "sidebar-project")]
-        public virtual Project? SidebarProject { get; set; }
         public bool Archived { get; set; }
     }
 }

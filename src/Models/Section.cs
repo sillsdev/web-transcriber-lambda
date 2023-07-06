@@ -60,10 +60,10 @@ namespace SIL.Transcriber.Models
         public virtual User? Editor { get; set; }
 
 
-        public int? AssignedGroupId { get; set; }
-
-        [HasOne(PublicName = "assigned-group")]
-        public virtual Group? AssignedGroup { get; set; }
+        public int? GroupId { get; set; }
+        [EagerLoad]
+        [HasOne(PublicName = "group")]
+        public virtual Group? Group { get; set; }
 
         [Attr(PublicName = "graphics")]
         [Column(TypeName = "jsonb")]
@@ -71,7 +71,10 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "published")]
         public bool Published { get; set; }
-
+        public int? ArtifactCategoryId { get; set; }
+        [EagerLoad]
+        [HasOne(PublicName = "artifact-category")]
+        public virtual Artifactcategory? ArtifactCategory { get; set; }
         public bool Archived { get; set; }
 
 

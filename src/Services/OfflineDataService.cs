@@ -975,10 +975,8 @@ namespace SIL.Transcriber.Services
                 IQueryable<Organization> orgs = dbContext.Organizations.Where(
                         o => o.Id == project.OrganizationId
                     );
-                IQueryable<Project> glossaryproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.GlossaryProjectId, (p, o) => p);
-                IQueryable<Project> sidebarproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.SidebarProjectId, (p, o) => p);
-                IQueryable<Project> supportingProjects = glossaryproject.Concat(sidebarproject);
-
+                IQueryable<Project> noteproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.NoteProjectId, (p, o) => p);
+                
                 IQueryable<Intellectualproperty>? ip = OrgIPs(orgs);
                 if (start == 0)
                 {
@@ -1108,7 +1106,7 @@ namespace SIL.Transcriber.Services
                     IQueryable<Plan> plans = projects
                         .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
                         .Where(x => !x.Archived);
-                    IQueryable<Plan> supportingPlans = supportingProjects
+                    IQueryable<Plan> supportingPlans = noteproject
                         .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
                         .Where(x => !x.Archived);
 
