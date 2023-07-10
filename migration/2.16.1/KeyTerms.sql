@@ -47,7 +47,7 @@ create table orgkeytermtargets (
 	offlinemediafileid text,
  	CONSTRAINT pk_orgkeytermtargets PRIMARY KEY (id)	
 	);
-CREATE unique INDEX ix_orgkeytermtargets_orgterm ON public.orgkeytermtargets USING btree (organizationid, term);
+CREATE INDEX ix_orgkeytermtargets_orgterm ON public.orgkeytermtargets USING btree (organizationid, term);
 CREATE INDEX ix_orgkeytermtargets_orgindex ON public.orgkeytermtargets USING btree (organizationid, termindex);
 CREATE INDEX ix_orgkeytermtargets_lastmodifiedorigin_idx ON public.orgkeytermtargets USING btree (lastmodifiedorigin, lastmodifiedby, dateupdated);
 
