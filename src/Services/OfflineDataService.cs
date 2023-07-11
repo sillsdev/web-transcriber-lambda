@@ -1826,7 +1826,7 @@ namespace SIL.Transcriber.Services
                 }
             }
         }
-        private int? ValidArtifactCategory(int? categoryid) { return dbContext.Artifactcategorys.First(c => c.Id == categoryid)?.Archived ?? true ? null : categoryid == 0 ? 1 : categoryid; }
+        private int? ValidArtifactCategory(int? categoryid) { return dbContext.Artifactcategorys.FirstOrDefault(c => c.Id == categoryid)?.Archived ?? true ? null : categoryid == 0 ? 1 : categoryid; }
 
         private void UpdateDiscussion(
             Discussion existing,
