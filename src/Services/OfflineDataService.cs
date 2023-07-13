@@ -945,7 +945,7 @@ namespace SIL.Transcriber.Services
         }
         public Fileresponse ExportProjectPTF(int projectId, int start)
         {
-            const int LAST_ADD = 19;
+            const int LAST_ADD = 20;
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
@@ -1204,7 +1204,7 @@ namespace SIL.Transcriber.Services
 
                     if (
                         !CheckAdd(
-                            6,
+                            7,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1216,7 +1216,7 @@ namespace SIL.Transcriber.Services
 
                     if (
                         !CheckAdd(
-                            7,
+                            8,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1234,7 +1234,7 @@ namespace SIL.Transcriber.Services
                         break;
                     if (
                         !CheckAdd(
-                            8,
+                            9,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1252,7 +1252,7 @@ namespace SIL.Transcriber.Services
                         break;
                     if (
                         !CheckAdd(
-                            9,
+                            10,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1271,7 +1271,7 @@ namespace SIL.Transcriber.Services
                     IQueryable<Discussion> discussions = PlanDiscussions(myMedia);
                     if (
                         !CheckAdd(
-                            10,
+                            11,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1282,7 +1282,7 @@ namespace SIL.Transcriber.Services
                         break;
                     if (
                         !CheckAdd(
-                            11,
+                            12,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1297,7 +1297,7 @@ namespace SIL.Transcriber.Services
 
                     if (
                         !CheckAdd(
-                            12,
+                            13,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1308,7 +1308,7 @@ namespace SIL.Transcriber.Services
                         break;
                     if (
                         !CheckAdd(
-                            13,
+                            14,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1332,7 +1332,7 @@ namespace SIL.Transcriber.Services
                                     );
                     if (
                         !CheckAdd(
-                            14,
+                            15,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1343,7 +1343,7 @@ namespace SIL.Transcriber.Services
                         break;
                     if (
                         !CheckAdd(
-                            15,
+                            16,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1356,7 +1356,7 @@ namespace SIL.Transcriber.Services
                         break;
                     if (
                         !CheckAdd(
-                            16,
+                            17,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1372,7 +1372,7 @@ namespace SIL.Transcriber.Services
                                     .Where(a => !a.Archived);
                     if (
                         !CheckAdd(
-                            17,
+                            18,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1383,7 +1383,7 @@ namespace SIL.Transcriber.Services
                         break;
                     if (
                         !CheckAdd(
-                            18,
+                            19,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1403,7 +1403,7 @@ namespace SIL.Transcriber.Services
                         group m by m.PassageId into grp
                         select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                    if (!AddMediaEaf(19, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
+                    if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
                         break;
                     List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
                     AddAttachedMedia(zipArchive, mediaList, null);
