@@ -36,7 +36,7 @@ namespace SIL.Transcriber.Services
         private readonly SectionService SectionService;
         private readonly ProjectService ProjectService;
         public CurrentUserRepository CurrentUserRepository { get; }
-
+        //private ParatextTokenHistoryRepository TokenHistoryRepo { get; }
         readonly private HttpContext? HttpContext;
         protected ILogger<ParatextService> Logger { get; set; }
 
@@ -54,7 +54,8 @@ namespace SIL.Transcriber.Services
             ProjectService projectService,
             CurrentUserRepository currentUserRepository,
             ProjectIntegrationRepository piRepo,
-            ILoggerFactory loggerFactory
+            ILoggerFactory loggerFactory,
+            ParatextTokenHistoryRepository tokenHistoryRepository
         )
         {
             dbContext = (AppDbContext)contextResolver.GetContext();
@@ -68,7 +69,7 @@ namespace SIL.Transcriber.Services
             CurrentUserRepository = currentUserRepository;
             ProjectIntegrationRepository = piRepo;
             Logger = loggerFactory.CreateLogger<ParatextService>();
-
+            //TokenHistoryRepo = tokenHistoryRepository;
             _httpClientHandler = new HttpClientHandler();
             _dataAccessClient = new HttpClient(_httpClientHandler);
             _registryClient = new HttpClient(_httpClientHandler);
@@ -111,13 +112,13 @@ namespace SIL.Transcriber.Services
                     savedToken.RefreshToken = tokenFromAuth0.ParatextTokens.RefreshToken ?? "";
                     Logger.LogInformation("new token newer than saved token");
                     _ = dbContext.Paratexttokens.Update(savedToken);
-                    dbContext.SaveChanges();
-                    //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From Login"));
+                    _ = dbContext.SaveChanges();
+                    //_ = TokenHistoryRepo.Create(new(currentUser.Id, savedToken.AccessToken, savedToken.RefreshToken, "From Login"));
                 }
                 else
                 {
                     tokenFromAuth0.ParatextTokens = savedToken;
-                    //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, token.AccessToken, token.RefreshToken, "From DB"));
+                    //TokenHistoryRepo.Create(new(currentUser.Id, savedToken.AccessToken, savedToken.RefreshToken, "From DB"));
                 }
             }
             else
@@ -125,7 +126,7 @@ namespace SIL.Transcriber.Services
                 Logger.LogInformation("no saved token");
                 _ = dbContext.Paratexttokens.Add(tokenFromAuth0.ParatextTokens);
                 dbContext.SaveChanges();
-                //TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(currentUser.Id, newPTToken.ParatextTokens.AccessToken, newPTToken.ParatextTokens.RefreshToken, "From First Login"));
+                //TokenHistoryRepo.Create(new (currentUser.Id, tokenFromAuth0.ParatextTokens.AccessToken, tokenFromAuth0.ParatextTokens.RefreshToken, "From First Login"));
             }
             return tokenFromAuth0;
         }
@@ -421,7 +422,7 @@ namespace SIL.Transcriber.Services
         )
         {
             _ = VerifyUserSecret(userSecret);
-            Console.WriteLine($"text/{projectId}/{bookId}/{chapter}");
+            Logger.LogInformation($"text/{projectId}/{bookId}/{chapter}");
             return CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -503,6 +504,7 @@ namespace SIL.Transcriber.Services
             {
                 throw new SecurityException("401 RefreshTokenNull");
             }
+            //Logger.LogInformation("Refreshing access token", userSecret.ParatextTokens.RefreshToken);
             HttpRequestMessage request = new(HttpMethod.Post, "api8/token");
             JObject requestObj =
                 new(
@@ -525,7 +527,7 @@ namespace SIL.Transcriber.Services
 
             //log it
             //requestObj["client_secret"] = "XXX";
-            //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, (string)responseObj["access_token"], (string)responseObj["refresh_token"], requestObj.ToString(), response.ReasonPhrase + responseObj));
+            //TokenHistoryRepo.Create(new(userSecret.ParatextTokens.UserId, (string?)responseObj ["access_token"], (string?)responseObj ["refresh_token"] ?? "", requestObj.ToString(), response.ReasonPhrase + responseObj));
             if (responseObj?.Count > 0 && (responseObj ["error_description"]?.ToString()?.Contains("refresh token") ?? false))
                 throw new SecurityException("401 RefreshTokenInvalid.  Expected on Dev and QA.  Login again with Paratext connection.");
 
@@ -535,9 +537,9 @@ namespace SIL.Transcriber.Services
             userSecret.ParatextTokens.RefreshToken = (string?)responseObj?["refresh_token"] ?? "";
 
             _ = dbContext.Paratexttokens.Update(userSecret.ParatextTokens);
-
+            dbContext.SaveChanges();
             //log it
-            //await TokenHistoryRepo.CreateAsync(new ParatextTokenHistory(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
+            //TokenHistoryRepo.Create(new(userSecret.ParatextTokens.UserId, userSecret.ParatextTokens.AccessToken, userSecret.ParatextTokens.RefreshToken, "AfterRefresh"));
 
             return userSecret;
         }
