@@ -43,7 +43,11 @@ namespace SIL.Transcriber.Services
             {
                 Artifactcategory? newEntity = Repo.Get()
                 .Include(ac => ac.Organization)
-                .Where(ac => ac.OrganizationId == entity.Organization.Id && ac.Categoryname == entity.Categoryname)
+                .Where(ac => ac.OrganizationId == entity.Organization.Id && 
+                        ac.Categoryname == entity.Categoryname && 
+                        ac.Note == entity.Note && 
+                        ac.Discussion == entity.Discussion && 
+                        ac.Resource == entity.Resource)
                 .FirstOrDefault();
 
                 if (newEntity != null && newEntity.Archived)
