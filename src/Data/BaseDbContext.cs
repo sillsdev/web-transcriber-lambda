@@ -42,7 +42,7 @@ namespace SIL.Transcriber.Data
 
                 foreach (IMutableIndex index in entity.GetIndexes())
                 {
-                    index.SetDatabaseName(index.GetDatabaseName().ToLower());
+                    index.SetDatabaseName(index.GetDatabaseName()?.ToLower());
                 }
             }
         }

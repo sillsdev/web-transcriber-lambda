@@ -17,6 +17,8 @@ using SIL.Transcriber.Utility;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Amazon.Lambda.Core;
 using System.Security.Cryptography;
+using Amazon.S3;
+using System.Net.Mime;
 
 namespace SIL.Transcriber.Services
 {
@@ -164,7 +166,7 @@ namespace SIL.Transcriber.Services
         {
             ZipArchiveEntry entry = zipArchive.CreateEntry(
                 "data/" + TableOrder.GetValueOrDefault(table, 'Z') + "_" + table + ".json",
-                CompressionLevel.Fastest
+                CompressionLevel.SmallestSize
             );
             WriteEntry(entry, ToJson(list));
         }
@@ -447,16 +449,14 @@ namespace SIL.Transcriber.Services
         {
             int startNext;
             string err = "";
-            bool recent = false;
             try
             {
-                Stream ms = OpenFile(fileName + ".sss", out recent);
-                Logger.LogInformation("{sf} status file {recent}", fileName + ".sss", recent);
-
+                Stream ms = OpenFile(fileName + ".sss", out DateTime writeTime);
+                StreamReader reader = new(ms);
+                string data = reader.ReadToEnd();
+                bool recent = writeTime > DateTime.Now.AddMinutes(data.Contains("writing") ? -8 : -2);
                 if (recent)
                 {
-                    StreamReader reader = new(ms);
-                    string data = reader.ReadToEnd();
                     if (data.IndexOf("|") > 0)
                     {
                         err = data [(data.IndexOf("|") + 1)..];
@@ -476,10 +476,9 @@ namespace SIL.Transcriber.Services
             catch
             {
                 //it's not there yet...
-                Logger.LogInformation("{sf} status file not available", fileName + ".sss");
+                Logger.LogWarning("{sf} status file not available", fileName + ".sss");
                 startNext = lastAdd + 1;
             }
-            Logger.LogInformation("{sf} status file {startNext}", fileName + ".sss", startNext);
             if (startNext < 0)
             {
                 try
@@ -488,7 +487,6 @@ namespace SIL.Transcriber.Services
                     resp = _S3Service.RemoveFile(fileName + ".tmp", ExportFolder).Result;
                 }
                 catch { }
-                ;
             }
             else
                 startNext = Math.Max(startNext, lastAdd + 1);
@@ -513,10 +511,11 @@ namespace SIL.Transcriber.Services
             };
         }
 
-        private Stream OpenFile(string fileName, out bool recent)
+        private Stream OpenFile(string fileName, out DateTime writeTime)
         {
-            S3Response s3response = _S3Service.ReadObjectDataAsync(fileName, ExportFolder).Result;
-            _ = bool.TryParse(s3response.Message, out recent);
+            S3Response s3response = _S3Service.ReadObjectDataAsync(fileName, ExportFolder, true).Result;
+
+            _ = DateTime.TryParse(s3response.Message, out writeTime);
             return s3response.FileStream ?? throw (new Exception("Export in progress " + fileName + "not found."));
         }
 
@@ -535,7 +534,7 @@ namespace SIL.Transcriber.Services
             }
             else
             {
-                ms = OpenFile(fileName + ext, out bool recent);
+                ms = OpenFile(fileName + ext, out _);
             }
             return ms;
         }
@@ -966,8 +965,9 @@ namespace SIL.Transcriber.Services
                     return going;
             }
             if (start > LAST_ADD)
+            {
                 return CheckProgress(fileName + ext, LAST_ADD);
-
+            }
             Stream ms = GetMemoryStream(start, fileName, ext);
             if (start >= 0)
             {
@@ -1405,7 +1405,7 @@ namespace SIL.Transcriber.Services
 
                     if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
                         break;
-                    List <Mediafile> mediaList  = attachedmediafiles.ToList().Concat(sourcemediafiles.ToList()).ToList();
+                    List<Mediafile> mediaList  = attachedmediafiles.ToList().Union(sourcemediafiles.ToList()).ToList();
                     AddAttachedMedia(zipArchive, mediaList, null);
                 } while (false);
             }
@@ -1520,20 +1520,22 @@ namespace SIL.Transcriber.Services
                 ? ChangesReport(Tables.ToType(Tables.GroupMemberships), Serialize(online), Serialize(imported))
                 : "";
         }
-
+        private static Fileresponse FileNotFound(string sFile)
+        {
+            return new Fileresponse()
+            {
+                Message = "File not found",
+                FileURL = sFile,
+                Status = HttpStatusCode.NotFound
+            };
+        }
         public async Task<Fileresponse> ImportSyncFileAsync(string sFile, int fileIndex, int start)
         {
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
             S3Response response = await _S3Service.ReadObjectDataAsync(sFile, "imports");
             if (response.FileStream == null)
-                return new Fileresponse()
-                {
-                    Message = "File not found",
-                    FileURL = sFile,
-                    Status = HttpStatusCode.NotFound,
-                    ContentType = "application/itf",
-                };
+                return FileNotFound(sFile);
             ZipArchive archive = new(response.FileStream);
             List<string> report = new();
             List<string> errors = new();
@@ -1587,13 +1589,7 @@ namespace SIL.Transcriber.Services
             DateTime dtBail = DateTime.Now.AddSeconds(20);
             S3Response response = await _S3Service.ReadObjectDataAsync(sFile, "imports");
             if (response.FileStream == null)
-                return new Fileresponse()
-                {
-                    Message = "File not found",
-                    FileURL = sFile,
-                    Status = HttpStatusCode.NotFound,
-                    ContentType = "application/itf",
-                };
+                return FileNotFound(sFile);
             ZipArchive archive = new(response.FileStream);
             return await ProcessImportFileAsync(archive, projectId, sFile, start, dtBail);
         }
@@ -1601,13 +1597,7 @@ namespace SIL.Transcriber.Services
         {
             S3Response response = await _S3Service.ReadObjectDataAsync(sFile, "imports");
             if (response.FileStream == null)
-                return new Fileresponse()
-                {
-                    Message = "File not found",
-                    FileURL = sFile,
-                    Status = HttpStatusCode.NotFound,
-                    ContentType = "application/ptf",
-                };
+                return FileNotFound(sFile);
             ZipArchive archive = new(response.FileStream);
             return await ProcessImportCopyFileAsync(archive, neworg, sFile);
         }
@@ -3447,6 +3437,7 @@ namespace SIL.Transcriber.Services
                     if (!entry.FullName.StartsWith("data"))
                         continue;
                     string name = Path.GetFileNameWithoutExtension(entry.Name[2..]);
+                    Logger.LogInformation("{n} {cl} {l}", entry.FullName, entry.CompressedLength, entry.Length);
                     string? json = new StreamReader(entry.Open()).ReadToEnd();
                     Document? doc = JsonSerializer.Deserialize<Document>(
                         json,
@@ -3455,6 +3446,8 @@ namespace SIL.Transcriber.Services
                     IList<ResourceObject>? lst = doc?.Data.ManyValue;
                     if (doc == null || lst == null)
                         continue;
+                    Logger.LogInformation("name: {0}", name);
+
                     switch (name)
                     {
                         case Tables.Organizations:

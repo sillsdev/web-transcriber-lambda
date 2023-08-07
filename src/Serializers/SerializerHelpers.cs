@@ -1,7 +1,7 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Queries.Expressions;
-using JsonApiDotNetCore.Queries.Internal;
 using JsonApiDotNetCore.QueryStrings;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Resources.Annotations;
@@ -20,8 +20,7 @@ namespace SIL.Transcriber.Serialization
         )
         {
             IReadOnlyCollection<RelationshipAttribute>? rcol = resourceType.Relationships;
-            if (existingIncludes == null)
-                existingIncludes = ImmutableHashSet<IncludeElementExpression>.Empty;
+            existingIncludes ??= ImmutableHashSet<IncludeElementExpression>.Empty;
             List<IncludeElementExpression> allIncludes = new(existingIncludes);
 
             foreach (RelationshipAttribute r in rcol)
