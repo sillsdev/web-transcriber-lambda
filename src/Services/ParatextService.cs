@@ -54,8 +54,8 @@ namespace SIL.Transcriber.Services
             ProjectService projectService,
             CurrentUserRepository currentUserRepository,
             ProjectIntegrationRepository piRepo,
-            ILoggerFactory loggerFactory,
-            ParatextTokenHistoryRepository tokenHistoryRepository
+            ILoggerFactory loggerFactory //,
+            //ParatextTokenHistoryRepository tokenHistoryRepository
         )
         {
             dbContext = (AppDbContext)contextResolver.GetContext();

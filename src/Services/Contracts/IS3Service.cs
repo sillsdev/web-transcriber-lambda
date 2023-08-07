@@ -10,9 +10,10 @@ namespace SIL.Transcriber.Services
         Task<S3Response> RenameFile(string fileName, string newFileName, string folder = "");
         Task<S3Response> RemoveFile(string fileName, string folder = "");
         Task<S3Response> ListObjectsAsync(string folder = "");
-        Task<S3Response> ReadObjectDataAsync(string keyName, string folder = "");
+        Task<S3Response> ReadObjectDataAsync(string keyName, string folder = "", bool forWrite = false);
         Task<bool> FileExistsAsync(string fileName, string folder = "");
         S3Response SignedUrlForGet(string fileName, string folder, string contentType);
         S3Response SignedUrlForPut(string fileName, string folder, string contentType);
+
     }
 }

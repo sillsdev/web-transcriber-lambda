@@ -13,12 +13,7 @@
         {
             string? variable = Environment.GetEnvironmentVariable(name);
 
-            if (string.IsNullOrEmpty(variable))
-            {
-                throw new System.Exception("Env var: " + name + " is not defined");
-            }
-
-            return variable;
+            return string.IsNullOrEmpty(variable) ? throw new System.Exception("Env var: " + name + " is not defined") : variable;
         }
 
         public static int GetIntVarOrDefault(string name, int defaultValue)
