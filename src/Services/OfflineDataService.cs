@@ -1397,14 +1397,15 @@ namespace SIL.Transcriber.Services
 
                     //Now I need the media list of just those files to download...
                     //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
-                    IQueryable<Mediafile> vernmediafiles =
-                        from m in attachedmediafiles
-                        where m.ArtifactTypeId == null
-                        group m by m.PassageId into grp
-                        select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                    //IQueryable<Mediafile> vernmediafiles =
+                    //    from m in attachedmediafiles
+                    //    where m.ArtifactTypeId == null
+                    //    group m by m.PassageId into grp
+                    //    select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
 
-                    if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
-                        break;
+                    //if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
+                    //    break;
+                    startNext++; //instead of eaf
                     List<Mediafile> mediaList  = attachedmediafiles.ToList().Union(sourcemediafiles.ToList()).ToList();
                     AddAttachedMedia(zipArchive, mediaList, null);
                 } while (false);
@@ -1488,7 +1489,7 @@ namespace SIL.Transcriber.Services
 
         private string MediafileChangesReport(Mediafile online, Mediafile imported)
         {
-            if (online.Transcription != imported.Transcription && online.Transcription != null)
+            if (online.Transcription != (imported.Transcription ?? online.Transcription) && online.Transcription != null)
             {
                 Mediafile copy = (Mediafile)online.ShallowCopy();
                 copy.AudioUrl = "";
@@ -1907,7 +1908,7 @@ namespace SIL.Transcriber.Services
                 existing.SourceSegments = importing.SourceSegments;
                 existing.SourceMediaOfflineId = importing.SourceMediaOfflineId;
                 existing.Topic = importing.Topic;
-                existing.Transcription = importing.Transcription;
+                existing.Transcription = importing.Transcription ?? existing.Transcription;
                 if (importing.Transcriptionstate != null) //from old desktop
                     existing.Transcriptionstate = importing.Transcriptionstate;
                 existing.LastModifiedBy = importing.LastModifiedBy;
