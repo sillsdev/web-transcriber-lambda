@@ -71,10 +71,6 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "published")]
         public bool Published { get; set; }
-        public int? ArtifactCategoryId { get; set; }
-        [EagerLoad]
-        [HasOne(PublicName = "artifact-category")]
-        public virtual Artifactcategory? ArtifactCategory { get; set; }
         public bool Archived { get; set; }
 
 
