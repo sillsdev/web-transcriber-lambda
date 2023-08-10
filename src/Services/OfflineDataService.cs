@@ -370,7 +370,7 @@ namespace SIL.Transcriber.Services
         public static string CleanFileName(string filename)
         {
             string invalidChars = System.Text.RegularExpressions.Regex.Escape(
-                new string(Path.GetInvalidFileNameChars()) + "'"
+                new string(Path.GetInvalidFileNameChars()) + "'()"
             );
             string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);
 
@@ -1425,7 +1425,7 @@ namespace SIL.Transcriber.Services
             // Project project = dbContext.Projects.Where(p => p.Id == id).First();
             string fileName = string.Format(
                 "{0}_{1}{2}",
-                Path.GetFileNameWithoutExtension(sFile),
+                CleanFileName(Path.GetFileNameWithoutExtension(sFile)),
                 DateTime.Now.Ticks,
                 extension
             );
