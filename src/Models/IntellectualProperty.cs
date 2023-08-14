@@ -11,6 +11,7 @@ namespace SIL.Transcriber.Models
         public Intellectualproperty() : base()
         {
         }
+        [Attr(PublicName = "organization-id")]
         public int OrganizationId { get; set; }
         [HasOne(PublicName = "organization")]
         public Organization? Organization { get; set; }

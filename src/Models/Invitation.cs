@@ -25,6 +25,7 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "organization")]
         public virtual Organization Organization { get; set; } = null!;
+        [Attr(PublicName = "organization-id")]
         public int OrganizationId { get; set; }
 
         [HasOne(PublicName = "role")]

@@ -19,6 +19,7 @@ using Amazon.Lambda.Core;
 using System.Security.Cryptography;
 using Amazon.S3;
 using System.Net.Mime;
+using System.Collections.Generic;
 
 namespace SIL.Transcriber.Services
 {
@@ -975,7 +976,7 @@ namespace SIL.Transcriber.Services
                 IQueryable<Organization> orgs = dbContext.Organizations.Where(
                         o => o.Id == project.OrganizationId
                     );
-                IQueryable<Project> noteproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.NoteProjectId, (p, o) => p);
+               // IQueryable<Project> noteproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.NoteProjectId, (p, o) => p);
                 
                 IQueryable<Intellectualproperty>? ip = OrgIPs(orgs);
                 if (start == 0)
@@ -1106,10 +1107,11 @@ namespace SIL.Transcriber.Services
                     IQueryable<Plan> plans = projects
                         .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
                         .Where(x => !x.Archived);
+                    /* NEXT RELEASE!
                     IQueryable<Plan> supportingPlans = noteproject
                         .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
                         .Where(x => !x.Archived);
-
+                    */
                     if (
                         !CheckAdd(
                             2,
@@ -1117,7 +1119,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Plans,
-                            plans.Concat(supportingPlans).ToList()
+                            plans/*.Concat(supportingPlans)*/.ToList()
                         )
                     )
                         break;
@@ -1128,6 +1130,7 @@ namespace SIL.Transcriber.Services
                     IQueryable<Passage> passages = sections
                         .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
                         .Where(x => !x.Archived);
+                    /* NEXT RELEASE!
                     IQueryable<Passagenote> passagenotes = passages.Join(
                         dbContext.Passagenotes,
                         p => p.Id,
@@ -1137,7 +1140,7 @@ namespace SIL.Transcriber.Services
                     IQueryable<Section> supportingSections = passagenotes
                         .Join(dbContext.Sections, pg => pg.NoteSectionId, s => s.Id, (pg, s) => s)
                         .Where(x => !x.Archived);
-
+                    */
                     if (
                         !CheckAdd(
                             3,
@@ -1145,14 +1148,16 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Sections,
-                            sections.Concat(supportingSections).ToList()
+                            sections/*.Concat(supportingSections)*/.ToList()
                         )
                     )
                         break;
                     //passages
+                    /* NEXT RELEASE!
                     IQueryable<Passage> supportingpassages = supportingSections
                         .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
                         .Where(x => !x.Archived);
+                    */
                     if (
                         !CheckAdd(
                             4,
@@ -1160,7 +1165,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Passages,
-                            passages.Concat(supportingpassages).ToList()
+                            passages/*.Concat(supportingpassages)*/.ToList()
                         )
                     )
                         break;
@@ -1182,6 +1187,7 @@ namespace SIL.Transcriber.Services
                         )
                     )
                         break;
+                    /* NEXT RELEASE!
                     //passagenotes                    
                     if (
                         !CheckAdd(
@@ -1192,15 +1198,18 @@ namespace SIL.Transcriber.Services
                             Tables.PassageNotes,
                             passagenotes.ToList()
                         )
-                    )
-                        break;
+                    ) 
+                        break; 
+                    */
+                    //THIS RELEASE ONLY!
+                    startNext++; //instead of passagenotes
+
                     //mediafiles
                     //I need my mediafiles plus any shared resource mediafiles
                     IQueryable<Sectionresource> sectionresources = SectionResources(sections);
 
                     IEnumerable<Mediafile> sourcemediafiles = PlanSourceMedia(sectionresources);
-                    IQueryable<Mediafile>? myMedia = PlanMedia(plans, ip, supportingpassages);
-
+                    IQueryable<Mediafile>? myMedia = PlanMedia(plans, ip);//NEXT RELEASE!, supportingpassages);
 
                     if (
                         !CheckAdd(
@@ -1209,7 +1218,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Mediafiles,
-                            myMedia.OrderBy(m => m.Id).ToList()
+                            myMedia.Union(sourcemediafiles).OrderBy(m => m.Id).ToList()
                         )
                     )
                         break;
@@ -1267,8 +1276,9 @@ namespace SIL.Transcriber.Services
                     break;
                     //only limit vernacular to those with passageids
                     IQueryable<Mediafile> attachedmediafiles = AttachedMedia(myMedia);
-
-                    IQueryable<Discussion> discussions = PlanDiscussions(myMedia);
+                    //ignore media from other plans (shared, notes etc)
+                    IQueryable<Discussion> discussions = PlanDiscussions(myMedia.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m)
+                                );
                     if (
                         !CheckAdd(
                             11,
@@ -1352,7 +1362,7 @@ namespace SIL.Transcriber.Services
                                 .Join(orgkeyterms, r => r.OrgkeytermId, k => k.Id, (r, k) => r)
                                 .ToList()
                         )
-)
+                        )
                         break;
                     if (
                         !CheckAdd(
@@ -1987,7 +1997,7 @@ namespace SIL.Transcriber.Services
             }
             return string.Concat(snake [..1].ToUpper(), snake.AsSpan(1));
         }
-        private Project? GetFileProject(ZipArchive archive)
+        private Project? ReadFileProject(ZipArchive archive)
         {
             IJsonApiOptions options = new JsonApiOptions();
             ZipArchiveEntry? projectsEntry = archive.GetEntry("data/D_projects.json");
@@ -2001,7 +2011,12 @@ namespace SIL.Transcriber.Services
                 );
             ResourceObject? fileproject = doc?.Data.SingleValue ?? (doc?.Data.ManyValue?[0]);
 
-            return fileproject == null ? null : dbContext.Projects.Find(int.Parse(fileproject.Id ?? "0"));
+            return fileproject == null ? null : ResourceObjectToResource(fileproject, new Project());
+        }
+        private Project? GetFileProject(ZipArchive archive)
+        {
+            Project? fileproject = ReadFileProject(archive);
+            return fileproject == null ? null : dbContext.Projects.Find(fileproject.Id);
         }
         private int UpdateUsers(IList<ResourceObject> lst, int startId, DateTime sourceDate, List<string> report, DateTime dtBail)
         {
@@ -2949,18 +2964,26 @@ namespace SIL.Transcriber.Services
                 int stepId = owfsMap == null ? sr.OrgWorkflowStepId : owfsMap.GetValueOrDefault(sr.OrgWorkflowStepId);
                 if (stepId == 0)
                     stepId = internalize;
-                EntityEntry<Sectionresource>? t =  dbContext.Sectionresources.Add(
-                   new Sectionresource
-                   {
-                       SequenceNum = sr.SequenceNum,
-                       Description = sr.Description,
-                       SectionId = sectionMap.GetValueOrDefault(sr.SectionId),
-                       MediafileId = sr.MediafileId == null ? null : mediafileMap.GetValueOrDefault(sr.MediafileId?? 0),
-                       OrgWorkflowStepId = stepId,
-                       PassageId = sr.PassageId == null ? null : passageMap.GetValueOrDefault(sr.PassageId??0),
-                       ProjectId = projectId
-                   });
-                map.Add(sr.Id, t.Entity);
+                int? m = sr.MediafileId == null ? null : mediafileMap.GetValueOrDefault(sr.MediafileId ?? 0);
+                if (sr.MediafileId != null && (m ?? 0) == 0)
+                {
+                    Console.WriteLine($"Mediafile {sr.MediafileId} not found");
+                }
+                else
+                {
+                    EntityEntry<Sectionresource>? t =  dbContext.Sectionresources.Add(
+                       new Sectionresource
+                       {
+                           SequenceNum = sr.SequenceNum,
+                           Description = sr.Description,
+                           SectionId = sectionMap.GetValueOrDefault(sr.SectionId),
+                           MediafileId = m,
+                           OrgWorkflowStepId = stepId,
+                           PassageId = sr.PassageId == null ? null : passageMap.GetValueOrDefault(sr.PassageId??0),
+                           ProjectId = projectId
+                       });
+                    map.Add(sr.Id, t.Entity);
+                }
             }
             dbContext.SaveChanges();
             Dictionary<int, int> result = new();
@@ -3103,23 +3126,21 @@ namespace SIL.Transcriber.Services
             foreach (Comment c in lst)
             {
                 int? mId = c.MediafileId == null ? null : mediafileMap.GetValueOrDefault(c.MediafileId??0);
-                if (mId == 0)
+                if (mId != 0)
                 {
-                    mId = null;
-                    throw new Exception("Where is my mediafile" + c.MediafileId.ToString());
+                    _ = dbContext.Comments.Add(
+                        new Comment
+                        {
+                            OfflineId = "",
+                            OfflineMediafileId = "",
+                            OfflineDiscussionId = "",
+                            DiscussionId = discussionMap.GetValueOrDefault(c.DiscussionId ?? 0),
+                            CommentText = c.CommentText,
+                            MediafileId = mId,
+                            Visible = c.Visible,
+                        }
+                    );
                 }
-                _ = dbContext.Comments.Add(
-                    new Comment
-                    {
-                        OfflineId = "",
-                        OfflineMediafileId = "",
-                        OfflineDiscussionId ="",
-                        DiscussionId = discussionMap.GetValueOrDefault(c.DiscussionId??0),
-                        CommentText = c.CommentText,
-                        MediafileId = mId ,
-                        Visible = c.Visible,
-                    }
-                );
             }
         }
 
@@ -3423,13 +3444,15 @@ namespace SIL.Transcriber.Services
 
             HttpContext?.SetFP("copy");
             //check project
-            Project? sourceproject = GetFileProject(archive);
+            Project? sourceproject = ReadFileProject(archive);
 #pragma warning disable CS8604 // Possible null reference argument.
             bool sameOrg = !neworg && sourceproject != null;
             if (sameOrg)
             {
                 int orgid = sourceproject?.OrganizationId??0;
                 org = dbContext.Organizations.FirstOrDefault(o => o.Id == orgid) ?? new Organization();
+                if (org.Id == 0)
+                    sameOrg = false;
             } 
             try
             {
@@ -3457,7 +3480,7 @@ namespace SIL.Transcriber.Services
                             Organization fileorg = ResourceObjectToResource(lst.First(), new Organization());
                             bool samename = !neworg;
                             if (!neworg) {
-                                Organization? existing = dbContext.Organizations.FirstOrDefault(o => o.Name == fileorg.Name && o.OwnerId == currentuser.Id);
+                                Organization? existing = dbContext.Organizations.FirstOrDefault(o => o.Name == fileorg.Name && o.OwnerId == currentuser.Id && !o.Archived);
                                 if (existing != null)
                                 {
                                     org = existing;
@@ -3475,7 +3498,7 @@ namespace SIL.Transcriber.Services
                             List<Artifactcategory> ac = new();
                             foreach (ResourceObject ro in lst)
                                 ac.Add(ResourceObjectToResource(ro, new Artifactcategory()));
-                            ArtifactCategoryMap = CopyArtifactCategorys(ac, org.Id);
+                            ArtifactCategoryMap = CopyArtifactCategorys(ac.Where(s => s.OrganizationId == sourceproject?.OrganizationId || s.OrganizationId is null).ToList(), org.Id);
                             break;
 
                         case Tables.ArtifactTypes:
@@ -3486,7 +3509,7 @@ namespace SIL.Transcriber.Services
 
                         case Tables.IntellectualPropertys:
                             //copy but change the organization to current org
-                            if (!neworg)
+                            if (!neworg) //we don't need a map so skip if we aren't a new org
                                 continue;
                             ipLst = lst;
                             continue;
@@ -3498,7 +3521,7 @@ namespace SIL.Transcriber.Services
                             List<Orgworkflowstep> owlst = new();
                             foreach (ResourceObject ro in lst)
                                 owlst.Add(ResourceObjectToResource(ro, new Orgworkflowstep()));
-                            OrgworkflowstepMap = CopyOrgworkflowsteps(owlst, org.Id);
+                            OrgworkflowstepMap = CopyOrgworkflowsteps(owlst.Where(s => s.OrganizationId == sourceproject?.OrganizationId).ToList(), org.Id);
                             break;
 
                         case Tables.Projects:
