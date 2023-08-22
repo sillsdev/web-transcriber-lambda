@@ -50,7 +50,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
         public DbSet<Passage> Passages => Set<Passage>();
-        public DbSet<Passagenote> Passagenotes => Set<Passagenote>();
+        //NR? public DbSet<Passagenote> Passagenotes => Set<Passagenote>();
         public DbSet<Passagestatechange> Passagestatechanges => Set<Passagestatechange>();
         public DbSet<Passagetype> Passagetypes => Set<Passagetype>();
         public DbSet<Plan> Plans => Set<Plan>();
@@ -227,11 +227,14 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
+            //NR?
+            /*
             _ = builder
                 .Entity<Passagenote>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
+            */
             _ = builder
                 .Entity<Passagestatechange>()
                 .HasOne(o => o.LastModifiedByUser)

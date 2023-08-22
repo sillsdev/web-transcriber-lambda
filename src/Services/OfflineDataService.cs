@@ -69,7 +69,7 @@ namespace SIL.Transcriber.Services
             {Tables.Mediafiles,'H'},
             {Tables.OrgKeyTermReferences,'H'},
             {Tables.PassageStateChanges,'H'},
-            {Tables.PassageNotes,'H'},
+            //NR?{Tables.PassageNotes,'H'},
             {Tables.OrgKeyTermTargets,'I'},
             {Tables.SectionResources,'I'},
             {Tables.Discussions,'I'},
@@ -1201,7 +1201,7 @@ namespace SIL.Transcriber.Services
                     ) 
                         break; 
                     */
-                    //THIS RELEASE ONLY!
+                    //NR? THIS RELEASE ONLY!
                     startNext++; //instead of passagenotes
 
                     //mediafiles
