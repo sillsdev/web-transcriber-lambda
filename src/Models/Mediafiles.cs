@@ -1,10 +1,11 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
 namespace SIL.Transcriber.Models
 {
-    [Table("mediafiles")]
+    [Table(Tables.Mediafiles)]
     public partial class Mediafile : BaseModel, IArchive
     {
         [Attr(PublicName = "passage-id")]
@@ -101,7 +102,7 @@ namespace SIL.Transcriber.Models
         }
 
     }
-    [Table("mediafiles")]
+    [Table(Tables.Mediafiles)]
     public partial class SourceMediafile : Mediafile
     {
 

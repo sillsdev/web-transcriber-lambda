@@ -27,7 +27,7 @@ namespace SIL.Transcriber.Data
             Options = options;
         }
 
-        private void DefineLastModifiedByUser(ModelBuilder builder)
+        private static void DefineLastModifiedByUser(ModelBuilder builder)
         {
             _ = builder
                 .Entity<Paratextsync>()

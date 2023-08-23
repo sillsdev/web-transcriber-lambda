@@ -1,8 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using SIL.Transcriber.Data;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("userversions")]
+    [Table(Tables.UserVersions)]
     public class Userversion : Version
     {
         public string? Environment { get; set; }

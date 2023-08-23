@@ -73,8 +73,7 @@ namespace SIL.Transcriber.Services
             if (plan == null)
                 return "";
             Project? proj = plan.Project;
-            if (proj == null)
-                proj = dbContext.Projects
+            proj ??= dbContext.Projects
                     .Where(p => p.Id == plan.ProjectId)
                     .Include(p => p.Organization)
                     .FirstOrDefault();
@@ -133,23 +132,6 @@ namespace SIL.Transcriber.Services
         {
             return MyRepository.PassageReadyToSync(PassageId, artifactTypeId);
         }
-
-        //I don't think we use this and I also don't think this will work now because edited fields
-        //are ignored unless set in the definition OnWritingAsync
-        public async Task<Mediafile?> CreateAsyncWithFile(Mediafile entity, IFormFile FileToUpload)
-        {
-            entity.S3File = await GetNewFileNameAsync(entity);
-            S3Response response = await S3service.UploadFileAsync(
-                FileToUpload,
-                DirectoryName(entity)
-            );
-            entity.S3File = response.Message;
-            entity.Filesize = FileToUpload.Length / 1024;
-            entity.OriginalFile = FileToUpload.FileName;
-            entity.ContentType = FileToUpload.ContentType;
-            return await base.CreateAsync(entity, new CancellationToken());
-        }
-
 
         public Mediafile? GetFileSignedUrl(int id)
         {

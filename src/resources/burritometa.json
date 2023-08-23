@@ -9,7 +9,7 @@
     },
     "defaultLanguage": "projRec.language",
     "dateCreated": "createddate",
-    "comments": []
+    "Tables": { ".Comments": [] }
   },
   // idAuthorities: {
   //   dbl: {

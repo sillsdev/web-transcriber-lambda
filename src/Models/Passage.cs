@@ -1,10 +1,11 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
 using Newtonsoft.Json.Linq;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("passages")]
+    [Table(Tables.Passages)]
     public class Passage : BaseModel, IArchive
     {
         public Passage() : base()
@@ -66,6 +67,12 @@ namespace SIL.Transcriber.Models
         [Column(TypeName = "jsonb")]
         public string? StepComplete { get; set; } //json
 
+
+        public int? PassagetypeId { get; set; }
+
+        [HasOne(PublicName = "Passagetype")]
+        public virtual Passagetype? Passagetype { get; set; }
+
         [Attr(PublicName = "plan-id")]
         [NotMapped]
         public int PlanId {
@@ -85,8 +92,7 @@ namespace SIL.Transcriber.Models
         private bool? validScripture = null;
         public bool ValidScripture {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference??"",
                         out startChapter,
                         out endChapter,
@@ -98,8 +104,7 @@ namespace SIL.Transcriber.Models
         }
         public int StartChapter {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference??"",
                         out startChapter,
                         out endChapter,
@@ -111,8 +116,7 @@ namespace SIL.Transcriber.Models
         }
         public int EndChapter {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference ?? "",
                         out startChapter,
                         out endChapter,
@@ -124,8 +128,7 @@ namespace SIL.Transcriber.Models
         }
         public int StartVerse {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference ?? "",
                         out startChapter,
                         out endChapter,
@@ -137,8 +140,7 @@ namespace SIL.Transcriber.Models
         }
         public int EndVerse {
             get {
-                if (validScripture == null)
-                    validScripture = ParseReference(
+                validScripture ??= ParseReference(
                         Reference ?? "",
                         out startChapter,
                         out endChapter,
@@ -150,9 +152,9 @@ namespace SIL.Transcriber.Models
         }
         public string Verses {
             get {
-                if (StartChapter != EndChapter)
-                    return Reference ?? "";
-                return StartVerse != EndVerse ? StartVerse.ToString() + "-" + EndVerse.ToString() : StartVerse.ToString();
+                return StartChapter != EndChapter
+                    ? Reference ?? ""
+                    : StartVerse != EndVerse ? StartVerse.ToString() + "-" + EndVerse.ToString() : StartVerse.ToString();
             }
         }
 

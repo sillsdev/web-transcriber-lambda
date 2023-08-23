@@ -1,11 +1,11 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
 using Newtonsoft.Json.Linq;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("sections")]
+    [Table(Tables.Sections)]
     public class Section : BaseModel, IArchive
     {
         public Section() : base()
@@ -59,7 +59,20 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "editor")]
         public virtual User? Editor { get; set; }
 
+
+        public int? GroupId { get; set; }
+        [EagerLoad]
+        [HasOne(PublicName = "group")]
+        public virtual Group? Group { get; set; }
+
+        //NR?[Attr(PublicName = "graphics")]
+        //NR?[Column(TypeName = "jsonb")]
+        //NR?public string? Graphics { get; set; } //json
+
+        //NR?[Attr(PublicName = "published")]
+        //NR?public bool Published { get; set; }
         public bool Archived { get; set; }
+
 
         public string SectionHeader(bool addNumbers = true)
         {

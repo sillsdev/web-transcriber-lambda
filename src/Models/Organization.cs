@@ -1,10 +1,11 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("organizations")]
+    [Table(Tables.Organizations)]
     public partial class Organization : BaseModel, IArchive
     {
         public Organization() : base()
@@ -29,11 +30,12 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "public-by-default")]
         public bool? PublicByDefault { get; set; }
+
         [Attr(PublicName = "clusterbase")]
         public bool ClusterBase { get; set; }
 
-        [Attr(PublicName = "cluster-id")]
         public int? ClusterId { get; set; }
+
         [HasOne(PublicName = "cluster")]
         public virtual Organization? Cluster { get; set; }
 
@@ -48,6 +50,15 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "owner")]
         public virtual User? Owner { get; set; }
         public int? OwnerId { get; set; }
+        //NR?[Attr(PublicName = "publishing-data")]
+        //NR?[Column(TypeName = "jsonb")]
+        //NR?public string? PublishingData { get; set; } //json
+
+        //NR?[ForeignKey("NoteProject")]
+        //NR?public int? NoteProjectId { get; set; }
+
+        //NR?[HasOne(PublicName = "note-project")]
+        //NR?public virtual Project? NoteProject { get; set; }
 
         public bool Archived { get; set; }
     }

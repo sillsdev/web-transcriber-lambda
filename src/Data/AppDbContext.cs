@@ -10,6 +10,7 @@ using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility.Extensions;
+using System.Reflection.Emit;
 using static SIL.Transcriber.Data.DbContextExtentions;
 
 namespace SIL.Transcriber.Data
@@ -49,7 +50,9 @@ namespace SIL.Transcriber.Data
         public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
         public DbSet<Passage> Passages => Set<Passage>();
+        //NR? public DbSet<Passagenote> Passagenotes => Set<Passagenote>();
         public DbSet<Passagestatechange> Passagestatechanges => Set<Passagestatechange>();
+        public DbSet<Passagetype> Passagetypes => Set<Passagetype>();
         public DbSet<Plan> Plans => Set<Plan>();
         public DbSet<Plantype> Plantypes => Set<Plantype>();
         public DbSet<Projdata> Projdatas => Set<Projdata>();
@@ -92,7 +95,7 @@ namespace SIL.Transcriber.Data
             //make all query items lowercase to send to postgres...
             LowerCaseDB(builder);
 
-            DefineManyToMany(builder);
+            DefineRelationships(builder);
             DefineLastModifiedByUser(builder);
         }
 
@@ -184,25 +187,11 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
-                .Entity<Mediafile>()
-                .HasOne(o => o.Passage)
-                .WithMany()
-                .HasForeignKey(o => o.PassageId);
-            _ = builder
-                .Entity<Mediafile>()
-                .HasOne(o => o.ResourcePassage)
-                .WithMany()
-                .HasForeignKey(o => o.ResourcePassageId);
-            _ = builder
                 .Entity<Organization>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = builder
-                .Entity<Organization>()
-                .HasOne(o => o.Cluster)
-                .WithMany()
-                .HasForeignKey(o => o.ClusterId);
+
             _ = builder
                 .Entity<Orgdata>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -238,8 +227,21 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
+            //NR?
+            /*
+            _ = builder
+                .Entity<Passagenote>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            */
             _ = builder
                 .Entity<Passagestatechange>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Passagetype>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -294,6 +296,11 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
+                .Entity<Section>()
+                .HasOne(o => o.Group)
+                .WithMany()
+                .HasForeignKey(o => o.GroupId);
+            _ = builder
                 .Entity<Sectionpassage>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -345,42 +352,43 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
         }
 
-        private static void DefineManyToMany(ModelBuilder modelBuilder)
+        private static void DefineRelationships(ModelBuilder modelBuilder)
         {
+
             _ = modelBuilder
-                .Entity<Groupmembership>()
-                .HasOne(o => o.LastModifiedByUser)
+                .Entity<Mediafile>()
+                .HasOne(o => o.Passage)
                 .WithMany()
-                .HasForeignKey(o => o.LastModifiedBy);
-
-
-            EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
-            _ = userEntity
-                .HasMany(u => u.OrganizationMemberships)
-                .WithOne(om => om.User)
-                .HasForeignKey(om => om.UserId);
-            _ = userEntity
-                .HasMany(u => u.GroupMemberships)
-                .WithOne(gm => gm.User)
-                .HasForeignKey(gm => gm.UserId);
-            _ = userEntity
-                .HasOne(o => o.LastModifiedByUser)
+                .HasForeignKey(o => o.PassageId);
+            _ = modelBuilder
+                .Entity<Mediafile>()
+                .HasOne(o => o.ResourcePassage)
                 .WithMany()
-                .HasForeignKey(o => o.LastModifiedBy);
-
+                .HasForeignKey(o => o.ResourcePassageId);
             EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
-
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
+            _ = orgEntity.HasOne(o => o.Cluster).WithMany().HasForeignKey(o => o.ClusterId);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
-
+            //NR? _ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
+            
             _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
             _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);
+            _ = modelBuilder.Entity<Project>().HasOne(p => p.Organization).WithMany().HasForeignKey(p => p.OrganizationId);
 
             _ = modelBuilder
                 .Entity<Orgworkflowstep>()
                 .HasOne(s => s.Parent)
                 .WithMany()
                 .HasForeignKey(s => s.ParentId);
+            EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
+            _ = userEntity
+                .HasMany(u => u.GroupMemberships)
+                .WithOne(gm => gm.User)
+                .HasForeignKey(gm => gm.UserId);
+            _ = userEntity
+                .HasMany(u => u.OrganizationMemberships)
+                .WithOne(om => om.User)
+                .HasForeignKey(om => om.UserId);
         }
 
         public async Task<int> SaveChangesNoTimestampAsync(

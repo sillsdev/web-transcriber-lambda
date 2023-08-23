@@ -1,5 +1,6 @@
 ﻿
 using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
@@ -32,6 +33,6 @@ namespace SIL.Transcriber.Models
 
         public bool Archived { get; set; }
     }
-    [Table("workflowsteps")]
+    [Table(Tables.WorkflowSteps)]
     public class Workflowstep : WorkflowStepBase { }
 }

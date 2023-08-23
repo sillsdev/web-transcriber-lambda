@@ -1,8 +1,9 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models;
-[Table("sharedresources")]
+[Table(Tables.SharedResources)]
 
 public partial class Sharedresource : BaseModel, IArchive
 {

@@ -3,6 +3,7 @@ namespace SIL.Transcriber.Models;
 
 public class Orgkeytermtarget : BaseModel, IArchive
 {
+    [Attr(PublicName = "organization-id")]
     public int OrganizationId { get; set; }
     [HasOne(PublicName = "organization")]
     public Organization? Organization { get; set; }

@@ -1,15 +1,17 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("intellectualpropertys")]
+    [Table(Tables.IntellectualPropertys)]
     public partial class Intellectualproperty : BaseModel, IArchive
     {
         public Intellectualproperty() : base()
         {
         }
+        [Attr(PublicName = "organization-id")]
         public int OrganizationId { get; set; }
         [HasOne(PublicName = "organization")]
         public Organization? Organization { get; set; }

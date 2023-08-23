@@ -191,10 +191,7 @@ namespace SIL.Transcriber
                             }
                             if (context.SecurityToken is JwtSecurityToken accessToken)
                             {
-                                if (identity != null)
-                                {
-                                    identity.AddClaim(new Claim("access_token", accessToken.RawData));
-                                }
+                                identity?.AddClaim(new Claim("access_token", accessToken.RawData));
                             }
                             return System.Threading.Tasks.Task.CompletedTask;
                         }
@@ -224,7 +221,7 @@ namespace SIL.Transcriber
                     "v1",
                     new OpenApiInfo
                     {
-                        Version = "v12.6",
+                        Version = "v2.16.6",
                         Title = "Transcriber API",
                         Contact = new OpenApiContact
                         {

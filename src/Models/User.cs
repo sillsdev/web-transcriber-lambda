@@ -1,12 +1,13 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
 using JsonApiDotNetCore.Serialization.Objects;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("users")]
+    [Table(Tables.Users)]
     public class User : BaseModel, IArchive
     {
         public User() : base()
@@ -146,8 +147,7 @@ namespace SIL.Transcriber.Models
             foreach (PropertyInfo userprop in typeof(User).GetProperties())
             {
                 PropertyInfo? cuprop = typeof(CurrentUser).GetProperty(userprop.Name);
-                if (cuprop != null)
-                    cuprop.SetValue(this, userprop.GetValue(user, null), null);
+                cuprop?.SetValue(this, userprop.GetValue(user, null), null);
             }
         }
     }

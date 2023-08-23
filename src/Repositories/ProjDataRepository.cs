@@ -68,12 +68,10 @@ namespace SIL.Transcriber.Repositories
             if (DateTime.Now > dtBail)
                 return false;
             int startId = -1;
-            int mystart = start;
-            StartIndex.GetStart(ref mystart, ref startId);
+            int starttable = StartIndex.GetStart(start, ref startId);
             int lastId = -1;
-            if (mystart == check)
+            if (starttable == check)
             {
-                start = mystart;
                 List<Mediafile>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
                 string thisData = ToJson(lst);
 
@@ -88,7 +86,7 @@ namespace SIL.Transcriber.Repositories
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
-                _ = StartIndex.SetStart(ref start, ref lastId);
+                start = StartIndex.SetStart(starttable, ref lastId);
                 return lastId == 0;
             }
             
@@ -106,12 +104,10 @@ namespace SIL.Transcriber.Repositories
             if (DateTime.Now > dtBail)
                 return false;
             int startId = -1;
-            int mystart = start;
-            StartIndex.GetStart(ref mystart, ref startId);
+            int starttable = StartIndex.GetStart(start, ref startId);
             int lastId = -1;
-            if (mystart == check )
+            if (starttable == check )
             {
-                start = mystart;
                 List<Passagestatechange>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
                 string thisData = ToJson(lst);
                 while (thisData.Length > (1000000 * 4))
@@ -125,7 +121,7 @@ namespace SIL.Transcriber.Repositories
                 if (data.Length + thisData.Length > (1000000 * 4))
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
-                StartIndex.SetStart(ref start, ref lastId);
+                start = StartIndex.SetStart(starttable, ref lastId);
                 return lastId == 0;
             }
             return true;

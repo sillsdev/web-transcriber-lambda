@@ -1,9 +1,10 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
+using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
 {
-    [Table("invitations")]
+    [Table(Tables.Invitations)]
     public partial class Invitation : BaseModel, IBelongsToOrganization
     {
         [Attr(PublicName = "email")]
@@ -24,6 +25,7 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "organization")]
         public virtual Organization Organization { get; set; } = null!;
+        [Attr(PublicName = "organization-id")]
         public int OrganizationId { get; set; }
 
         [HasOne(PublicName = "role")]
