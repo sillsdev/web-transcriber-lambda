@@ -1218,7 +1218,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Mediafiles,
-                            myMedia.Union(sourcemediafiles).OrderBy(m => m.Id).ToList()
+                            myMedia.ToList().Union(sourcemediafiles.ToList()).OrderBy(m => m.Id).ToList()
                         )
                     )
                         break;
