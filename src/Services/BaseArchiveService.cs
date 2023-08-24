@@ -93,9 +93,9 @@ namespace SIL.Transcriber.Services
         {
             //return unarchived
             TResource? existing = await base.GetAsync(id, new CancellationToken());
-            return (existing?.Archived ?? true) && !entity.Archived
-                ? throw new Exception("Entity has been deleted. Unable to update.")
-                : await base.UpdateAsync(id, entity, cancellationToken);
+            if ((existing?.Archived ?? true) && !entity.Archived)
+                    entity.Archived = true;
+                return await base.UpdateAsync(id, entity, cancellationToken);
         }
 
         public async Task<TResource?> NoCheckUpdateAsync(
