@@ -15,6 +15,11 @@ using System.Text.Json;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 using SIL.Transcriber.Utility;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Amazon.Lambda.Core;
+using System.Security.Cryptography;
+using Amazon.S3;
+using System.Net.Mime;
+using System.Collections.Generic;
 
 
 namespace SIL.Transcriber.Services
