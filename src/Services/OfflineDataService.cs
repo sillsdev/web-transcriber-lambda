@@ -21,6 +21,7 @@ using Amazon.S3;
 using System.Net.Mime;
 using System.Collections.Generic;
 
+
 namespace SIL.Transcriber.Services
 {
     public class OfflineDataService : IOfflineDataService
@@ -218,7 +219,6 @@ namespace SIL.Transcriber.Services
 
         private static async Task<Stream?> GetStreamFromUrlAsync(string url)
         {
-            byte[]? imageData = null;
             try
             {
                 using HttpClient client = new ();
@@ -227,15 +227,15 @@ namespace SIL.Transcriber.Services
                     HttpCompletionOption.ResponseHeadersRead
                 );
                 using Stream streamToReadFrom = await response.Content.ReadAsStreamAsync();
-                string fileToWriteTo = Path.GetTempFileName();
-                using Stream streamToWriteTo = File.Open(fileToWriteTo, FileMode.Create);
-                await streamToReadFrom.CopyToAsync(streamToWriteTo);
+                MemoryStream mem = new ();
+                streamToReadFrom.CopyTo(mem);
+                mem.Position = 0;
+                return mem;
             }
             catch
             {
                 return null;
             }
-            return imageData != null ? new MemoryStream(imageData) : null;
         }
 
         private static void AddOrgLogos(ZipArchive zipArchive, List<Organization> orgs)
