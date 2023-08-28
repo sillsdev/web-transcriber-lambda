@@ -50,7 +50,6 @@ namespace SIL.Transcriber.Data
         public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
         public DbSet<Passage> Passages => Set<Passage>();
-        //NR? public DbSet<Passagenote> Passagenotes => Set<Passagenote>();
         public DbSet<Passagestatechange> Passagestatechanges => Set<Passagestatechange>();
         public DbSet<Passagetype> Passagetypes => Set<Passagetype>();
         public DbSet<Plan> Plans => Set<Plan>();
@@ -227,14 +226,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            //NR?
-            /*
-            _ = builder
-                .Entity<Passagenote>()
-                .HasOne(o => o.LastModifiedByUser)
-                .WithMany()
-                .HasForeignKey(o => o.LastModifiedBy);
-            */
             _ = builder
                 .Entity<Passagestatechange>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -369,11 +360,16 @@ namespace SIL.Transcriber.Data
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
             _ = orgEntity.HasOne(o => o.Cluster).WithMany().HasForeignKey(o => o.ClusterId);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
-            _ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
-            
+            //_ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
+            _ = orgEntity.HasOne(o => o.IsoMediafile).WithMany().HasForeignKey(x => x.IsoMediafileId);
+            _ = orgEntity.HasOne(o => o.BibleMediafile).WithMany().HasForeignKey(x => x.BibleMediafileId);
+
             _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
             _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);
             _ = modelBuilder.Entity<Project>().HasOne(p => p.Organization).WithMany().HasForeignKey(p => p.OrganizationId);
+
+            _ = modelBuilder.Entity<Artifactcategory>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
+            _ = modelBuilder.Entity<Sharedresource>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
 
             _ = modelBuilder
                 .Entity<Orgworkflowstep>()
@@ -517,7 +513,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
             Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
-            Passages.Include(x => x.Section).Include(x => x.OrgWorkflowStep);
+            Passages.Include(x => x.Section);
         public IQueryable<Passagestatechange> PassagestatechangesData => Passagestatechanges
             .Include(x => x.Passage)
             .Include(x => x.LastModifiedByUser);

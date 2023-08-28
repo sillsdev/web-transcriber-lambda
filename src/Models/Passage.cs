@@ -53,20 +53,34 @@ namespace SIL.Transcriber.Models
         public string? LastComment { get; set; }
 
         [Attr(PublicName = "section-id")]
+        [ForeignKey("Section")]
         public int SectionId { get; set; }
-
+        
         [HasOne(PublicName = "section")]
         public virtual Section? Section { get; set; }
-
-        public int? OrgWorkflowStepId { get; set; }
-
-        [HasOne(PublicName = "org-workflow-step")]
-        public Orgworkflowstep? OrgWorkflowStep { get; set; }
 
         [Attr(PublicName = "step-complete")]
         [Column(TypeName = "jsonb")]
         public string? StepComplete { get; set; } //json
 
+        [Attr(PublicName = "shared-resource-id")]
+        [ForeignKey("SharedResource")]
+        public int SharedResourceId { get; set; }
+
+        [HasOne(PublicName = "shared-resource")]
+        public Sharedresource? SharedResource { get; set; }
+
+        [Attr(PublicName = "start-chapter")]
+        public int? StartChapter { get;  }
+
+        [Attr(PublicName = "start-verse")]
+        public int? StartVerse { get;  }
+
+        [Attr(PublicName = "end-chapter")]
+        public int? EndChapter { get; }
+
+        [Attr(PublicName = "end-verse")]
+        public int? EndVerse { get; }
 
         public int? PassagetypeId { get; set; }
 
@@ -85,125 +99,20 @@ namespace SIL.Transcriber.Models
             get { return State == "approved" && !Archived; }
         }
 
-        private int startChapter = 0,
-            endChapter = 0,
-            startVerse = 0,
-            endVerse = 0;
-        private bool? validScripture = null;
         public bool ValidScripture {
             get {
-                validScripture ??= ParseReference(
-                        Reference??"",
-                        out startChapter,
-                        out endChapter,
-                        out startVerse,
-                        out endVerse
-                    );
-                return (bool)validScripture;
+                return StartChapter != null && StartVerse != null && EndVerse != null;
             }
         }
-        public int StartChapter {
-            get {
-                validScripture ??= ParseReference(
-                        Reference??"",
-                        out startChapter,
-                        out endChapter,
-                        out startVerse,
-                        out endVerse
-                    );
-                return startChapter;
-            }
-        }
-        public int EndChapter {
-            get {
-                validScripture ??= ParseReference(
-                        Reference ?? "",
-                        out startChapter,
-                        out endChapter,
-                        out startVerse,
-                        out endVerse
-                    );
-                return endChapter;
-            }
-        }
-        public int StartVerse {
-            get {
-                validScripture ??= ParseReference(
-                        Reference ?? "",
-                        out startChapter,
-                        out endChapter,
-                        out startVerse,
-                        out endVerse
-                    );
-                return startVerse;
-            }
-        }
-        public int EndVerse {
-            get {
-                validScripture ??= ParseReference(
-                        Reference ?? "",
-                        out startChapter,
-                        out endChapter,
-                        out startVerse,
-                        out endVerse
-                    );
-                return endVerse;
-            }
-        }
+       
         public string Verses {
             get {
-                return StartChapter != EndChapter
-                    ? Reference ?? ""
-                    : StartVerse != EndVerse ? StartVerse.ToString() + "-" + EndVerse.ToString() : StartVerse.ToString();
+                string? tmp = StartChapter != EndChapter
+                    ? Reference
+                    : StartVerse != EndVerse ? StartVerse?.ToString() + "-" + EndVerse?.ToString() : StartVerse?.ToString();
+                return tmp ?? "";
             }
         }
 
-        private static bool ParseReferencePart(string reference, out int chapter, out int verse)
-        {
-            int colon = reference.IndexOf(':');
-            if (colon >= 0)
-            {
-                _ = int.TryParse(reference[..colon], out chapter);
-                reference = reference [(colon + 1)..];
-            }
-            else
-            {
-                chapter = 0;
-            }
-            return int.TryParse(reference, out verse);
-        }
-
-        private static bool ParseReference(
-            string reference,
-            out int startChapter,
-            out int endChapter,
-            out int startVerse,
-            out int endVerse
-        )
-        {
-            bool ok = reference.Length > 0;
-            if (ok)
-            {
-                int dash = reference.IndexOf("-");
-                string firstsection = dash > 0 ? reference[..dash] : reference;
-                ok = ParseReferencePart(firstsection, out startChapter, out startVerse);
-
-                endChapter = startChapter;
-                endVerse = startVerse;
-                if (ok && dash > 0)
-                {
-                    ok = ParseReferencePart(reference [(dash + 1)..], out endChapter, out endVerse);
-                    if (endChapter == 0)
-                        endChapter = startChapter;
-                }
-            } else
-            {
-                startChapter = 0;
-                endChapter = 0;
-                startVerse = 0;
-                endVerse = 0;
-            }
-            return ok;
-        }
     }
 }

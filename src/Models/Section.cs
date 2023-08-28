@@ -65,12 +65,10 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "group")]
         public virtual Group? Group { get; set; }
 
-        [Attr(PublicName = "graphics")]
-        [Column(TypeName = "jsonb")]
-        public string? Graphics { get; set; } //json
-
         [Attr(PublicName = "published")]
         public bool Published { get; set; }
+        [Attr(PublicName = "level")]
+        public int Level { get; set; }
         public bool Archived { get; set; }
 
 

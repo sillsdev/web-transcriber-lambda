@@ -15,10 +15,14 @@ namespace SIL.Transcriber.Models
         public bool Resource { get; set; }
         [Attr(PublicName = "note")]
         public bool Note { get; set; }
+
+        [Attr(PublicName = "title-mediafile-id")]
+        [ForeignKey(nameof(TitleMediafile))]
+        public int? TitleMediafileId { get; set; }
+
+        [HasOne(PublicName = "title-mediafile")]
+        public Mediafile? TitleMediafile { get; set; }
         public bool Archived { get; set; }
-        [Attr(PublicName = "graphics")]
-        [Column(TypeName = "jsonb")]
-        public string? Graphics { get; set; } //json
 
         public int? OrganizationId { get; set; }
         [HasOne(PublicName = "organization")]

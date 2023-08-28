@@ -53,12 +53,23 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "publishing-data")]
         [Column(TypeName = "jsonb")]
         public string? PublishingData { get; set; } //json
+        [Attr(PublicName ="bible-id")]
+        public string? BibleId { get; set; }
+        [Attr(PublicName = "iso")]
+        public string? Iso { get; set; }
 
-        [ForeignKey("NoteProject")]
-        public int? NoteProjectId { get; set; }
+        [ForeignKey("BibleMediafile")]
+        [Attr(PublicName = "bible-mediafile-id")]
+        public int? BibleMediafileId { get; set; }
 
-        [HasOne(PublicName = "note-project")]
-        public virtual Project? NoteProject { get; set; }
+        [HasOne(PublicName = "bible-mediafile")]
+        public virtual Mediafile? BibleMediafile { get; set; }
+
+        [ForeignKey("IsoMediafile")]
+        [Attr(PublicName = "iso-mediafile-id")]
+        public int? IsoMediafileId { get; set; }
+        [HasOne(PublicName = "iso-mediafile")]
+        public virtual Mediafile? IsoMediafile { get; set; }
 
         public bool Archived { get; set; }
     }

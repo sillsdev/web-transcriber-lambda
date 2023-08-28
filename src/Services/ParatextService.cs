@@ -621,10 +621,10 @@ namespace SIL.Transcriber.Services
             public string Book { get; }
             public int Chapter { get; }
 
-            public BookChapter(string? book, int chapter)
+            public BookChapter(string? book, int? chapter)
             {
                 Book = book ?? "";
-                Chapter = chapter;
+                Chapter = chapter ?? 0;
             }
             public override bool Equals(object? obj)
             {

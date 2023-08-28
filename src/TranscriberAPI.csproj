@@ -42,6 +42,7 @@
     <Compile Remove="Models\IBurritoMeta.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ParatextVerse.cs" />
+    <Compile Remove="Models\PassageNote.cs" />
     <Compile Remove="Models\PassageSection.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\SFProject.cs" />

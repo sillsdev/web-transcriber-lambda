@@ -193,11 +193,11 @@ namespace SIL.Transcriber.Utility
         {
             return chapterContent?.GetElement("chapter");
         }
-        private static XNode? FindNodeAfterVerse(int startverse, int endverse, IEnumerable<XElement>? verses)
+        private static XNode? FindNodeAfterVerse(int? startverse, int? endverse, IEnumerable<XElement>? verses)
         {
             //find where to put it
             XElement? nextVerse = null;
-            if (verses != null)
+            if (verses != null && startverse != null && endverse != null)
                 foreach (XElement v in verses)
                 {
                     if (nextVerse == null)
@@ -240,7 +240,7 @@ namespace SIL.Transcriber.Utility
             if (chapterContent != null)
             {
                 IEnumerable<XElement>? verses = chapterContent.GetElements("verse");
-                for (int ix = currentPassage.StartVerse; ix <= currentPassage.EndVerse; ix++)
+                for (int ix = currentPassage.StartVerse??0; ix <= currentPassage.EndVerse; ix++)
                 {
                     IEnumerable<XElement>? myverses = verses?.Where(n => n.IncludesVerse(ix));
                     if (myverses != null)

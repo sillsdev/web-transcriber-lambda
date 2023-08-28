@@ -34,5 +34,18 @@ public partial class Sharedresource : BaseModel, IArchive
 
     [HasOne(PublicName = "artifact-category")]
     public Artifactcategory? ArtifactCategory { get; set; }
+    [Attr(PublicName = "title-mediafile-id")]
+    [ForeignKey(nameof(TitleMediafile))]
+    public int? TitleMediafileId { get; set; }
+
+    [HasOne(PublicName = "title-mediafile")]
+    public Mediafile? TitleMediafile { get; set; }
+
+    [Attr(PublicName = "note")]
+    public bool Note { get; set; }
+
+    [Attr(PublicName = "link-url")]
+    public string? LinkUrl { get; set; }
+
     public bool Archived { get; set; }
 }
