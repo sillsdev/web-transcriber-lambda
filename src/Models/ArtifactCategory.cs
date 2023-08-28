@@ -16,9 +16,9 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "note")]
         public bool Note { get; set; }
         public bool Archived { get; set; }
-        //NR?[Attr(PublicName = "graphics")]
-        //NR?[Column(TypeName = "jsonb")]
-        //NR?public string? Graphics { get; set; } //json
+        [Attr(PublicName = "graphics")]
+        [Column(TypeName = "jsonb")]
+        public string? Graphics { get; set; } //json
 
         public int? OrganizationId { get; set; }
         [HasOne(PublicName = "organization")]

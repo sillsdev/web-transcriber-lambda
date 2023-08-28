@@ -369,7 +369,7 @@ namespace SIL.Transcriber.Data
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
             _ = orgEntity.HasOne(o => o.Cluster).WithMany().HasForeignKey(o => o.ClusterId);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
-            //NR? _ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
+            _ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
             
             _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
             _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);

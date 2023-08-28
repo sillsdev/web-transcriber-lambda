@@ -50,15 +50,15 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "owner")]
         public virtual User? Owner { get; set; }
         public int? OwnerId { get; set; }
-        //NR?[Attr(PublicName = "publishing-data")]
-        //NR?[Column(TypeName = "jsonb")]
-        //NR?public string? PublishingData { get; set; } //json
+        [Attr(PublicName = "publishing-data")]
+        [Column(TypeName = "jsonb")]
+        public string? PublishingData { get; set; } //json
 
-        //NR?[ForeignKey("NoteProject")]
-        //NR?public int? NoteProjectId { get; set; }
+        [ForeignKey("NoteProject")]
+        public int? NoteProjectId { get; set; }
 
-        //NR?[HasOne(PublicName = "note-project")]
-        //NR?public virtual Project? NoteProject { get; set; }
+        [HasOne(PublicName = "note-project")]
+        public virtual Project? NoteProject { get; set; }
 
         public bool Archived { get; set; }
     }
