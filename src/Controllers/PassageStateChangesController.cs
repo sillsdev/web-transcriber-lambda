@@ -9,7 +9,6 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
     public class PassagestatechangesController : BaseController<Passagestatechange>
     {
         public PassagestatechangesController(

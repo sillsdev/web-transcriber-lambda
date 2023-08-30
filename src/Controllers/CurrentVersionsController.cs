@@ -10,7 +10,6 @@ namespace SIL.Transcriber.Controllers
     //[NoHttpDelete]
     //[NoHttpPatch]
     [Route("api/[controller]")]
-    [ApiController]
     public class CurrentversionsController : BaseController<Currentversion>
     {
         public CurrentversionsController(

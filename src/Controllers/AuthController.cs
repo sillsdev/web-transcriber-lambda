@@ -6,7 +6,6 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class AuthController : ControllerBase
     {
