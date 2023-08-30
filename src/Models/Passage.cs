@@ -21,6 +21,12 @@ namespace SIL.Transcriber.Models
             Sequencenum = int.TryParse(item ["sequencenum"]?.ToString() ?? "", out int tryint)
                 ? tryint
                 : 0;
+            SharedResourceId = int.TryParse(item ["sharedresourceId"]?.ToString() ?? "", out tryint)
+                ? tryint
+                : null;
+            PassagetypeId = int.TryParse(item ["passagetypeId"]?.ToString() ?? "", out tryint)
+                ? tryint
+                : null;
             return this;
         }
 
@@ -65,27 +71,29 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "shared-resource-id")]
         [ForeignKey("SharedResource")]
-        public int SharedResourceId { get; set; }
+        public int? SharedResourceId { get; set; }
 
         [HasOne(PublicName = "shared-resource")]
         public Sharedresource? SharedResource { get; set; }
 
-        [Attr(PublicName = "start-chapter")]
-        public int? StartChapter { get;  }
+        [Attr(PublicName = "start-chapter", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
+        public int? StartChapter { get;   }
 
-        [Attr(PublicName = "start-verse")]
-        public int? StartVerse { get;  }
+        [Attr(PublicName = "start-verse", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
+        public int? StartVerse { get;   }
 
-        [Attr(PublicName = "end-chapter")]
-        public int? EndChapter { get; }
+        [Attr(PublicName = "end-chapter", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
+        public int? EndChapter { get;  }
 
-        [Attr(PublicName = "end-verse")]
-        public int? EndVerse { get; }
+        [Attr(PublicName = "end-verse", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
+        public int? EndVerse { get;   }
 
+        [Attr(PublicName = "passagetype-id")] 
         public int? PassagetypeId { get; set; }
 
-        [HasOne(PublicName = "Passagetype")]
+        [HasOne(PublicName = "passagetype")]
         public virtual Passagetype? Passagetype { get; set; }
+
 
         [Attr(PublicName = "plan-id")]
         [NotMapped]

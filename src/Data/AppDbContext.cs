@@ -34,6 +34,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Dashboard> Dashboards => Set<Dashboard>();
         public DbSet<Datachanges> Datachanges => Set<Datachanges>();
         public DbSet<Discussion> Discussions => Set<Discussion>();
+        public DbSet<Graphic> Graphics => Set<Graphic>();
         public DbSet<Group> Groups => Set<Group>();
         public DbSet<Groupmembership> Groupmemberships => Set<Groupmembership>();
         public DbSet<Integration> Integrations => Set<Integration>();
@@ -152,6 +153,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Discussion>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Graphic>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -485,6 +491,7 @@ namespace SIL.Transcriber.Data
                 .Include(d => d.Group)
                 .Include(d => d.User);
         public IQueryable<Intellectualproperty> IntellectualPropertyData => IntellectualPropertys.Include(x => x.Organization).Include(x => x.ReleaseMediafile);
+        public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization); 
         public IQueryable<Groupmembership> GroupmembershipsData =>
             Groupmemberships.Include(x => x.Group).Include(x => x.User).Include(x => x.Role);
         public IQueryable<Group> GroupsData => Groups.Include(x => x.Owner);

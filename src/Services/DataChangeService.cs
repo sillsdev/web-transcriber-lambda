@@ -23,6 +23,7 @@ namespace SIL.Transcriber.Services
         private readonly ArtifactTypeService ArtifactTypeService;
         private readonly CommentService CommentService;
         private readonly DiscussionService DiscussionService;
+        private readonly GraphicService GraphicService; 
         private readonly GroupMembershipService GMService;
         private readonly GroupService GroupService;
         private readonly IntellectualPropertyService IntellectualPropertyService;
@@ -66,6 +67,7 @@ namespace SIL.Transcriber.Services
             ArtifactTypeService artifactTypeService,
             CommentService commentService,
             DiscussionService discussionService,
+            GraphicService graphicService,
             GroupMembershipService gmService,
             GroupService groupService,
             IntellectualPropertyService intellectualPropertyService,
@@ -110,6 +112,7 @@ namespace SIL.Transcriber.Services
             ArtifactTypeService = artifactTypeService;
             CommentService = commentService;
             DiscussionService = discussionService;
+            GraphicService = graphicService;
             GMService = gmService;
             GroupService = groupService;
             IntellectualPropertyService = intellectualPropertyService;
@@ -296,7 +299,7 @@ namespace SIL.Transcriber.Services
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
-            int LAST_ADD = (dbVersion > 5) ? 26 : (dbVersion > 3) ? 21 : 12;
+            int LAST_ADD = (dbVersion > 6) ? 27 :(dbVersion > 5) ? 26 : (dbVersion > 3) ? 21 : 12;
             int startId = -1;
             start = StartIndex.GetStart(start, ref startId);
 
@@ -471,10 +474,19 @@ namespace SIL.Transcriber.Services
                     BuildList(SharedResourceService.GetDeletedSince(dbContext.Sharedresources, currentUser, origin, dtSince), Tables.SharedResources, deleted, false);
                     start++;
                 }
-                if (CheckStart(dtBail, start) == LAST_ADD)
+                if (CheckStart(dtBail, start) == 26)
                 {
                     BuildList(SharedResourceReferenceService.GetChanges(dbContext.Sharedresourcereferences, currentUser, origin, dtSince, project, startId), Tables.SharedResourceReferences, changes);
                     BuildList(SharedResourceReferenceService.GetDeletedSince(dbContext.Sharedresourcereferences, currentUser, origin, dtSince), Tables.SharedResourceReferences, deleted, false);
+                    start++;
+                }
+            }
+            if (dbVersion > 6)
+            {
+                if (CheckStart(dtBail, start) == LAST_ADD)
+                {
+                    BuildList(GraphicService.GetChanges(dbContext.Graphics, currentUser, origin, dtSince, project, startId), Tables.Graphics, changes);
+                    BuildList(GraphicService.GetDeletedSince(dbContext.Graphics, currentUser, origin, dtSince), Tables.Graphics, deleted, false);
                     start++;
                 }
             }

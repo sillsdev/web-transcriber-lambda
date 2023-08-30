@@ -78,7 +78,7 @@ namespace SIL.Transcriber
             services.AddScoped<CurrentversionService>();
             services.AddScoped<DataChangeService>();
             services.AddScoped<DiscussionService>();
-            //services.AddScoped<FileresponseService>();
+            services.AddScoped<GraphicService>();
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
@@ -125,7 +125,7 @@ namespace SIL.Transcriber
             services.AddScoped<DashboardRepository>();
             services.AddScoped<DatachangesRepository>();
             services.AddScoped<DiscussionRepository>();
-            //services.AddScoped<FileresponseRepository>();
+            services.AddScoped<GraphicRepository>();
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();
             services.AddScoped<IntegrationRepository>();
@@ -144,6 +144,7 @@ namespace SIL.Transcriber
             services.AddScoped<ParatextTokenRepository>();
             services.AddScoped<ParatextTokenHistoryRepository>();
             services.AddScoped<PassageRepository>();
+            services.AddScoped<PassagetypeRepository>();
             services.AddScoped<PassageStateChangeRepository>();
             services.AddScoped<PlanRepository>();
             services.AddScoped<ProjDataRepository>();

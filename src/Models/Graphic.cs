@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace SIL.Transcriber.Models
 {
     [Table(Tables.Graphics)]
-    public partial class Graphic : BaseModel
+    public partial class Graphic : BaseModel, IBelongsToOrganization, IArchive
     {
         [HasOne(PublicName = "organization")]
         public virtual Organization Organization { get; set; } = null!;
@@ -21,5 +21,6 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "info")]
         [Column(TypeName = "jsonb")]
         public string? Info { get; set; } //json
+        public bool Archived { get; set; }
     }
 }

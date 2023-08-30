@@ -47,6 +47,14 @@ namespace SIL.Transcriber.Definitions
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
+    public class GraphicDefinition : BaseDefinition<Graphic>
+    {
+        public GraphicDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
     public class GroupDefinition : BaseDefinition<Group>
     {
         public GroupDefinition(
