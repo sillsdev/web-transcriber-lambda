@@ -9,7 +9,6 @@ using System.Net.Mime;
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
     public class S3FilesController : ControllerBase
     {
         private readonly IS3Service _service;

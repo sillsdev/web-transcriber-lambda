@@ -8,7 +8,7 @@ namespace SIL.Transcriber.Controllers
 {
     //[HttpReadOnly]
     [Route("api/[controller]")]
-    [ApiController]
+
     public class OrgdatasController : BaseController<Orgdata>
     {
         public OrgdatasController(

@@ -12,7 +12,6 @@ namespace SIL.Transcriber.Controllers
 {
     //[HttpReadOnly]
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class DatachangesController : JsonApiController<Datachanges, int>
     {
