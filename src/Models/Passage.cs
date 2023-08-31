@@ -76,17 +76,21 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "shared-resource")]
         public Sharedresource? SharedResource { get; set; }
 
-        [Attr(PublicName = "start-chapter", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
-        public int? StartChapter { get;   }
+        [Attr(PublicName = "start-chapter")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public int? StartChapter { get; set; }
 
-        [Attr(PublicName = "start-verse", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
-        public int? StartVerse { get;   }
+        [Attr(PublicName = "start-verse")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public int? StartVerse { get; set; }
 
-        [Attr(PublicName = "end-chapter", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
-        public int? EndChapter { get;  }
+        [Attr(PublicName = "end-chapter")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public int? EndChapter { get; set; }
 
-        [Attr(PublicName = "end-verse", Capabilities = AttrCapabilities.AllowView | AttrCapabilities.AllowFilter | AttrCapabilities.AllowSort)]
-        public int? EndVerse { get;   }
+        [Attr(PublicName = "end-verse")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)] 
+        public int? EndVerse { get; set; }
 
         [Attr(PublicName = "passagetype-id")] 
         public int? PassagetypeId { get; set; }
