@@ -68,6 +68,26 @@ namespace SIL.Transcriber.Models
         public string? StepComplete { get; set; } //json
 
 
+        [HasOne(PublicName = "shared-resource")]
+        public Sharedresource? SharedResource { get; set; }
+
+        [Attr(PublicName = "start-chapter")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public int? StartChapter { get; set; }
+
+        [Attr(PublicName = "start-verse")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public int? StartVerse { get; set; }
+
+        [Attr(PublicName = "end-chapter")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public int? EndChapter { get; set; }
+
+        [Attr(PublicName = "end-verse")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)] 
+        public int? EndVerse { get; set; }
+
+        [Attr(PublicName = "passagetype-id")] 
         public int? PassagetypeId { get; set; }
 
         [HasOne(PublicName = "Passagetype")]
