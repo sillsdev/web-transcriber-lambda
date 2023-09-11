@@ -18,10 +18,10 @@ namespace SIL.Transcriber.Models
             Book = item ["book"]?.ToString() ?? "";
             Reference = item ["reference"]?.ToString() ?? "";
             Title = item ["title"]?.ToString() ?? "";
-            Sequencenum = int.TryParse(item ["sequencenum"]?.ToString() ?? "", out int tryint)
-                ? tryint
+            Sequencenum = decimal.TryParse(item ["sequencenum"]?.ToString() ?? "", out decimal trydec)
+                ? trydec
                 : 0;
-            SharedResourceId = int.TryParse(item ["sharedresourceId"]?.ToString() ?? "", out tryint)
+            SharedResourceId = int.TryParse(item ["sharedresourceId"]?.ToString() ?? "", out int tryint)
                 ? tryint
                 : null;
             PassagetypeId = int.TryParse(item ["passagetypeId"]?.ToString() ?? "", out tryint)
@@ -38,7 +38,7 @@ namespace SIL.Transcriber.Models
         }
 
         [Attr(PublicName = "sequencenum")]
-        public int Sequencenum { get; set; }
+        public decimal Sequencenum { get; set; }
 
         [Attr(PublicName = "book")]
         public string? Book { get; set; }
@@ -92,7 +92,8 @@ namespace SIL.Transcriber.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)] 
         public int? EndVerse { get; set; }
 
-        [Attr(PublicName = "passagetype-id")] 
+        [Attr(PublicName = "passagetype-id")]
+        [ForeignKey("Passagetype")]
         public int? PassagetypeId { get; set; }
 
         [HasOne(PublicName = "passagetype")]

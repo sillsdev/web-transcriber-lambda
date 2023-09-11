@@ -16,9 +16,12 @@ namespace SIL.Transcriber.Models
         public Section UpdateFrom(JToken item)
         {
             Name = item ["title"]?.ToString() ?? "";
-            Sequencenum = int.TryParse(item ["sequencenum"]?.ToString() ?? "", out int tryint)
-                ? tryint
+            Sequencenum = decimal.TryParse(item ["sequencenum"]?.ToString() ?? "", out decimal trydec)
+                ? trydec
                 : 0;
+            Level = int.TryParse(item ["level"]?.ToString() ?? "", out int tryint)
+                ? tryint
+                : 2;
             return this;
         }
 
@@ -30,7 +33,7 @@ namespace SIL.Transcriber.Models
         }
 
         [Attr(PublicName = "sequencenum")]
-        public int Sequencenum { get; set; }
+        public decimal Sequencenum { get; set; }
 
         [Attr(PublicName = "name")]
         public string Name { get; set; }

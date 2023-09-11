@@ -520,7 +520,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
             Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
-            Passages.Include(x => x.Section);
+            Passages.Include(x => x.Section).Include(x => x.Passagetype).Include(x => x.SharedResource);
         public IQueryable<Passagestatechange> PassagestatechangesData => Passagestatechanges
             .Include(x => x.Passage)
             .Include(x => x.LastModifiedByUser);
