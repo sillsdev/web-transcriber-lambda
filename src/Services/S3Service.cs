@@ -2,7 +2,6 @@
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
-using Microsoft.AspNetCore.Http;
 using SIL.Transcriber.Models;
 using System.Net;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;

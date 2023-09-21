@@ -21,7 +21,9 @@ namespace SIL.Transcriber.Models
                 : 0;
             Level = int.TryParse(item ["level"]?.ToString() ?? "", out int tryint)
                 ? tryint
-                : 2;
+                : 3;
+            Published = bool.TryParse(item ["published"]?.ToString() ?? "false", out bool trybool)
+&& trybool;
             return this;
         }
 
