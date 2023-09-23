@@ -74,6 +74,12 @@ namespace SIL.Transcriber.Models
         public bool Published { get; set; }
         [Attr(PublicName = "level")]
         public int Level { get; set; }
+        [Attr(PublicName = "title-mediafile-id")]
+        [ForeignKey(nameof(TitleMediafile))]
+        public int? TitleMediafileId { get; set; }
+
+        [HasOne(PublicName = "title-mediafile")]
+        public Mediafile? TitleMediafile { get; set; }
         public bool Archived { get; set; }
 
 

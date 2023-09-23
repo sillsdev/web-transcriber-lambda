@@ -8,6 +8,7 @@ namespace SIL.Transcriber.Models;
 public partial class Sharedresource : BaseModel, IArchive
 {
     [Attr(PublicName = "passage-id")]
+    [ForeignKey(nameof(Passage))]
     public int? PassageId { get; set; }
     [HasOne(PublicName = "passage")]
     public Passage? Passage { get; set; }
