@@ -73,10 +73,11 @@ namespace SIL.Transcriber.Services
                 ? new List<TResource>()
                 : currentuser > 0
                 ? entities.Where(p =>
-                        (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin)
-                        && p.DateUpdated > since
+                        //TEMP FIX (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin)
+                        p.DateUpdated > since
                 )
-                : (IEnumerable<TResource>)entities.Where(p => p.LastModifiedOrigin != origin && p.DateUpdated > since);
+                : (IEnumerable<TResource>)entities.Where(p => //TEMP FIX p.LastModifiedOrigin != origin &&
+                                                              p.DateUpdated > since);
         }
 
         public override async Task DeleteAsync(int id, CancellationToken ct)
