@@ -290,6 +290,10 @@ namespace SIL.Transcriber.Repositories
                         if (!CheckAdd(26, ToJson(dbContext.SharedresourcesData
                 .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
+                        IQueryable<Mediafile> mna = dbContext.Mediafiles.Where(x => !x.Archived);
+                        IQueryable<Mediafile> m = mna.Join(orgs,m => m.Id, o=>o.IsoMediafileId, (m, o)=> m).Union(mna.Join(orgs, m => m.Id, o => o.BibleMediafileId, (m, o) => m));
+                        if (!CheckAdd(27, ToJson(m), dtBail, ref iStartNext, ref data))
+                            break;
                     }
 
                 }

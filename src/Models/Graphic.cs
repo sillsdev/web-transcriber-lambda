@@ -13,7 +13,12 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "organization-id")]
         [ForeignKey(nameof(Organization))]
         public int OrganizationId { get; set; }
+        [HasOne(PublicName = "mediafile")]
+        public virtual Mediafile Mediafile { get; set; } = null!;
 
+        [Attr(PublicName = "mediafile-id")]
+        [ForeignKey(nameof(Mediafile))]
+        public int MediafileId { get; set; }
         [Attr(PublicName = "resource-type")]
         public string ResourceType { get; set; } = "";
         [Attr(PublicName = "resource-id")]
