@@ -22,7 +22,7 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "resource-type")]
         public string ResourceType { get; set; } = "";
         [Attr(PublicName = "resource-id")]
-        public string ResourceId { get; set; } = "";
+        public int ResourceId { get; set; }
         [Attr(PublicName = "info")]
         [Column(TypeName = "jsonb")]
         public string? Info { get; set; } //json

@@ -294,6 +294,9 @@ namespace SIL.Transcriber.Repositories
                         IQueryable<Mediafile> m = mna.Join(orgs,m => m.Id, o=>o.IsoMediafileId, (m, o)=> m).Union(mna.Join(orgs, m => m.Id, o => o.BibleMediafileId, (m, o) => m));
                         if (!CheckAdd(27, ToJson(m), dtBail, ref iStartNext, ref data))
                             break;
+                        if (!CheckAdd(28, ToJson(dbContext.GraphicsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
+                                    .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                            break;
                     }
 
                 }

@@ -491,7 +491,7 @@ namespace SIL.Transcriber.Data
                 .Include(d => d.Group)
                 .Include(d => d.User);
         public IQueryable<Intellectualproperty> IntellectualPropertyData => IntellectualPropertys.Include(x => x.Organization).Include(x => x.ReleaseMediafile);
-        public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization); 
+        public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization).Include(x => x.Mediafile); 
         public IQueryable<Groupmembership> GroupmembershipsData =>
             Groupmemberships.Include(x => x.Group).Include(x => x.User).Include(x => x.Role);
         public IQueryable<Group> GroupsData => Groups.Include(x => x.Owner);
