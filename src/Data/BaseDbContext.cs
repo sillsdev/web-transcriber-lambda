@@ -49,7 +49,7 @@ namespace SIL.Transcriber.Data
 
         public static string GetFingerprint(HttpContext? http)
         {
-            return http?.GetFP() ?? "noFP";
+            return http != null ? http.GetFP() ?? "noFP" : "nohttp";
         }
 
         //// https://benjii.me/2014/03/track-created-and-modified-fields-automatically-with-entity-framework-code-first/
