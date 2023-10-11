@@ -55,6 +55,8 @@ namespace SIL.Transcriber.Models
         public string? PublishingData { get; set; } //json
         [Attr(PublicName ="bible-id")]
         public string? BibleId { get; set; }
+        [Attr(PublicName = "bible-name")]
+        public string? BibleName { get; set; }
         [Attr(PublicName = "iso")]
         public string? Iso { get; set; }
 
