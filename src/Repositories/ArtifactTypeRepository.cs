@@ -39,19 +39,7 @@ namespace SIL.Transcriber.Repositories
         //internal thing that we need control of, so ignore the organization
         public IQueryable<Artifacttype> UsersArtifactTypes(IQueryable<Artifacttype> entities)
         {
-            /*
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                entities = entities.Where(
-                    om => !om.Archived && (om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId))
-                );
-            } */
-
-            return entities.Where(om=>!om.Archived);
+            return entities;
         }
 
         //at one time we thought the users would be able to add artifacttype, but it's really an 
@@ -61,17 +49,7 @@ namespace SIL.Transcriber.Repositories
             string projectid
         )
         {
-            /*
-            IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(
-                dbContext.Organizations,
-                projectid
-            );
-            IQueryable<int> ids = orgs.Select(o => o.Id);
-            return entities.Where(
-                om => !om.Archived && (om.OrganizationId == null || ids.Contains((int)om.OrganizationId))
-            );
-            */
-            return entities.Where(om => !om.Archived);
+            return entities;
         }
 
         #region Overrides

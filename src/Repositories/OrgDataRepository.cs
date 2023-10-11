@@ -263,12 +263,12 @@ namespace SIL.Transcriber.Repositories
                     if (!CheckAdd(19, ToJson(ip),dtBail,ref iStartNext, ref data ))
                         break;
                     //ipMedia
-                    if (!CheckAdd(20, ToJson(ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList()),
+                    if (!CheckAdd(20, ToJson(ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList()),
                         dtBail, ref iStartNext, ref data))
                         break;
                     if (version > 5)
                     {
-                        IQueryable<Orgkeyterm>? orgkeyterms = dbContext.Orgkeyterms
+                        IQueryable<Orgkeyterm>? orgkeyterms = dbContext.OrgKeytermsData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived);
                         if (!CheckAdd(21, ToJson(orgkeyterms), dtBail, ref iStartNext, ref data))
@@ -290,7 +290,7 @@ namespace SIL.Transcriber.Repositories
                         if (!CheckAdd(26, ToJson(dbContext.SharedresourcesData
                 .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
-                        IQueryable<Mediafile> mna = dbContext.Mediafiles.Where(x => !x.Archived);
+                        IQueryable<Mediafile> mna = dbContext.MediafilesData.Where(x => !x.Archived);
                         IQueryable<Mediafile> m = mna.Join(orgs,m => m.Id, o=>o.IsoMediafileId, (m, o)=> m).Union(mna.Join(orgs, m => m.Id, o => o.BibleMediafileId, (m, o) => m));
                         if (!CheckAdd(27, ToJson(m), dtBail, ref iStartNext, ref data))
                             break;

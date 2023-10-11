@@ -34,7 +34,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Integration>? entities = null
         )
         {
-            return (entities ?? GetAll()).Where(e => !e.Archived);
+            return (entities ?? GetAll());
         }
 
         public override IQueryable<Integration> FromProjectList(
@@ -42,7 +42,7 @@ namespace SIL.Transcriber.Repositories
             string idList
         )
         {
-            return (entities ?? GetAll()).Where(e => !e.Archived);
+            return (entities ?? GetAll());
         }
     }
 }

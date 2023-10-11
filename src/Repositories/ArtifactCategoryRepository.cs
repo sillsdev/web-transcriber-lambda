@@ -46,10 +46,10 @@ namespace SIL.Transcriber.Repositories
             {
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty() ?? new List<int>();
                 entities = entities.Where(
-                    om => !om.Archived && (om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId))
+                    om => (om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId))
                 );
             }
-            return entities.Where(om => !om.Archived);
+            return entities;
         }
 
         public IQueryable<Artifactcategory> ProjectArtifactCategorys(
@@ -62,9 +62,12 @@ namespace SIL.Transcriber.Repositories
                 projectid
             );
             IQueryable<int> ids = orgs.Select(o => o.Id);
-            return entities.Where(
-                om => !om.Archived && (om.OrganizationId == null || ids.Contains((int)om.OrganizationId))
+            Console.WriteLine(projectid, "org: " + ids.FirstOrDefault(), ids.Count());
+            var ac =entities.Where(
+                om => (om.OrganizationId == null || ids.Contains((int)om.OrganizationId))
             );
+            ac.ToList().ForEach(a => Console.WriteLine("ac: " + a.Id));
+            return ac;
         }
 
         #region Overrides
@@ -73,7 +76,8 @@ namespace SIL.Transcriber.Repositories
             string idList
         )
         {
-            return ProjectArtifactCategorys(entities ?? GetAll(), idList);
+            var ac = ProjectArtifactCategorys(entities ?? GetAll(), idList);
+            return ac;
         }
 
         public override IQueryable<Artifactcategory> FromCurrentUser(

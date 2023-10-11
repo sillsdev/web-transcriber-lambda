@@ -33,7 +33,7 @@ public class SharedResourceRepository : BaseRepository<Sharedresource>
 
     public IQueryable<Sharedresource> UsersSharedResources(IQueryable<Sharedresource> entities)
     {   //send them all
-        return CurrentUser == null ? entities.Where(e => e.Id == -1) : entities.Where(e => !e.Archived);
+        return CurrentUser == null ? entities.Where(e => e.Id == -1) : entities;
     }
 
     public IQueryable<Sharedresource> ProjectSharedResources(
@@ -42,7 +42,7 @@ public class SharedResourceRepository : BaseRepository<Sharedresource>
     )
     {
         //TODO get where (clusterid is null) + (clusterid is set and my org is in the cluster)
-        return entities.Where(e => !e.Archived);
+        return entities;
     }
 
     public IQueryable<Sharedresource> GetMine()
