@@ -71,6 +71,7 @@ namespace SIL.Transcriber.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
+        public DbSet<VWChecksum> VWChecksums => Set<VWChecksum>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
         #endregion
 
