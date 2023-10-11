@@ -1,5 +1,4 @@
-﻿using Amazon.S3.Model;
-using JsonApiDotNetCore.Resources.Annotations;
+﻿using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models
@@ -19,6 +18,5 @@ namespace SIL.Transcriber.Models
         public int StartIndex { get; set; }
         [Attr(PublicName = "startnext")]
         public int StartNext { get; set; }
-
     }
 }

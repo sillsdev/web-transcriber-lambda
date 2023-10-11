@@ -64,23 +64,6 @@ namespace SIL.Transcriber.Repositories
             return entities;
         }
 
-        //TODO?
-        protected IQueryable<Project> FromProjectDate(QueryLayer layer, string projDate)
-        { //only project
-            DateTime date = projDate.DateTimeFromISO8601();
-            /*
-                        switch (op)
-                        {
-                            case FilterOperations.ge:
-            */
-            return base.GetAll().Where(p => p.DateUpdated > date);
-            /*                case FilterOperations.le:
-                                return entities
-                                    .Where(p => p.DateUpdated < date);
-                        }
-            */
-        }
-
         public override IQueryable<Project> FromCurrentUser(IQueryable<Project>? entities = null)
         {
             return UsersProjects(entities ?? GetAll());

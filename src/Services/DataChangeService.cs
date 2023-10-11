@@ -312,6 +312,10 @@ namespace SIL.Transcriber.Services
         {
             switch (table)
             {
+                case "graphic":
+                    startId = BuildList(GraphicService.GetChanges(dbContext.Graphics, currentUser, origin, dtSince, project, startId), Tables.Groups, changes);
+                    BuildList(GraphicService.GetDeletedSince(dbContext.Graphics, currentUser, origin, dtSince, project, 0), Tables.Groups, deleted, false);
+                    break;
                 case "group":
                     startId = BuildList(GroupService.GetChanges(dbContext.Groups, currentUser, origin, dtSince, project, startId), Tables.Groups, changes);
                     BuildList(GroupService.GetDeletedSince(dbContext.Groups, currentUser, origin, dtSince, project, 0), Tables.Groups, deleted, false);

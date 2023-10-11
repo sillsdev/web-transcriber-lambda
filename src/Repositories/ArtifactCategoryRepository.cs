@@ -62,12 +62,9 @@ namespace SIL.Transcriber.Repositories
                 projectid
             );
             IQueryable<int> ids = orgs.Select(o => o.Id);
-            Console.WriteLine(projectid, "org: " + ids.FirstOrDefault(), ids.Count());
-            var ac =entities.Where(
+            return entities.Where(
                 om => (om.OrganizationId == null || ids.Contains((int)om.OrganizationId))
             );
-            ac.ToList().ForEach(a => Console.WriteLine("ac: " + a.Id));
-            return ac;
         }
 
         #region Overrides
@@ -76,8 +73,7 @@ namespace SIL.Transcriber.Repositories
             string idList
         )
         {
-            var ac = ProjectArtifactCategorys(entities ?? GetAll(), idList);
-            return ac;
+            return ProjectArtifactCategorys(entities ?? GetAll(), idList);
         }
 
         public override IQueryable<Artifactcategory> FromCurrentUser(
