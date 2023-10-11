@@ -463,7 +463,7 @@ namespace SIL.Transcriber.Services
                 }
                 checkstart = CheckStart(dtBail, start);
             }
-            DCReturn ret = new (changes, deleted, start == tables.Length + 1 ? -1 : start);
+            DCReturn ret = new (changes, deleted, start == tables.Length ? -1 : start);
             return ret;
         }
     }

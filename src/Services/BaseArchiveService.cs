@@ -61,7 +61,6 @@ namespace SIL.Transcriber.Services
         )
         {
             return base.GetChanges(entities, currentuser, origin, since, project, startId).Where(t => t.Archived);
-            ;
         }
 
         public override async Task<IReadOnlyCollection<TResource>> GetAsync(
