@@ -544,7 +544,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Sectionresourceuser> SectionresourceusersData =>
             Sectionresourceusers.Include(x => x.SectionResource).Include(x => x.User);
         public IQueryable<Section> SectionsData =>
-            Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber);
+            Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber).Include(x => x.TitleMediafile);
         public IQueryable<Sharedresource> SharedresourcesData =>
            Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory);
         public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>

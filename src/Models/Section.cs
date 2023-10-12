@@ -24,6 +24,10 @@ namespace SIL.Transcriber.Models
                 : 3;
             Published = bool.TryParse(item ["published"]?.ToString() ?? "false", out bool trybool)
 && trybool;
+
+            TitleMediafileId = int.TryParse(item ["titlemediafile"]?.ToString() ?? "", out tryint)
+                ? tryint
+                : null;
             return this;
         }
 

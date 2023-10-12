@@ -14,6 +14,8 @@ namespace SIL.Transcriber.Services
         Task<bool> FileExistsAsync(string fileName, string folder = "");
         S3Response SignedUrlForGet(string fileName, string folder, string contentType);
         S3Response SignedUrlForPut(string fileName, string folder, string contentType);
+        Task<string> GetFilename(string folder, string filename, bool overwrite = false, string suffix = "");
+
 
     }
 }

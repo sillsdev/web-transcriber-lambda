@@ -68,33 +68,11 @@ namespace SIL.Transcriber.Services
             HttpContext?.SetFP("api");
             return MyRepository.WBTUpdate();
         }
-        private string DirectoryName(Plan? plan)
-        {
-            if (plan == null)
-                return "";
-            Project? proj = plan.Project;
-            proj ??= dbContext.Projects
-                    .Where(p => p.Id == plan.ProjectId)
-                    .Include(p => p.Organization)
-                    .FirstOrDefault();
-            Organization? org = proj?.Organization;
-            if (org == null && proj?.OrganizationId != null)
-                org = dbContext.Organizations
-                    .Where(o => o.Id == proj.OrganizationId)
-                    .FirstOrDefault();
-            return org != null ? org.Slug + "/" + plan.Slug : throw new Exception("No org in DirectoryName");
-        }
+
 
         public string DirectoryName(Mediafile entity)
         {
-            int id = entity.Plan?.Id ?? entity.PlanId;
-            /* this no longer works...project is null */
-            Plan plan = dbContext.Plans
-                .Include(p => p.Project)
-                .ThenInclude(p => p.Organization)
-                .Where(p => p.Id == id)
-                .First();
-            return plan != null ? DirectoryName(plan) : "";
+            return PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
         }
 
         public string? GetAudioUrl(Mediafile mf)
@@ -113,15 +91,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<string> GetNewFileNameAsync(Mediafile mf, string suffix = "")
         {
-            string ext = Path.GetExtension(mf.OriginalFile)??"";
-            string newfilename = Path.GetFileNameWithoutExtension(mf.OriginalFile ?? "") +suffix + ext;
-            return mf.SourceMedia == null && await S3service.FileExistsAsync(newfilename, DirectoryName(mf))
-                ? Path.GetFileNameWithoutExtension(mf.OriginalFile)
-                    + "__"
-                    + Guid.NewGuid()
-                    + suffix
-                    + ext
-                : newfilename;
+            return await S3service.GetFilename(DirectoryName(mf), mf.OriginalFile??"", mf.SourceMedia != null, suffix);
         }
 
         public IEnumerable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId)
@@ -166,7 +136,7 @@ namespace SIL.Transcriber.Services
             Plan? plan = PlanRepository.GetWithProject(mf.PlanId);
             if (
                 mf.S3File.Length == 0
-                || !(await S3service.FileExistsAsync(mf.S3File, DirectoryName(plan)))
+                || !(await S3service.FileExistsAsync(mf.S3File, PlanRepository.DirectoryName(plan)))
             )
                 return new S3Response
                 {
@@ -176,7 +146,7 @@ namespace SIL.Transcriber.Services
 
             S3Response response = await S3service.ReadObjectDataAsync(
                 mf.S3File ?? "",
-                DirectoryName(plan)
+                PlanRepository.DirectoryName(plan)
             );
             response.Message = mf.OriginalFile ?? "";
             return response;
@@ -190,8 +160,7 @@ namespace SIL.Transcriber.Services
             {
                 return new S3Response { Message = "", Status = HttpStatusCode.NotFound };
             }
-            Plan? plan = PlanRepository.GetWithProject(mf.PlanId);
-            S3Response response = await S3service.RemoveFile(mf.S3File, DirectoryName(plan));
+            S3Response response = await S3service.RemoveFile(mf.S3File, DirectoryName(mf));
             return response;
         }
 
