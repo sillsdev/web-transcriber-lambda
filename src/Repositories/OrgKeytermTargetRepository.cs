@@ -46,9 +46,9 @@ namespace SIL.Transcriber.Repositories
             IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                entities = entities.Where(om => !om.Archived && orgIds.Contains(om.OrganizationId));
+                entities = entities.Where(om => orgIds.Contains(om.OrganizationId));
             }
-            return entities.Where(e => !e.Archived);
+            return entities;
         }
 
         public IQueryable<Orgkeytermtarget> ProjectOrgKeytermTargets(

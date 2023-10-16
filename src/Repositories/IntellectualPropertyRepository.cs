@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Repositories
             if (CurrentUser == null)
                 return entities.Where(e => e.Id == -1);
             IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            return entities.Where(om => !om.Archived && orgIds.Contains(om.OrganizationId));
+            return entities.Where(om => orgIds.Contains(om.OrganizationId));
         }
         public override IQueryable<Intellectualproperty> FromCurrentUser(
             IQueryable<Intellectualproperty>? entities = null

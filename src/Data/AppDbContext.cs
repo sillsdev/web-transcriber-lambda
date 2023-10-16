@@ -71,6 +71,7 @@ namespace SIL.Transcriber.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
+        public DbSet<VWChecksum> VWChecksums => Set<VWChecksum>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
         #endregion
 
@@ -449,8 +450,8 @@ namespace SIL.Transcriber.Data
         {
             if (_currentUser < 0)
             {
-                string auth0Id = CurrentUserContext.Auth0Id;
-                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "").Equals(auth0Id) && !u.Archived);
+                string auth0Id = CurrentUserContext.Auth0Id ?? "nouser";
+                                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "olddata").Equals(auth0Id) && !u.Archived);
                 _currentUser = userFromResult == null ? -1 : userFromResult.Id;
             }
             return _currentUser;

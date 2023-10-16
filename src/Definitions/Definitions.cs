@@ -1,5 +1,6 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
+using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Definitions
@@ -265,5 +266,11 @@ namespace SIL.Transcriber.Definitions
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
+    }
+    public class VWChecksumDefinition : JsonApiResourceDefinition<VWChecksum, int>
+    {
+        public VWChecksumDefinition(
+            IResourceGraph resourceGraph
+        ) : base(resourceGraph) { }
     }
 }
