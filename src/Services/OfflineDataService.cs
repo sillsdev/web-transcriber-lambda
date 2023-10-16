@@ -1780,31 +1780,14 @@ namespace SIL.Transcriber.Services
             _ = dbContext.SaveChanges();
         }
 
-        private int CompareMediafilesByArtifactTypeVersionDesc(Mediafile a, Mediafile b)
+        private int CompareMediafilesByArtifactTypeVersionDate(Mediafile a, Mediafile b)
         {
-            if (a == null)
-            {
-                return b == null ? 0 : -1;
-            }
-            else
-            { //a is not null
-                if (b == null)
-                    return 1;
-                else
-                { //neither a nor b is null
-                    if (a.IsVernacular)
-                    {
-                        if (b.IsVernacular)
-                            return a.VersionNumber ?? 0 - b.VersionNumber ?? 0; //both vernacular so use version number
-                        else
-                            return -1;
-                    }
-                    else
-                    {
-                        return b.IsVernacular ? 1 : 0;
-                    }
-                }
-            }
+            int compareType = Nullable.Compare(a.ArtifactTypeId, b.ArtifactTypeId);
+            if (compareType != 0)
+                return compareType;
+            return a.ArtifactTypeId == null ? 
+                Nullable.Compare(a.VersionNumber, b.VersionNumber) : 
+                Nullable.Compare(a.DateUpdated,b.DateUpdated);
         }
         private int? ValidArtifactCategory(int? categoryid) { return dbContext.Artifactcategorys.FirstOrDefault(c => c.Id == categoryid)?.Archived ?? true ? null : categoryid == 0 ? 1 : categoryid; }
 
@@ -1883,6 +1866,7 @@ namespace SIL.Transcriber.Services
                     || existing.SourceMediaId != importing.SourceMediaId
                     || existing.SourceMediaOfflineId != importing.SourceMediaOfflineId
                     || existing.SourceSegments != importing.SourceSegments
+                    || existing.VersionNumber != importing.VersionNumber
                     || existing.Topic != importing.Topic
                 )
             )
@@ -1902,6 +1886,7 @@ namespace SIL.Transcriber.Services
                     existing.Transcriptionstate = importing.Transcriptionstate;
                 existing.LastModifiedBy = importing.LastModifiedBy;
                 existing.LastModifiedByUser = importing.LastModifiedByUser;
+                existing.VersionNumber = importing.VersionNumber;
                 existing.DateUpdated = DateTime.UtcNow;
                 _ = dbContext.Mediafiles.Update(existing);
             }
@@ -2563,7 +2548,7 @@ namespace SIL.Transcriber.Services
                             {
                                 sorted.Add(ResourceObjectToResource(ro, new Mediafile()));
                             }
-                            sorted.Sort(CompareMediafilesByArtifactTypeVersionDesc);
+                            sorted.Sort(CompareMediafilesByArtifactTypeVersionDate);
                             startId = await CreateOrUpdateMediafiles(sorted, startId, sourceDate, report, dtBail, archive);
                             break;
 
