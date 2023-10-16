@@ -9,6 +9,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility;
+using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -89,7 +90,7 @@ namespace SIL.Transcriber.Repositories
                 start = StartIndex.SetStart(starttable, ref lastId);
                 return lastId == 0;
             }
-            
+
             return true;
         }
         protected bool CheckAddPSC(
@@ -130,7 +131,7 @@ namespace SIL.Transcriber.Repositories
         private string ToJson<TResource>(IEnumerable<TResource> resources)
             where TResource : class, IIdentifiable
         {
-            string? withIncludes = 
+            string? withIncludes =
             SerializerHelpers.ResourceListToJson<TResource>(
                 resources,
                 _resourceGraph,
@@ -142,11 +143,14 @@ namespace SIL.Transcriber.Repositories
             {
                 dynamic tmp = JObject.Parse(withIncludes);
                 tmp.Remove("included");
-                return tmp.ToString(); //will this take it out of transcriptions also?? .Replace("\n", "").Replace("\r", "");
+                withIncludes = tmp.ToString();
             }
-            return  withIncludes; //will this take it out of transcriptions also?? .Replace("\n", "").Replace("\r", "");.Replace("\n", "").Replace("\r", "");
+            Regex rgxnewlines = new("\r\n|\n");
+            Regex rgxmultiplspaces = new("\t|\\s+");
+            //will this take it out of transcriptions also?? Seems to be ok!!
+            withIncludes = rgxnewlines.Replace(withIncludes, "");
+            return rgxmultiplspaces.Replace(withIncludes, " ");
         }
-
         private IQueryable<Projdata> GetData(
             IQueryable<Projdata> entities,
             string project,

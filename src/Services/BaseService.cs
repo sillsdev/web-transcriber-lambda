@@ -73,10 +73,10 @@ namespace SIL.Transcriber.Services
                 ? new List<TResource>()
                 : currentuser > 0
                 ? entities.Where(p =>
-                        //TEMP FIX (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin)
+                        (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) &&
                         p.DateUpdated > since
                 )
-                : (IEnumerable<TResource>)entities.Where(p => //TEMP FIX p.LastModifiedOrigin != origin &&
+                : (IEnumerable<TResource>)entities.Where(p => p.LastModifiedOrigin != origin &&
                                                               p.DateUpdated > since);
         }
 

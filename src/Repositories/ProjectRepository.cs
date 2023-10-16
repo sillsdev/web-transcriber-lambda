@@ -56,29 +56,12 @@ namespace SIL.Transcriber.Repositories
                     o => CurrentUserRepository.IsOrgAdmin(CurrentUser, o)
                 );
 
-                entities = entities.Where(p => !p.Archived && (
+                entities = entities.Where(p =>  
                         orgadmins.Contains(p.OrganizationId)
-                        || CurrentUser.GroupIds.Contains(p.GroupId))
+                        || CurrentUser.GroupIds.Contains(p.GroupId)
                 );
             }
-            return entities.Where(e => !e.Archived);
-        }
-
-        //TODO?
-        protected IQueryable<Project> FromProjectDate(QueryLayer layer, string projDate)
-        { //only project
-            DateTime date = projDate.DateTimeFromISO8601();
-            /*
-                        switch (op)
-                        {
-                            case FilterOperations.ge:
-            */
-            return base.GetAll().Where(p => p.DateUpdated > date);
-            /*                case FilterOperations.le:
-                                return entities
-                                    .Where(p => p.DateUpdated < date);
-                        }
-            */
+            return entities;
         }
 
         public override IQueryable<Project> FromCurrentUser(IQueryable<Project>? entities = null)

@@ -111,6 +111,7 @@ namespace SIL.Transcriber
             services.AddScoped<UserService>();
             services.AddScoped<UserVersionService>();
             services.AddScoped<StatehistoryService>();
+            services.AddScoped<VWChecksumService>();
             services.AddScoped<WorkflowStepService>();
         }
 
@@ -162,6 +163,7 @@ namespace SIL.Transcriber
             services.AddScoped<UserRepository>();
             services.AddScoped<UserVersionRepository>();
             services.AddScoped<StatehistoryRepository>();
+            services.AddScoped<VWChecksumRepository>();
             services.AddScoped<WorkflowStepRepository>();
         }
 

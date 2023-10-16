@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Repositories;
         public IQueryable<Sharedresourcereference> UsersSharedResourceReferences(IQueryable<Sharedresourcereference> entities)
         {
             IQueryable<Sharedresource>? resources = SharedResourceRepository.UsersSharedResources(dbContext.Sharedresources.AsQueryable());
-            return entities.Where(e => !e.Archived).Join(resources, o => o.SharedResourceId, r => r.Id, (o, r) => o);
+            return entities.Join(resources, o => o.SharedResourceId, r => r.Id, (o, r) => o);
         }
 
         public IQueryable<Sharedresourcereference> ProjectSharedResourceReferences(
@@ -49,7 +49,7 @@ namespace SIL.Transcriber.Repositories;
         )
         {
             IQueryable<Sharedresource>? resources = SharedResourceRepository.ProjectSharedResources(dbContext.Sharedresources.AsQueryable(), projectid);
-            return entities.Where(e => !e.Archived).Join(resources, o => o.SharedResourceId, r => r.Id, (o, r) => o);
+            return entities.Join(resources, o => o.SharedResourceId, r => r.Id, (o, r) => o);
         }
 
         public IQueryable<Sharedresourcereference> GetMine()

@@ -55,11 +55,12 @@ namespace SIL.Transcriber.Services
             IQueryable<TResource> entities,
             int currentuser,
             string origin,
-            DateTime since
+            DateTime since,
+            int project,
+            int startId
         )
         {
-            return base.GetChanges(entities, currentuser, origin, since).Where(t => t.Archived);
-            ;
+            return base.GetChanges(entities, currentuser, origin, since, project, startId).Where(t => t.Archived);
         }
 
         public override async Task<IReadOnlyCollection<TResource>> GetAsync(

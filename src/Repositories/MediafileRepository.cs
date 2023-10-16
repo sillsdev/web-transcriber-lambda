@@ -62,7 +62,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans
         )
         {
-            return entities.Where(e => !e.Archived).Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
+            return entities.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
         }
 
         public IEnumerable<Mediafile>? WBTUpdate()
