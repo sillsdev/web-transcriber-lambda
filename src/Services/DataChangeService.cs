@@ -437,7 +437,7 @@ namespace SIL.Transcriber.Services
         {
             string[] tables = { "user", "organization", "organizationmembership", 
                 "group", "groupmembership", "project", "plan", "section", "passage", "passagestatechange",
-                "projectintegration", "invitation", };
+                "projectintegration", "invitation", "mediafile"};
             if (dbVersion > 3)
                 tables = tables.Concat(new string [] { "artifactcategory", "artifactttype",
                     "discussion", "comment", "orgworkflowstep","sectionresource", "sectionresourceuser",
