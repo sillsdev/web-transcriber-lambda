@@ -50,28 +50,12 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "owner")]
         public virtual User? Owner { get; set; }
         public int? OwnerId { get; set; }
-        [Attr(PublicName = "publishing-data")]
-        [Column(TypeName = "jsonb")]
-        public string? PublishingData { get; set; } //json
-        [Attr(PublicName ="bible-id")]
-        public string? BibleId { get; set; }
-        [Attr(PublicName = "bible-name")]
-        public string? BibleName { get; set; }
-        [Attr(PublicName = "iso")]
-        public string? Iso { get; set; }
 
-        [ForeignKey("BibleMediafile")]
-        [Attr(PublicName = "bible-mediafile-id")]
-        public int? BibleMediafileId { get; set; }
+        //[Attr(PublicName ="bible-id")]
+        //public int? BibleId { get; set; }
 
-        [HasOne(PublicName = "bible-mediafile")]
-        public virtual Mediafile? BibleMediafile { get; set; }
-
-        [ForeignKey("IsoMediafile")]
-        [Attr(PublicName = "iso-mediafile-id")]
-        public int? IsoMediafileId { get; set; }
-        [HasOne(PublicName = "iso-mediafile")]
-        public virtual Mediafile? IsoMediafile { get; set; }
+        //[HasOne(PublicName = "bible")]
+        //public virtual Bible? Bible { get; set; }
 
         public bool Archived { get; set; }
     }

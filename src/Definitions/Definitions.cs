@@ -1,7 +1,9 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Resources;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Definitions
 {
@@ -22,6 +24,38 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
+    public class BibleDefinition : BaseDefinition<Bible>
+    {
+        private readonly MediafileService _mediafileService;
+        public BibleDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request,
+            MediafileService mediafileService
+        ) : base(resourceGraph, loggerFactory, Request)
+        {
+            _mediafileService = mediafileService;
+
+        }
+        public override async Task OnWritingAsync(
+    Bible resource,
+    WriteOperationKind writeOperation,
+    CancellationToken cancellationToken
+)
+        {
+            if (resource.IsoMediafile != null)
+            {
+                await _mediafileService.MakePublic(resource.IsoMediafile);
+            }
+            if (resource.BibleMediafile != null)
+            {
+                await _mediafileService.MakePublic(resource.BibleMediafile);
+            }
+
+            await base.OnWritingAsync(resource, writeOperation, cancellationToken);
+        }
+    }
+
     public class CommentDefinition : BaseDefinition<Comment>
     {
         public CommentDefinition(

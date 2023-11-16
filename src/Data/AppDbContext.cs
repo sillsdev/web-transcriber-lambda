@@ -28,6 +28,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Activitystate> Activitystates => Set<Activitystate>();
         public DbSet<Artifactcategory> Artifactcategorys => Set<Artifactcategory>();
         public DbSet<Artifacttype> Artifacttypes => Set<Artifacttype>();
+        public DbSet<Bible> Bibles => Set<Bible>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<CopyProject> Copyprojects => Set<CopyProject>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
@@ -129,6 +130,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Artifacttype>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Bible>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -368,8 +374,6 @@ namespace SIL.Transcriber.Data
             _ = orgEntity.HasOne(o => o.Cluster).WithMany().HasForeignKey(o => o.ClusterId);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
             //_ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
-            _ = orgEntity.HasOne(o => o.IsoMediafile).WithMany().HasForeignKey(x => x.IsoMediafileId);
-            _ = orgEntity.HasOne(o => o.BibleMediafile).WithMany().HasForeignKey(x => x.BibleMediafileId);
 
             _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
             _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);
@@ -392,6 +396,9 @@ namespace SIL.Transcriber.Data
                 .HasMany(u => u.OrganizationMemberships)
                 .WithOne(om => om.User)
                 .HasForeignKey(om => om.UserId);
+            modelBuilder.Entity<Bible>().HasOne(o => o.IsoMediafile).WithMany().HasForeignKey(x => x.IsoMediafileId);
+            modelBuilder.Entity<Bible>().HasOne(o => o.BibleMediafile).WithMany().HasForeignKey(x => x.BibleMediafileId);
+
         }
 
         public async Task<int> SaveChangesNoTimestampAsync(
@@ -480,6 +487,10 @@ namespace SIL.Transcriber.Data
             Artifactcategorys.Include(c => c.Organization);
         public IQueryable<Artifacttype> ArtifacttypesData =>
             Artifacttypes.Include(c => c.Organization);
+        public IQueryable<Bible> BiblesData => Bibles
+            //.Include(c => c.OwnerOrganization)
+            .Include(c => c.IsoMediafile)
+            .Include(c => c.BibleMediafile);
         public IQueryable<Comment> CommentsData => Comments
             .Include(c => c.Mediafile)
             .Include(c => c.Discussion)

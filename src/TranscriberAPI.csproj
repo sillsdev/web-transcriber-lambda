@@ -28,7 +28,6 @@
     <Compile Remove="Controllers\ArtifactCategorysController.cs" />
     <Compile Remove="Controllers\BooksController.cs" />
     <Compile Remove="Controllers\CurrentUsersController.cs" />
-    <Compile Remove="Controllers\HomeController.cs" />
     <Compile Remove="Controllers\PassagesectionsController.cs" />
     <Compile Remove="Controllers\ProjectusersController.cs" />
     <Compile Remove="Controllers\RpcControllerBase.cs" />

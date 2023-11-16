@@ -74,6 +74,7 @@ namespace SIL.Transcriber
         {
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
+            services.AddScoped<BibleService>();
             services.AddScoped<CommentService>();
             services.AddScoped<CurrentversionService>();
             services.AddScoped<DataChangeService>();
@@ -120,6 +121,7 @@ namespace SIL.Transcriber
             services.AddScoped<ActivitystateRepository>();
             services.AddScoped<ArtifactCategoryRepository>();
             services.AddScoped<ArtifactTypeRepository>();
+            services.AddScoped<BibleRepository>();
             services.AddScoped<CommentRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<CurrentversionRepository>();

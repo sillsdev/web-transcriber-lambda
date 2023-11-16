@@ -1,4 +1,5 @@
-﻿using JsonApiDotNetCore.Configuration;
+﻿using Amazon.S3.Model;
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
@@ -163,7 +164,19 @@ namespace SIL.Transcriber.Services
             S3Response response = await S3service.RemoveFile(mf.S3File, DirectoryName(mf));
             return response;
         }
-
+        public async Task<string> MakePublic(Mediafile? mf)
+        {
+            if (mf == null || mf.S3File == null)
+            {
+                return "";
+            }
+            S3Response response = await S3service.MakePublic(mf.S3File, DirectoryName(mf));
+            return response.Message;
+        }
+        public async Task<string> MakePublic(int id)
+        {
+            return await MakePublic(MyRepository.Get(id));
+        }
         public Mediafile? GetLatest(int passageId)
         {
             return MyRepository

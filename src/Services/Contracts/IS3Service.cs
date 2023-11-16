@@ -15,6 +15,8 @@ namespace SIL.Transcriber.Services
         S3Response SignedUrlForGet(string fileName, string folder, string contentType);
         S3Response SignedUrlForPut(string fileName, string folder, string contentType);
         Task<string> GetFilename(string folder, string filename, bool overwrite = false, string suffix = "");
+        Task<S3Response> MakePublic(string fileName, string folder = "");
+
 
 
     }

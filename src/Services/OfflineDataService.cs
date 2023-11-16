@@ -1783,10 +1783,10 @@ namespace SIL.Transcriber.Services
         private int CompareMediafilesByArtifactTypeVersionDate(Mediafile a, Mediafile b)
         {
             int compareType = Nullable.Compare(a.ArtifactTypeId, b.ArtifactTypeId);
-            if (compareType != 0)
-                return compareType;
-            return a.ArtifactTypeId == null ? 
-                Nullable.Compare(a.VersionNumber, b.VersionNumber) : 
+            return compareType != 0
+                ? compareType
+                : a.ArtifactTypeId == null ?
+                Nullable.Compare(a.VersionNumber, b.VersionNumber) :
                 Nullable.Compare(a.DateUpdated,b.DateUpdated);
         }
         private int? ValidArtifactCategory(int? categoryid) { return dbContext.Artifactcategorys.FirstOrDefault(c => c.Id == categoryid)?.Archived ?? true ? null : categoryid == 0 ? 1 : categoryid; }

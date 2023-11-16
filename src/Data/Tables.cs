@@ -5,6 +5,7 @@ public static class Tables
     public const string ActivityStates = "activitystates";
     public const string ArtifactCategorys  = "artifactcategorys";
     public const string ArtifactTypes = "artifacttypes";
+    public const string Bibles = "bibles";
     public const string Comments = "comments";
     public const string CurrentVersions= "currentversions";
     public const string Discussions = "discussions";
