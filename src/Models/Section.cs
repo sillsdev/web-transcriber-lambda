@@ -16,9 +16,18 @@ namespace SIL.Transcriber.Models
         public Section UpdateFrom(JToken item)
         {
             Name = item ["title"]?.ToString() ?? "";
-            Sequencenum = int.TryParse(item ["sequencenum"]?.ToString() ?? "", out int tryint)
-                ? tryint
+            Sequencenum = decimal.TryParse(item ["sequencenum"]?.ToString() ?? "", out decimal trydec)
+                ? trydec
                 : 0;
+            Level = int.TryParse(item ["level"]?.ToString() ?? "", out int tryint)
+                ? tryint
+                : 3;
+            Published = bool.TryParse(item ["published"]?.ToString() ?? "false", out bool trybool)
+&& trybool;
+
+            TitleMediafileId = int.TryParse(item ["titlemediafile"]?.ToString() ?? "", out tryint)
+                ? tryint
+                : null;
             return this;
         }
 
@@ -30,7 +39,7 @@ namespace SIL.Transcriber.Models
         }
 
         [Attr(PublicName = "sequencenum")]
-        public int Sequencenum { get; set; }
+        public decimal Sequencenum { get; set; }
 
         [Attr(PublicName = "name")]
         public string Name { get; set; }
@@ -65,12 +74,16 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "group")]
         public virtual Group? Group { get; set; }
 
-        //NR?[Attr(PublicName = "graphics")]
-        //NR?[Column(TypeName = "jsonb")]
-        //NR?public string? Graphics { get; set; } //json
+        [Attr(PublicName = "published")]
+        public bool Published { get; set; }
+        [Attr(PublicName = "level")]
+        public int Level { get; set; }
+        [Attr(PublicName = "title-mediafile-id")]
+        [ForeignKey(nameof(TitleMediafile))]
+        public int? TitleMediafileId { get; set; }
 
-        //NR?[Attr(PublicName = "published")]
-        //NR?public bool Published { get; set; }
+        [HasOne(PublicName = "title-mediafile")]
+        public Mediafile? TitleMediafile { get; set; }
         public bool Archived { get; set; }
 
 

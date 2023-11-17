@@ -28,12 +28,14 @@ namespace SIL.Transcriber.Data
         public DbSet<Activitystate> Activitystates => Set<Activitystate>();
         public DbSet<Artifactcategory> Artifactcategorys => Set<Artifactcategory>();
         public DbSet<Artifacttype> Artifacttypes => Set<Artifacttype>();
+        public DbSet<Bible> Bibles => Set<Bible>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<CopyProject> Copyprojects => Set<CopyProject>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
         public DbSet<Dashboard> Dashboards => Set<Dashboard>();
         public DbSet<Datachanges> Datachanges => Set<Datachanges>();
         public DbSet<Discussion> Discussions => Set<Discussion>();
+        public DbSet<Graphic> Graphics => Set<Graphic>();
         public DbSet<Group> Groups => Set<Group>();
         public DbSet<Groupmembership> Groupmemberships => Set<Groupmembership>();
         public DbSet<Integration> Integrations => Set<Integration>();
@@ -50,7 +52,6 @@ namespace SIL.Transcriber.Data
         public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
         public DbSet<Passage> Passages => Set<Passage>();
-        //NR? public DbSet<Passagenote> Passagenotes => Set<Passagenote>();
         public DbSet<Passagestatechange> Passagestatechanges => Set<Passagestatechange>();
         public DbSet<Passagetype> Passagetypes => Set<Passagetype>();
         public DbSet<Plan> Plans => Set<Plan>();
@@ -71,6 +72,7 @@ namespace SIL.Transcriber.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
+        public DbSet<VWChecksum> VWChecksums => Set<VWChecksum>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
         #endregion
 
@@ -132,6 +134,11 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
+                .Entity<Bible>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
                 .Entity<Comment>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -153,6 +160,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Discussion>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Graphic>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -227,14 +239,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            //NR?
-            /*
-            _ = builder
-                .Entity<Passagenote>()
-                .HasOne(o => o.LastModifiedByUser)
-                .WithMany()
-                .HasForeignKey(o => o.LastModifiedBy);
-            */
             _ = builder
                 .Entity<Passagestatechange>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -369,11 +373,14 @@ namespace SIL.Transcriber.Data
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
             _ = orgEntity.HasOne(o => o.Cluster).WithMany().HasForeignKey(o => o.ClusterId);
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
-            //NR? _ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
-            
+            //_ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
+
             _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
             _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);
             _ = modelBuilder.Entity<Project>().HasOne(p => p.Organization).WithMany().HasForeignKey(p => p.OrganizationId);
+
+            _ = modelBuilder.Entity<Artifactcategory>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
+            _ = modelBuilder.Entity<Sharedresource>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
 
             _ = modelBuilder
                 .Entity<Orgworkflowstep>()
@@ -389,6 +396,9 @@ namespace SIL.Transcriber.Data
                 .HasMany(u => u.OrganizationMemberships)
                 .WithOne(om => om.User)
                 .HasForeignKey(om => om.UserId);
+            modelBuilder.Entity<Bible>().HasOne(o => o.IsoMediafile).WithMany().HasForeignKey(x => x.IsoMediafileId);
+            modelBuilder.Entity<Bible>().HasOne(o => o.BibleMediafile).WithMany().HasForeignKey(x => x.BibleMediafileId);
+
         }
 
         public async Task<int> SaveChangesNoTimestampAsync(
@@ -447,8 +457,8 @@ namespace SIL.Transcriber.Data
         {
             if (_currentUser < 0)
             {
-                string auth0Id = CurrentUserContext.Auth0Id;
-                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "").Equals(auth0Id) && !u.Archived);
+                string auth0Id = CurrentUserContext.Auth0Id ?? "nouser";
+                                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "olddata").Equals(auth0Id) && !u.Archived);
                 _currentUser = userFromResult == null ? -1 : userFromResult.Id;
             }
             return _currentUser;
@@ -477,6 +487,10 @@ namespace SIL.Transcriber.Data
             Artifactcategorys.Include(c => c.Organization);
         public IQueryable<Artifacttype> ArtifacttypesData =>
             Artifacttypes.Include(c => c.Organization);
+        public IQueryable<Bible> BiblesData => Bibles
+            //.Include(c => c.OwnerOrganization)
+            .Include(c => c.IsoMediafile)
+            .Include(c => c.BibleMediafile);
         public IQueryable<Comment> CommentsData => Comments
             .Include(c => c.Mediafile)
             .Include(c => c.Discussion)
@@ -489,6 +503,7 @@ namespace SIL.Transcriber.Data
                 .Include(d => d.Group)
                 .Include(d => d.User);
         public IQueryable<Intellectualproperty> IntellectualPropertyData => IntellectualPropertys.Include(x => x.Organization).Include(x => x.ReleaseMediafile);
+        public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization).Include(x => x.Mediafile); 
         public IQueryable<Groupmembership> GroupmembershipsData =>
             Groupmemberships.Include(x => x.Group).Include(x => x.User).Include(x => x.Role);
         public IQueryable<Group> GroupsData => Groups.Include(x => x.Owner);
@@ -517,7 +532,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
             Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
-            Passages.Include(x => x.Section).Include(x => x.OrgWorkflowStep);
+            Passages.Include(x => x.Section).Include(x => x.Passagetype).Include(x => x.SharedResource);
         public IQueryable<Passagestatechange> PassagestatechangesData => Passagestatechanges
             .Include(x => x.Passage)
             .Include(x => x.LastModifiedByUser);
@@ -541,7 +556,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Sectionresourceuser> SectionresourceusersData =>
             Sectionresourceusers.Include(x => x.SectionResource).Include(x => x.User);
         public IQueryable<Section> SectionsData =>
-            Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber);
+            Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber).Include(x => x.TitleMediafile);
         public IQueryable<Sharedresource> SharedresourcesData =>
            Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory);
         public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>

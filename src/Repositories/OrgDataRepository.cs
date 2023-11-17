@@ -8,7 +8,9 @@ using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Utility;
 using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -62,10 +64,10 @@ namespace SIL.Transcriber.Repositories
         }
 
         private string ToJson<TResource>(IEnumerable<TResource> resources)
-            where TResource : class, IIdentifiable
+             where TResource : class, IIdentifiable
         {
             string? withIncludes =
-            SerializerHelpers.ResourceListToJson<TResource>(
+            SerializerHelpers.ResourceListToJson(
                 resources,
                 _resourceGraph,
                 _options,
@@ -76,11 +78,49 @@ namespace SIL.Transcriber.Repositories
             {
                 dynamic tmp = JObject.Parse(withIncludes);
                 tmp.Remove("included");
-                return tmp.ToString();
+                withIncludes = tmp.ToString();
             }
-            return withIncludes;
+            Regex rgxnewlines = new("\r\n|\n");
+            Regex rgxmultiplspaces = new("\t|\\s+");
+            return rgxmultiplspaces.Replace(rgxnewlines.Replace(withIncludes, ""), " ");
         }
 
+        public bool CheckAddGraphics(
+        int check,
+        IQueryable<Graphic> list,
+        DateTime dtBail,
+        ref int start,
+        ref string data
+        )
+        {
+            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail)
+                return false;
+            int startId = -1;
+            int starttable = StartIndex.GetStart(start, ref startId);
+            int lastId = -1;
+            if (starttable == check)
+            {
+                List<Graphic>? lst = startId > 0 ? list.Where(m => m.Id >= startId).ToList() : list.ToList();
+                string thisData = ToJson(lst);
+
+                while (thisData.Length > (1000000 * 4))
+                {
+                    int cnt = lst.Count;
+                    Graphic mid = lst[cnt/2];
+                    lastId = mid.Id;
+                    lst = list.Where(m => m.Id >= startId && m.Id < lastId).ToList();
+                    thisData = ToJson(lst);
+                }
+                if (data.Length + thisData.Length > (1000000 * 4))
+                    return false;
+                data += (data.Length > 0 ? "," : InitData()) + thisData;
+                start = StartIndex.SetStart(starttable, ref lastId);
+                return lastId == 0;
+            }
+
+            return true;
+        }
         private IQueryable<Orgdata> GetData(
             IQueryable<Orgdata> entities,
             string start,
@@ -127,20 +167,21 @@ namespace SIL.Transcriber.Repositories
                         ref data)
                 )
                     break;
-
+                if (!CheckAdd(5, ToJson(dbContext.Passagetypes),dtBail,ref iStartNext,ref data))
+                    break;
                 IQueryable<Organization> orgs = organizationRepository.GetMine(); //this limits to current user
 
-                if (!CheckAdd(5, ToJson(orgs), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(6, ToJson(orgs), dtBail, ref iStartNext, ref data))
                     break;
-                IQueryable<Group> groups = groupRepository.GetMine();
+                IQueryable<Models.Group> groups = groupRepository.GetMine();
                 IQueryable<Groupmembership> gms = gmRepository.GetMine(groups);
-                if (!CheckAdd(6, ToJson(gms), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(7, ToJson(gms), dtBail, ref iStartNext, ref data))
                     break;
                 //groups
-                if (!CheckAdd(7, ToJson(groups), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(8, ToJson(groups), dtBail, ref iStartNext, ref data))
                     break;
                 //invitations
-                if (!CheckAdd(8,
+                if (!CheckAdd(9,
                         ToJson(dbContext.InvitationsData.Join(
                                 orgs,
                                 i => i.OrganizationId,
@@ -159,11 +200,11 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Organizationmembership> oms = dbContext.OrganizationmembershipsData
                     .Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(9, ToJson(oms), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(10, ToJson(oms), dtBail, ref iStartNext, ref data))
                     break;
                 int userid = CurrentUser?.Id ?? -1;
                 //users
-                if (!CheckAdd(10,
+                if (!CheckAdd(11,
                         ToJson(
                             oms.Any()
                                 ? dbContext.Users
@@ -182,10 +223,10 @@ namespace SIL.Transcriber.Repositories
                 IEnumerable<Project> projects = dbContext.ProjectsData
                     .Join(gms, p => p.GroupId, gm => gm.GroupId, (p, gm) => p)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(11, ToJson(projects), dtBail, ref iStartNext, ref data))
+                if (!CheckAdd(12, ToJson(projects), dtBail, ref iStartNext, ref data))
                     break;
                 //projectintegrations
-                if (!CheckAdd(12,
+                if (!CheckAdd(13,
                         ToJson(
                             dbContext.ProjectintegrationsData
                                 .Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl)
@@ -197,7 +238,7 @@ namespace SIL.Transcriber.Repositories
                 )
                     break;
                 //plans
-                if (!CheckAdd(13,
+                if (!CheckAdd(14,
                         ToJson(
                             dbContext.PlansData
                                 .Join(projects, pl => pl.ProjectId, p => p.Id, (pl, p) => pl)
@@ -211,7 +252,7 @@ namespace SIL.Transcriber.Repositories
 
                 if (version > 3)
                 {
-                    if (!CheckAdd(14,
+                    if (!CheckAdd(15,
                             ToJson(dbContext.Workflowsteps.Where(x => !x.Archived)),
                             dtBail,
                             ref iStartNext,
@@ -224,7 +265,7 @@ namespace SIL.Transcriber.Repositories
                             (c.OrganizationId == null || ids.Contains((int)c.OrganizationId))
                             && !c.Archived
                     );
-                    if (!CheckAdd(15,
+                    if (!CheckAdd(16,
                             ToJson(cats),
                             dtBail,
                             ref iStartNext,
@@ -237,9 +278,9 @@ namespace SIL.Transcriber.Repositories
                                 (c.OrganizationId == null || ids.Contains((int)c.OrganizationId))
                                 && !c.Archived
                         );
-                    if (!CheckAdd(16, ToJson(typs), dtBail, ref iStartNext, ref data))
+                    if (!CheckAdd(17, ToJson(typs), dtBail, ref iStartNext, ref data))
                         break;
-                    if (!CheckAdd(17,
+                    if (!CheckAdd(18,
                             ToJson(
                                 dbContext.OrgworkflowstepsData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
@@ -254,33 +295,51 @@ namespace SIL.Transcriber.Repositories
                     IQueryable<Intellectualproperty>? ip = dbContext.IntellectualPropertyData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived);
-                    if (!CheckAdd(18, ToJson(ip),dtBail,ref iStartNext, ref data ))
+                    if (!CheckAdd(19, ToJson(ip),dtBail,ref iStartNext, ref data ))
                         break;
                     //ipMedia
-                    if (!CheckAdd(19, ToJson(ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList()),
+                    if (!CheckAdd(20, ToJson(ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList()),
                         dtBail, ref iStartNext, ref data))
                         break;
                     if (version > 5)
                     {
-                        IQueryable<Orgkeyterm>? orgkeyterms = dbContext.Orgkeyterms
+                        IQueryable<Orgkeyterm>? orgkeyterms = dbContext.OrgKeytermsData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived);
-                        if (!CheckAdd(20, ToJson(orgkeyterms), dtBail, ref iStartNext, ref data))
+                        if (!CheckAdd(21, ToJson(orgkeyterms), dtBail, ref iStartNext, ref data))
                             break;
-                        if (!CheckAdd(21, ToJson(dbContext.OrgKeytermTargetsData
+                        if (!CheckAdd(22, ToJson(dbContext.OrgKeytermTargetsData
                                         .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                         .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
-                        if (!CheckAdd(22, ToJson(dbContext.OrgKeytermReferencesData
+                        if (!CheckAdd(23, ToJson(dbContext.OrgKeytermReferencesData
                                         .Join(orgkeyterms, c => c.OrgkeytermId, o => o.Id, (c, o) => c)
                                         .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
-                        if (!CheckAdd(23, ToJson(dbContext.SharedresourcesData
+                        if (!CheckAdd(24, ToJson(dbContext.SharedresourcesData
                                         .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
-                        if (!CheckAdd(24, ToJson(dbContext.SharedresourcereferencesData
+                        if (!CheckAdd(25, ToJson(dbContext.SharedresourcereferencesData
                                         .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
+                        if (!CheckAdd(26, ToJson(dbContext.SharedresourcesData
+                                    .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                            break;
+                        if (version > 6)
+                        {
+                            IQueryable<Bible> allbibles = dbContext.BiblesData.Where(x => !x.Archived);
+                            if (!CheckAdd(27, ToJson(allbibles), dtBail, ref iStartNext, ref data))
+                                break;
+                            IQueryable<Bible> bibles = allbibles;//.Join(orgs, b => b.Id, o => o.BibleId, (b, o) => b);
+                            List<Mediafile> mna = dbContext.MediafilesData.Where(x => !x.Archived).Join(bibles, m => m.Id, o=>o.IsoMediafileId, (m, o)=> m).ToList();
+                            mna.AddRange(
+                            dbContext.MediafilesData.Where(x => !x.Archived).Join(bibles, m => m.Id, o => o.BibleMediafileId, (m, o) => m).ToList());
+                            if (!CheckAdd(28, ToJson(mna), dtBail, ref iStartNext, ref data))
+                                break;
+                            if (!CheckAddGraphics(29, dbContext.GraphicsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
+                                        .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
+                                break;
+                        }
                     }
 
                 }

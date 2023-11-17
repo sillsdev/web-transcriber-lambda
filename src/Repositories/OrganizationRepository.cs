@@ -46,9 +46,9 @@ namespace SIL.Transcriber.Repositories
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                return entities.Where(o => !o.Archived && orgIds.Contains(o.Id));
+                return entities.Where(o =>  orgIds.Contains(o.Id));
             }
-            return entities.Where(e => !e.Archived);
+            return entities;
         }
 
         public IQueryable<Organization> ProjectOrganizations(
@@ -60,12 +60,12 @@ namespace SIL.Transcriber.Repositories
                 dbContext.Projects,
                 projectid
             );
-            return entities.Where(e => !e.Archived).Join(projects, o => o.Id, p => p.OrganizationId, (o, p) => o); //.GroupBy(o => o.Id).Select(g => g.First());
+            return entities.Join(projects, o => o.Id, p => p.OrganizationId, (o, p) => o); //.GroupBy(o => o.Id).Select(g => g.First());
         }
 
         public IQueryable<Organization> GetMine()
         {
-            return FromCurrentUser().Include(o => o.Owner); //NR?.Include(o => o.NoteProject);
+            return FromCurrentUser().Include(o => o.Owner);
         }
 
         #region Overrides

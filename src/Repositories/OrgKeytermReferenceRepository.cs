@@ -40,7 +40,7 @@ namespace SIL.Transcriber.Repositories
         )
         {
             IQueryable<Orgkeyterm>? terms = OrgKeytermRepository.UsersOrgKeyterms(dbContext.Orgkeyterms.AsQueryable());
-            return entities.Where(e => !e.Archived).Join(terms, o => o.OrgkeytermId, r => r.Id, (o, r) => o);
+            return entities.Join(terms, o => o.OrgkeytermId, r => r.Id, (o, r) => o);
         }
 
         public IQueryable<Orgkeytermreference> ProjectOrgKeytermReferences(
@@ -49,7 +49,7 @@ namespace SIL.Transcriber.Repositories
         )
         {
             IQueryable<Orgkeyterm>? terms = OrgKeytermRepository.ProjectOrgKeyterms(dbContext.Orgkeyterms.AsQueryable(), projectid);
-            return entities.Where(e => !e.Archived).Join(terms, o => o.OrgkeytermId, r => r.Id, (o, r) => o);
+            return entities.Join(terms, o => o.OrgkeytermId, r => r.Id, (o, r) => o);
         }
 
         #region Overrides

@@ -10,7 +10,7 @@ namespace SIL.Transcriber.Controllers
 {
     //[HttpReadOnly]
     [Route("api/[controller]")]
-    [ApiController]
+
     public class DashboardsController : JsonApiController<Dashboard, int>
     {
         private readonly DashboardRepository repo;

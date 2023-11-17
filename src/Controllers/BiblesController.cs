@@ -1,21 +1,17 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Mvc;
-using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Models;
 
-namespace SIL.Transcriber.Controllers
+namespace SIL.Transcriber.Controllers;
+public class BiblesController : BaseController<Bible>
 {
-    //[HttpReadOnly]
-    [Route("api/[controller]")]
-
-    public class ProjdatasController : BaseController<Projdata>
-    {
-        public ProjdatasController(
+        
+        public BiblesController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<Projdata, int> resourceService,
+            IResourceService<Bible, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
         ) : base(
@@ -26,6 +22,6 @@ namespace SIL.Transcriber.Controllers
                 currentUserContext,
                 userService
             )
-        { }
-    }
+    { }
+
 }

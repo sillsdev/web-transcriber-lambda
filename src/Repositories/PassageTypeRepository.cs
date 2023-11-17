@@ -6,9 +6,9 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class IntegrationRepository : BaseRepository<Integration>
+    public class PassagetypeRepository : BaseRepository<Passagetype>
     {
-        public IntegrationRepository(
+        public PassagetypeRepository(
             ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph,
@@ -30,19 +30,19 @@ namespace SIL.Transcriber.Repositories
             )
         { }
 
-        public override IQueryable<Integration> FromCurrentUser(
-            IQueryable<Integration>? entities = null
+        public override IQueryable<Passagetype> FromCurrentUser(
+            IQueryable<Passagetype>? entities = null
         )
         {
-            return (entities ?? GetAll());
+            return entities ?? GetAll();
         }
 
-        public override IQueryable<Integration> FromProjectList(
-            IQueryable<Integration>? entities,
+        public override IQueryable<Passagetype> FromProjectList(
+            IQueryable<Passagetype>? entities,
             string idList
         )
         {
-            return (entities ?? GetAll());
+            return entities ?? GetAll();
         }
     }
 }

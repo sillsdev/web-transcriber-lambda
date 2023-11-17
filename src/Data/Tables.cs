@@ -5,9 +5,11 @@ public static class Tables
     public const string ActivityStates = "activitystates";
     public const string ArtifactCategorys  = "artifactcategorys";
     public const string ArtifactTypes = "artifacttypes";
+    public const string Bibles = "bibles";
     public const string Comments = "comments";
     public const string CurrentVersions= "currentversions";
-    public const string Discussions = "discussions";  
+    public const string Discussions = "discussions";
+    public const string Graphics = "graphics";
     public const string GroupMemberships = "groupmemberships";
     public const string Groups = "groups";
     public const string Integrations = "integrations";
@@ -22,7 +24,6 @@ public static class Tables
     public const string OrgWorkflowSteps =  "orgworkflowsteps";
     public const string ParatextTokens = "paratexttokens";
     public const string Passages = "passages";
-    public const string PassageNotes = "passagenotes";
     public const string PassageStateChanges = "passagestatechanges";
     public const string PassageTypes = "passagetypes";
     public const string Plans =     "plans";

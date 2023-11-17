@@ -6,17 +6,16 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class IntegrationRepository : BaseRepository<Integration>
+    public class VWChecksumRepository : AppDbContextRepository<VWChecksum>
     {
-        public IntegrationRepository(
+        public VWChecksumRepository(
             ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph,
             IResourceFactory resourceFactory,
             IEnumerable<IQueryConstraintProvider> constraintProviders,
             ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository
+            IResourceDefinitionAccessor resourceDefinitionAccessor
         )
             : base(
                 targetedFields,
@@ -25,24 +24,10 @@ namespace SIL.Transcriber.Repositories
                 resourceFactory,
                 constraintProviders,
                 loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+                resourceDefinitionAccessor
             )
         { }
 
-        public override IQueryable<Integration> FromCurrentUser(
-            IQueryable<Integration>? entities = null
-        )
-        {
-            return (entities ?? GetAll());
-        }
-
-        public override IQueryable<Integration> FromProjectList(
-            IQueryable<Integration>? entities,
-            string idList
-        )
-        {
-            return (entities ?? GetAll());
-        }
     }
 }
+

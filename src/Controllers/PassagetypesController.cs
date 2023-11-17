@@ -1,21 +1,17 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    //[HttpReadOnly]
-    [Route("api/[controller]")]
-
-    public class ProjdatasController : BaseController<Projdata>
+    public class PassagetypesController : BaseController<Passagetype>
     {
-        public ProjdatasController(
+        public PassagetypesController(
             ILoggerFactory loggerFactory,
             IJsonApiOptions options,
             IResourceGraph resourceGraph,
-            IResourceService<Projdata, int> resourceService,
+            IResourceService<Passagetype, int> resourceService,
             ICurrentUserContext currentUserContext,
             UserService userService
         ) : base(

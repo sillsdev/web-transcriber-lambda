@@ -70,7 +70,6 @@ namespace SIL.Transcriber.Services
             {Tables.Mediafiles,'H'},
             {Tables.OrgKeyTermReferences,'H'},
             {Tables.PassageStateChanges,'H'},
-            //NR?{Tables.PassageNotes,'H'},
             {Tables.OrgKeyTermTargets,'I'},
             {Tables.SectionResources,'I'},
             {Tables.Discussions,'I'},
@@ -662,9 +661,9 @@ namespace SIL.Transcriber.Services
                     "{0}-{1}-{2}-{3}-{4}v{5}{6}",
                     language,
                     passage.Book,
-                    passage.StartChapter.ToString().PadLeft(3, '0'),
-                    passage.StartVerse.ToString().PadLeft(3, '0'),
-                    passage.EndVerse.ToString().PadLeft(3, '0'),
+                    ToStr(passage.StartChapter).PadLeft(3, '0'),
+                    ToStr(passage.StartVerse).PadLeft(3, '0'),
+                    ToStr(passage.EndVerse).PadLeft(3, '0'),
                     m.VersionNumber,
                     Path.GetExtension(m.S3File)
                 );
@@ -702,6 +701,10 @@ namespace SIL.Transcriber.Services
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles.Concat(ipMedia).ToList<Mediafile>());
             return mediafiles;
         }
+        private static string ToStr(int? value)
+        {
+            return value?.ToString()??"";
+        }   
         private string NameFromTemplate(Mediafile m, string? nameTemplate)
         {
             //expecting template to have
@@ -724,16 +727,16 @@ namespace SIL.Transcriber.Services
                 string pref = passage.StartChapter > 0
                         ? passage.StartChapter == passage.EndChapter ? string.Format(
                                 "{0}_{1}{2}",
-                                passage.StartChapter.ToString().PadLeft(3, '0'),
-                                passage.StartVerse.ToString().PadLeft(3, '0'),
+                                ToStr(passage.StartChapter).PadLeft(3, '0'),
+                                ToStr(passage.StartVerse).PadLeft(3, '0'),
                                 passage.StartVerse == passage.EndVerse ? "" :
-                                '-' + passage.EndVerse.ToString().PadLeft(3, '0')
+                                '-' + ToStr(passage.EndVerse).PadLeft(3, '0')
                             ) : string.Format(
                                 "{0}_{1}-{2}_{3}",
-                                passage.StartChapter.ToString().PadLeft(3, '0'),
-                                passage.StartVerse.ToString().PadLeft(3, '0'),
-                                passage.EndChapter.ToString().PadLeft(3, '0'),
-                                passage.EndVerse.ToString().PadLeft(3, '0'))
+                                ToStr(passage.StartChapter).PadLeft(3, '0'),
+                                ToStr(passage.StartVerse).PadLeft(3, '0'),
+                                ToStr(passage.EndChapter).PadLeft(3, '0'),
+                                ToStr(passage.EndVerse).PadLeft(3, '0'))
                         : passage.Reference ?? "";
                 if (pref.Length == 0 && !nameTemplate.Contains("{PASS}"))
                 {   //do I have enough info without ref?
@@ -1130,17 +1133,7 @@ namespace SIL.Transcriber.Services
                     IQueryable<Passage> passages = sections
                         .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
                         .Where(x => !x.Archived);
-                    /* NEXT RELEASE!
-                    IQueryable<Passagenote> passagenotes = passages.Join(
-                        dbContext.Passagenotes,
-                        p => p.Id,
-                        pg => pg.PassageId,
-                        (p, pg) => pg
-                    );
-                    IQueryable<Section> supportingSections = passagenotes
-                        .Join(dbContext.Sections, pg => pg.NoteSectionId, s => s.Id, (pg, s) => s)
-                        .Where(x => !x.Archived);
-                    */
+                    //TODO did I get notes in the shared resources?
                     if (
                         !CheckAdd(
                             3,
@@ -1187,22 +1180,8 @@ namespace SIL.Transcriber.Services
                         )
                     )
                         break;
-                    /* NEXT RELEASE!
-                    //passagenotes                    
-                    if (
-                        !CheckAdd(
-                            6,
-                            dtBail,
-                            ref startNext,
-                            zipArchive,
-                            Tables.PassageNotes,
-                            passagenotes.ToList()
-                        )
-                    ) 
-                        break; 
-                    */
-                    //NR? THIS RELEASE ONLY!
-                    startNext++; //instead of passagenotes
+ 
+                    startNext++; //TODO REMOVE? instead of passagenotes
 
                     //mediafiles
                     //I need my mediafiles plus any shared resource mediafiles
@@ -1801,31 +1780,14 @@ namespace SIL.Transcriber.Services
             _ = dbContext.SaveChanges();
         }
 
-        private int CompareMediafilesByArtifactTypeVersionDesc(Mediafile a, Mediafile b)
+        private int CompareMediafilesByArtifactTypeVersionDate(Mediafile a, Mediafile b)
         {
-            if (a == null)
-            {
-                return b == null ? 0 : -1;
-            }
-            else
-            { //a is not null
-                if (b == null)
-                    return 1;
-                else
-                { //neither a nor b is null
-                    if (a.IsVernacular)
-                    {
-                        if (b.IsVernacular)
-                            return a.VersionNumber ?? 0 - b.VersionNumber ?? 0; //both vernacular so use version number
-                        else
-                            return -1;
-                    }
-                    else
-                    {
-                        return b.IsVernacular ? 1 : 0;
-                    }
-                }
-            }
+            int compareType = Nullable.Compare(a.ArtifactTypeId, b.ArtifactTypeId);
+            return compareType != 0
+                ? compareType
+                : a.ArtifactTypeId == null ?
+                Nullable.Compare(a.VersionNumber, b.VersionNumber) :
+                Nullable.Compare(a.DateUpdated,b.DateUpdated);
         }
         private int? ValidArtifactCategory(int? categoryid) { return dbContext.Artifactcategorys.FirstOrDefault(c => c.Id == categoryid)?.Archived ?? true ? null : categoryid == 0 ? 1 : categoryid; }
 
@@ -1904,6 +1866,7 @@ namespace SIL.Transcriber.Services
                     || existing.SourceMediaId != importing.SourceMediaId
                     || existing.SourceMediaOfflineId != importing.SourceMediaOfflineId
                     || existing.SourceSegments != importing.SourceSegments
+                    || existing.VersionNumber != importing.VersionNumber
                     || existing.Topic != importing.Topic
                 )
             )
@@ -1923,6 +1886,7 @@ namespace SIL.Transcriber.Services
                     existing.Transcriptionstate = importing.Transcriptionstate;
                 existing.LastModifiedBy = importing.LastModifiedBy;
                 existing.LastModifiedByUser = importing.LastModifiedByUser;
+                existing.VersionNumber = importing.VersionNumber;
                 existing.DateUpdated = DateTime.UtcNow;
                 _ = dbContext.Mediafiles.Update(existing);
             }
@@ -2584,7 +2548,7 @@ namespace SIL.Transcriber.Services
                             {
                                 sorted.Add(ResourceObjectToResource(ro, new Mediafile()));
                             }
-                            sorted.Sort(CompareMediafilesByArtifactTypeVersionDesc);
+                            sorted.Sort(CompareMediafilesByArtifactTypeVersionDate);
                             startId = await CreateOrUpdateMediafiles(sorted, startId, sourceDate, report, dtBail, archive);
                             break;
 
@@ -3046,7 +3010,7 @@ namespace SIL.Transcriber.Services
                     //TextQuality = m.TextQuality,
                     Transcription = m.Transcription,
                     PlanId = plan.Id,
-                    OriginalFile = m.OriginalFile,
+                    OriginalFile = m.S3File ?? m.OriginalFile,
                     Filesize = m.Filesize,
                     Position = m.Position,
                     Segments = m.Segments,

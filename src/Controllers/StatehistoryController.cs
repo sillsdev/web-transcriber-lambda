@@ -10,7 +10,7 @@ namespace SIL.Transcriber.Controllers
 {
     //HttpReadOnly]
     [Route("api/statehistory")] //ignored...it's statehistories now
-    [ApiController]
+
     public class StatehistoryController : BaseController<Statehistory>
     {
         readonly private StatehistoryService myService;

@@ -1,17 +1,17 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
+using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgWorkflowStepRepository : BaseRepository<Orgworkflowstep>
+    public class GraphicRepository : BaseRepository<Graphic>
     {
         private readonly OrganizationRepository OrganizationRepository;
-
-        public OrgWorkflowStepRepository(
+        public GraphicRepository(
             ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph,
@@ -32,12 +32,10 @@ namespace SIL.Transcriber.Repositories
                 resourceDefinitionAccessor,
                 currentUserRepository
             )
-        {
-            OrganizationRepository = organizationRepository;
-        }
+        { OrganizationRepository = organizationRepository; }
 
-        public IQueryable<Orgworkflowstep> UsersOrgWorkflowSteps(
-            IQueryable<Orgworkflowstep> entities
+        public IQueryable<Graphic> UsersGraphics(
+            IQueryable<Graphic> entities
         )
         {
             if (CurrentUser == null)
@@ -46,13 +44,13 @@ namespace SIL.Transcriber.Repositories
             IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                entities = entities.Where(om => orgIds.Contains(om.OrganizationId));
+                entities = entities.Where(g => !g.Archived && orgIds.Contains(g.OrganizationId));
             }
-            return entities;
+            return entities.Where(e => !e.Archived);
         }
 
-        public IQueryable<Orgworkflowstep> ProjectOrgWorkflowSteps(
-            IQueryable<Orgworkflowstep> entities,
+        public IQueryable<Graphic> ProjectGraphics(
+            IQueryable<Graphic> entities,
             string projectid
         )
         {
@@ -60,23 +58,23 @@ namespace SIL.Transcriber.Repositories
                 dbContext.Organizations,
                 projectid
             );
-            return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
+            return entities.Join(orgs, g => g.OrganizationId, o => o.Id, (g, o) => g).Where(g => !g.Archived);
         }
 
         #region Overrides
-        public override IQueryable<Orgworkflowstep> FromProjectList(
-            IQueryable<Orgworkflowstep>? entities,
+        public override IQueryable<Graphic> FromProjectList(
+            IQueryable<Graphic>? entities,
             string idList
         )
         {
-            return ProjectOrgWorkflowSteps(entities ?? GetAll(), idList);
+            return ProjectGraphics(entities ?? GetAll(), idList);
         }
 
-        public override IQueryable<Orgworkflowstep> FromCurrentUser(
-            IQueryable<Orgworkflowstep>? entities = null
+        public override IQueryable<Graphic> FromCurrentUser(
+            IQueryable<Graphic>? entities = null
         )
         {
-            return UsersOrgWorkflowSteps(entities ?? GetAll());
+            return UsersGraphics(entities ?? GetAll());
         }
         #endregion
     }

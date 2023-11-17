@@ -74,11 +74,12 @@ namespace SIL.Transcriber
         {
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
+            services.AddScoped<BibleService>();
             services.AddScoped<CommentService>();
             services.AddScoped<CurrentversionService>();
             services.AddScoped<DataChangeService>();
             services.AddScoped<DiscussionService>();
-            //services.AddScoped<FileresponseService>();
+            services.AddScoped<GraphicService>();
             services.AddScoped<GroupMembershipService>();
             services.AddScoped<GroupService>();
             services.AddScoped<IntegrationService>();
@@ -111,6 +112,7 @@ namespace SIL.Transcriber
             services.AddScoped<UserService>();
             services.AddScoped<UserVersionService>();
             services.AddScoped<StatehistoryService>();
+            services.AddScoped<VWChecksumService>();
             services.AddScoped<WorkflowStepService>();
         }
 
@@ -119,13 +121,14 @@ namespace SIL.Transcriber
             services.AddScoped<ActivitystateRepository>();
             services.AddScoped<ArtifactCategoryRepository>();
             services.AddScoped<ArtifactTypeRepository>();
+            services.AddScoped<BibleRepository>();
             services.AddScoped<CommentRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<CurrentversionRepository>();
             services.AddScoped<DashboardRepository>();
             services.AddScoped<DatachangesRepository>();
             services.AddScoped<DiscussionRepository>();
-            //services.AddScoped<FileresponseRepository>();
+            services.AddScoped<GraphicRepository>();
             services.AddScoped<GroupMembershipRepository>();
             services.AddScoped<GroupRepository>();
             services.AddScoped<IntegrationRepository>();
@@ -144,6 +147,7 @@ namespace SIL.Transcriber
             services.AddScoped<ParatextTokenRepository>();
             services.AddScoped<ParatextTokenHistoryRepository>();
             services.AddScoped<PassageRepository>();
+            services.AddScoped<PassagetypeRepository>();
             services.AddScoped<PassageStateChangeRepository>();
             services.AddScoped<PlanRepository>();
             services.AddScoped<ProjDataRepository>();
@@ -162,6 +166,7 @@ namespace SIL.Transcriber
             services.AddScoped<UserRepository>();
             services.AddScoped<UserVersionRepository>();
             services.AddScoped<StatehistoryRepository>();
+            services.AddScoped<VWChecksumRepository>();
             services.AddScoped<WorkflowStepRepository>();
         }
 

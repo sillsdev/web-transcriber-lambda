@@ -41,7 +41,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Project> projects
         )
         {
-            return entities.Where(e => !e.Archived).Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
+            return entities.Join(projects, (u => u.ProjectId), (p => p.Id), (u, p) => u);
         }
 
         public IQueryable<Plan> ProjectPlans(IQueryable<Plan> entities, string projectid)
@@ -77,8 +77,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Project>? projects = null
         )
         {
-            if (projects == null)
-                projects = ProjectRepository.UsersProjects(dbContext.Projects);
+            projects ??= ProjectRepository.UsersProjects(dbContext.Projects);
 
             return ProjectsPlans(entities, projects);
         }
@@ -90,6 +89,29 @@ namespace SIL.Transcriber.Repositories
                 .Include(p => p.Project)
                 .ThenInclude(pr => pr.Organization)
                 .FirstOrDefault();
+        }
+
+        public string DirectoryName(int planId)
+        {
+            /* this no longer works...project is null */
+            Plan? plan = GetWithProject(planId);
+            return plan != null ? DirectoryName(plan) : "";
+        }
+        public string DirectoryName(Plan? plan)
+        {
+            if (plan == null)
+                return "";
+            Project? proj = plan.Project;
+            proj ??= dbContext.Projects
+                    .Where(p => p.Id == plan.ProjectId)
+                    .Include(p => p.Organization)
+                    .FirstOrDefault();
+            Organization? org = proj?.Organization;
+            if (org == null && proj?.OrganizationId != null)
+                org = dbContext.Organizations
+                    .Where(o => o.Id == proj.OrganizationId)
+                    .FirstOrDefault();
+            return org != null ? org.Slug + "/" + plan.Slug : throw new Exception("No org in DirectoryName");
         }
     }
 }

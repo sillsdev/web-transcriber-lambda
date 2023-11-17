@@ -2,10 +2,10 @@
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
-using Microsoft.AspNetCore.Http;
 using SIL.Transcriber.Models;
 using System.Net;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SIL.Transcriber.Services
 {
@@ -140,7 +140,7 @@ namespace SIL.Transcriber.Services
             USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
             this.Logger = loggerFactory.CreateLogger<S3Service>();
         }
-        
+
         private static string ProperFolder(string folder)
         {
             //what else should be checked here?
@@ -198,7 +198,18 @@ namespace SIL.Transcriber.Services
             }
             return false;
         }
-
+        public async Task<string> GetFilename (string folder, string filename, bool overwrite = false, string suffix = "")
+        {
+           string ext = Path.GetExtension(filename)??"";
+           string newfilename = Path.GetFileNameWithoutExtension(filename) +suffix + ext;
+           return !overwrite && await FileExistsAsync(newfilename, folder)
+                ? Path.GetFileNameWithoutExtension(filename)
+                    + "__"
+                    + Guid.NewGuid()
+                    + suffix
+                    + ext
+                : newfilename;
+        }
         public async Task<S3Response> CreateBucketAsync(string bucketName)
         {
             try
@@ -225,7 +236,28 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-
+        public async Task<S3Response> MakePublic(string fileName, string folder = "")
+        {
+            try
+            {
+                PutACLRequest request = new()
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = ProperFolder(folder) + fileName,
+                    CannedACL = S3CannedACL.PublicRead,
+                };
+                PutACLResponse response = await _client.PutACLAsync(request);
+                return S3Response("", response.HttpStatusCode);
+            }
+            catch (AmazonS3Exception e)
+            {
+                return S3Response(e.Message, e.StatusCode);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }   
         private string SignedUrl(string key, HttpVerb action, string mimetype)
         {
             AmazonS3Client s3Client = new();
@@ -269,7 +301,6 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-
         public S3Response SignedUrlForPut(string fileName, string folder, string contentType)
         {
             try

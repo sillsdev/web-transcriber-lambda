@@ -72,7 +72,7 @@ namespace SIL.Transcriber.Repositories
                     )
                 );
             }
-            return entities.Where(e => !e.Archived);
+            return entities;
         }
 
         public IQueryable<User> ProjectUsers(IQueryable<User> entities, string projectid)
@@ -88,7 +88,7 @@ namespace SIL.Transcriber.Repositories
         #region Overrides
         public override IQueryable<User> FromCurrentUser(IQueryable<User>? entities = null)
         {
-            return UsersUsers((entities ?? GetAll()).Where(u => !u.Archived));
+            return UsersUsers(entities ?? GetAll());
         }
 
         public override IQueryable<User> FromProjectList(IQueryable<User>? entities, string idList)

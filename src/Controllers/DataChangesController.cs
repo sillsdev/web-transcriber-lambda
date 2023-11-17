@@ -5,14 +5,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
+using System.Threading.Channels;
 
 namespace SIL.Transcriber.Controllers
 {
     //[HttpReadOnly]
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class DatachangesController : JsonApiController<Datachanges, int>
     {
@@ -62,6 +63,20 @@ namespace SIL.Transcriber.Controllers
                 return new UnprocessableEntityResult();
             dtSince = dtSince.ToUniversalTime();
             return Ok(service.GetUserChanges(origin, dtSince, version, start));
+        }
+        [HttpGet("project/{project}/{table}/{start}/since/{since}")]
+        public ActionResult GetTableDatachanges(
+                [FromRoute] 
+                int project,
+                string table,
+                int start,
+                string since
+            )
+        {
+            if (!DateTime.TryParse(since, out DateTime dtSince))
+                return new UnprocessableEntityResult();
+            dtSince = dtSince.ToUniversalTime();
+            return Ok(service.GetProjectTableChanges(table, dtSince, project, start));
         }
 
         [HttpGet("v{version}/{start}/project/{origin}")]

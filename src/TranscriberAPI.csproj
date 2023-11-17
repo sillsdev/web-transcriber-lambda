@@ -28,7 +28,6 @@
     <Compile Remove="Controllers\ArtifactCategorysController.cs" />
     <Compile Remove="Controllers\BooksController.cs" />
     <Compile Remove="Controllers\CurrentUsersController.cs" />
-    <Compile Remove="Controllers\HomeController.cs" />
     <Compile Remove="Controllers\PassagesectionsController.cs" />
     <Compile Remove="Controllers\ProjectusersController.cs" />
     <Compile Remove="Controllers\RpcControllerBase.cs" />
@@ -42,6 +41,7 @@
     <Compile Remove="Models\IBurritoMeta.cs" />
     <Compile Remove="Models\Organizationusers.cs" />
     <Compile Remove="Models\ParatextVerse.cs" />
+    <Compile Remove="Models\PassageNote.cs" />
     <Compile Remove="Models\PassageSection.cs" />
     <Compile Remove="Models\ProjectUser.cs" />
     <Compile Remove="Models\SFProject.cs" />

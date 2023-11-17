@@ -64,7 +64,7 @@ namespace SIL.Transcriber.Repositories
                 p => p.Id,
                 (m, p) => m
             );
-            return entities.Where(e => !e.Archived).Join(
+            return entities.Join(
                 mediafiles,
                 (d => d.MediafileId),
                 m => m.Id,

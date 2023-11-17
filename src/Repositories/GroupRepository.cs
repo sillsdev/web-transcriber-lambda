@@ -46,10 +46,10 @@ namespace SIL.Transcriber.Repositories
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
 
                 return entities.Where(
-                    g => !g.Archived && (orgIds.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id))
+                    g =>   (orgIds.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id))
                 );
             }
-            return entities.Where(e => !e.Archived);
+            return entities;
         }
 
         public IQueryable<Group> ProjectGroups(IQueryable<Group> entities, string projectid)
@@ -59,7 +59,7 @@ namespace SIL.Transcriber.Repositories
             );
             int orgId = projects.FirstOrDefault()?.OrganizationId ?? 0;
             
-            return entities.Where(g => !g.Archived && g.OwnerId == orgId);
+            return entities.Where(g => g.OwnerId == orgId);
         }
 
         public override IQueryable<Group> FromCurrentUser(IQueryable<Group>? entities = null)

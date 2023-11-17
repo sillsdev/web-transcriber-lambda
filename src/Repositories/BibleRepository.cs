@@ -1,17 +1,17 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
+using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
+using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgWorkflowStepRepository : BaseRepository<Orgworkflowstep>
+    public class BibleRepository : BaseRepository<Bible>
     {
         private readonly OrganizationRepository OrganizationRepository;
-
-        public OrgWorkflowStepRepository(
+        public BibleRepository(
             ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph,
@@ -32,12 +32,10 @@ namespace SIL.Transcriber.Repositories
                 resourceDefinitionAccessor,
                 currentUserRepository
             )
-        {
-            OrganizationRepository = organizationRepository;
-        }
+        { OrganizationRepository = organizationRepository; }
 
-        public IQueryable<Orgworkflowstep> UsersOrgWorkflowSteps(
-            IQueryable<Orgworkflowstep> entities
+        public IQueryable<Bible> UsersBibles(
+            IQueryable<Bible> entities
         )
         {
             if (CurrentUser == null)
@@ -46,13 +44,13 @@ namespace SIL.Transcriber.Repositories
             IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
-                entities = entities.Where(om => orgIds.Contains(om.OrganizationId));
+                //entities = entities.Join(dbContext.Organizations.Where(o => !o.Archived && orgIds.Contains(o.Id)), b => b.Id, o => o.BibleId, (b, o) => b);
             }
-            return entities;
+            return entities.Where(e => !e.Archived);
         }
 
-        public IQueryable<Orgworkflowstep> ProjectOrgWorkflowSteps(
-            IQueryable<Orgworkflowstep> entities,
+        public IQueryable<Bible> ProjectBibles(
+            IQueryable<Bible> entities,
             string projectid
         )
         {
@@ -60,23 +58,25 @@ namespace SIL.Transcriber.Repositories
                 dbContext.Organizations,
                 projectid
             );
-            return entities.Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om);
+            return entities
+                //.Join(orgs, b => b.Id, o => o.BibleId, (b, o) => b)
+                .Where(b => !b.Archived);
         }
 
         #region Overrides
-        public override IQueryable<Orgworkflowstep> FromProjectList(
-            IQueryable<Orgworkflowstep>? entities,
+        public override IQueryable<Bible> FromProjectList(
+            IQueryable<Bible>? entities,
             string idList
         )
         {
-            return ProjectOrgWorkflowSteps(entities ?? GetAll(), idList);
+            return ProjectBibles(entities ?? GetAll(), idList);
         }
 
-        public override IQueryable<Orgworkflowstep> FromCurrentUser(
-            IQueryable<Orgworkflowstep>? entities = null
+        public override IQueryable<Bible> FromCurrentUser(
+            IQueryable<Bible>? entities = null
         )
         {
-            return UsersOrgWorkflowSteps(entities ?? GetAll());
+            return UsersBibles(entities ?? GetAll());
         }
         #endregion
     }

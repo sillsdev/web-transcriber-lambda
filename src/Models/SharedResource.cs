@@ -8,6 +8,7 @@ namespace SIL.Transcriber.Models;
 public partial class Sharedresource : BaseModel, IArchive
 {
     [Attr(PublicName = "passage-id")]
+    [ForeignKey(nameof(Passage))]
     public int? PassageId { get; set; }
     [HasOne(PublicName = "passage")]
     public Passage? Passage { get; set; }
@@ -34,5 +35,18 @@ public partial class Sharedresource : BaseModel, IArchive
 
     [HasOne(PublicName = "artifact-category")]
     public Artifactcategory? ArtifactCategory { get; set; }
+    [Attr(PublicName = "title-mediafile-id")]
+    [ForeignKey(nameof(TitleMediafile))]
+    public int? TitleMediafileId { get; set; }
+
+    [HasOne(PublicName = "title-mediafile")]
+    public Mediafile? TitleMediafile { get; set; }
+
+    [Attr(PublicName = "note")]
+    public bool Note { get; set; }
+
+    [Attr(PublicName = "link-url")]
+    public string? LinkUrl { get; set; }
+
     public bool Archived { get; set; }
 }

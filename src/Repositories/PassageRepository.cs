@@ -54,7 +54,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Section> sections
         )
         {
-            return entities.Where(e => !e.Archived).Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
+            return entities.Join(sections, p => p.SectionId, s => s.Id, (p, s) => p);
         }
 
         public IQueryable<Passage> UsersPassages(
@@ -62,10 +62,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Section>? sections = null
         )
         {
-            if (sections == null)
-            {
-                sections = SectionRepository.UsersSections(dbContext.Sections);
-            }
+            sections ??= SectionRepository.UsersSections(dbContext.Sections);
             return SectionsPassages(entities, sections);
         }
 
@@ -123,9 +120,7 @@ namespace SIL.Transcriber.Repositories
 
         protected override IQueryable<Passage> FromPlan(QueryLayer layer, string planid)
         {
-            if (int.TryParse(planid, out int plan))
-                return UsersPassages(base.GetAll(), plan);
-            return UsersPassages(base.GetAll(), -1);
+            return int.TryParse(planid, out int plan) ? UsersPassages(base.GetAll(), plan) : UsersPassages(base.GetAll(), -1);
         }
 
         protected override IQueryable<Passage> ApplyQueryLayer(QueryLayer layer)
@@ -142,7 +137,7 @@ namespace SIL.Transcriber.Repositories
                 layer.Filter = null;
                 return FromCurrentUser(
                     SectionsPassages(
-                        dbContext.Passages.Include(p => p.Section),
+                        dbContext.Passages.Include(p => p.Section).Include(p => p.Passagetype).Include(p => p.SharedResource),
                         dbContext.Sections.Where(s => s.PlanId == planid)
                     )
                 );

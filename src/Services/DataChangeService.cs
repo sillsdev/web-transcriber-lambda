@@ -23,6 +23,7 @@ namespace SIL.Transcriber.Services
         private readonly ArtifactTypeService ArtifactTypeService;
         private readonly CommentService CommentService;
         private readonly DiscussionService DiscussionService;
+        private readonly GraphicService GraphicService; 
         private readonly GroupMembershipService GMService;
         private readonly GroupService GroupService;
         private readonly IntellectualPropertyService IntellectualPropertyService;
@@ -66,6 +67,7 @@ namespace SIL.Transcriber.Services
             ArtifactTypeService artifactTypeService,
             CommentService commentService,
             DiscussionService discussionService,
+            GraphicService graphicService,
             GroupMembershipService gmService,
             GroupService groupService,
             IntellectualPropertyService intellectualPropertyService,
@@ -110,6 +112,7 @@ namespace SIL.Transcriber.Services
             ArtifactTypeService = artifactTypeService;
             CommentService = commentService;
             DiscussionService = discussionService;
+            GraphicService = graphicService;
             GMService = gmService;
             GroupService = groupService;
             IntellectualPropertyService = intellectualPropertyService;
@@ -179,6 +182,24 @@ namespace SIL.Transcriber.Services
                 else
                     list.AddUnique(t.Ids);
             });
+        }
+        public Datachanges GetProjectTableChanges(
+                string table,
+                DateTime dtSince, int project, int startId
+            )
+        {
+            DateTime dtNow = DateTime.UtcNow;
+            startId = GetTableChanges(table, "any", dtSince, 0, project, startId);
+            _ = changes.RemoveAll(c => c.Ids.Count == 0);
+            _ = deleted.RemoveAll(d => d.Ids.Count == 0);
+            return new Datachanges()
+            {
+                Id = 1,
+                Startnext = startId,
+                Querydate = dtNow,
+                Changes = changes.ToArray(),
+                Deleted = deleted.ToArray()
+            };
         }
 
         public Datachanges GetProjectChanges(
@@ -262,7 +283,7 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        private class DCReturn
+        public class DCReturn
         {
             public int startNext;
             public List<OrbitId> changes;
@@ -282,9 +303,130 @@ namespace SIL.Transcriber.Services
             return DateTime.Now > dtBail ? 1000 : completed;
         }
 
+        private int GetTableChanges(string table,
+            string origin,
+            DateTime dtSince,
+            int currentUser,
+            int project,
+            int startId)
+        {
+            switch (table)
+            {
+                case "graphic":
+                    startId = BuildList(GraphicService.GetChanges(dbContext.Graphics, currentUser, origin, dtSince, project, startId), Tables.Groups, changes);
+                    BuildList(GraphicService.GetDeletedSince(dbContext.Graphics, currentUser, origin, dtSince, project, 0), Tables.Groups, deleted, false);
+                    break;
+                case "group":
+                    startId = BuildList(GroupService.GetChanges(dbContext.Groups, currentUser, origin, dtSince, project, startId), Tables.Groups, changes);
+                    BuildList(GroupService.GetDeletedSince(dbContext.Groups, currentUser, origin, dtSince, project, 0), Tables.Groups, deleted, false);
+                    break;
+                case "groupmembership":
+                    startId = BuildList(GMService.GetChanges(dbContext.Groupmemberships, currentUser, origin, dtSince, project, startId), Tables.GroupMemberships, changes);
+                    BuildList(GMService.GetDeletedSince(dbContext.Groupmemberships, currentUser, origin, dtSince, project, 0), Tables.GroupMemberships, deleted, false);
+                    break;
+                case "invitation":
+                    startId = BuildList(InvitationService.GetChanges(dbContext.Invitations, currentUser, origin, dtSince, project, startId), Tables.Invitations, changes);
+                    break;
+                case "mediafile":
+                    startId = BuildList(MediafileService.GetChanges(dbContext.Mediafiles, currentUser, origin, dtSince, project, startId), Tables.Mediafiles, changes);
+                    if (startId == -1)
+                        BuildList(MediafileService.GetDeletedSince(dbContext.Mediafiles, currentUser, origin, dtSince, project, 0), Tables.Mediafiles, deleted, false);
+                    break;
+                case "organization":
+                    startId = BuildList(OrganizationService.GetChanges(dbContext.Organizations, currentUser, origin, dtSince, project, startId), Tables.Organizations, changes);
+                    BuildList(OrganizationService.GetDeletedSince(dbContext.Organizations, currentUser, origin, dtSince, project, 0), Tables.Organizations, deleted, false);
+                    break;
+                case "organizationmembership":
+                    startId = BuildList(OrgMemService.GetChanges(dbContext.Organizationmemberships, currentUser, origin, dtSince, project, startId), Tables.OrganizationMemberships, changes);
+                    BuildList(OrgMemService.GetDeletedSince(dbContext.Organizationmemberships, currentUser, origin, dtSince, project, 0), Tables.OrganizationMemberships, deleted, false);
+                    break;
+                case "passage":
+                    startId = BuildList(PassageService.GetChanges(dbContext.Passages, currentUser, origin, dtSince, project, startId), Tables.Passages, changes);
+                    BuildList(PassageService.GetDeletedSince(dbContext.Passages, currentUser, origin, dtSince, project, 0), Tables.Passages, deleted, false);
+                    break;
+                case "passagestatechange":
+                    startId = BuildList(PassageStateChangeService.GetChanges(dbContext.Passagestatechanges, currentUser, origin, dtSince, project, startId), Tables.PassageStateChanges, changes);
+                    break;
+                case "plan":
+                    startId = BuildList(PlanService.GetChanges(dbContext.Plans, currentUser, origin, dtSince, project, startId), Tables.Plans, changes);
+                    BuildList(PlanService.GetDeletedSince(dbContext.Plans, currentUser, origin, dtSince, project, 0), Tables.Plans, deleted, false);
+                    break;
+                case "project":
+                    startId = BuildList(ProjectService.GetChanges(dbContext.Projects, currentUser, origin, dtSince, project, startId), Tables.Projects, changes);
+                    BuildList(ProjectService.GetDeletedSince(dbContext.Projects, currentUser, origin, dtSince, project, 0), Tables.Projects, deleted, false);
+                    break;
+                case "projectintegration":
+                    startId = BuildList(ProjIntService.GetChanges(dbContext.Projectintegrations, currentUser, origin, dtSince, project, startId), Tables.ProjectIntegrations, changes);
+                    break;
+                case "section":
+                    startId = BuildList(SectionService.GetChanges(dbContext.Sections, currentUser, origin, dtSince, project, startId), Tables.Sections, changes);
+                    BuildList(SectionService.GetDeletedSince(dbContext.Sections, currentUser, origin, dtSince, project, 0), Tables.Sections, deleted, false);
+                    break;
+                case "user":
+                    startId = BuildList(UserService.GetChanges(dbContext.Users, currentUser, origin, dtSince, project, startId), Tables.Users, changes);
+                    BuildList(UserService.GetDeletedSince(dbContext.Users, currentUser, origin, dtSince, project, 0), Tables.Users, deleted, false);
+                    break;
+                case "artifactcategory":
+                    startId = BuildList(ArtifactCategoryService.GetChanges(dbContext.Artifactcategorys, currentUser, origin, dtSince, project, startId), Tables.ArtifactCategorys, changes);
+                    BuildList(ArtifactCategoryService.GetDeletedSince(dbContext.Artifactcategorys, currentUser, origin, dtSince, project, 0), Tables.ArtifactCategorys, deleted, false);
+                    break;
+                case "artifacttype":
+                    startId = BuildList(ArtifactTypeService.GetChanges(dbContext.Artifacttypes, currentUser, origin, dtSince, project, startId), Tables.ArtifactTypes, changes);
+                    BuildList(ArtifactTypeService.GetDeletedSince(dbContext.Artifacttypes, currentUser, origin, dtSince, project, 0), Tables.ArtifactTypes, deleted, false);
+                    break;
+                case "discussion":
+                    startId = BuildList(DiscussionService.GetChanges(dbContext.Discussions, currentUser, origin, dtSince, project, startId), Tables.Discussions, changes);
+                    BuildList(DiscussionService.GetDeletedSince(dbContext.Discussions, currentUser, origin, dtSince, project, 0), Tables.Discussions, deleted, false);
+                    break;
+                case "comment":
+                    startId = BuildList(CommentService.GetChanges(dbContext.Comments, currentUser, origin, dtSince, project, startId), Tables.Comments, changes);
+                    BuildList(CommentService.GetDeletedSince(dbContext.Comments, currentUser, origin, dtSince, project, 0), Tables.Comments, deleted, false);
+                    break;
+                case "orgworkflowstep":
+                    startId = BuildList(OrgWorkflowStepService.GetChanges(dbContext.Orgworkflowsteps, currentUser, origin, dtSince, project, startId), Tables.OrgWorkflowSteps, changes);
+                    BuildList(OrgWorkflowStepService.GetDeletedSince(dbContext.Orgworkflowsteps, currentUser, origin, dtSince, project, 0), Tables.OrgWorkflowSteps, deleted, false);
+                    break;
+                case "sectionresource":
+                    startId = BuildList(SectionResourceService.GetChanges(dbContext.Sectionresources, currentUser, origin, dtSince, project, startId), Tables.SectionResources, changes);
+                    BuildList(SectionResourceService.GetDeletedSince(dbContext.Sectionresources, currentUser, origin, dtSince, project, 0), Tables.SectionResources, deleted, false);
+                    break;
+                case "sectionresourceuser":
+                    startId = BuildList(SectionResourceUserService.GetChanges(dbContext.Sectionresourceusers, currentUser, origin, dtSince, project, startId), Tables.SectionResourceUsers, changes);
+                    BuildList(SectionResourceUserService.GetDeletedSince(dbContext.Sectionresourceusers, currentUser, origin, dtSince, project, 0), Tables.SectionResourceUsers, deleted, false);
+                    break;
+                case "workflowstep":
+                    startId = BuildList(WorkflowStepService.GetChanges(dbContext.Workflowsteps, currentUser, origin, dtSince, project, startId), Tables.WorkflowSteps, changes);
+                    BuildList(WorkflowStepService.GetDeletedSince(dbContext.Workflowsteps, currentUser, origin, dtSince, project, 0), Tables.WorkflowSteps, deleted, false);
+                    break;
+                case "intellectualproperty":
+                    startId = BuildList(IntellectualPropertyService.GetChanges(dbContext.IntellectualPropertys, currentUser, origin, dtSince, project, startId), Tables.IntellectualPropertys, changes);
+                    BuildList(IntellectualPropertyService.GetDeletedSince(dbContext.IntellectualPropertys, currentUser, origin, dtSince, project, 0), Tables.IntellectualPropertys, deleted, false);
+                    break;
+                case "orgkeyterm":
+                    startId = BuildList(OrgKeytermService.GetChanges(dbContext.Orgkeyterms, currentUser, origin, dtSince, project, startId), Tables.OrgKeyTerms, changes);
+                    BuildList(OrgKeytermService.GetDeletedSince(dbContext.Orgkeyterms, currentUser, origin, dtSince, project, 0), Tables.OrgKeyTerms, deleted, false);
+                    break;
+                case "orgkeytermreference":
+                    startId = BuildList(OrgKeytermReferenceService.GetChanges(dbContext.Orgkeytermreferences, currentUser, origin, dtSince, project, startId), Tables.OrgKeyTermReferences, changes);
+                    BuildList(OrgKeytermReferenceService.GetDeletedSince(dbContext.Orgkeytermreferences, currentUser, origin, dtSince, project, 0), Tables.OrgKeyTermReferences, deleted, false);
+                    break;
+                case "orgkeytermtarget":
+                    startId = BuildList(OrgKeytermTargetService.GetChanges(dbContext.Orgkeytermtargets, currentUser, origin, dtSince, project, startId), Tables.OrgKeyTermTargets, changes);
+                    BuildList(OrgKeytermTargetService.GetDeletedSince(dbContext.Orgkeytermtargets, currentUser, origin, dtSince, project, 0), Tables.OrgKeyTermTargets, deleted, false);
+                    break;
+                case "sharedresource":
+                    startId = BuildList(SharedResourceService.GetChanges(dbContext.Sharedresources, currentUser, origin, dtSince, project, startId), Tables.SharedResources, changes);
+                    BuildList(SharedResourceService.GetDeletedSince(dbContext.Sharedresources, currentUser, origin, dtSince, project, 0), Tables.SharedResources, deleted, false);
+                    break;
+                case "sharedresourcereference":
+                    startId = BuildList(SharedResourceReferenceService.GetChanges(dbContext.Sharedresourcereferences, currentUser, origin, dtSince, project, startId), Tables.SharedResourceReferences, changes);
+                    BuildList(SharedResourceReferenceService.GetDeletedSince(dbContext.Sharedresourcereferences, currentUser, origin, dtSince, project, 0), Tables.SharedResourceReferences, deleted, false);
+                    break;
+            }
+            return startId;
 
-        // csharpier-ignore
-        private DCReturn GetChanges(
+        }
+        DCReturn GetChanges(
             string origin,
             DateTime dtSince,
             int currentUser,
@@ -293,192 +435,39 @@ namespace SIL.Transcriber.Services
             int start
         )
         {
+            string[] tables = { "user", "organization", "organizationmembership", 
+                "group", "groupmembership", "project", "plan", "section", "passage", "passagestatechange",
+                "projectintegration", "invitation", "mediafile"};
+            if (dbVersion > 3)
+                tables = tables.Concat(new string [] { "artifactcategory", "artifactttype",
+                    "discussion", "comment", "orgworkflowstep","sectionresource", "sectionresourceuser",
+                "workflowstep", "intellectualproperty"}).ToArray();
+            if (dbVersion > 5)
+                tables = tables.Concat(new string [] { "orgkeyterm", "orgkeytermreference", "orgkeytermtarget",
+                    "sharedresource", "sharedresourcereference" }).ToArray();
+            if (dbVersion > 6)
+                tables = tables.Concat(new string [] { "graphics" }).ToArray();
+              
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
-            int LAST_ADD = (dbVersion > 5) ? 26 : (dbVersion > 3) ? 21 : 12;
             int startId = -1;
             start = StartIndex.GetStart(start, ref startId);
 
-            if (CheckStart(dtBail, start) == 0)
+            int checkstart = CheckStart(dtBail, start);
+            while (checkstart < tables.Length)
             {
-                BuildList(UserService.GetChanges(dbContext.Users, currentUser, origin, dtSince, project, startId), Tables.Users, changes);
-                BuildList(UserService.GetDeletedSince(dbContext.Users, currentUser, origin, dtSince), Tables.Users, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 1)
-            {
-                BuildList(OrganizationService.GetChanges(dbContext.Organizations, currentUser, origin, dtSince, project, startId), Tables.Organizations, changes);
-                BuildList(OrganizationService.GetDeletedSince(dbContext.Organizations, currentUser, origin, dtSince), Tables.Organizations, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 2)
-            {
-                BuildList(OrgMemService.GetChanges(dbContext.Organizationmemberships, currentUser, origin, dtSince, project, startId), Tables.OrganizationMemberships, changes);
-                BuildList(OrgMemService.GetDeletedSince(dbContext.Organizationmemberships, currentUser, origin, dtSince), Tables.OrganizationMemberships, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 3)
-            {
-                BuildList(GroupService.GetChanges(dbContext.Groups, currentUser, origin, dtSince, project, startId), Tables.Groups, changes);
-                BuildList(GroupService.GetDeletedSince(dbContext.Groups, currentUser, origin, dtSince), Tables.Groups, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 4)
-            {
-                BuildList(GMService.GetChanges(dbContext.Groupmemberships, currentUser, origin, dtSince, project, startId), Tables.GroupMemberships, changes);
-                BuildList(GMService.GetDeletedSince(dbContext.Groupmemberships, currentUser, origin, dtSince), Tables.GroupMemberships, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 5)
-            {
-                BuildList(ProjectService.GetChanges(dbContext.Projects, currentUser, origin, dtSince, project, startId), Tables.Projects, changes);
-                BuildList(ProjectService.GetDeletedSince(dbContext.Projects, currentUser, origin, dtSince), Tables.Projects, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 6)
-            {
-                BuildList(PlanService.GetChanges(dbContext.Plans, currentUser, origin, dtSince, project, startId), Tables.Plans, changes);
-                BuildList(PlanService.GetDeletedSince(dbContext.Plans, currentUser, origin, dtSince), Tables.Plans, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 7)
-            {
-                BuildList(SectionService.GetChanges(dbContext.Sections, currentUser, origin, dtSince, project, startId), Tables.Sections, changes);
-                BuildList(SectionService.GetDeletedSince(dbContext.Sections, currentUser, origin, dtSince), Tables.Sections, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 8)
-            {
-                BuildList(PassageService.GetChanges(dbContext.Passages, currentUser, origin, dtSince, project, startId), Tables.Passages, changes);
-                BuildList(PassageService.GetDeletedSince(dbContext.Passages, currentUser, origin, dtSince), Tables.Passages, deleted, false);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 9)
-            {
-                startId = BuildList(MediafileService.GetChanges(dbContext.Mediafiles, currentUser, origin, dtSince, project, startId), Tables.Mediafiles, changes);
+                startId = GetTableChanges(tables[checkstart], origin, dtSince, currentUser, project, startId);
                 if (startId == -1)
-                {
-                    BuildList(MediafileService.GetDeletedSince(dbContext.Mediafiles, currentUser, origin, dtSince), Tables.Mediafiles, deleted, false);
                     start++;
-                } else
-                {
-                    start = StartIndex.SetStart(start, ref startId);
-                }
-            }
-            if (CheckStart(dtBail, start) == 10)
-            {
-                startId = BuildList(PassageStateChangeService.GetChanges(dbContext.Passagestatechanges, currentUser, origin, dtSince, project, startId), Tables.PassageStateChanges, changes);
-                if (startId == -1)
-                {
-                    start++;
-                }
                 else
                 {
                     start = StartIndex.SetStart(start, ref startId);
+                    break;
                 }
+                checkstart = CheckStart(dtBail, start);
             }
-            if (CheckStart(dtBail, start) == 11)
-            {
-                BuildList(ProjIntService.GetChanges(dbContext.Projectintegrations, currentUser, origin, dtSince, project, startId), Tables.ProjectIntegrations, changes);
-                start++;
-            }
-            if (CheckStart(dtBail, start) == 12)
-            {
-                BuildList(InvitationService.GetChanges(dbContext.Invitations, currentUser, origin, dtSince, project, startId), Tables.Invitations, changes);
-                start++;
-            }
-            if (dbVersion > 3)
-            {
-                if (CheckStart(dtBail, start) == 13)
-                {
-                    BuildList(ArtifactCategoryService.GetChanges(dbContext.Artifactcategorys, currentUser, origin, dtSince, project, startId), Tables.ArtifactCategorys, changes);
-                    BuildList(ArtifactCategoryService.GetDeletedSince(dbContext.Artifactcategorys, currentUser, origin, dtSince), Tables.ArtifactCategorys, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 14)
-                {
-                    BuildList(ArtifactTypeService.GetChanges(dbContext.Artifacttypes, currentUser, origin, dtSince, project, startId), Tables.ArtifactTypes, changes);
-                    BuildList(ArtifactTypeService.GetDeletedSince(dbContext.Artifacttypes, currentUser, origin, dtSince), Tables.ArtifactTypes, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 15)
-                {
-                    BuildList(DiscussionService.GetChanges(dbContext.Discussions, currentUser, origin, dtSince, project, startId), Tables.Discussions, changes);
-                    BuildList(DiscussionService.GetDeletedSince(dbContext.Discussions, currentUser, origin, dtSince), Tables.Discussions, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 16)
-                {
-                    BuildList(CommentService.GetChanges(dbContext.Comments, currentUser, origin, dtSince, project, startId), Tables.Comments, changes);
-                    BuildList(CommentService.GetDeletedSince(dbContext.Comments, currentUser, origin, dtSince), Tables.Comments, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 17)
-                {
-                    BuildList(OrgWorkflowStepService.GetChanges(dbContext.Orgworkflowsteps, currentUser, origin, dtSince, project, startId), Tables.OrgWorkflowSteps, changes);
-                    BuildList(OrgWorkflowStepService.GetDeletedSince(dbContext.Orgworkflowsteps, currentUser, origin, dtSince), Tables.OrgWorkflowSteps, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 18)
-                {
-                    BuildList(SectionResourceService.GetChanges(dbContext.Sectionresources, currentUser, origin, dtSince, project, startId), Tables.SectionResources, changes);
-                    BuildList(SectionResourceService.GetDeletedSince(dbContext.Sectionresources, currentUser, origin, dtSince), Tables.SectionResources, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 19)
-                {
-                    BuildList(SectionResourceUserService.GetChanges(dbContext.Sectionresourceusers, currentUser, origin, dtSince, project, startId), Tables.SectionResourceUsers, changes);
-                    BuildList(SectionResourceUserService.GetDeletedSince(dbContext.Sectionresourceusers, currentUser, origin, dtSince), Tables.SectionResourceUsers, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 20)
-                {
-                    BuildList(WorkflowStepService.GetChanges(dbContext.Workflowsteps, currentUser, origin, dtSince, project, startId), Tables.WorkflowSteps, changes);
-                    BuildList(WorkflowStepService.GetDeletedSince(dbContext.Workflowsteps, currentUser, origin, dtSince), Tables.WorkflowSteps, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 21)
-                {
-                    BuildList(IntellectualPropertyService.GetChanges(dbContext.IntellectualPropertys, currentUser, origin, dtSince, project, startId), Tables.IntellectualPropertys, changes);
-                    BuildList(IntellectualPropertyService.GetDeletedSince(dbContext.IntellectualPropertys, currentUser, origin, dtSince), Tables.IntellectualPropertys, deleted, false);
-                    start++;
-                }
-            }
-            if (dbVersion > 5)
-            { 
-                if (CheckStart(dtBail, start) == 22)
-                {
-                    BuildList(OrgKeytermService.GetChanges(dbContext.Orgkeyterms, currentUser, origin, dtSince, project, startId), Tables.OrgKeyTerms, changes);
-                    BuildList(OrgKeytermService.GetDeletedSince(dbContext.Orgkeyterms, currentUser, origin, dtSince), Tables.OrgKeyTerms, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 23)
-                {
-                    BuildList(OrgKeytermReferenceService.GetChanges(dbContext.Orgkeytermreferences, currentUser, origin, dtSince, project, startId), Tables.OrgKeyTermReferences, changes);
-                    BuildList(OrgKeytermReferenceService.GetDeletedSince(dbContext.Orgkeytermreferences, currentUser, origin, dtSince), Tables.OrgKeyTermReferences, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 24)
-                {
-                    BuildList(OrgKeytermTargetService.GetChanges(dbContext.Orgkeytermtargets, currentUser, origin, dtSince, project, startId), Tables.OrgKeyTermTargets, changes);
-                    BuildList(OrgKeytermTargetService.GetDeletedSince(dbContext.Orgkeytermtargets, currentUser, origin, dtSince), Tables.OrgKeyTermTargets, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == 25)
-                {
-                    BuildList(SharedResourceService.GetChanges(dbContext.Sharedresources, currentUser, origin, dtSince, project, startId), Tables.SharedResources, changes);
-                    BuildList(SharedResourceService.GetDeletedSince(dbContext.Sharedresources, currentUser, origin, dtSince), Tables.SharedResources, deleted, false);
-                    start++;
-                }
-                if (CheckStart(dtBail, start) == LAST_ADD)
-                {
-                    BuildList(SharedResourceReferenceService.GetChanges(dbContext.Sharedresourcereferences, currentUser, origin, dtSince, project, startId), Tables.SharedResourceReferences, changes);
-                    BuildList(SharedResourceReferenceService.GetDeletedSince(dbContext.Sharedresourcereferences, currentUser, origin, dtSince), Tables.SharedResourceReferences, deleted, false);
-                    start++;
-                }
-            }
-            DCReturn ret = new (changes, deleted, start == LAST_ADD + 1 ? -1 : start);
+            DCReturn ret = new (changes, deleted, start == tables.Length ? -1 : start);
             return ret;
         }
     }

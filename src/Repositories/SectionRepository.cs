@@ -52,7 +52,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan> plans
         )
         {
-            return entities.Where(e => !e.Archived).Join(plans, s => s.PlanId, p => p.Id, (s, p) => s);
+            return entities.Join(plans, s => s.PlanId, p => p.Id, (s, p) => s);
         }
 
         public IQueryable<Section> UsersSections(
@@ -120,8 +120,8 @@ namespace SIL.Transcriber.Repositories
                             Book = book,
                             StartChapter = chapter,
                             EndChapter = chapter,
-                            StartVerse = ps.Min(a => a.passage.StartVerse),
-                            EndVerse = ps.Max(a => a.passage.EndVerse),
+                            StartVerse = ps.Min(a => a.passage.StartVerse??0),
+                            EndVerse = ps.Max(a => a.passage.EndVerse??0),
                         };
                     ss.Add(newss);
                 });

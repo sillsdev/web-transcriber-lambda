@@ -9,7 +9,6 @@ namespace SIL.Transcriber.Controllers
 {
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [Route("api/[controller]")]
-    [ApiController]
     public class ParatextController : ControllerBase
     {
         private readonly IParatextService _paratextService;

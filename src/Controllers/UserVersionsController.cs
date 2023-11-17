@@ -5,7 +5,7 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
+
     public class UserversionsController : ControllerBase
     {
         private readonly UserVersionService ResourceService;
