@@ -307,4 +307,12 @@ namespace SIL.Transcriber.Definitions
             IResourceGraph resourceGraph
         ) : base(resourceGraph) { }
     }
+    public class WorkflowstepDefinition : BaseDefinition<Workflowstep>
+    {
+        public WorkflowstepDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
 }

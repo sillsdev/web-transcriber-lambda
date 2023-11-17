@@ -375,7 +375,7 @@ namespace SIL.Transcriber.Services
                     BuildList(ArtifactTypeService.GetDeletedSince(dbContext.Artifacttypes, currentUser, origin, dtSince, project, 0), Tables.ArtifactTypes, deleted, false);
                     break;
                 case "discussion":
-                    BuildList(DiscussionService.GetChanges(dbContext.Discussions, currentUser, origin, dtSince, project, startId), Tables.Discussions, changes);
+                    startId = BuildList(DiscussionService.GetChanges(dbContext.Discussions, currentUser, origin, dtSince, project, startId), Tables.Discussions, changes);
                     BuildList(DiscussionService.GetDeletedSince(dbContext.Discussions, currentUser, origin, dtSince, project, 0), Tables.Discussions, deleted, false);
                     break;
                 case "comment":
