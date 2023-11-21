@@ -53,9 +53,9 @@ namespace SIL.Transcriber.Definitions
 
         public override FilterExpression? OnApplyFilter(FilterExpression? existingFilter)
         {
-            if (existingFilter != null && existingFilter.Has(FilterConstants.DATA_START_INDEX))
-                return null;
-            return base.OnApplyFilter(existingFilter);
+            return existingFilter != null && existingFilter.Has(FilterConstants.DATA_START_INDEX) 
+                ? null 
+                : base.OnApplyFilter(existingFilter);
         }
     }
 }

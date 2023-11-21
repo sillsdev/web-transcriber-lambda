@@ -140,7 +140,14 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-
+    public class OrganizationBibleDefinition : BaseDefinition<Organizationbible>
+    {
+        public OrganizationBibleDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
     public class OrganizationMembershipDefinition : BaseDefinition<Organizationmembership>
     {
         public OrganizationMembershipDefinition(

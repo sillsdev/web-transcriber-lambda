@@ -330,16 +330,23 @@ namespace SIL.Transcriber.Repositories
                             IQueryable<Bible> allbibles = dbContext.BiblesData.Where(x => !x.Archived);
                             if (!CheckAdd(27, ToJson(allbibles), dtBail, ref iStartNext, ref data))
                                 break;
-                            IQueryable<Bible> bibles = allbibles;//.Join(orgs, b => b.Id, o => o.BibleId, (b, o) => b);
+                            //orgbibles
+                            IQueryable<Organizationbible> obs = dbContext.OrganizationbiblesData
+                                            .Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om)
+                                            .Where(x => !x.Archived);
+                            if (!CheckAdd(28, ToJson(obs), dtBail, ref iStartNext, ref data))
+                                break;
+                            IQueryable<Bible> bibles = allbibles.Join(obs, b => b.Id, o => o.BibleId, (b, o) => b);
                             List<Mediafile> mna = dbContext.MediafilesData.Where(x => !x.Archived).Join(bibles, m => m.Id, o=>o.IsoMediafileId, (m, o)=> m).ToList();
                             mna.AddRange(
                             dbContext.MediafilesData.Where(x => !x.Archived).Join(bibles, m => m.Id, o => o.BibleMediafileId, (m, o) => m).ToList());
-                            if (!CheckAdd(28, ToJson(mna), dtBail, ref iStartNext, ref data))
+                            if (!CheckAdd(29, ToJson(mna), dtBail, ref iStartNext, ref data))
                                 break;
-                            if (!CheckAddGraphics(29, dbContext.GraphicsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
+                            if (!CheckAddGraphics(30, dbContext.GraphicsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                         .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
                                 break;
                         }
+
                     }
 
                 }

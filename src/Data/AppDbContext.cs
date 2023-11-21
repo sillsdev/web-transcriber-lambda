@@ -43,6 +43,8 @@ namespace SIL.Transcriber.Data
         public DbSet<Invitation> Invitations => Set<Invitation>();
         public DbSet<Mediafile> Mediafiles => Set<Mediafile>();
         public DbSet<Organization> Organizations => Set<Organization>();
+        public DbSet<Organizationbible> Organizationbibles =>
+            Set<Organizationbible>();
         public DbSet<Organizationmembership> Organizationmemberships =>
             Set<Organizationmembership>();
         public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
@@ -206,6 +208,11 @@ namespace SIL.Transcriber.Data
 
             _ = builder
                 .Entity<Orgdata>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Organizationbible>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -517,6 +524,10 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.ArtifactType)
                 .Include(x => x.ResourcePassage)
                 .Include(x => x.SourceMedia);
+        public IQueryable<Organizationbible> OrganizationbiblesData =>
+            Organizationbibles
+                .Include(x => x.Organization)
+                .Include(x => x.Bible);
         public IQueryable<Organizationmembership> OrganizationmembershipsData =>
             Organizationmemberships
                 .Include(x => x.Organization)
