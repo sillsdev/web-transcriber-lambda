@@ -21,6 +21,7 @@ namespace SIL.Transcriber.Services
         public ICurrentUserContext CurrentUserContext { get; }
         private readonly ArtifactCategoryService ArtifactCategoryService;
         private readonly ArtifactTypeService ArtifactTypeService;
+        private readonly BibleService BibleService;
         private readonly CommentService CommentService;
         private readonly DiscussionService DiscussionService;
         private readonly GraphicService GraphicService; 
@@ -29,6 +30,7 @@ namespace SIL.Transcriber.Services
         private readonly IntellectualPropertyService IntellectualPropertyService;
         private readonly InvitationService InvitationService;
         private readonly MediafileService MediafileService;
+        private readonly OrganizationBibleService OrgBibleService;
         private readonly OrganizationMembershipService OrgMemService;
         private readonly OrganizationService OrganizationService;
         private readonly OrgKeytermService OrgKeytermService;
@@ -65,6 +67,7 @@ namespace SIL.Transcriber.Services
             DatachangesRepository repository,
             ArtifactCategoryService artifactCategoryService,
             ArtifactTypeService artifactTypeService,
+            BibleService bibleService,
             CommentService commentService,
             DiscussionService discussionService,
             GraphicService graphicService,
@@ -73,6 +76,7 @@ namespace SIL.Transcriber.Services
             IntellectualPropertyService intellectualPropertyService,
             InvitationService invitationService,
             MediafileService mediafileService,
+            OrganizationBibleService orgBibleService,
             OrganizationMembershipService omService,
             OrganizationService organizationService,
             OrgWorkflowStepService orgWorkflowStepService,
@@ -110,6 +114,7 @@ namespace SIL.Transcriber.Services
             CurrentUserContext = currentUserContext;
             ArtifactCategoryService = artifactCategoryService;
             ArtifactTypeService = artifactTypeService;
+            BibleService = bibleService;
             CommentService = commentService;
             DiscussionService = discussionService;
             GraphicService = graphicService;
@@ -118,6 +123,7 @@ namespace SIL.Transcriber.Services
             IntellectualPropertyService = intellectualPropertyService;
             InvitationService = invitationService;
             MediafileService = mediafileService;
+            OrgBibleService = orgBibleService;
             OrgMemService = omService;
             OrganizationService = organizationService;
             OrgKeytermService = orgKeytermService;
@@ -312,9 +318,13 @@ namespace SIL.Transcriber.Services
         {
             switch (table)
             {
+                case "bible":
+                    startId = BuildList(BibleService.GetChanges(dbContext.Bibles, currentUser, origin, dtSince, project, startId), Tables.Bibles, changes);
+                    BuildList(BibleService.GetDeletedSince(dbContext.Bibles, currentUser, origin, dtSince, project, 0), Tables.Bibles, deleted, false);
+                    break;
                 case "graphic":
-                    startId = BuildList(GraphicService.GetChanges(dbContext.Graphics, currentUser, origin, dtSince, project, startId), Tables.Groups, changes);
-                    BuildList(GraphicService.GetDeletedSince(dbContext.Graphics, currentUser, origin, dtSince, project, 0), Tables.Groups, deleted, false);
+                    startId = BuildList(GraphicService.GetChanges(dbContext.Graphics, currentUser, origin, dtSince, project, startId), Tables.Graphics, changes);
+                    BuildList(GraphicService.GetDeletedSince(dbContext.Graphics, currentUser, origin, dtSince, project, 0), Tables.Graphics, deleted, false);
                     break;
                 case "group":
                     startId = BuildList(GroupService.GetChanges(dbContext.Groups, currentUser, origin, dtSince, project, startId), Tables.Groups, changes);
@@ -335,6 +345,10 @@ namespace SIL.Transcriber.Services
                 case "organization":
                     startId = BuildList(OrganizationService.GetChanges(dbContext.Organizations, currentUser, origin, dtSince, project, startId), Tables.Organizations, changes);
                     BuildList(OrganizationService.GetDeletedSince(dbContext.Organizations, currentUser, origin, dtSince, project, 0), Tables.Organizations, deleted, false);
+                    break;
+                case "organizationbible":
+                    startId = BuildList(OrgBibleService.GetChanges(dbContext.Organizationbibles, currentUser, origin, dtSince, project, startId), Tables.OrganizationBibles, changes);
+                    BuildList(OrgBibleService.GetDeletedSince(dbContext.Organizationbibles, currentUser, origin, dtSince, project, 0), Tables.OrganizationBibles, deleted, false);
                     break;
                 case "organizationmembership":
                     startId = BuildList(OrgMemService.GetChanges(dbContext.Organizationmemberships, currentUser, origin, dtSince, project, startId), Tables.OrganizationMemberships, changes);

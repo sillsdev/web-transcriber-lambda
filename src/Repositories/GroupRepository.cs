@@ -46,7 +46,7 @@ namespace SIL.Transcriber.Repositories
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
 
                 return entities.Where(
-                    g =>   (orgIds.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id))
+                    g =>   (orgIds.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id) || g.Name == "All users of BibleMedia")
                 );
             }
             return entities;

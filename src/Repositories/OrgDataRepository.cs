@@ -221,7 +221,7 @@ namespace SIL.Transcriber.Repositories
 
                 //projects
                 IEnumerable<Project> projects = dbContext.ProjectsData
-                    .Join(gms, p => p.GroupId, gm => gm.GroupId, (p, gm) => p)
+                    .Join(orgs, p => p.OrganizationId, o => o.Id, (p, o) => p)
                     .Where(x => !x.Archived);
                 if (!CheckAdd(12, ToJson(projects), dtBail, ref iStartNext, ref data))
                     break;

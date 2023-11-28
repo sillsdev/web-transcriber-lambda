@@ -47,6 +47,10 @@ namespace SIL.Transcriber.Services
             dbContext = (AppDbContext)contextResolver.GetContext();
         }
 
+        public bool AnyPublished(int id)
+        {
+            return ((OrganizationRepository)Repo).AnyPublished(id);
+        }   
         public void JoinOrg(Organization entity, User user, RoleName orgRole, RoleName groupRole)
         {
             Group? allGroup = dbContext.Groups

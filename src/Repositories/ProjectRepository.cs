@@ -58,7 +58,7 @@ namespace SIL.Transcriber.Repositories
 
                 entities = entities.Where(p =>  
                         orgadmins.Contains(p.OrganizationId)
-                        || CurrentUser.GroupIds.Contains(p.GroupId)
+                        || CurrentUser.GroupIds.Contains(p.GroupId) || p.Name=="BibleMedia"
                 );
             }
             return entities;
