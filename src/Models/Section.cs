@@ -28,6 +28,7 @@ namespace SIL.Transcriber.Models
             TitleMediafileId = int.TryParse(item ["titlemediafile"]?.ToString() ?? "", out tryint)
                 ? tryint
                 : null;
+            State = item ["reference"]?.ToString();
             return this;
         }
 

@@ -460,7 +460,7 @@ namespace SIL.Transcriber.Services
                 tables = tables.Concat(new string [] { "orgkeyterm", "orgkeytermreference", "orgkeytermtarget",
                     "sharedresource", "sharedresourcereference" }).ToArray();
             if (dbVersion > 6)
-                tables = tables.Concat(new string [] { "graphics" }).ToArray();
+                tables = tables.Concat(new string [] { "graphic" }).ToArray();
               
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...

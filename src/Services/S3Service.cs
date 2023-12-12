@@ -317,7 +317,10 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-
+        public string GetPublicUrl(string fileName, string folder = "")
+        {
+            return "https://" + USERFILES_BUCKET + ".s3.amazonaws.com/" + ProperFolder(folder) + fileName;
+        }
         public async Task<S3Response> UploadFileAsync(
             Stream stream,
             bool overwriteifExists,
@@ -338,7 +341,13 @@ namespace SIL.Transcriber.Services
                     USERFILES_BUCKET,
                     ProperFolder(folder) + fileName
                 );
-                return new S3Response { Message = fileName, Status = HttpStatusCode.OK, };
+
+                return new S3Response
+                {
+                    Message = fileName,
+                    Status = HttpStatusCode.OK,
+                    FileURL = GetPublicUrl(fileName,folder)
+                };
             }
             catch (AmazonS3Exception e)
             {
