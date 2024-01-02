@@ -1128,7 +1128,7 @@ namespace SIL.Transcriber.Services
                         break;
                     //sections
                     IQueryable<Section> sections = plans
-                        .Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s)
+                        .Join(dbContext.SectionsData, p => p.Id, s => s.PlanId, (p, s) => s)
                         .Where(x => !x.Archived);
                     IQueryable<Passage> passages = sections
                         .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)

@@ -47,13 +47,19 @@ namespace SIL.Transcriber.Services
                 {
                     string s = graphic["content"]?.ToString() ?? "";
                     string base64Data = s[(s.IndexOf(",") + 1)..].Trim();
-                    using MemoryStream ms = new(Convert.FromBase64String(base64Data));
-                    S3Response fileinfo = await S3service.UploadFileAsync(ms, true, graphic["type"]?.ToString() ?? "", graphic["name"]?.ToString() ?? "", "graphics");
-                    graphic ["content"] = fileinfo.FileURL;
-                    await S3service.MakePublic(fileinfo.Message, "graphics");
+                    try
+                    {
+                        using MemoryStream ms = new(Convert.FromBase64String(base64Data));
+                        S3Response fileinfo = await S3service.UploadFileAsync(ms, true, graphic["type"]?.ToString() ?? "", graphic["name"]?.ToString() ?? "", "graphics");
+                        graphic ["content"] = fileinfo.FileURL;
+                        await S3service.MakePublic(fileinfo.Message, "graphics");
+                        info [size] = graphic;
+                    }
+                    catch (Exception e)
+                    {
+                        //it's already converted by another linked passage, or it's crap
+                    }
                 }
-
-                info [size] = graphic;
             }
             return info.ToString();
         }

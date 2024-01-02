@@ -22,6 +22,9 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "title-mediafile")]
         public Mediafile? TitleMediafile { get; set; }
+
+        [Attr(PublicName = "color")]
+        public string? Color { get; set; }
         public bool Archived { get; set; }
 
         public int? OrganizationId { get; set; }
