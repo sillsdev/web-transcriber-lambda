@@ -20,7 +20,7 @@ using System.Security.Cryptography;
 using Amazon.S3;
 using System.Net.Mime;
 using System.Collections.Generic;
-
+using SIL.Transcriber.Controllers;
 
 namespace SIL.Transcriber.Services
 {
@@ -892,6 +892,12 @@ namespace SIL.Transcriber.Services
                         .Join(sections, r => r.SectionId, s => s.Id, (r, s) => r)
                         .Where(x => !x.Archived);
         }
+        private IEnumerable<Mediafile> CategoryMedia(IQueryable<Artifactcategory> categories)
+        {
+            return dbContext.Mediafiles
+                        .Join(categories, m => m.Id, c => c.TitleMediafileId, (m, c) => m)
+                        .Where(x => !x.Archived);
+        }
         private IEnumerable<Mediafile> PlanSourceMedia(IQueryable<Sectionresource> sectionresources)
         {
             //get the mediafiles associated with section resources
@@ -1186,8 +1192,12 @@ namespace SIL.Transcriber.Services
                     //mediafiles
                     //I need my mediafiles plus any shared resource mediafiles
                     IQueryable<Sectionresource> sectionresources = SectionResources(sections);
-
+                    IQueryable<Artifactcategory> categories = dbContext.Artifactcategorys.Where(a =>
+                                        (   a.OrganizationId == null
+                                            || a.OrganizationId == project.OrganizationId
+                                        ) && !a.Archived);
                     IEnumerable<Mediafile> sourcemediafiles = PlanSourceMedia(sectionresources);
+                    IEnumerable<Mediafile> categorymediafiles =  CategoryMedia(categories);
                     IQueryable<Mediafile>? myMedia = PlanMedia(plans, ip);//NEXT RELEASE!, supportingpassages);
 
                     if (
@@ -1197,7 +1207,9 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Mediafiles,
-                            myMedia.ToList().Union(sourcemediafiles.ToList()).OrderBy(m => m.Id).ToList()
+                            myMedia.ToList()
+                                .Union(sourcemediafiles.ToList())
+                                .Union(categorymediafiles.ToList()).OrderBy(m => m.Id).ToList()
                         )
                     )
                         break;
@@ -1209,14 +1221,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.ArtifactCategorys,
-                            dbContext.Artifactcategorys
-                                .Where(a =>
-                                        (
-                                            a.OrganizationId == null
-                                            || a.OrganizationId == project.OrganizationId
-                                        ) && !a.Archived
-                                )
-                                .ToList()
+                            categories.ToList()
                         )
                     )
                         break;
@@ -1253,11 +1258,7 @@ namespace SIL.Transcriber.Services
                         )
                     )
                     break;
-                    //only limit vernacular to those with passageids
-                    IQueryable<Mediafile> attachedmediafiles = AttachedMedia(myMedia);
-                    //ignore media from other plans (shared, notes etc)
-                    IQueryable<Discussion> discussions = PlanDiscussions(myMedia.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m)
-                                );
+                    IQueryable<Discussion> discussions = PlanDiscussions(myMedia.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m));
                     if (
                         !CheckAdd(
                             11,
@@ -1395,8 +1396,10 @@ namespace SIL.Transcriber.Services
                     //if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
                     //    break;
                     startNext++; //instead of eaf
-                    List<Mediafile> mediaList  = attachedmediafiles.ToList().Union(sourcemediafiles.ToList()).ToList();
-                    AddAttachedMedia(zipArchive, mediaList, null);
+                    List<Mediafile> attachedmediafiles = AttachedMedia(myMedia).ToList()
+                            .Union(sourcemediafiles).ToList()
+                            .Union(categorymediafiles).ToList();
+                    AddAttachedMedia(zipArchive, attachedmediafiles, null);
                 } while (false);
             }
             Fileresponse response = WriteMemoryStream(ms, fileName, startNext, ext);

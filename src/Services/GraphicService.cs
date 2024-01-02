@@ -55,7 +55,7 @@ namespace SIL.Transcriber.Services
                         await S3service.MakePublic(fileinfo.Message, "graphics");
                         info [size] = graphic;
                     }
-                    catch (Exception e)
+                    catch
                     {
                         //it's already converted by another linked passage, or it's crap
                     }

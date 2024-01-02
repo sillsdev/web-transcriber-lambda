@@ -491,7 +491,7 @@ namespace SIL.Transcriber.Data
 
         //Include all HasOne attributes
         public IQueryable<Artifactcategory> ArtifactcategoriesData =>
-            Artifactcategorys.Include(c => c.Organization);
+            Artifactcategorys.Include(c => c.Organization).Include(c => c.TitleMediafile);
         public IQueryable<Artifacttype> ArtifacttypesData =>
             Artifacttypes.Include(c => c.Organization);
         public IQueryable<Bible> BiblesData => Bibles
@@ -569,7 +569,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Section> SectionsData =>
             Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber).Include(x => x.TitleMediafile);
         public IQueryable<Sharedresource> SharedresourcesData =>
-           Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory);
+           Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory).Include(x => x.TitleMediafile);
         public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>
                 Sharedresourcereferences.Include(x => x.SharedResource);
 
