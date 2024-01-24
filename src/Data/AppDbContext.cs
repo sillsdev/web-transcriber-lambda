@@ -523,7 +523,9 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.ArtifactCategory)
                 .Include(x => x.ArtifactType)
                 .Include(x => x.ResourcePassage)
-                .Include(x => x.SourceMedia);
+                .Include(x => x.SourceMedia)
+                .Include(x => x.RecordedbyUser);
+
         public IQueryable<Organizationbible> OrganizationbiblesData =>
             Organizationbibles
                 .Include(x => x.Organization)
