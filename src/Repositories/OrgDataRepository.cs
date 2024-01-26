@@ -265,6 +265,14 @@ namespace SIL.Transcriber.Repositories
                             (c.OrganizationId == null || ids.Contains((int)c.OrganizationId))
                             && !c.Archived
                     );
+                    IQueryable<Sharedresource>? sharedres = null;
+                    if (version > 5)
+                    {
+                        sharedres = dbContext.SharedresourcesData.Where(x => !x.Archived);
+                        cats.Union(sharedres.Join(dbContext.ArtifactcategoriesData, s => s.ArtifactCategoryId, c => c.Id, (s, c) => c), new RecordEqualityComparer<Artifactcategory>());
+                    }
+                    List<Mediafile> linkedmedia = dbContext.MediafilesData.Where(x => !x.Archived).Join(cats, m => m.Id, c => c.TitleMediafileId, (m, c) => m).ToList();
+
                     if (!CheckAdd(16,
                             ToJson(cats),
                             dtBail,
@@ -297,56 +305,75 @@ namespace SIL.Transcriber.Repositories
                                     .Where(x => !x.Archived);
                     if (!CheckAdd(19, ToJson(ip),dtBail,ref iStartNext, ref data ))
                         break;
-                    //ipMedia
-                    if (!CheckAdd(20, ToJson(ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList()),
-                        dtBail, ref iStartNext, ref data))
-                        break;
+                    linkedmedia.AddRange(ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m));
                     if (version > 5)
                     {
                         IQueryable<Orgkeyterm>? orgkeyterms = dbContext.OrgKeytermsData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived);
-                        if (!CheckAdd(21, ToJson(orgkeyterms), dtBail, ref iStartNext, ref data))
+                        if (!CheckAdd(20, ToJson(orgkeyterms), dtBail, ref iStartNext, ref data))
                             break;
-                        if (!CheckAdd(22, ToJson(dbContext.OrgKeytermTargetsData
+                        IQueryable<Orgkeytermtarget> orgkttargets = dbContext.OrgKeytermTargetsData
                                         .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
-                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                                        .Where(x => !x.Archived);
+                        if (!CheckAdd(21, ToJson(orgkttargets), dtBail, ref iStartNext, ref data))
                             break;
-                        if (!CheckAdd(23, ToJson(dbContext.OrgKeytermReferencesData
+                        //do I need the sections from orgkeytermreferences?
+                        if (!CheckAdd(22, ToJson(dbContext.OrgKeytermReferencesData
                                         .Join(orgkeyterms, c => c.OrgkeytermId, o => o.Id, (c, o) => c)
                                         .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
-                        if (!CheckAdd(24, ToJson(dbContext.SharedresourcesData
-                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
-                            break;
-                        if (!CheckAdd(25, ToJson(dbContext.SharedresourcereferencesData
+
+                        if (sharedres != null)
+                        {
+                            linkedmedia.AddRange(sharedres.Join(dbContext.MediafilesData, sr => sr.TitleMediafileId, m => m.Id, (sr, m) => m));
+                            if (!CheckAdd(23, ToJson(sharedres), dtBail, ref iStartNext, ref data))
+                                break;
+                            IQueryable<Passage> linkedpassages = sharedres.Join(dbContext.PassagesData, sr => sr.PassageId, p => p.Id, (sr, p) => p);
+                            if (!CheckAdd(24, ToJson(linkedpassages), dtBail, ref iStartNext, ref data))
+                                break;
+                            IQueryable<Section> linkedsections = linkedpassages.Join(dbContext.SectionsData, p => p.SectionId, s => s.Id, (p, s) => s);
+                            if (!CheckAdd(25, ToJson(linkedsections), dtBail, ref iStartNext, ref data))
+                                break;
+
+                            linkedmedia.AddRange(linkedsections.Join(dbContext.MediafilesData, s => s.TitleMediafileId, m => m.Id, (s, m) => m));
+
+                        }
+                        else
+                            iStartNext+=3;
+                        if (!CheckAdd(26, ToJson(dbContext.SharedresourcereferencesData
                                         .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
                             break;
                         if (version > 6)
                         {
                             IQueryable<Bible> allbibles = dbContext.BiblesData.Where(x => !x.Archived);
-                            if (!CheckAdd(26, ToJson(allbibles), dtBail, ref iStartNext, ref data))
+                            if (!CheckAdd(27, ToJson(allbibles), dtBail, ref iStartNext, ref data))
                                 break;
                             //orgbibles
                             IQueryable<Organizationbible> obs = dbContext.OrganizationbiblesData
                                             .Join(orgs, om => om.OrganizationId, o => o.Id, (om, o) => om)
                                             .Where(x => !x.Archived);
-                            if (!CheckAdd(27, ToJson(obs), dtBail, ref iStartNext, ref data))
+                            if (!CheckAdd(28, ToJson(obs), dtBail, ref iStartNext, ref data))
                                 break;
                             IQueryable<Bible> bibles = allbibles.Join(obs, b => b.Id, o => o.BibleId, (b, o) => b);
-                            List<Mediafile> mna = dbContext.MediafilesData.Where(x => !x.Archived).Join(bibles, m => m.Id, o=>o.IsoMediafileId, (m, o)=> m).ToList();
-                            mna.AddRange(
-                            dbContext.MediafilesData.Where(x => !x.Archived).Join(bibles, m => m.Id, o => o.BibleMediafileId, (m, o) => m).ToList());
-                            mna.AddRange(dbContext.MediafilesData.Where(x => !x.Archived).Join(cats, m => m.Id, c => c.TitleMediafileId, (m, c) => m).ToList());
-                            if (!CheckAdd(28, ToJson(mna), dtBail, ref iStartNext, ref data))
+                            linkedmedia.AddRange(dbContext.MediafilesData.Where(x => !x.Archived)
+                                                     .Join(bibles, m => m.Id, o => o.IsoMediafileId, (m, o) => m));
+                            linkedmedia.AddRange(dbContext.MediafilesData.Where(x => !x.Archived)
+                                                    .Join(bibles, m => m.Id, o => o.BibleMediafileId, (m, o) => m));
+                            IQueryable<Graphic> graphics = dbContext.GraphicsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
+                                        .Where(x => !x.Archived);
+                            if (!CheckAddGraphics(29, graphics, dtBail, ref iStartNext, ref data))
                                 break;
-                            if (!CheckAddGraphics(29, dbContext.GraphicsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
-                                        .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
-                                break;
+                            linkedmedia.AddRange(graphics.Join(dbContext.MediafilesData, g => g.MediafileId, m => m.Id, (g, m) => m));
                         }
+                        else
+                            iStartNext = 30;
 
                     }
-
+                    else
+                        iStartNext = 30; 
+                    if (!CheckAdd(30, ToJson(linkedmedia), dtBail, ref iStartNext, ref data))
+                        break;
                 }
                 iStartNext = -1; //Done!
             } while (false); //do it once

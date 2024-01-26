@@ -2,6 +2,7 @@
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.Response;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
@@ -9,6 +10,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
@@ -151,6 +153,7 @@ namespace SIL.Transcriber.Repositories
             withIncludes = rgxnewlines.Replace(withIncludes, "");
             return rgxmultiplspaces.Replace(withIncludes, " ");
         }
+
         private IQueryable<Projdata> GetData(
             IQueryable<Projdata> entities,
             string project,
@@ -167,7 +170,6 @@ namespace SIL.Transcriber.Repositories
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);
             string snapshotDate = DateTime.UtcNow.ToString();
-
             do
             {
                 //plans
@@ -181,25 +183,39 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Section> sections = dbContext.SectionsData
                     .Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(0, ToJson<Section>(sections), dtBail, ref iStartNext, ref data))
-                    break;
-
+                
                 //passages
                 IQueryable<Passage> passages = dbContext.PassagesData
                     .Join(sections, p => p.SectionId, s => s.Id, (p, s) => p)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(1, ToJson<Passage>(passages), dtBail, ref iStartNext, ref data))
+                //orgdata should have gotten these already...but do it anyway
+                IQueryable<Sharedresource> linkedresources = passages.Join(dbContext.SharedresourcesData,
+                    p => p.SharedResourceId, r => r.Id, (p, r) => r);
+                IQueryable<Passage> linkedpassages = linkedresources
+                    .Join(dbContext.PassagesData, r => r.PassageId, p => p.Id, (r, p) => p)
+                    .Where(x => !x.Archived);
+                 IQueryable<Section> linkedsections = linkedpassages
+                    .Join(dbContext.SectionsData, p => p.SectionId, s => s.Id, (p, s) => s)
+                    .Where(x => !x.Archived);
+                if (!CheckAdd(0, ToJson(sections.ToList().Union(linkedsections)), dtBail, ref iStartNext, ref data))
+                    break;
+                if (!CheckAdd(1, ToJson(passages.ToList().Union(linkedpassages)), dtBail, ref iStartNext, ref data))
+                    break;
+                IQueryable<Mediafile>? linkedmediafiles = dbContext.MediafilesData
+                    .Join(linkedpassages, m => m.PassageId, pl => pl.Id, (m, pl) => m)
+                    .Where(x => !x.Archived);
+                if (!CheckAdd(2, ToJson(linkedmediafiles), dtBail, ref iStartNext, ref data))
                     break;
 
                 //mediafiles
                 IQueryable<Mediafile>? mediafiles = dbContext.MediafilesData
                     .Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m)
                     .Where(x => !x.Archived).OrderBy(m=>m.Id);
-                if (!CheckAddMedia(2, mediafiles, dtBail, ref iStartNext, ref data))
+                if (!CheckAddMedia(3, mediafiles, dtBail, ref iStartNext, ref data))
                     break;
 
                 //passagestatechanges
-                if (!CheckAddPSC(3, dbContext.PassagestatechangesData.Join(
+                if (!CheckAddPSC(4, dbContext.PassagestatechangesData.Join(
                                 passages,
                                 psc => psc.PassageId,
                                 p => p.Id,
