@@ -42,6 +42,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Intellectualproperty> IntellectualPropertys => Set<Intellectualproperty>();
         public DbSet<Invitation> Invitations => Set<Invitation>();
         public DbSet<Mediafile> Mediafiles => Set<Mediafile>();
+        public DbSet<Note> Notes => Set<Note>();
         public DbSet<Organization> Organizations => Set<Organization>();
         public DbSet<Organizationbible> Organizationbibles =>
             Set<Organizationbible>();
@@ -75,6 +76,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
         public DbSet<VWChecksum> VWChecksums => Set<VWChecksum>();
+        public DbSet<VWProject> VWProjects => Set<VWProject>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
         #endregion
 
@@ -197,6 +199,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Mediafile>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Note>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);

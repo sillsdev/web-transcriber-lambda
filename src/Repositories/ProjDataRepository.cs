@@ -188,7 +188,6 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Passage> passages = dbContext.PassagesData
                     .Join(sections, p => p.SectionId, s => s.Id, (p, s) => p)
                     .Where(x => !x.Archived);
-                //orgdata should have gotten these already...but do it anyway
                 IQueryable<Sharedresource> linkedresources = passages.Join(dbContext.SharedresourcesData,
                     p => p.SharedResourceId, r => r.Id, (p, r) => r);
                 IQueryable<Passage> linkedpassages = linkedresources
@@ -201,9 +200,13 @@ namespace SIL.Transcriber.Repositories
                     break;
                 if (!CheckAdd(1, ToJson(passages.ToList().Union(linkedpassages)), dtBail, ref iStartNext, ref data))
                     break;
-                IQueryable<Mediafile>? linkedmediafiles = dbContext.MediafilesData
-                    .Join(linkedpassages, m => m.PassageId, pl => pl.Id, (m, pl) => m)
-                    .Where(x => !x.Archived);
+
+                List<Mediafile>linkedmediafiles = new();
+                linkedpassages.ToList().ForEach(p => {
+                    Mediafile? m = MediaService.GetLatest(p.Id);
+                    if (m != null)
+                        linkedmediafiles.Add(m);
+                });
                 if (!CheckAdd(2, ToJson(linkedmediafiles), dtBail, ref iStartNext, ref data))
                     break;
 

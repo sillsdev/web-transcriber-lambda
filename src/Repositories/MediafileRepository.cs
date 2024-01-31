@@ -105,6 +105,13 @@ namespace SIL.Transcriber.Repositories
                 .OrderBy(m => m.VersionNumber)
                 .LastOrDefault();
         }
+        public Mediafile? GetLatestForPassage(int passageId)
+        {
+            return GetAll()
+                .Where(p => p.PassageId == passageId)
+                .OrderBy(m => m.VersionNumber)
+                .LastOrDefault();
+        }
         public IEnumerable<Mediafile> PassageReadyToSync(int PassageId, int artifactTypeId = 0)
         {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.

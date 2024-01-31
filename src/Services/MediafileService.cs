@@ -179,8 +179,7 @@ namespace SIL.Transcriber.Services
         }
         public Mediafile? GetLatest(int passageId)
         {
-            return MyRepository
-                .Get()
+            return dbContext.MediafilesData
                 .Where(mf => mf.PassageId == passageId)
                 .OrderByDescending(mf => mf.VersionNumber)
                 .FirstOrDefault();

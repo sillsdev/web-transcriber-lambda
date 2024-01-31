@@ -268,9 +268,16 @@ namespace SIL.Transcriber.Repositories
                     IQueryable<Sharedresource>? sharedres = null;
                     if (version > 5)
                     {
+                        IQueryable<Note> notes = dbContext.Notes.Where(x => ids.Contains((int)x.OrganizationId));
                         sharedres = dbContext.SharedresourcesData.Where(x => !x.Archived);
+                        if (version > 8)
+                        {
+                            IQueryable<int?> noteids = dbContext.Notes.Where(x => ids.Contains((int)x.OrganizationId)).Select(x => x.ResourceId);
+                            sharedres = sharedres.Where(sr => !sr.Note || noteids.Contains(sr.Id));
+                        }
                         cats.Union(sharedres.Join(dbContext.ArtifactcategoriesData, s => s.ArtifactCategoryId, c => c.Id, (s, c) => c), new RecordEqualityComparer<Artifactcategory>());
                     }
+                    //Category Title Media
                     List<Mediafile> linkedmedia = dbContext.MediafilesData.Where(x => !x.Archived).Join(cats, m => m.Id, c => c.TitleMediafileId, (m, c) => m).ToList();
 
                     if (!CheckAdd(16,
@@ -305,6 +312,7 @@ namespace SIL.Transcriber.Repositories
                                     .Where(x => !x.Archived);
                     if (!CheckAdd(19, ToJson(ip),dtBail,ref iStartNext, ref data ))
                         break;
+                    //IP Release Media
                     linkedmedia.AddRange(ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m));
                     if (version > 5)
                     {
@@ -326,16 +334,18 @@ namespace SIL.Transcriber.Repositories
 
                         if (sharedres != null)
                         {
-                            linkedmedia.AddRange(sharedres.Join(dbContext.MediafilesData, sr => sr.TitleMediafileId, m => m.Id, (sr, m) => m));
-                            if (!CheckAdd(23, ToJson(sharedres), dtBail, ref iStartNext, ref data))
-                                break;
+                            IQueryable<int?> titleids = sharedres.Select(sr => sr.TitleMediafileId);
+
+                            linkedmedia.AddRange(dbContext.MediafilesData.Where(m => titleids.Contains(m.Id)));
+
                             IQueryable<Passage> linkedpassages = sharedres.Join(dbContext.PassagesData, sr => sr.PassageId, p => p.Id, (sr, p) => p);
+                            IQueryable<Section> linkedsections = linkedpassages.Join(dbContext.SectionsData, p => p.SectionId, s => s.Id, (p, s) => s);
+                            if (!CheckAdd(23, ToJson(linkedsections), dtBail, ref iStartNext, ref data))
+                                break;
                             if (!CheckAdd(24, ToJson(linkedpassages), dtBail, ref iStartNext, ref data))
                                 break;
-                            IQueryable<Section> linkedsections = linkedpassages.Join(dbContext.SectionsData, p => p.SectionId, s => s.Id, (p, s) => s);
-                            if (!CheckAdd(25, ToJson(linkedsections), dtBail, ref iStartNext, ref data))
+                            if (!CheckAdd(25, ToJson(sharedres), dtBail, ref iStartNext, ref data))
                                 break;
-
                             linkedmedia.AddRange(linkedsections.Join(dbContext.MediafilesData, s => s.TitleMediafileId, m => m.Id, (s, m) => m));
 
                         }
