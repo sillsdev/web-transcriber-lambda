@@ -168,8 +168,7 @@ namespace TranscriberAPI.Utility.Extensions
                 {
                     remParent = rem.Parent?.DescendantNodes().Count() == 1 ? rem.Parent : null;
                     rem.Remove();
-                    if (remParent != null)
-                        remParent.Remove();
+                    remParent?.Remove();
                 }
 
             }
@@ -181,10 +180,8 @@ namespace TranscriberAPI.Utility.Extensions
             RemoveText(value);
             if (!value.HasChildren())
             {
-                if (value != null)
-                    value.Remove();
-                if (removeParent != null)
-                    removeParent.Remove();
+                value?.Remove();
+                removeParent?.Remove();
                 return true;
             }
             return false;

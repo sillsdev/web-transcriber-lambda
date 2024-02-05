@@ -123,6 +123,7 @@ namespace SIL.Transcriber.Repositories
                     .Include(m => m.Passage)
                     .ThenInclude(p => p.Section)
                     .ThenInclude(s => s.Plan)
+                    .ThenInclude(p => p.Project)
                     .OrderBy(m => m.VersionNumber)
                 :
                     dbContext.Mediafiles
@@ -132,6 +133,7 @@ namespace SIL.Transcriber.Repositories
                     .Include(m => m.Passage)
                     .ThenInclude(p => p.Section)
                     .ThenInclude(s => s.Plan)
+                    .ThenInclude(p => p.Project)
                     .ToList()
                     .Where(m => m.ReadyToSync)
                     .OrderBy(m => m.VersionNumber);
@@ -164,6 +166,8 @@ namespace SIL.Transcriber.Repositories
                 )
                 .Include(m => m.Passage)
                 .ThenInclude(p => p.Section)
+                .ThenInclude(s => s.Plan)
+                .ThenInclude(p => p.Project)
                 .ToList()
                 .Where(m => m.ReadyToSync)
                 .OrderBy(m => m.PassageId)

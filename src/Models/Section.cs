@@ -88,9 +88,23 @@ namespace SIL.Transcriber.Models
         public bool Archived { get; set; }
 
 
-        public string SectionHeader(bool addNumbers = true)
+        public string SectionHeader(bool addNumbers, SectionMap [] sectionMap)
         {
-            return (addNumbers ? Sequencenum.ToString() + " - " : "") + Name;
+            SectionMap? map = sectionMap.FirstOrDefault(m => m.Sequencenum== Sequencenum);
+            return (addNumbers ? 
+                     (map != null ? map.Label : Sequencenum.ToString()) + " - "  
+                     : "") + Name;
         }
     }
+    public class SectionMap
+    {
+        public SectionMap()
+        {
+        }
+        public decimal Sequencenum { get; set; }
+        public string Label { get; set; } = "";
+    }
+
+
+
 }

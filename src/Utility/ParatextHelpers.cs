@@ -320,7 +320,7 @@ namespace SIL.Transcriber.Utility
             };
             return transcription;
         }
-        public static XElement? GenerateParatextData(XElement? chapterContent, Passage currentPassage, string transcription, bool addNumbers)
+        public static XElement? GenerateParatextData(XElement? chapterContent, Passage currentPassage, string transcription, bool addNumbers, SectionMap [] sectionMap)
         {
             Debug.WriteLine(transcription);
             IEnumerable<Passage> parsedPassages = ParseTranscription(currentPassage, transcription);
@@ -374,11 +374,11 @@ namespace SIL.Transcriber.Utility
                         {
                             XText? firstNode = (XText?)((XElement)vp.PreviousNode).FirstNode;
                             if (firstNode != null)
-                                firstNode.Value = currentPassage.Section?.SectionHeader(addNumbers) ?? "";
+                                firstNode.Value = currentPassage.Section?.SectionHeader(addNumbers,sectionMap) ?? "";
                         }
                         else
                         {
-                            vp.AddBeforeSelf(ParatextSection(currentPassage.Section?.SectionHeader(addNumbers) ?? ""));
+                            vp.AddBeforeSelf(ParatextSection(currentPassage.Section?.SectionHeader(addNumbers, sectionMap) ?? ""));
                         }
                     first = false;
                 }
