@@ -91,8 +91,14 @@ namespace SIL.Transcriber.Models
         public string SectionHeader(bool addNumbers, SectionMap [] sectionMap)
         {
             SectionMap? map = sectionMap.FirstOrDefault(m => m.Sequencenum== Sequencenum);
-            return (addNumbers ? 
-                     (map != null ? map.Label : Sequencenum.ToString()) + " - "  
+            string numstr = "";
+            if (addNumbers)
+            {
+                int num = (int)Math.Floor(Sequencenum);
+                numstr = (num == Sequencenum ? num.ToString() : Sequencenum.ToString()) + " - ";
+            }
+                return (addNumbers ? 
+                     (map != null ? map.Label : numstr)
                      : "") + Name;
         }
     }

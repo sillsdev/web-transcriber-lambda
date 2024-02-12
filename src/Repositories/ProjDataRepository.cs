@@ -234,7 +234,7 @@ namespace SIL.Transcriber.Repositories
                         .Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d)
                         .Where(x => !x.Archived);
                     if (
-                        !CheckAdd(4,
+                        !CheckAdd(5,
                             ToJson(discussions),
                             dtBail,
                             ref iStartNext,
@@ -245,7 +245,7 @@ namespace SIL.Transcriber.Repositories
 
                     //comments
                     if (
-                        !CheckAdd(5,
+                        !CheckAdd(6,
                             ToJson<Comment>(
                                 dbContext.CommentsData
                                     .Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c)
@@ -262,7 +262,7 @@ namespace SIL.Transcriber.Repositories
                         .Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr)
                         .Where(x => !x.Archived);
                     if (
-                        !CheckAdd(6,
+                        !CheckAdd(7,
                             ToJson<Sectionresource>(sectionresources),
                             dtBail,
                             ref iStartNext,
@@ -275,7 +275,7 @@ namespace SIL.Transcriber.Repositories
                         .Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u)
                         .Where(x => !x.Archived);
                     if (
-                        !CheckAdd(7,
+                        !CheckAdd(8,
                             ToJson<Sectionresourceuser>(srusers),
                             dtBail,
                             ref iStartNext,
