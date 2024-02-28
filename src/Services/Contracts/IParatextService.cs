@@ -26,5 +26,6 @@ namespace SIL.Transcriber.Services
         Task<List<ParatextChapter>> SyncProjectAsync(UserSecret userSecret, int projectId, int artifactTypeId);
         Task<List<ParatextChapter>> SyncPassageAsync(UserSecret userSecret, int passageId, int artifactTypeId);
         Task<string?> PassageTextAsync(int passageId, int type);
+        Task<bool> GetCanPublishAsync(UserSecret userSecret);
     }
 }

@@ -751,7 +751,15 @@ namespace SIL.Transcriber.Services
                 }
             return total;
         }
-
+        public async Task<bool> GetCanPublishAsync(UserSecret userSecret)
+        { //https://registry-dev.paratext.org/api8/my/org
+            _ = VerifyUserSecret(userSecret);
+            string response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "my/org");
+            JObject org = JObject.Parse(response);
+            JToken? auth = org["paratextAuth"];
+            Logger.LogInformation("TTY D: {dt} {res} {org}", DateTime.Now, response, org);
+            return (bool?)auth?["fobaiResources"] ?? false;
+        }
         public string VerifyReferences(
             UserSecret userSecret,
             IEnumerable<Passage> passages,
