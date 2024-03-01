@@ -89,5 +89,10 @@ namespace SIL.Transcriber.Services
             return await base.CreateAsync(entity, cancellationToken);
         }
 
+        public override async Task<Graphic?> UpdateAsync(int id, Graphic entity, CancellationToken cancellationToken)
+        {
+            entity.Info = await SaveImages(JObject.Parse(entity.Info ?? "{}"));
+            return await base.UpdateAsync(id, entity, cancellationToken);
+        }
     }
 }

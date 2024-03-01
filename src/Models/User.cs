@@ -81,6 +81,9 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "shared-content-creator")]
         public bool? SharedContentCreator { get; set; }
+        [Attr(PublicName = "can-publish")]
+        public bool? CanPublish { get; set; }
+
         [HasOne(PublicName = "last-modified-by-user")]
         [JsonIgnore]
         override public User? LastModifiedByUser { get; set; }
