@@ -30,6 +30,7 @@ namespace SIL.Transcriber.Services
         private readonly IntellectualPropertyService IntellectualPropertyService;
         private readonly InvitationService InvitationService;
         private readonly MediafileService MediafileService;
+        private readonly PassagetypeService PassagetypeService;
         private readonly OrganizationBibleService OrgBibleService;
         private readonly OrganizationMembershipService OrgMemService;
         private readonly OrganizationService OrganizationService;
@@ -85,6 +86,7 @@ namespace SIL.Transcriber.Services
             OrgKeytermTargetService orgKeytermTargetService,
             PassageService passageService,
             PassageStateChangeService passageStateChangeService,
+            PassagetypeService passagetypeService,
             PlanService planService,
             ProjectIntegrationService piService,
             ProjectService projectService,
@@ -132,6 +134,7 @@ namespace SIL.Transcriber.Services
             OrgWorkflowStepService = orgWorkflowStepService;
             PassageService = passageService;
             PassageStateChangeService = passageStateChangeService;
+            PassagetypeService = passagetypeService;
             PlanService = planService;
             ProjIntService = piService;
             ProjectService = projectService;
@@ -395,6 +398,9 @@ namespace SIL.Transcriber.Services
                 case "comment":
                     startId = BuildList(CommentService.GetChanges(dbContext.Comments, currentUser, origin, dtSince, project, startId), Tables.Comments, changes);
                     BuildList(CommentService.GetDeletedSince(dbContext.Comments, currentUser, origin, dtSince, project, 0), Tables.Comments, deleted, false);
+                    break;
+                case "passagetype":
+                    startId = BuildList(PassagetypeService.GetChanges(dbContext.Passagetypes, currentUser, origin, dtSince, project, startId), Tables.PassageTypes, changes);
                     break;
                 case "orgworkflowstep":
                     startId = BuildList(OrgWorkflowStepService.GetChanges(dbContext.Orgworkflowsteps, currentUser, origin, dtSince, project, startId), Tables.OrgWorkflowSteps, changes);

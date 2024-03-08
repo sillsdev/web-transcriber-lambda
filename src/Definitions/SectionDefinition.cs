@@ -49,18 +49,6 @@ public class SectionDefinition : BaseDefinition<Section>
         string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
         HttpContext?.SetFP("publish");
         PublishPassages(section.Id);
-        if (section.Level == 2) //movement - publish all sections
-        {
-            List<Section> sections = AppDbContext.Sections.Where(s => s.PlanId == section.PlanId && s.Sequencenum > section.Sequencenum).OrderBy(s => s.Sequencenum).ToList();
-            foreach (Section? s in sections)
-            {
-                if (s.Level == 2)
-                    break;
-                s.Published = true;
-                AppDbContext.Sections.Update(s);
-                PublishPassages(s.Id);
-            }
-        }
         AppDbContext.SaveChanges();
         HttpContext?.SetFP(fp);
     }

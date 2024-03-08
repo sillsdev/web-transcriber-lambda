@@ -3016,7 +3016,7 @@ namespace SIL.Transcriber.Services
                 Mediafile m = lst[ix];
                 int? psgId = m.PassageId == null ? null : passageMap.GetValueOrDefault(m.PassageId ?? 0);
                 if (m.PassageId != null && psgId == 0)
-                    psgId = m.ArtifactTypeId == null ? throw new Exception("Passage not found" + m.PassageId) : null;
+                    psgId = null; //psgId = m.ArtifactTypeId == null ? throw new Exception("Passage not found " + m.PassageId) : null;
                 Mediafile copym = new()
                 {
                     PassageId = psgId,

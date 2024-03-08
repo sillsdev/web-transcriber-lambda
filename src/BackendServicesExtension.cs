@@ -101,6 +101,7 @@ namespace SIL.Transcriber
             services.AddScoped<ParatextTokenHistoryService>();
             services.AddScoped<PassageService>();
             services.AddScoped<PassageStateChangeService>();
+            services.AddScoped<PassagetypeService>();
             services.AddScoped<PlanService>();
             services.AddScoped<ProjectIntegrationService>();
             services.AddScoped<ProjectService>();
