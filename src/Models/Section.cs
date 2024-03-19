@@ -11,6 +11,7 @@ namespace SIL.Transcriber.Models
         public Section() : base()
         {
             Name = "";
+            PublishTo = "{}";
         }
 
         public Section UpdateFrom(JToken item)
@@ -25,6 +26,7 @@ namespace SIL.Transcriber.Models
             Published = bool.TryParse(item ["published"]?.ToString() ?? "false", out bool trybool)
 && trybool;
 
+            PublishTo = item["publish-to"]?.ToString() ?? "{}";
             TitleMediafileId = int.TryParse(item ["titlemediafile"]?.ToString() ?? "", out tryint)
                 ? tryint
                 : null;
@@ -77,6 +79,10 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "published")]
         public bool Published { get; set; }
+        [Attr(PublicName = "publish-to")]
+        [Column(TypeName = "jsonb")]
+        public string PublishTo { get; set; } = "{}";
+
         [Attr(PublicName = "level")]
         public int Level { get; set; }
         [Attr(PublicName = "title-mediafile-id")]

@@ -24,6 +24,9 @@ public class VWProject : Identifiable<int>
     public decimal? SectionNum { get; set; }
     [Attr(PublicName = "published")]
     public bool? Published { get; set; }
+    [Attr(PublicName = "publish-to")]
+    [Column(TypeName = "jsonb")]
+    public string? PublishTo { get; set; }
     [Attr(PublicName = "section-level")]
     public int? SectionLevel { get; set; }
     [Attr(PublicName = "passage-id")]
