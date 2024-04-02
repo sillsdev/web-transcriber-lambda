@@ -51,12 +51,6 @@ namespace SIL.Transcriber.Models
         public virtual User? Owner { get; set; }
         public int? OwnerId { get; set; }
 
-        //[Attr(PublicName ="bible-id")]
-        //public int? BibleId { get; set; }
-
-        //[HasOne(PublicName = "bible")]
-        //public virtual Bible? Bible { get; set; }
-
         public bool Archived { get; set; }
     }
 }

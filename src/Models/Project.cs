@@ -92,8 +92,8 @@ namespace SIL.Transcriber.Models
             {
                 return null;
             }
-            Dictionary<string, string>? dict = JsonSerializer.Deserialize<Dictionary<string, string>>(DefaultParams);
-            return dict?.ContainsKey(key)??false ? dict [key] : null;
+            dynamic? x = Newtonsoft.Json.JsonConvert.DeserializeObject(DefaultParams);
+            return x?[key];
         }
         public bool AddSectionNumbers()
         {
