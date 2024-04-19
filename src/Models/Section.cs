@@ -26,7 +26,7 @@ namespace SIL.Transcriber.Models
             Published = bool.TryParse(item ["published"]?.ToString() ?? "false", out bool trybool)
 && trybool;
 
-            PublishTo = item["publish-to"]?.ToString() ?? "{}";
+            PublishTo = item["publishTo"]?.ToString() ?? "{}";
             TitleMediafileId = int.TryParse(item ["titlemediafile"]?.ToString() ?? "", out tryint)
                 ? tryint
                 : null;

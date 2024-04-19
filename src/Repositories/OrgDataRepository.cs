@@ -173,8 +173,8 @@ namespace SIL.Transcriber.Repositories
 
                 if (!CheckAdd(6, ToJson(orgs), dtBail, ref iStartNext, ref data))
                     break;
-                IQueryable<Models.Group> groups = groupRepository.GetMine();
-                IQueryable<Groupmembership> gms = gmRepository.GetMine(groups);
+                IQueryable<Models.Group> groups = groupRepository.GetMine().Where(g => !g.Archived);
+                IQueryable<Groupmembership> gms = gmRepository.GetMine(groups).Where(g => !g.Archived);
                 if (!CheckAdd(7, ToJson(gms), dtBail, ref iStartNext, ref data))
                     break;
                 //groups
@@ -187,7 +187,7 @@ namespace SIL.Transcriber.Repositories
                                 i => i.OrganizationId,
                                 o => o.Id,
                                 (i, o) => i
-                            )
+                            ).Where(g => !g.Archived)
                         ),
                         dtBail,
                         ref iStartNext,
