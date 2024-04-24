@@ -169,7 +169,7 @@ namespace SIL.Transcriber.Repositories
                     break;
                 if (!CheckAdd(5, ToJson(dbContext.Passagetypes),dtBail,ref iStartNext,ref data))
                     break;
-                IQueryable<Organization> orgs = organizationRepository.GetMine(); //this limits to current user
+                IQueryable<Organization> orgs = organizationRepository.GetMine().Where(g => !g.Archived); //this limits to current user
 
                 if (!CheckAdd(6, ToJson(orgs), dtBail, ref iStartNext, ref data))
                     break;
@@ -187,7 +187,7 @@ namespace SIL.Transcriber.Repositories
                                 i => i.OrganizationId,
                                 o => o.Id,
                                 (i, o) => i
-                            ).Where(g => !g.Archived)
+                            )
                         ),
                         dtBail,
                         ref iStartNext,
