@@ -2005,7 +2005,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId) //at least do one
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 User u = ResourceObjectToResource(ro, new User());
@@ -2044,7 +2044,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Section s = ResourceObjectToResource(ro, new Section());
@@ -2069,7 +2069,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Passage p = ResourceObjectToResource(ro, new Passage());
@@ -2112,7 +2112,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Discussion d = ResourceObjectToResource(ro, new Discussion());
@@ -2162,7 +2162,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Comment c = ResourceObjectToResource(ro, new Comment());
@@ -2209,7 +2209,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 Mediafile m = lst[lastIndex];
                 Dictionary<int, int> passageVersions = new();
@@ -2314,7 +2314,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
 
@@ -2341,7 +2341,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
 
@@ -2374,7 +2374,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
 
@@ -2418,7 +2418,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Orgkeytermtarget tt = ResourceObjectToResource(ro, new Orgkeytermtarget());

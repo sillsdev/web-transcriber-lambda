@@ -3,17 +3,21 @@ using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
     public class GraphicService : BaseArchiveService<Graphic>
     {
         private readonly IS3Service S3service;
+        readonly private HttpContext? HttpContext;
         public GraphicService(
+            IHttpContextAccessor httpContextAccessor,
             IResourceRepositoryAccessor repositoryAccessor,
             IQueryLayerComposer queryLayerComposer,
             IPaginationContext paginationContext,
@@ -36,7 +40,10 @@ namespace SIL.Transcriber.Services
                 resourceDefinitionAccessor,
                 repository
             )
-        { S3service = s3service; }
+        { 
+            HttpContext = httpContextAccessor.HttpContext; 
+            S3service = s3service; 
+        }
         private async Task<string> SaveImages(JObject info)
         {
             string[] sizes = { "512", "1024" };
@@ -81,17 +88,20 @@ namespace SIL.Transcriber.Services
                 {
                     newEntity.Archived = false;
                     newEntity.Info = await SaveImages(JObject.Parse(entity.Info ?? "{}"));
+                    HttpContext?.SetFP("graphicimage");
                     _ = await base.UpdateArchivedAsync(newEntity.Id, newEntity, cancellationToken);
                     return newEntity;
                 }
             }
             entity.Info = await SaveImages(JObject.Parse(entity.Info ?? "{}"));
+            HttpContext?.SetFP("graphicimage");
             return await base.CreateAsync(entity, cancellationToken);
         }
 
         public override async Task<Graphic?> UpdateAsync(int id, Graphic entity, CancellationToken cancellationToken)
         {
             entity.Info = await SaveImages(JObject.Parse(entity.Info ?? "{}"));
+            HttpContext?.SetFP("graphicimage");
             return await base.UpdateAsync(id, entity, cancellationToken);
         }
     }
