@@ -126,6 +126,22 @@ namespace SIL.Transcriber.Controllers
             string? username = _paratextService.GetParatextUsername(userSecret);
             return Ok(username);
         }
+        [HttpGet("canpublish")]
+        public async Task< ActionResult<bool>> CanPublish()
+        {
+            UserSecret userSecret;
+            try
+            {
+                userSecret = _paratextService.ParatextLogin();
+            }
+            catch 
+            {
+                return Ok(false);
+            }
+
+            bool canpublish = await _paratextService.GetCanPublishAsync(userSecret);
+            return Ok(canpublish);
+        }
 
         [HttpGet("useremail/{inviteId}")]
         public ActionResult<string> UserEmails([FromRoute] string inviteId)

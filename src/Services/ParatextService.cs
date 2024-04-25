@@ -1,5 +1,6 @@
 ﻿using IdentityModel;
 using Microsoft.EntityFrameworkCore.Storage;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Logging.Models;
 using SIL.Logging.Repositories;
@@ -750,7 +751,15 @@ namespace SIL.Transcriber.Services
                 }
             return total;
         }
-
+        public async Task<bool> GetCanPublishAsync(UserSecret userSecret)
+        { //https://registry-dev.paratext.org/api8/my/org
+            _ = VerifyUserSecret(userSecret);
+            string response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "my/org");
+            JObject org = JObject.Parse(response);
+            JToken? auth = org["paratextAuth"];
+            Logger.LogInformation("TTY D: {dt} {res} {org}", DateTime.Now, response, org);
+            return (bool?)auth?["fobaiResources"] ?? false;
+        }
         public string VerifyReferences(
             UserSecret userSecret,
             IEnumerable<Passage> passages,
@@ -809,6 +818,11 @@ namespace SIL.Transcriber.Services
             User? currentUser = CurrentUserRepository.GetCurrentUser();
             Artifacttype? type = dbContext.Artifacttypes.Find(artifactTypeId);
             Plan? plan = mediafiles.First()?.Passage?.Section?.Plan;
+            Project? project = plan?.Project;
+            
+            bool addNumbers = project?.AddSectionNumbers()??false;
+            SectionMap[] sectionMap = addNumbers ? project?.GetSectionMap()??Array.Empty<SectionMap>() : Array.Empty<SectionMap>(); //"[[0.01,\\"M1\\"],[1,\\"M1 S1\\"],[2,\\"M1 S2\\"],[3,\\"M1 S3\\"]]"   
+             
             string paratextId = ParatextHelpers.ParatextProject(
                 plan?.ProjectId,
                 type?.Typename ?? "",
@@ -821,7 +835,7 @@ namespace SIL.Transcriber.Services
             //assume startChapter=endChapter for all passages
             IEnumerable<BookChapter> book_chapters = BookChapters(passages);
 
-            bool addNumbers = true; //this would be an option in the plan? or the project?
+
 
             List<ParatextChapter> chapterList = await GetPassageChaptersAsync(
                 userSecret,
@@ -877,7 +891,8 @@ namespace SIL.Transcriber.Services
                                     chapter.NewUSX,
                                     passage,
                                     transcription,
-                                    addNumbers
+                                    addNumbers, 
+                                    sectionMap
                                 );
                                 //log it
                                 _ = logDbContext.Paratextsyncpassages.Add(

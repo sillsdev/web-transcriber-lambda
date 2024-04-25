@@ -2,6 +2,7 @@
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Utility.Extensions;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
@@ -85,5 +86,31 @@ namespace SIL.Transcriber.Models
         //public virtual List<Task> Tasks { get; set; }
         public bool Archived { get; set; }
 
+        public string? GetDefaultParam(string key)
+        {
+            if (DefaultParams == null)
+            {
+                return null;
+            }
+            dynamic? x = Newtonsoft.Json.JsonConvert.DeserializeObject(DefaultParams);
+            return x?[key];
+        }
+        public bool AddSectionNumbers()
+        {
+            string? value = GetDefaultParam("exportNumbers");
+            return value != null && value.ToLower() == "\"true\"";
+        }
+        public SectionMap [] GetSectionMap()
+        {
+            SectionMap [] ret = Array.Empty<SectionMap>();
+            string? sectionMapstr = GetDefaultParam("sectionMap"); //"[[0.01,\\"M1\\"],[1,\\"M1 S1\\"],[2,\\"M1 S2\\"],[3,\\"M1 S3\\"]]"    
+            List<List<object>>? tmp = sectionMapstr != null ? Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<object>>>(sectionMapstr) : null;
+            tmp?.ForEach((List<object> item) => {
+                if (!decimal.TryParse(item[0]?.ToString(), out decimal num))
+                    num = 0;
+                ret = ret.Append(new SectionMap { Sequencenum = num, Label = item [1]?.ToString() ?? "" }).ToArray();
+            });
+            return ret;
+        }
     }
 }

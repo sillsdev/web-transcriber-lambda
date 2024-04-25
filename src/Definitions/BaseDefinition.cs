@@ -1,10 +1,12 @@
-﻿using JsonApiDotNetCore.Configuration;
+﻿using Amazon.Auth.AccessControlPolicy;
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries.Expressions;
 using JsonApiDotNetCore.Resources;
 using Microsoft.Extensions.Primitives;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using System.Collections.Immutable;
 
@@ -53,9 +55,17 @@ namespace SIL.Transcriber.Definitions
 
         public override FilterExpression? OnApplyFilter(FilterExpression? existingFilter)
         {
-            if (existingFilter != null && existingFilter.Has(FilterConstants.DATA_START_INDEX))
-                return null;
-            return base.OnApplyFilter(existingFilter);
+            return existingFilter != null && existingFilter.Has(FilterConstants.DATA_START_INDEX) 
+                ? null 
+                : base.OnApplyFilter(existingFilter);
+        }
+        public async Task MakeMediafilePublicAsync(WriteOperationKind writeOperation, MediafileService service, int? id)
+        {
+            if (writeOperation != WriteOperationKind.DeleteResource &&
+                writeOperation != WriteOperationKind.RemoveFromRelationship &&
+                writeOperation != WriteOperationKind.AddToRelationship &&
+                id != null)
+                _ = await service.MakePublic((int)id);
         }
     }
 }

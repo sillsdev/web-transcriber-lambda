@@ -36,12 +36,6 @@ public class Bible : BaseModel, IArchive
     [Attr(PublicName = "any-published")]
     public bool AnyPublished { get; set; }
 
-    //[ForeignKey("OwnerOrganization")]
-    //[Attr(PublicName = "owner-organization-id")]
-    //public int? OwnerOrganizationId { get; set; }
-
-    //[HasOne(PublicName = "owner-organization")]
-    //public virtual Organization? OwnerOrganization { get; set; }
     public bool Archived { get; set; }
 }
 

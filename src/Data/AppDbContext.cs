@@ -10,7 +10,6 @@ using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility.Extensions;
-using System.Reflection.Emit;
 using static SIL.Transcriber.Data.DbContextExtentions;
 
 namespace SIL.Transcriber.Data
@@ -42,7 +41,10 @@ namespace SIL.Transcriber.Data
         public DbSet<Intellectualproperty> IntellectualPropertys => Set<Intellectualproperty>();
         public DbSet<Invitation> Invitations => Set<Invitation>();
         public DbSet<Mediafile> Mediafiles => Set<Mediafile>();
+        public DbSet<Note> Notes => Set<Note>();
         public DbSet<Organization> Organizations => Set<Organization>();
+        public DbSet<Organizationbible> Organizationbibles =>
+            Set<Organizationbible>();
         public DbSet<Organizationmembership> Organizationmemberships =>
             Set<Organizationmembership>();
         public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
@@ -73,6 +75,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
         public DbSet<VWChecksum> VWChecksums => Set<VWChecksum>();
+        public DbSet<VWProject> VWProjects => Set<VWProject>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
         #endregion
 
@@ -199,6 +202,11 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
+                .Entity<Note>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
                 .Entity<Organization>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -206,6 +214,11 @@ namespace SIL.Transcriber.Data
 
             _ = builder
                 .Entity<Orgdata>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Organizationbible>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -484,7 +497,7 @@ namespace SIL.Transcriber.Data
 
         //Include all HasOne attributes
         public IQueryable<Artifactcategory> ArtifactcategoriesData =>
-            Artifactcategorys.Include(c => c.Organization);
+            Artifactcategorys.Include(c => c.Organization).Include(c => c.TitleMediafile);
         public IQueryable<Artifacttype> ArtifacttypesData =>
             Artifacttypes.Include(c => c.Organization);
         public IQueryable<Bible> BiblesData => Bibles
@@ -516,7 +529,13 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.ArtifactCategory)
                 .Include(x => x.ArtifactType)
                 .Include(x => x.ResourcePassage)
-                .Include(x => x.SourceMedia);
+                .Include(x => x.SourceMedia)
+                .Include(x => x.RecordedbyUser);
+
+        public IQueryable<Organizationbible> OrganizationbiblesData =>
+            Organizationbibles
+                .Include(x => x.Organization)
+                .Include(x => x.Bible);
         public IQueryable<Organizationmembership> OrganizationmembershipsData =>
             Organizationmemberships
                 .Include(x => x.Organization)
@@ -558,7 +577,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Section> SectionsData =>
             Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber).Include(x => x.TitleMediafile);
         public IQueryable<Sharedresource> SharedresourcesData =>
-           Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory);
+           Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory).Include(x => x.TitleMediafile);
         public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>
                 Sharedresourcereferences.Include(x => x.SharedResource);
 

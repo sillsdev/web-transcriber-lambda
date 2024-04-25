@@ -13,12 +13,12 @@ namespace SIL.Transcriber.Utility
 
             return token;
         }
-        public static string GetOrigin(this HttpContext context)
+        public static string? GetOrigin(this HttpContext context)
         {
             return context.Request.Headers.FirstOrDefault(h => h.Key.ToLower() == "origin").Value;
         }
 
-        public static string GetFP(this HttpContext context)
+        public static string? GetFP(this HttpContext context)
         {
             return context.Request.Headers.FirstOrDefault(h => h.Key.ToLower() == "x-fp").Value;
         }

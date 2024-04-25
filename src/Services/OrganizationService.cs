@@ -47,14 +47,17 @@ namespace SIL.Transcriber.Services
             dbContext = (AppDbContext)contextResolver.GetContext();
         }
 
+        public bool AnyPublished(int id)
+        {
+            return ((OrganizationRepository)Repo).AnyPublished(id);
+        }   
         public void JoinOrg(Organization entity, User user, RoleName orgRole, RoleName groupRole)
         {
             Group? allGroup = dbContext.Groups
                 .Where(g => g.AllUsers && g.OwnerId == entity.Id)
                 .FirstOrDefault();
 
-            if (HttpContext != null)
-                HttpContext.SetFP("api join org");
+            HttpContext?.SetFP("api join org");
             Organizationmembership? membership = dbContext.Organizationmemberships
                 .Where(om => om.OrganizationId == entity.Id && om.UserId == user.Id)
                 .FirstOrDefault();

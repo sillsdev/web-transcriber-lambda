@@ -2,22 +2,24 @@
 using JsonApiDotNetCore.Middleware;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Definitions
 {
     public class MediafileDefinition : BaseDefinition<Mediafile>
     {
         private readonly AppDbContext AppDbContext;
-
+        private readonly MediafileService MediafileService;
         public MediafileDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
             IJsonApiRequest Request,
-            AppDbContext appDbContext
+            AppDbContext appDbContext,
+             MediafileService mediafileService
         ) : base(resourceGraph, loggerFactory, Request)
         {
             AppDbContext = appDbContext;
-
+            MediafileService = mediafileService;
             //Do not use a service here...the dbContext in the service isn't correct when called from definition
             //at least in onWritingAsync
         }
@@ -77,7 +79,9 @@ namespace SIL.Transcriber.Definitions
                     _ = AppDbContext.Passagestatechanges.Add(psc);
                     resource.EafUrl = "";
                 }
-            }
+            } else if (resource.ReadyToShare && AppDbContext.Mediafiles.Any(s => s.Id == resource.Id && !s.ReadyToShare))
+                _ = MakeMediafilePublicAsync(writeOperation, MediafileService, resource.Id);
+
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
         }
     }

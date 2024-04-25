@@ -37,7 +37,14 @@ namespace SIL.Transcriber.Repositories
             ProjectRepository =
                 projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
         }
-
+        public bool AnyPublished(int id)
+        {
+            return dbContext.Organizations.Where(o => o.Id == id)
+                .Join(dbContext.Projects, o => o.Id, p => p.OrganizationId, (o, p) => p)
+                .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
+                .Join(dbContext.Sections, pl => pl.Id, s => s.PlanId, (pl, s) => s)
+                .Any(s => s.Published == true);
+        }
         public IQueryable<Organization> UsersOrganizations(IQueryable<Organization> entities)
         {
             if (CurrentUser == null)
@@ -46,7 +53,7 @@ namespace SIL.Transcriber.Repositories
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                return entities.Where(o =>  orgIds.Contains(o.Id));
+                return entities.Where(o =>  orgIds.Contains(o.Id) || o.Name=="BibleMedia");
             }
             return entities;
         }

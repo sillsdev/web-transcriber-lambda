@@ -105,6 +105,13 @@ namespace SIL.Transcriber.Repositories
                 .OrderBy(m => m.VersionNumber)
                 .LastOrDefault();
         }
+        public Mediafile? GetLatestForPassage(int passageId)
+        {
+            return GetAll()
+                .Where(p => p.PassageId == passageId)
+                .OrderBy(m => m.VersionNumber)
+                .LastOrDefault();
+        }
         public IEnumerable<Mediafile> PassageReadyToSync(int PassageId, int artifactTypeId = 0)
         {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
@@ -116,6 +123,7 @@ namespace SIL.Transcriber.Repositories
                     .Include(m => m.Passage)
                     .ThenInclude(p => p.Section)
                     .ThenInclude(s => s.Plan)
+                    .ThenInclude(p => p.Project)
                     .OrderBy(m => m.VersionNumber)
                 :
                     dbContext.Mediafiles
@@ -125,6 +133,7 @@ namespace SIL.Transcriber.Repositories
                     .Include(m => m.Passage)
                     .ThenInclude(p => p.Section)
                     .ThenInclude(s => s.Plan)
+                    .ThenInclude(p => p.Project)
                     .ToList()
                     .Where(m => m.ReadyToSync)
                     .OrderBy(m => m.VersionNumber);
@@ -157,6 +166,8 @@ namespace SIL.Transcriber.Repositories
                 )
                 .Include(m => m.Passage)
                 .ThenInclude(p => p.Section)
+                .ThenInclude(s => s.Plan)
+                .ThenInclude(p => p.Project)
                 .ToList()
                 .Where(m => m.ReadyToSync)
                 .OrderBy(m => m.PassageId)

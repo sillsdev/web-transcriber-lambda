@@ -7,15 +7,6 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Definitions
 {
-    public class ArtifactCategoryDefinition : BaseDefinition<Artifactcategory>
-    {
-        public ArtifactCategoryDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
-    }
-
     public class ArtifactTypeDefinition : BaseDefinition<Artifacttype>
     {
         public ArtifactTypeDefinition(
@@ -38,20 +29,13 @@ namespace SIL.Transcriber.Definitions
 
         }
         public override async Task OnWritingAsync(
-    Bible resource,
-    WriteOperationKind writeOperation,
-    CancellationToken cancellationToken
-)
+                        Bible resource,
+                        WriteOperationKind writeOperation,
+                        CancellationToken cancellationToken
+                    )
         {
-            if (resource.IsoMediafile != null)
-            {
-                await _mediafileService.MakePublic(resource.IsoMediafile);
-            }
-            if (resource.BibleMediafile != null)
-            {
-                await _mediafileService.MakePublic(resource.BibleMediafile);
-            }
-
+            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.IsoMediafileId);
+            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.BibleMediafileId);
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
         }
     }
@@ -84,11 +68,28 @@ namespace SIL.Transcriber.Definitions
 
     public class GraphicDefinition : BaseDefinition<Graphic>
     {
+        private readonly MediafileService _mediafileService;
         public GraphicDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
+            IJsonApiRequest Request,
+            MediafileService mediafileService
+
+        ) : base(resourceGraph, loggerFactory, Request)
+        {
+            _mediafileService = mediafileService;
+
+        }
+        public override async Task OnWritingAsync(
+                        Graphic resource,
+                        WriteOperationKind writeOperation,
+                        CancellationToken cancellationToken
+                    )
+        {
+            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.MediafileId);
+            await base.OnWritingAsync(resource, writeOperation, cancellationToken);
+        }
+
     }
     public class GroupDefinition : BaseDefinition<Group>
     {
@@ -140,7 +141,14 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
-
+    public class OrganizationBibleDefinition : BaseDefinition<Organizationbible>
+    {
+        public OrganizationBibleDefinition(
+            IResourceGraph resourceGraph,
+            ILoggerFactory loggerFactory,
+            IJsonApiRequest Request
+        ) : base(resourceGraph, loggerFactory, Request) { }
+    }
     public class OrganizationMembershipDefinition : BaseDefinition<Organizationmembership>
     {
         public OrganizationMembershipDefinition(
@@ -250,15 +258,6 @@ namespace SIL.Transcriber.Definitions
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class SectionDefinition : BaseDefinition<Section>
-    {
-        public SectionDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
-    }
-
     public class SectionPassageDefinition : BaseDefinition<Sectionpassage>
     {
         public SectionPassageDefinition(
@@ -287,11 +286,27 @@ namespace SIL.Transcriber.Definitions
     }
     public class SharedresourceDefinition : BaseDefinition<Sharedresource>
     {
+        private readonly MediafileService _mediafileService;
+
         public SharedresourceDefinition(
             IResourceGraph resourceGraph,
             ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
+            IJsonApiRequest Request,
+            MediafileService mediafileService
+        ) : base(resourceGraph, loggerFactory, Request)
+        {
+            _mediafileService = mediafileService;
+
+        }
+        public override async Task OnWritingAsync(
+                        Sharedresource resource,
+                        WriteOperationKind writeOperation,
+                        CancellationToken cancellationToken
+                    )
+        {
+            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.TitleMediafileId);
+            await base.OnWritingAsync(resource, writeOperation, cancellationToken);
+        }
     }
     public class SharedresourcereferenceDefinition : BaseDefinition<Sharedresourcereference>
     {

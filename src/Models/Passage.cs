@@ -120,11 +120,12 @@ namespace SIL.Transcriber.Models
        
         public string Verses {
             get {
-                string? tmp = StartChapter != EndChapter
+                return (StartChapter != EndChapter
                     ? Reference
-                    : StartVerse != EndVerse ? StartVerse?.ToString() + "-" + EndVerse?.ToString() : StartVerse?.ToString();
-                return tmp ?? "";
-            }
+                    : StartVerse != (EndVerse??StartVerse) ? StartVerse?.ToString() + "-" + EndVerse?.ToString() : StartVerse?.ToString())
+                    ?? "";
+                }
+            
         }
 
     }

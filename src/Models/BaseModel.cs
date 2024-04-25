@@ -1,7 +1,6 @@
 ﻿using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Resources.Annotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {

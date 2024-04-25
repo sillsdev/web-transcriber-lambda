@@ -15,11 +15,6 @@ using System.Text.Json;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 using SIL.Transcriber.Utility;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Amazon.Lambda.Core;
-using System.Security.Cryptography;
-using Amazon.S3;
-using System.Net.Mime;
-using System.Collections.Generic;
 
 
 namespace SIL.Transcriber.Services
@@ -761,6 +756,7 @@ namespace SIL.Transcriber.Services
                 m.AudioUrl = "media/" + NameFromTemplate(m, nameTemplate);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
+          
             AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles);
         }
 
@@ -876,20 +872,22 @@ namespace SIL.Transcriber.Services
                         o => o.Id,
                         (i, o) => i);
         }
-        private IQueryable<Mediafile> PlanMedia(IQueryable<Plan> plans, IQueryable<Intellectualproperty> ip, IQueryable<Passage>? supportingPassages = null)
+        private IQueryable<Mediafile> PlanMedia(IQueryable<Plan> plans)
         {
-            IQueryable<Mediafile> xmediafiles = plans
+            return plans
                         .Join(dbContext.MediafilesData, p => p.Id, m => m.PlanId, (p, m) => m)
                         .Where(x => !x.Archived);
-            IQueryable<Mediafile> ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m).Where(x => !x.Archived);
-            IQueryable<Mediafile> supportingmedia = (supportingPassages ?? dbContext.Passages.Where(p => p.Id == -1)).Join(dbContext.MediafilesData, p => p.Id, m=> m.PassageId, (p, m) => m).Where(x => !x.Archived);
-            IQueryable<Mediafile> myMedia = xmediafiles.Concat(ipmedia).Concat(supportingmedia).Distinct();
-            return myMedia;
         }
         private IQueryable<Sectionresource> SectionResources(IQueryable<Section> sections)
         {
             return dbContext.Sectionresources
                         .Join(sections, r => r.SectionId, s => s.Id, (r, s) => r)
+                        .Where(x => !x.Archived);
+        }
+        private IEnumerable<Mediafile> CategoryMedia(IQueryable<Artifactcategory> categories)
+        {
+            return dbContext.Mediafiles
+                        .Join(categories, m => m.Id, c => c.TitleMediafileId, (m, c) => m)
                         .Where(x => !x.Archived);
         }
         private IEnumerable<Mediafile> PlanSourceMedia(IQueryable<Sectionresource> sectionresources)
@@ -934,10 +932,10 @@ namespace SIL.Transcriber.Services
             dbContext.SaveChanges();
             return sourcemediafiles;
         }
-        private static IQueryable<Mediafile> AttachedMedia(IQueryable<Mediafile> myMedia) {
+        private static IEnumerable<Mediafile> AttachedMedia(List<Mediafile> myMedia) {
             return myMedia
                         .Where(x => (x.PassageId != null || x.ArtifactTypeId != null) &&
-                            x.ResourcePassageId == null && !x.Archived);
+                            x.ResourcePassageId == null && !x.Archived).Distinct();
 
         }
         private IQueryable<Discussion> PlanDiscussions(IQueryable<Mediafile> myMedia)
@@ -945,6 +943,28 @@ namespace SIL.Transcriber.Services
             return dbContext.Discussions
                         .Join(myMedia, d => d.MediafileId, m => m.Id, (d, m) => d)
                         .Where(x => !x.Archived);
+        }
+        private List<Mediafile> ProjectMedia( 
+            IQueryable<Orgkeytermtarget> orgkeytermtargets,
+            IQueryable<Artifactcategory> categories,
+            IQueryable<Sectionresource> sectionresources,
+            IQueryable<Intellectualproperty> ip,
+            IQueryable<Plan> plans,
+            IQueryable<Note> supportingNotes)
+        {
+            IQueryable<Mediafile> okttmedia = orgkeytermtargets.Join(dbContext.MediafilesData, o => o.MediafileId, m => m.Id, (o, m) => m);
+            IQueryable<Mediafile> ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m).Where(x => !x.Archived);
+            IEnumerable<Mediafile> sourcemediafiles = PlanSourceMedia(sectionresources);
+            IEnumerable<Mediafile> categorymediafiles =  CategoryMedia(categories);
+            IQueryable<Mediafile> sharedNoteMedia = supportingNotes.Join(
+                                          dbContext.MediafilesData, n => n.MediafileId, m => m.Id, (n, m) => m);
+            List<Mediafile> myMedia = PlanMedia(plans).ToList()
+                                .Concat(okttmedia.ToList())
+                                .Concat(ipmedia.ToList())
+                                .Concat(sourcemediafiles.ToList())
+                                .Concat(categorymediafiles.ToList())
+                                .Concat(sharedNoteMedia.ToList()).Distinct().ToList();
+            return myMedia;
         }
         public Fileresponse ExportProjectPTF(int projectId, int start)
         {
@@ -979,8 +999,7 @@ namespace SIL.Transcriber.Services
                 IQueryable<Organization> orgs = dbContext.Organizations.Where(
                         o => o.Id == project.OrganizationId
                     );
-               // IQueryable<Project> noteproject = dbContext.Projects.Join(orgs, p=>p.Id, o => o.NoteProjectId, (p, o) => p);
-                
+               
                 IQueryable<Intellectualproperty>? ip = OrgIPs(orgs);
                 if (start == 0)
                 {
@@ -990,7 +1009,7 @@ namespace SIL.Transcriber.Services
                     };
                     DateTime exported = AddCheckEntry(
                         zipArchive,
-                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 6
+                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 8
                     );
                     AddJsonEntry(
                         zipArchive,
@@ -1082,7 +1101,7 @@ namespace SIL.Transcriber.Services
                     AddJsonEntry(zipArchive, Tables.OrganizationMemberships, orgmems.ToList());
 
                     //projects
-                    AddJsonEntry(zipArchive, Tables.Projects, projects.ToList());//.Concat(supportingProjects).ToList());
+                    AddJsonEntry(zipArchive, Tables.Projects, projects.ToList());
                     startNext = 1;
                 }
                 do //give me something to break out of
@@ -1096,7 +1115,7 @@ namespace SIL.Transcriber.Services
                             Tables.ProjectIntegrations,
                             projects
                                 .Join(
-                                    dbContext.Projectintegrations,
+                                    dbContext.ProjectintegrationsData,
                                     p => p.Id,
                                     pi => pi.ProjectId,
                                     (p, pi) => pi
@@ -1108,57 +1127,80 @@ namespace SIL.Transcriber.Services
                         break;
                     //plans
                     IQueryable<Plan> plans = projects
-                        .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
+                        .Join(dbContext.PlansData, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
                         .Where(x => !x.Archived);
-                    /* NEXT RELEASE!
-                    IQueryable<Plan> supportingPlans = noteproject
-                        .Join(dbContext.Plans, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
+                    IQueryable<Artifactcategory> categories = dbContext.Artifactcategorys.Where(a =>
+                                        (   a.OrganizationId == null
+                                            || a.OrganizationId == project.OrganizationId
+                                        ) && !a.Archived);
+                    IQueryable<VWProject> sharednotes = dbContext.VWProjects.Where(x => x.ProjectId == project.Id && x.SharedResourceId != null);
+                    IQueryable<Note> supportingNotes = dbContext.Notes
+                        .Join(sharednotes, n => n.ResourceId, sn => sn.SharedResourceId, (n, sn) => n);
+
+                    IQueryable<Orgkeytermtarget> orgkeytermtargets = dbContext.OrgKeytermTargetsData.Where(
+                                    a => (a.OrganizationId == project.OrganizationId) && !a.Archived
+                                );
+                    IQueryable<Section> sections = plans
+                        .Join(dbContext.SectionsData, p => p.Id, s => s.PlanId, (p, s) => s)
                         .Where(x => !x.Archived);
-                    */
+                    IQueryable<Sectionresource> sectionresources = SectionResources(sections);
+                    List<Mediafile> mediafiles = ProjectMedia(orgkeytermtargets, categories,
+                        sectionresources, ip,plans, supportingNotes);
+                    List<int>  planIds = mediafiles.Select(m => m.PlanId).Distinct().ToList();
+                    IQueryable<Plan> supportingPlans = dbContext.PlansData.Where(p => planIds.Contains(p.Id)) ;
+                    List<int> projIds = supportingPlans.Where(p => p.ProjectId != project.Id).Select(p => p.ProjectId).ToList();
+                    IQueryable<Project> supportingProjects = dbContext.ProjectsData.Where(p => projIds.Contains(p.Id));
                     if (
                         !CheckAdd(
                             2,
                             dtBail,
                             ref startNext,
                             zipArchive,
-                            Tables.Plans,
-                            plans/*.Concat(supportingPlans)*/.ToList()
+                            "supportingprojects",
+                            supportingProjects.ToList()
                         )
                     )
                         break;
-                    //sections
-                    IQueryable<Section> sections = plans
-                        .Join(dbContext.Sections, p => p.Id, s => s.PlanId, (p, s) => s)
-                        .Where(x => !x.Archived);
-                    IQueryable<Passage> passages = sections
-                        .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
-                        .Where(x => !x.Archived);
-                    //TODO did I get notes in the shared resources?
                     if (
                         !CheckAdd(
                             3,
                             dtBail,
                             ref startNext,
                             zipArchive,
-                            Tables.Sections,
-                            sections/*.Concat(supportingSections)*/.ToList()
+                            Tables.Plans,
+                            plans.Concat(supportingPlans).ToList()
                         )
                     )
                         break;
-                    //passages
-                    /* NEXT RELEASE!
-                    IQueryable<Passage> supportingpassages = supportingSections
-                        .Join(dbContext.Passages, s => s.Id, p => p.SectionId, (s, p) => p)
+                    //sections
+
+                    IQueryable<Section> supportingSections = dbContext.SectionsData.Join(
+                        supportingNotes, s => s.Id, n => n.SectionId, (s,n) => s);
+                    IQueryable<Passage> passages = sections
+                        .Join(dbContext.PassagesData, s => s.Id, p => p.SectionId, (s, p) => p)
                         .Where(x => !x.Archived);
-                    */
+                    IQueryable<Passage>  supportingPassages = dbContext.PassagesData.Join(
+                                               supportingNotes, p => p.Id, n => n.PassageId, (p,n) => p);
                     if (
                         !CheckAdd(
                             4,
                             dtBail,
                             ref startNext,
                             zipArchive,
+                            Tables.Sections,
+                            sections.Concat(supportingSections).ToList()
+                        )
+                    )
+                        break;
+                    //passages
+                    if (
+                        !CheckAdd(
+                            5,
+                            dtBail,
+                            ref startNext,
+                            zipArchive,
                             Tables.Passages,
-                            passages/*.Concat(supportingpassages)*/.ToList()
+                            passages.ToList().Concat(supportingPassages).ToList()
                         )
                     )
                         break;
@@ -1171,7 +1213,7 @@ namespace SIL.Transcriber.Services
                     );
                     if (
                         !CheckAdd(
-                            5,
+                            6,
                             dtBail,
                             ref startNext,
                             zipArchive,
@@ -1180,16 +1222,7 @@ namespace SIL.Transcriber.Services
                         )
                     )
                         break;
- 
-                    startNext++; //TODO REMOVE? instead of passagenotes
-
-                    //mediafiles
-                    //I need my mediafiles plus any shared resource mediafiles
-                    IQueryable<Sectionresource> sectionresources = SectionResources(sections);
-
-                    IEnumerable<Mediafile> sourcemediafiles = PlanSourceMedia(sectionresources);
-                    IQueryable<Mediafile>? myMedia = PlanMedia(plans, ip);//NEXT RELEASE!, supportingpassages);
-
+                   
                     if (
                         !CheckAdd(
                             7,
@@ -1197,7 +1230,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Mediafiles,
-                            myMedia.ToList().Union(sourcemediafiles.ToList()).OrderBy(m => m.Id).ToList()
+                            mediafiles.OrderBy(m => m.Id).ToList()
                         )
                     )
                         break;
@@ -1209,14 +1242,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.ArtifactCategorys,
-                            dbContext.Artifactcategorys
-                                .Where(a =>
-                                        (
-                                            a.OrganizationId == null
-                                            || a.OrganizationId == project.OrganizationId
-                                        ) && !a.Archived
-                                )
-                                .ToList()
+                            categories.ToList()
                         )
                     )
                         break;
@@ -1253,11 +1279,7 @@ namespace SIL.Transcriber.Services
                         )
                     )
                     break;
-                    //only limit vernacular to those with passageids
-                    IQueryable<Mediafile> attachedmediafiles = AttachedMedia(myMedia);
-                    //ignore media from other plans (shared, notes etc)
-                    IQueryable<Discussion> discussions = PlanDiscussions(myMedia.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m)
-                                );
+                    IQueryable<Discussion> discussions = PlanDiscussions(PlanMedia(plans));
                     if (
                         !CheckAdd(
                             11,
@@ -1343,6 +1365,7 @@ namespace SIL.Transcriber.Services
                         )
                         )
                         break;
+
                     if (
                         !CheckAdd(
                             17,
@@ -1350,10 +1373,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.OrgKeyTermTargets,
-                            dbContext.OrgKeytermTargetsData.Where(
-                                    a => (a.OrganizationId == project.OrganizationId) && !a.Archived
-                                )
-                                .ToList()
+                            orgkeytermtargets.ToList()
                         )
                     )
                         break;
@@ -1395,8 +1415,7 @@ namespace SIL.Transcriber.Services
                     //if (!AddMediaEaf(20, dtBail, ref startNext, zipArchive, vernmediafiles.ToList(), null))
                     //    break;
                     startNext++; //instead of eaf
-                    List<Mediafile> mediaList  = attachedmediafiles.ToList().Union(sourcemediafiles.ToList()).ToList();
-                    AddAttachedMedia(zipArchive, mediaList, null);
+                    AddAttachedMedia(zipArchive, AttachedMedia(mediafiles).ToList(), null);
                 } while (false);
             }
             Fileresponse response = WriteMemoryStream(ms, fileName, startNext, ext);
@@ -1986,7 +2005,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId) //at least do one
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 User u = ResourceObjectToResource(ro, new User());
@@ -2025,7 +2044,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Section s = ResourceObjectToResource(ro, new Section());
@@ -2050,7 +2069,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Passage p = ResourceObjectToResource(ro, new Passage());
@@ -2093,7 +2112,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Discussion d = ResourceObjectToResource(ro, new Discussion());
@@ -2143,7 +2162,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Comment c = ResourceObjectToResource(ro, new Comment());
@@ -2190,7 +2209,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 Mediafile m = lst[lastIndex];
                 Dictionary<int, int> passageVersions = new();
@@ -2295,7 +2314,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
 
@@ -2322,7 +2341,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
 
@@ -2355,7 +2374,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
 
@@ -2399,7 +2418,7 @@ namespace SIL.Transcriber.Services
         {
             for (int lastIndex = startId; lastIndex < lst.Count; lastIndex++)
             {
-                if (DateTime.Now > dtBail)
+                if (DateTime.Now > dtBail && lastIndex > startId)
                     return lastIndex;
                 ResourceObject ro = lst[lastIndex];
                 Orgkeytermtarget tt = ResourceObjectToResource(ro, new Orgkeytermtarget());
@@ -2997,7 +3016,7 @@ namespace SIL.Transcriber.Services
                 Mediafile m = lst[ix];
                 int? psgId = m.PassageId == null ? null : passageMap.GetValueOrDefault(m.PassageId ?? 0);
                 if (m.PassageId != null && psgId == 0)
-                    psgId = m.ArtifactTypeId == null ? throw new Exception("Passage not found" + m.PassageId) : null;
+                    psgId = null; //psgId = m.ArtifactTypeId == null ? throw new Exception("Passage not found " + m.PassageId) : null;
                 Mediafile copym = new()
                 {
                     PassageId = psgId,
@@ -3237,7 +3256,15 @@ namespace SIL.Transcriber.Services
                 IQueryable<Passage> sourcepassages = sourcesections.Join(dbContext.Passages, s => s.Id, p=> p.SectionId, (s, p) => p).Where(x => !x.Archived);
                 IQueryable<Sectionresource> sectionresources = SectionResources(sourcesections);
                 IEnumerable<Mediafile> sourcemediafiles = PlanSourceMedia(sectionresources);
-                IQueryable<Mediafile>? myMedia = PlanMedia(sourceplans, OrgIPs(sourceOrg)).OrderBy(m => m.Id);
+
+                IQueryable<Orgkeytermtarget> oktt = dbContext.Orgkeytermtargets.Where(s => s.OrganizationId == sourceproject.OrganizationId);
+                IQueryable<Artifactcategory> categories = dbContext.Artifactcategorys.Where(ac => ac.OrganizationId == null || ac.OrganizationId == sourceproject.OrganizationId);
+                IQueryable<VWProject> sharednotes = dbContext.VWProjects.Where(x => x.ProjectId == project.Id && x.SharedResourceId != null);
+                IQueryable<Note> supportingNotes = dbContext.Notes
+                        .Join(sharednotes, n => n.ResourceId, sn => sn.SharedResourceId, (n, sn) => n);
+                IQueryable<Intellectualproperty>? ip = OrgIPs(dbContext.Organizations.Where(o => o.Id == sourceproject.OrganizationId));
+                IOrderedEnumerable<Mediafile> myMedia = ProjectMedia(oktt, categories, sectionresources, 
+                                                    ip, sourceplans, supportingNotes                                                             ).OrderBy(m => m.Id);
                 
                 int ix = start;
                 string status = "";
@@ -3250,7 +3277,7 @@ namespace SIL.Transcriber.Services
                         case Tables.ArtifactCategorys:
                             if (!sameOrg)
                             {
-                                ArtifactCategoryMap = CopyArtifactCategorys(dbContext.Artifactcategorys.Where(ac => ac.OrganizationId == null || ac.OrganizationId == sourceproject.OrganizationId).ToList(), org.Id);
+                                ArtifactCategoryMap = CopyArtifactCategorys(categories.ToList(), org.Id);
                                 SaveMap(ArtifactCategoryMap, name, newProjId);
                             }
                             ix++;
@@ -3341,14 +3368,14 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.Discussions:
-                            DiscussionMap = CopyDiscussions(PlanDiscussions(myMedia).ToList(), sameOrg, GetArtifactCategoryMap(sameOrg, newProjId), GetMediafileMap(newProjId), GetOrgworkflowstepMap(sameOrg, newProjId));
+                            DiscussionMap = CopyDiscussions(PlanDiscussions(PlanMedia(sourceplans)).ToList(), sameOrg, GetArtifactCategoryMap(sameOrg, newProjId), GetMediafileMap(newProjId), GetOrgworkflowstepMap(sameOrg, newProjId));
                             SaveMap(DiscussionMap, name, newProjId);
                             ix++;
                             break;
 
                         case Tables.Comments:
                             CopyComments(dbContext.Comments
-                            .Join(PlanDiscussions(myMedia), c => c.DiscussionId, d => d.Id, (c, d) => c)
+                            .Join(PlanDiscussions(PlanMedia(sourceplans)), c => c.DiscussionId, d => d.Id, (c, d) => c)
                             .Where(x => !x.Archived)
                             .ToList(), GetDiscussionMap(newProjId), GetMediafileMap(newProjId));
                             ix++;

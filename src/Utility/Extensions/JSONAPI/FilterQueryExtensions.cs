@@ -24,23 +24,23 @@ namespace SIL.Transcriber.Utility.Extensions.JSONAPI
     {
         public static string Field(this QueryExpression expression)
         {
-            if (expression.GetType().IsAssignableFrom(typeof(ComparisonExpression)))
-                return (expression as ComparisonExpression)?.Left.ToString() ?? "";
-            return "";
+            return expression.GetType().IsAssignableFrom(typeof(ComparisonExpression))
+                ? (expression as ComparisonExpression)?.Left.ToString() ?? ""
+                : "";
         }
 
         public static string Value(this QueryExpression expression)
         {
-            if (expression.GetType().IsAssignableFrom(typeof(ComparisonExpression)))
-                return (expression as ComparisonExpression)?.Right.ToString() ?? "";
-            return "";
+            return expression.GetType().IsAssignableFrom(typeof(ComparisonExpression))
+                ? (expression as ComparisonExpression)?.Right.ToString() ?? ""
+                : "";
         }
 
         public static string Operator(this QueryExpression expression)
         {
-            if (expression.GetType().IsAssignableFrom(typeof(ComparisonExpression)))
-                return (expression as ComparisonExpression)?.Operator.ToString() ?? "";
-            return "";
+            return expression.GetType().IsAssignableFrom(typeof(ComparisonExpression))
+                ? (expression as ComparisonExpression)?.Operator.ToString() ?? ""
+                : "";
         }
 
         public static bool Has(this QueryExpression expression, string param)
@@ -53,23 +53,17 @@ namespace SIL.Transcriber.Utility.Extensions.JSONAPI
 
         public static string Field(this ExpressionInScope expression)
         {
-            if (expression.Expression != null)
-                return expression.Expression.Field();
-            return "";
+            return expression.Expression != null ? expression.Expression.Field() : "";
         }
 
         public static string Value(this ExpressionInScope expression)
         {
-            if (expression.Expression != null)
-                return expression.Expression.Value();
-            return "";
+            return expression.Expression != null ? expression.Expression.Value() : "";
         }
 
         public static bool Has(this ExpressionInScope expression, string param)
         {
-            if (expression.Expression != null)
-                return expression.Expression.Has(param);
-            return false;
+            return expression.Expression != null && expression.Expression.Has(param);
         }
     }
 }

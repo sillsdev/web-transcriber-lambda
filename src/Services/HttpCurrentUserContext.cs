@@ -28,20 +28,14 @@ namespace SIL.Transcriber.Services
 
         private User Auth0User {
             get {
-                if (auth0User == null)
-                {
-                    auth0User = AuthService.GetUserAsync(Auth0Id).Result;
-                }
+                auth0User ??= AuthService.GetUserAsync(Auth0Id).Result;
                 return auth0User;
             }
         }
 
         public string Auth0Id {
             get {
-                if (auth0Id == null)
-                {
-                    auth0Id = HttpContext?.GetAuth0Id() ?? "";
-                }
+                auth0Id ??= HttpContext?.GetAuth0Id() ?? "";
                 return auth0Id;
             }
         }
