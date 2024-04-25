@@ -10,7 +10,6 @@ using SIL.Paratext.Models;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility.Extensions;
-using System.Reflection.Emit;
 using static SIL.Transcriber.Data.DbContextExtentions;
 
 namespace SIL.Transcriber.Data

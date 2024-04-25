@@ -15,6 +15,7 @@ using System.Web;
 using System.Xml.Linq;
 using TranscriberAPI.Utility.Extensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services
 {
@@ -25,6 +26,9 @@ namespace SIL.Transcriber.Services
         private MediafileRepository MyRepository { get; set; }
         private readonly AppDbContext dbContext;
         readonly private HttpContext? HttpContext;
+        private readonly ICurrentUserContext CurrentUserContext;
+        private readonly ILoggerFactory LoggerFactory;
+        private readonly IHttpContextAccessor HttpContextAccessor;
         public MediafileService(
             IResourceRepositoryAccessor repositoryAccessor,
             IQueryLayerComposer queryLayerComposer,
@@ -37,8 +41,9 @@ namespace SIL.Transcriber.Services
             PlanRepository planRepository,
             IS3Service service,
             MediafileRepository myRepository,
-                        IHttpContextAccessor httpContextAccessor,
-            AppDbContextResolver contextResolver
+            IHttpContextAccessor httpContextAccessor,
+            AppDbContextResolver contextResolver,
+            ICurrentUserContext currentUserContext
         )
             : base(
                 repositoryAccessor,
@@ -55,8 +60,11 @@ namespace SIL.Transcriber.Services
             S3service = service;
             PlanRepository = planRepository;
             MyRepository = myRepository;
+            HttpContextAccessor = httpContextAccessor;
             HttpContext = httpContextAccessor.HttpContext;
             dbContext = (AppDbContext)contextResolver.GetContext();
+            CurrentUserContext = currentUserContext;
+            LoggerFactory = loggerFactory;
         }
 
         public Mediafile? GetFromFile(int plan, string s3File)
@@ -175,7 +183,19 @@ namespace SIL.Transcriber.Services
         }
         public async Task<string> MakePublic(int id)
         {
-            return await MakePublic(MyRepository.Get(id));
+            Mediafile? m = MyRepository.Get(id);
+            if (m != null && m.S3File == null)
+            {
+                DbContextOptions<AppDbContext> options = 
+                    new DbContextOptionsBuilder<AppDbContext>()
+                    .UseNpgsql(GetVarOrDefault("SIL_TR_CONNECTIONSTRING", ""))
+                    .Options;
+                using DbContext context = new AppDbContext(options,
+                    CurrentUserContext,
+                    HttpContextAccessor, LoggerFactory);
+                await context.Entry(m).ReloadAsync();
+            }
+            return await MakePublic(m);
         }
         public Mediafile? GetLatest(int passageId)
         {
