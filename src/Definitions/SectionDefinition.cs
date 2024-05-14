@@ -43,7 +43,8 @@ public class SectionDefinition : BaseDefinition<Section>
             PublishSection(resource, resource.Published);
             if (resource.Published)
                 _ = MakeMediafilePublicAsync(writeOperation, MediafileService, resource.TitleMediafileId);
-        }
+        } else if (resource.Sequencenum < 0)
+            _ = MakeMediafilePublicAsync(writeOperation, MediafileService, resource.TitleMediafileId);
         await base.OnWritingAsync(resource, writeOperation, cancellationToken);
     }
 
