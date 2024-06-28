@@ -3,12 +3,12 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Logging.Models;
-using SIL.Logging.Repositories;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Utility;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -18,6 +18,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Services
 {
@@ -685,25 +686,9 @@ namespace SIL.Transcriber.Services
             return chapterList;
         }
 
-        private static IEnumerable<BookChapter> BookChapters(IEnumerable<Passage> passages)
+        private static IEnumerable<BookChapter> BookChapters(IEnumerable<Passage> passages, IEnumerable<Mediafile>? mediafiles=null)
         {
-            return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Distinct();
-        }
-
-        public async Task<List<ParatextChapter>> GetSectionChaptersAsync(
-            UserSecret userSecret,
-            int sectionId,
-            int typeId
-        )
-        {
-            Artifacttype? type = dbContext.Artifacttypes.Find(typeId);
-            string paratextId = ParatextHelpers.ParatextProject(
-                SectionService.GetProjectId(sectionId) ?? 0,
-                type?.Typename ?? "",
-                ProjectIntegrationRepository
-            );
-            IQueryable<Passage> passages = PassageService.GetBySection(sectionId);
-            return await GetPassageChaptersAsync(userSecret, paratextId, BookChapters(passages));
+            return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Union(passages.Select(p => new BookChapter(p.Book, p.EndChapter))).Distinct();
         }
 
         public int PlanPassagesToSyncCount(int planId, int artifactTypeId)
@@ -730,14 +715,28 @@ namespace SIL.Transcriber.Services
             if (err.Length > 0)
                 throw new Exception(err);
 
-            //assume startChapter=endChapter for all passages
-            IEnumerable<BookChapter> book_chapters = BookChapters(passages);
+            IEnumerable<BookChapter> book_chapters = BookChapters(passages,null);
             List<ParatextChapter> chapterList = await GetPassageChaptersAsync(
                 userSecret,
                 paratextId,
                 book_chapters
             );
-            return ParatextHelpers.GetParatextData(chapterList.First()?.OriginalUSX, passage);
+            //check for cross chapter passages
+            ParatextChapter chap = (ParatextChapter)chapterList.First();
+            string? txt = ParatextHelpers.GetParatextData(chap.Chapter, chap.OriginalUSX, passage);
+            if (chapterList.Count > 1)
+            { //cross chapter passage
+                chap = (ParatextChapter)chapterList.Last();
+                string? txt2 = ParatextHelpers.GetParatextData(chap.Chapter, chap.OriginalUSX, passage);
+                if (txt2.Length > 0)
+                {
+                    if (txt.Length > 0)
+                        txt += "\\c " + chap.Chapter.ToString() + txt2;
+                    else
+                        txt = txt2;
+                }
+            }
+            return txt;
         }
 
         public async Task<int> ProjectPassagesToSyncCountAsync(int projectId, int artifactTypeid)
@@ -783,6 +782,7 @@ namespace SIL.Transcriber.Services
                         p.Sequencenum,
                         p.Book
                     );
+                /*
                 if (p.StartChapter != p.EndChapter)
                     err += string.Format(
                         "||Chapter|{0}|{1}|{2}|",
@@ -790,6 +790,7 @@ namespace SIL.Transcriber.Services
                         p.Sequencenum,
                         p.Reference
                     );
+                */
                 if (p.StartVerse == 0)
                     err += string.Format(
                         "||Reference|{0}|{1}|{2}|",
@@ -803,8 +804,14 @@ namespace SIL.Transcriber.Services
                 ? "ReferenceError:" + err 
                 : err;
         }
-
-        public string GetTranscription(List<Mediafile> mediafiles)
+        public static List<Mediafile> GetTranscriptionMedia(int psgId, IEnumerable<Mediafile> mediafiles)
+        {
+            return mediafiles
+                    .Where(m => m.PassageId == psgId)
+                    .OrderBy(m => m.DateCreated) //this is not sufficient! TODO!
+                    .ToList();
+        }   
+        public static string GetTranscription(List<Mediafile> mediafiles)
         {
             string transcription = "";
             mediafiles.ForEach(m => transcription += m.Transcription + " ");
@@ -832,8 +839,7 @@ namespace SIL.Transcriber.Services
             if (err.Length > 0)
                 throw new Exception(err);
 
-            //assume startChapter=endChapter for all passages
-            IEnumerable<BookChapter> book_chapters = BookChapters(passages);
+            IEnumerable<BookChapter> book_chapters = BookChapters(passages, mediafiles);
 
 
 
@@ -873,21 +879,38 @@ namespace SIL.Transcriber.Services
                         HttpContext?.SetFP("paratext");
                         foreach (
                             Passage passage in passages.Where(
-                                p => p.Book == chapter.Book && p.StartChapter == chapter.Chapter
+                                p => p.Book == chapter.Book && 
+                                (p.StartChapter == chapter.Chapter || p.EndChapter == chapter.Chapter)
                             )
                         )
                         {
                             try
                             {
-                                List<Mediafile> psgMedia = mediafiles
-                                    .Where(m => m.PassageId == passage.Id)
-                                    .OrderBy(m => m.DateCreated)
-                                    .ToList();
-                                string transcription = "";
-                                if (psgMedia.Count > 0)
-                                    transcription = GetTranscription(psgMedia);
-
+                                bool updateMedia = true;
+                                List<Mediafile> psgMedia = GetTranscriptionMedia(passage.Id, mediafiles);
+                                string transcription = GetTranscription(psgMedia);
+                                if (passage.StartChapter != passage.EndChapter)
+                                {
+                                    Regex rg = new (@"(\\c\s*[0-9]*)");
+                                    MatchCollection internalverses = rg.Matches(transcription);
+                                    if (internalverses.Count > 0)
+                                    {
+                                        Match match = internalverses[0];
+                                        transcription = passage.StartChapter == chapter.Chapter ? transcription [0..match.Index] : transcription[(match.Index + match.Value.Length)..];
+                                        updateMedia = passage.EndChapter == chapter.Chapter;
+                                    }
+                                    else if (passage.DestinationChapter() == chapter.Chapter)
+                                    {
+                                        transcription = $"({passage.Reference}) {transcription}";
+                                    }
+                                    else
+                                    {
+                                        transcription = "";
+                                        updateMedia = false;
+                                    }
+                                }
                                 chapter.NewUSX = ParatextHelpers.GenerateParatextData(
+                                    chapter.Chapter,
                                     chapter.NewUSX,
                                     passage,
                                     transcription,
@@ -905,12 +928,15 @@ namespace SIL.Transcriber.Services
                                     )
                                 );
                                 _ = logDbContext.SaveChanges();
-                                for (int ix = 0; ix < psgMedia.Count; ix++)
+                                if (updateMedia)
                                 {
-                                    Mediafile mediafile = psgMedia[ix];
-                                    mediafile.Transcriptionstate = "done";
-                                    //Debug.WriteLine("mediafile {0}", mediafile.Id);
-                                    _ = dbContext.Mediafiles.Update(mediafile);
+                                    for (int ix = 0; ix < psgMedia.Count; ix++)
+                                    {
+                                        Mediafile mediafile = psgMedia[ix];
+                                        mediafile.Transcriptionstate = "done";
+                                        //Debug.WriteLine("mediafile {0}", mediafile.Id);
+                                        _ = dbContext.Mediafiles.Update(mediafile);
+                                    }
                                 }
                             }
                             catch (Exception ex)
@@ -1046,7 +1072,9 @@ namespace SIL.Transcriber.Services
                         passages.Add(bc);
                 }
             }
-            return await SyncPassages(userSecret, passages, mediafiles, artifactTypeId);
+            return passages.Any() 
+                ? await SyncPassages(userSecret, passages, mediafiles, artifactTypeId) 
+                : new List<ParatextChapter>();
         }
         public async Task<List<ParatextChapter>> SyncPassageAsync(
             UserSecret userSecret,

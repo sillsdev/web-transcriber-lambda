@@ -162,28 +162,6 @@ namespace SIL.Transcriber.Controllers
             return Ok(x.Result);
         }
 
-        [HttpGet("section/{sectionid}")]
-        public async Task<ActionResult<List<ParatextChapter>>> GetSectionBookAsync(
-            [FromRoute] int sectionId
-        )
-        {
-            UserSecret userSecret;
-            try
-            {
-                userSecret = _paratextService.ParatextLogin();
-            }
-            catch (Exception e)
-            {
-                return ValidationProblem(new ValidationProblemDetails { Detail = e.Message });
-            }
-            List<ParatextChapter> chapters = await _paratextService.GetSectionChaptersAsync(
-                userSecret,
-                sectionId,
-                0
-            );
-            return Ok(chapters);
-        }
-
         [HttpGet("project/{projectId}/count")]
         public async Task<ActionResult<int>> ProjectPassagesToSyncCount([FromRoute] int projectId)
         {

@@ -112,6 +112,7 @@
     <EmbeddedResource Include="resources\EafTemplate.xml" />
     <EmbeddedResource Include="resources\invitation.html" />
     <EmbeddedResource Include="resources\burritometa.json" />
+    <EmbeddedResource Include="resources\eng-vrs.json" />
   </ItemGroup>
 
   <ItemGroup>

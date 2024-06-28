@@ -148,10 +148,10 @@ namespace SIL.Transcriber.Repositories
                 withIncludes = tmp.ToString();
             }
             Regex rgxnewlines = new("\r\n|\n");
-            Regex rgxmultiplspaces = new("\t|\\s+");
+            Regex rgxmultiplespaces = new("\t|\\s+");
             //will this take it out of transcriptions also?? Seems to be ok!!
             withIncludes = rgxnewlines.Replace(withIncludes, "");
-            return rgxmultiplspaces.Replace(withIncludes, " ");
+            return rgxmultiplespaces.Replace(withIncludes, " ");
         }
 
         private IQueryable<Projdata> GetData(
