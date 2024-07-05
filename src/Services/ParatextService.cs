@@ -895,6 +895,12 @@ namespace SIL.Transcriber.Services
                                     MatchCollection internalverses = rg.Matches(transcription);
                                     if (internalverses.Count > 0)
                                     {
+                                        if (internalverses.Count > 1)
+                                        {//why? ignore all but the last one
+                                            Match ignore = internalverses[^2];
+                                            transcription = transcription [ignore.Value.Length..];
+                                            internalverses = rg.Matches(transcription);
+                                        }
                                         Match match = internalverses[0];
                                         transcription = passage.StartChapter == chapter.Chapter ? transcription [0..match.Index] : transcription[(match.Index + match.Value.Length)..];
                                         updateMedia = passage.EndChapter == chapter.Chapter;
