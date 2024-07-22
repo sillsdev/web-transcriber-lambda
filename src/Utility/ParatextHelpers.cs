@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using System.Diagnostics;
@@ -17,7 +18,7 @@ namespace SIL.Transcriber.Utility
             string? paratextSettings = piRepo.IntegrationSettings(projectId??0, "paratext"+ artifactType);
             if (paratextSettings is null or "")
             {
-                throw new Exception("No Paratext Integration Settings for this project " + projectId.ToString());
+                throw new Exception("No Paratext Integration Settings for this project " + projectId.ToString() + " type: paratext" + artifactType);
             }
             dynamic? settings = JsonConvert.DeserializeObject(paratextSettings);
             return settings?.ParatextId ?? "";
@@ -386,17 +387,22 @@ namespace SIL.Transcriber.Utility
                 {
                     XElement? vp = MoveToPara(thisVerse);
                     if (vp != null)
+                    {
+                        string header = currentPassage.Section?.SectionHeader(addNumbers, sectionMap) ?? "";
                         //add/update the section header
                         if (vp.PreviousNode?.IsSection() ?? false)
                         {
                             XText? firstNode = (XText?)((XElement)vp.PreviousNode).FirstNode;
                             if (firstNode != null)
-                                firstNode.Value = currentPassage.Section?.SectionHeader(addNumbers,sectionMap) ?? "";
+                                firstNode.Value = header;
+                            else
+                                vp.PreviousNode.AddAfterSelf(new XText(header));
                         }
                         else
                         {
-                            vp.AddBeforeSelf(ParatextSection(currentPassage.Section?.SectionHeader(addNumbers, sectionMap) ?? ""));
+                            vp.AddBeforeSelf(ParatextSection(header));
                         }
+                    }
                     first = false;
                 }
             }

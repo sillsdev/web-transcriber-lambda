@@ -86,7 +86,7 @@ namespace SIL.Transcriber.Models
         //public virtual List<Task> Tasks { get; set; }
         public bool Archived { get; set; }
 
-        public string? GetDefaultParam(string key)
+        public dynamic? GetDefaultParam(string key)
         {
             if (DefaultParams == null)
             {
@@ -98,13 +98,20 @@ namespace SIL.Transcriber.Models
         public bool AddSectionNumbers()
         {
             string? value = GetDefaultParam("exportNumbers");
-            return value != null && value.ToLower() == "\"true\"";
+            return value != null && (value.ToLower() == "true" || value.ToLower() == "\"true\"");
         }
         public SectionMap [] GetSectionMap()
         {
             SectionMap [] ret = Array.Empty<SectionMap>();
-            string? sectionMapstr = GetDefaultParam("sectionMap"); //"[[0.01,\\"M1\\"],[1,\\"M1 S1\\"],[2,\\"M1 S2\\"],[3,\\"M1 S3\\"]]"    
-            List<List<object>>? tmp = sectionMapstr != null ? Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<object>>>(sectionMapstr) : null;
+            dynamic? sectionMapstr = GetDefaultParam("sectionMap"); //"[[0.01,\\"M1\\"],[1,\\"M1 S1\\"],[2,\\"M1 S2\\"],[3,\\"M1 S3\\"]]"    
+            if (typeof(string) == sectionMapstr?.GetType()) //if it's a string, it's escaped
+            {
+                if (sectionMapstr.Contains("\\"))
+                    sectionMapstr = sectionMapstr.Replace("\\", "");
+            }
+            else
+                sectionMapstr = sectionMapstr?.ToString();
+            List<List<object>>? tmp = sectionMapstr == null ? null : Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<object>>>(sectionMapstr.ToString());
             tmp?.ForEach((List<object> item) => {
                 if (!decimal.TryParse(item[0]?.ToString(), out decimal num))
                     num = 0;

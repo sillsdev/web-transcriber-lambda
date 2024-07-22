@@ -79,7 +79,7 @@ namespace SIL.Transcriber.Definitions
                     _ = AppDbContext.Passagestatechanges.Add(psc);
                     resource.EafUrl = "";
                 }
-            } else if (resource.ReadyToShare && AppDbContext.Mediafiles.Any(s => s.Id == resource.Id && !s.ReadyToShare))
+            } else if (resource.ReadyToShare )//&& AppDbContext.Mediafiles.Any(s => s.Id == resource.Id && !s.ReadyToShare))
                 _ = MakeMediafilePublicAsync(writeOperation, MediafileService, resource.Id);
 
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
