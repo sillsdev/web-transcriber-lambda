@@ -2040,6 +2040,7 @@ namespace SIL.Transcriber.Services
                     user.LastModifiedBy = u.LastModifiedBy;
                     user.LastModifiedByUser = u.LastModifiedByUser;
                     user.DateUpdated = DateTime.UtcNow;
+                    user.HotKeys = u.HotKeys;
                     /* TODO: figure out if the avatar needs uploading */
                     _ = dbContext.Users.Update(user);
                 }
