@@ -38,6 +38,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Bible> entities
         )
         {
+            /*
             if (CurrentUser == null)
                 return entities.Where(e => e.Id == -1);
 
@@ -46,7 +47,8 @@ namespace SIL.Transcriber.Repositories
             {
                 //entities = entities.Join(dbContext.Organizations.Where(o => !o.Archived && orgIds.Contains(o.Id)), b => b.Id, o => o.BibleId, (b, o) => b);
             }
-            return entities.Where(e => !e.Archived);
+            */
+            return entities;
         }
 
         public IQueryable<Bible> ProjectBibles(

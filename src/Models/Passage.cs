@@ -2,12 +2,18 @@
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
+using static SIL.Transcriber.Utility.ResourceHelpers;
+using System.Text.Json;
 
 namespace SIL.Transcriber.Models
 {
     [Table(Tables.Passages)]
     public class Passage : BaseModel, IArchive
     {
+        private int? destinationChapter;
+        private int? startChapterLastVerse;
+        private bool destinationChapterSet = false;
+
         public Passage() : base()
         {
             Hold = false;
@@ -118,15 +124,55 @@ namespace SIL.Transcriber.Models
             }
         }
        
-        public string Verses {
-            get {
-                return (StartChapter != EndChapter
-                    ? Reference
-                    : StartVerse != (EndVerse??StartVerse) ? StartVerse?.ToString() + "-" + EndVerse?.ToString() : StartVerse?.ToString())
-                    ?? "";
-                }
-            
+        private static string VerseRange(int? s, int? e)
+        {
+            int start = s??1;
+            int end  = e??1;
+            return start == end ? start.ToString() : start.ToString() + "-" + end.ToString();
         }
+        public string Verses(int chapter)
+        {
+            return (StartChapter != EndChapter
+                    ? StartChapter == chapter 
+                            ? VerseRange(StartVerse, startChapterLastVerse) 
+                            : VerseRange(1, EndVerse)
+                    : VerseRange(StartVerse,EndVerse))
+                    ?? "";
+        }
+        public int ChapterStartVerse(int chapter)
+        {
+            return (chapter == StartChapter) ? (StartVerse??1) : 1;
+        }
+        public int ChapterEndVerse(int chapter)
+        {
+            if (chapter == EndChapter || Book is null) return EndVerse??1000;
+            if (!destinationChapterSet)
+            {
+                DestinationChapter();
+            }
+            return startChapterLastVerse ?? 1000;
+        }
+
+        public int? DestinationChapter()
+        {
+            if (!destinationChapterSet)
+            {
+                if (StartChapter is null || Book is null || StartChapter == EndChapter)
+                {
+                    destinationChapter = StartChapter;
+                }
+                else
+                {
+                    string verses = LoadResource("eng-vrs.json");
+                    Dictionary<string, int []>? versemap = JsonSerializer.Deserialize<Dictionary<string, int[]>>(verses);
+                    startChapterLastVerse = versemap?[Book]?[(StartChapter??1)-1] ?? 1000;
+                    destinationChapter = (EndVerse > startChapterLastVerse - StartVerse + 1 ? EndChapter : StartChapter) ?? 0;
+                }
+                destinationChapterSet = true;
+            }
+            return destinationChapter;
+        }
+
 
     }
 }

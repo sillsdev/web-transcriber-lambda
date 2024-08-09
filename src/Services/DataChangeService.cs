@@ -467,7 +467,8 @@ namespace SIL.Transcriber.Services
                     "sharedresource", "sharedresourcereference" }).ToArray();
             if (dbVersion > 6)
                 tables = tables.Concat(new string [] { "graphic" }).ToArray();
-              
+            if (dbVersion > 7)
+                tables = tables.Concat(new string [] { "bible", "organizationbible" }).ToArray();
             Logger.LogInformation("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);

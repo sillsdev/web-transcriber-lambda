@@ -81,8 +81,8 @@ namespace SIL.Transcriber.Repositories
                 withIncludes = tmp.ToString();
             }
             Regex rgxnewlines = new("\r\n|\n");
-            Regex rgxmultiplspaces = new("\t|\\s+");
-            return rgxmultiplspaces.Replace(rgxnewlines.Replace(withIncludes, ""), " ");
+            Regex rgxmultiplespaces = new("\t|\\s+");
+            return rgxmultiplespaces.Replace(rgxnewlines.Replace(withIncludes, ""), " ");
         }
 
         public bool CheckAddGraphics(

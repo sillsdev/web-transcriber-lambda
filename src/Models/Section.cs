@@ -100,12 +100,16 @@ namespace SIL.Transcriber.Models
             string numstr = "";
             if (addNumbers)
             {
-                int num = (int)Math.Floor(Sequencenum);
-                numstr = (num == Sequencenum ? num.ToString() : Sequencenum.ToString()) + " - ";
+                if (map != null)
+                {
+                    numstr = map.Label + " - ";
+                } else
+                {
+                    int num = (int)Math.Floor(Sequencenum);
+                    numstr = (num == Sequencenum ? num.ToString() : Sequencenum.ToString()) + " - ";
+                }
             }
-                return (addNumbers ? 
-                     (map != null ? map.Label : numstr)
-                     : "") + Name;
+            return numstr + Name;
         }
     }
     public class SectionMap

@@ -25,6 +25,8 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "color")]
         public string? Color { get; set; }
+        [Attr(PublicName = "specialuse")]
+        public string? Specialuse { get; set; }
         public bool Archived { get; set; }
 
         public int? OrganizationId { get; set; }

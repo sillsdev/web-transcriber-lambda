@@ -1830,12 +1830,12 @@ namespace SIL.Transcriber.Services
                     report.Add(DiscussionChangesReport(existing, importing));
                 existing.Subject = importing.Subject;
                 existing.ArtifactCategoryId = ValidArtifactCategory(importing.ArtifactCategoryId);
-                existing.GroupId = importing.GroupId;
+                existing.GroupId = CheckValidId(importing.GroupId);
                 existing.Resolved = importing.Resolved;
-                existing.UserId = importing.UserId;
-                existing.MediafileId = importing.MediafileId;
+                existing.UserId = CheckValidId(importing.UserId);
+                existing.MediafileId = CheckValidId(importing.MediafileId);
                 existing.OfflineMediafileId = importing.OfflineMediafileId;
-                existing.LastModifiedBy = importing.LastModifiedBy;
+                existing.LastModifiedBy = CheckValidId(importing.LastModifiedBy);
                 existing.LastModifiedByUser = importing.LastModifiedByUser;
                 existing.DateUpdated = DateTime.UtcNow;
                 _ = dbContext.Discussions.Update(existing);
@@ -1950,9 +1950,15 @@ namespace SIL.Transcriber.Services
                         myTypeRelationship != null
                         && int.TryParse(row.Value?.Data.SingleValue?.Id, out int id)
                     )
-                    {
-                        object? p = dbContext.Find(myTypeRelationship.Property.PropertyType, id);
-                        myTypeRelationship.SetValue(s, p);
+                    { try
+                        {
+                            object? p = dbContext.Find(myTypeRelationship.Property.PropertyType, id);
+                            myTypeRelationship.SetValue(s, p);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogError("unable to find {r} with id {id} {e}", myTypeRelationship.PublicName, id, e);
+                        }
                         AttrAttribute? myIdAttribute = attrs.FirstOrDefault(
                         a => a.PublicName == myTypeRelationship.PublicName + "-id"
                     );
@@ -2034,6 +2040,7 @@ namespace SIL.Transcriber.Services
                     user.LastModifiedBy = u.LastModifiedBy;
                     user.LastModifiedByUser = u.LastModifiedByUser;
                     user.DateUpdated = DateTime.UtcNow;
+                    user.HotKeys = u.HotKeys;
                     /* TODO: figure out if the avatar needs uploading */
                     _ = dbContext.Users.Update(user);
                 }
@@ -2134,7 +2141,7 @@ namespace SIL.Transcriber.Services
                             new Discussion
                             {
                                 ArtifactCategoryId = ValidArtifactCategory(d.ArtifactCategoryId),
-                                MediafileId = d.MediafileId,
+                                MediafileId = CheckValidId(d.MediafileId),
                                 OfflineId = d.OfflineId,
                                 OfflineMediafileId = d.OfflineMediafileId,
                                 OrgWorkflowStepId = d.OrgWorkflowStepId,
@@ -2143,7 +2150,7 @@ namespace SIL.Transcriber.Services
                                 Segments = d.Segments,
                                 Subject = d.Subject,
                                 UserId = d.User?.Id,
-                                LastModifiedBy = d.LastModifiedBy,
+                                LastModifiedBy = CheckValidId(d.LastModifiedBy),
                                 LastModifiedByUser = d.LastModifiedByUser,
                                 DateCreated = d.DateCreated,
                                 DateUpdated = DateTime.UtcNow,
@@ -2204,6 +2211,10 @@ namespace SIL.Transcriber.Services
                 }
             }
             return -1;
+        }
+        private int? CheckValidId(int? id)
+        {
+            return id <= 0 ? null : id;
         }
         private async Task<int> CreateOrUpdateMediafiles(IList<Mediafile> lst, int startId, DateTime sourceDate, List<string> report, DateTime dtBail, ZipArchive archive)
         {
@@ -2268,7 +2279,7 @@ namespace SIL.Transcriber.Services
                         _ = dbContext.Mediafiles.Add(
                             new Mediafile
                             {
-                                ArtifactTypeId = m.ArtifactTypeId,
+                                ArtifactTypeId = CheckValidId(m.ArtifactTypeId),
                                 ArtifactCategoryId = ValidArtifactCategory(m.ArtifactCategoryId),
                                 AudioUrl = m.AudioUrl,
                                 ContentType = m.ContentType,
@@ -2279,14 +2290,14 @@ namespace SIL.Transcriber.Services
                                 //LastModifiedByUserId = m.LastModifiedByUserId,
                                 Link = m.Link != null ? m.Link : false,
                                 OfflineId = m.OfflineId,
-                                PassageId = m.PassageId,
+                                PassageId = CheckValidId(m.PassageId),
                                 PerformedBy = m.PerformedBy,
                                 PlanId = m.PlanId,
                                 Position = m.Position,
                                 ReadyToShare = m.ReadyToShare,
                                 // RecordedbyuserId = m.RecordedbyuserId,
                                 RecordedbyUser = m.RecordedbyUser,
-                                ResourcePassageId = m.ResourcePassageId,
+                                ResourcePassageId = CheckValidId(m.ResourcePassageId),
                                 S3File = m.S3File,
                                 Segments = m.Segments,
                                 Topic = m.Topic,
@@ -2402,7 +2413,7 @@ namespace SIL.Transcriber.Services
                                 OrganizationId = ip.Organization?.Id ?? 0,
                                 OfflineId = ip.OfflineId,
                                 ReleaseMediafileId = ip.ReleaseMediafile?.Id,
-                                LastModifiedBy = ip.LastModifiedBy,
+                                LastModifiedBy = CheckValidId(ip.LastModifiedBy),
                                 LastModifiedByUser = ip.LastModifiedByUser,
                                 DateCreated = ip.DateCreated,
                                 DateUpdated = DateTime.UtcNow,
@@ -2757,8 +2768,8 @@ namespace SIL.Transcriber.Services
                         Name = s.Name,
                         PlanId = planId,
                         Sequencenum = s.Sequencenum,
-                        EditorId = sameOrg ?  s.Editor?.Id : currentuser.Id,
-                        TranscriberId = sameOrg ? s.Transcriber?.Id : currentuser.Id,
+                        EditorId = sameOrg ?  CheckValidId(s.Editor?.Id) : currentuser.Id,
+                        TranscriberId = sameOrg ? CheckValidId(s.Transcriber?.Id) : currentuser.Id,
                         State = s.State,
                     });
                 map.Add(s.Id, t.Entity);
@@ -2931,7 +2942,7 @@ namespace SIL.Transcriber.Services
                        OfflineMediafileId = "",
                        OrganizationId = orgId,
                        OfflineId = "",
-                       ReleaseMediafileId = ip.ReleaseMediafileId == null ? null : MediafileMap.GetValueOrDefault(ip.ReleaseMediafileId ?? 0),
+                       ReleaseMediafileId = CheckValidId(ip.ReleaseMediafileId) == null ? null : MediafileMap.GetValueOrDefault(ip.ReleaseMediafileId ?? 0),
                    });
 
             }
@@ -3021,7 +3032,7 @@ namespace SIL.Transcriber.Services
                 {
                     PassageId = psgId,
                     VersionNumber = Convert.ToBoolean(m.VersionNumber) ? m.VersionNumber : 1,
-                    ArtifactTypeId = m.ArtifactTypeId == null ? null : artifacttypeMap?.GetValueOrDefault(m.ArtifactTypeId??0) ?? m.ArtifactTypeId,
+                    ArtifactTypeId = CheckValidId(m.ArtifactTypeId) == null ? null : artifacttypeMap?.GetValueOrDefault(m.ArtifactTypeId??0) ?? m.ArtifactTypeId,
                     EafUrl = m.EafUrl,
                     Duration = m.Duration,
                     ContentType = m.ContentType,
@@ -3037,8 +3048,8 @@ namespace SIL.Transcriber.Services
                     Link = Convert.ToBoolean(m.Link),
                     PerformedBy = m.PerformedBy,
                     ReadyToShare = false,
-                    ArtifactCategoryId = m.ArtifactCategoryId == null ? null : sameOrg ? ValidArtifactCategory(m.ArtifactCategoryId) : artifactcategoryMap?.GetValueOrDefault(m.ArtifactCategoryId??0),
-                    ResourcePassageId = m.ResourcePassageId == null ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0) == 0 ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0),
+                    ArtifactCategoryId = CheckValidId(m.ArtifactCategoryId) == null ? null : sameOrg ? ValidArtifactCategory(m.ArtifactCategoryId) : artifactcategoryMap?.GetValueOrDefault(m.ArtifactCategoryId??0),
+                    ResourcePassageId = CheckValidId(m.ResourcePassageId) == null ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0) == 0 ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0),
                     RecordedbyUser = sameOrg ? m.RecordedbyUser : CurrentUser(),
                     OfflineId = "",
                     SourceMediaId = map.GetValueOrDefault(m.SourceMediaId??0)?.Id,
@@ -3083,10 +3094,10 @@ namespace SIL.Transcriber.Services
                 EntityEntry<Discussion>? t = dbContext.Discussions.Add(
                     new Discussion
                     {
-                        ArtifactCategoryId = d.ArtifactCategoryId == null ? null : sameOrg ? d.ArtifactCategoryId : acMap?.GetValueOrDefault(d.ArtifactCategoryId??0),
-                        MediafileId = d.MediafileId == null ? null : mediafileMap.GetValueOrDefault(d.MediafileId??0),
+                        ArtifactCategoryId = CheckValidId(d.ArtifactCategoryId) == null ? null : sameOrg ? d.ArtifactCategoryId : acMap?.GetValueOrDefault(d.ArtifactCategoryId??0),
+                        MediafileId = CheckValidId(d.MediafileId) == null ? null : mediafileMap.GetValueOrDefault(d.MediafileId??0),
                         OrgWorkflowStepId = orgwfMap == null ? d.OrgWorkflowStepId : orgwfMap.GetValueOrDefault(d.OrgWorkflowStepId),
-                        GroupId = sameOrg ? d.GroupId : null,
+                        GroupId = sameOrg ? CheckValidId(d.GroupId) : null,
                         Resolved = d.Resolved,
                         Segments = d.Segments,
                         Subject = d.Subject,
@@ -3108,7 +3119,7 @@ namespace SIL.Transcriber.Services
         {
             foreach (Comment c in lst)
             {
-                int? mId = c.MediafileId == null ? null : mediafileMap.GetValueOrDefault(c.MediafileId??0);
+                int? mId = CheckValidId(c.MediafileId) == null ? null : mediafileMap.GetValueOrDefault(c.MediafileId??0);
                 if (mId != 0)
                 {
                     _ = dbContext.Comments.Add(
