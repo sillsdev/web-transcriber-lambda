@@ -34,8 +34,8 @@ namespace SIL.Transcriber.Definitions
                         CancellationToken cancellationToken
                     )
         {
-            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.IsoMediafileId);
-            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.BibleMediafileId);
+            _ = PublishMediafile(writeOperation, _mediafileService, PublishTitle, resource.IsoMediafileId);
+            _ = PublishMediafile(writeOperation, _mediafileService, PublishTitle, resource.BibleMediafileId);
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
         }
     }
@@ -86,7 +86,7 @@ namespace SIL.Transcriber.Definitions
                         CancellationToken cancellationToken
                     )
         {
-            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.MediafileId);
+            _ = PublishMediafile(writeOperation, _mediafileService, PublishTitle, resource.MediafileId);
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
         }
 
@@ -304,7 +304,7 @@ namespace SIL.Transcriber.Definitions
                         CancellationToken cancellationToken
                     )
         {
-            _ = MakeMediafilePublicAsync(writeOperation, _mediafileService, resource.TitleMediafileId);
+            _ = PublishMediafile(writeOperation, _mediafileService, PublishTitle, resource.TitleMediafileId);
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
         }
     }

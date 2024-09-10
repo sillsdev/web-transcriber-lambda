@@ -48,6 +48,12 @@ namespace SIL.Transcriber.Models
         public string? OriginalFile { get; set; }
         [Attr(PublicName = "s3file")]
         public string? S3File { get; set; }
+        [Attr(PublicName = "published-as")]
+        public string? PublishedAs { get; set; }
+
+        [Attr(PublicName = "publish-to")]
+        [Column(TypeName = "jsonb")]
+        public string? PublishTo { get; set; } = "{}";
         [Attr(PublicName = "filesize")]
         public long Filesize { get; set; }
         [Attr(PublicName = "position")]

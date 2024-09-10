@@ -1,5 +1,4 @@
-﻿using Amazon.S3.Model;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
@@ -23,6 +22,7 @@ namespace SIL.Transcriber.Services
     {
         private IS3Service S3service { get; }
         private PlanRepository PlanRepository { get; set; }
+        private PassageRepository PassageRepository { get; set; }
         private MediafileRepository MyRepository { get; set; }
         private readonly AppDbContext dbContext;
         readonly private HttpContext? HttpContext;
@@ -39,6 +39,7 @@ namespace SIL.Transcriber.Services
             IResourceChangeTracker<Mediafile> resourceChangeTracker,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             PlanRepository planRepository,
+            PassageRepository passageRepository,
             IS3Service service,
             MediafileRepository myRepository,
             IHttpContextAccessor httpContextAccessor,
@@ -59,6 +60,7 @@ namespace SIL.Transcriber.Services
         {
             S3service = service;
             PlanRepository = planRepository;
+            PassageRepository = passageRepository;
             MyRepository = myRepository;
             HttpContextAccessor = httpContextAccessor;
             HttpContext = httpContextAccessor.HttpContext;
@@ -181,21 +183,120 @@ namespace SIL.Transcriber.Services
             S3Response response = await S3service.MakePublic(mf.S3File, DirectoryName(mf));
             return response.Message;
         }
+        private AppDbContext GetMyOwnContext()
+        {
+            DbContextOptions<AppDbContext> options =
+                    new DbContextOptionsBuilder<AppDbContext>()
+                    .UseNpgsql(GetVarOrDefault("SIL_TR_CONNECTIONSTRING", ""))
+                    .Options;
+            return new AppDbContext(options,
+                                   CurrentUserContext,
+                                   HttpContextAccessor, LoggerFactory);
+        }
+        private async Task<Mediafile> Reload(Mediafile m)
+        {
+            using AppDbContext context = GetMyOwnContext();
+            await context.Entry(m).ReloadAsync();
+            return context.Entry(m).Entity;
+        }
         public async Task<string> MakePublic(int id)
         {
             Mediafile? m = MyRepository.Get(id);
             if (m != null && m.S3File == null)
             {
-                DbContextOptions<AppDbContext> options = 
-                    new DbContextOptionsBuilder<AppDbContext>()
-                    .UseNpgsql(GetVarOrDefault("SIL_TR_CONNECTIONSTRING", ""))
-                    .Options;
-                using DbContext context = new AppDbContext(options,
-                    CurrentUserContext,
-                    HttpContextAccessor, LoggerFactory);
-                await context.Entry(m).ReloadAsync();
+                m = await Reload(m);
             }
             return await MakePublic(m);
+        }
+        private static string PadSeqNum(decimal? seq)
+        {
+            if (seq == null) return "";
+            string[]? parts = seq?.ToString().Split(".");
+            return parts?[0].PadLeft(3, '0') + (parts?.Length > 1 ? "." + parts [1] : "");
+        }
+        private string PublishFilename(Mediafile m)
+        {
+            Passage? p = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
+            string bibleId = PlanRepository.BibleId(m.PlanId);
+            if (bibleId == "") throw new Exception("No BibleId found");
+            string fileName = m.PublishedAs??"";
+            if (fileName == "")
+            {
+                string book = p?.Book ?? "";
+                fileName = $"{book}{PadSeqNum(p?.Section?.Sequencenum)}{PadSeqNum(p?.Sequencenum)}";
+                if (fileName.Length > 0)
+                    fileName += "_";
+                if (p?.StartChapter != null)
+                {
+                    string startChap = p.StartChapter?.ToString().PadLeft(3, '0') ?? "";
+                    string endChap = p.EndChapter?.ToString().PadLeft(3, '0') ?? "";
+                    string startVerse = p.StartVerse?.ToString().PadLeft(3, '0') ?? "";
+                    string endVerse = (p.EndVerse ?? p.StartVerse)?.ToString().PadLeft(3, '0') ?? "";
+                    fileName = startChap == endChap ?
+                        startVerse == endVerse ?
+                            $"{fileName}_c{startChap}_{startVerse}" :
+                            $"{fileName}_c{startChap}_{startVerse}-{endVerse}"
+                        : $"{fileName}_c{startChap}_{startVerse}-c{endChap}_{endVerse}";
+                }
+                else if (p?.Passagetype?.Abbrev == "NOTE")
+                {
+                    Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId);
+                    sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
+                    fileName = (sr?.Title ?? "") != ""
+                        ? $"{fileName}NOTE_{FileName.CleanFileName(sr?.Title ?? "")}"
+                        : $"{fileName}{Path.ChangeExtension(m.OriginalFile, ".mp3")}";
+                }
+                else if (p?.Passagetype?.Abbrev == "CHNUM")
+                {
+                    fileName = $"{fileName}{FileName.CleanFileName(p.Reference??Path.ChangeExtension(m.OriginalFile, ".mp3")??p.Id.ToString())}";
+                }
+                else
+                {
+                    Section? s = dbContext.SectionsData.SingleOrDefault(s => s.TitleMediafileId == m.Id);
+                    if (s != null)
+                    {
+                        fileName = $"{fileName}{FileName.CleanFileName(s.Plan?.Name??"")}{PadSeqNum(s.Sequencenum)}{FileName.CleanFileName(s.Name)}";
+                    }
+                    else if (m.OriginalFile != null)
+                        fileName = $"{fileName}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, ".mp3"))}";
+                }
+            }
+            if (!fileName.StartsWith(bibleId))
+            {                 
+                fileName = $"{bibleId}_{fileName}";
+            } 
+            if (!fileName.EndsWith(".mp3"))
+            {
+                fileName = $"{fileName}.mp3";
+            }
+            return fileName;
+        }
+
+        public async Task<string> Publish(int id, string publishTo)
+        {
+            Mediafile? m = MyRepository.Get(id);
+            if (m == null)
+            {
+                return "";
+            }
+            if (m.S3File == null)
+            {
+                m = await Reload(m);
+            }
+            Plan? plan = PlanRepository.GetWithProject(m.PlanId);
+            string outputKey = PublishFilename(m);
+            string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
+            S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey);
+            if ( response.Status == HttpStatusCode.OK)
+            {
+                using AppDbContext context = GetMyOwnContext();
+                m.PublishedAs = outputKey;
+                m.ReadyToShare = true;
+                m.PublishTo = publishTo;
+                context.Mediafiles.Update(m);
+                context.SaveChanges(); 
+            }
+            return response.Message;
         }
         public Mediafile? GetLatest(int passageId)
         {

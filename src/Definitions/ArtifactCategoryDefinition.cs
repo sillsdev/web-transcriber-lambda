@@ -27,7 +27,7 @@ public class ArtifactCategoryDefinition : BaseDefinition<Artifactcategory>
     CancellationToken cancellationToken
     )
     {
-        _ = MakeMediafilePublicAsync(writeOperation, MediafileService, resource.TitleMediafileId);
+        _ = PublishMediafile(writeOperation, MediafileService, PublishTitle, resource.TitleMediafileId);
         await base.OnWritingAsync(resource, writeOperation, cancellationToken);
     }
 }

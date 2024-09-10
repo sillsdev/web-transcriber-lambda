@@ -1,5 +1,4 @@
-﻿using Amazon.Auth.AccessControlPolicy;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries.Expressions;
 using JsonApiDotNetCore.Resources;
@@ -16,6 +15,7 @@ namespace SIL.Transcriber.Definitions
         where TEntity : BaseModel
     {
         protected ILogger<TEntity> Logger { get; set; }
+        protected string PublishTitle = "{'Public': 'true'}";
         readonly private IJsonApiRequest Request;
         private bool TopLevel = true;
 
@@ -59,13 +59,13 @@ namespace SIL.Transcriber.Definitions
                 ? null 
                 : base.OnApplyFilter(existingFilter);
         }
-        public async Task MakeMediafilePublicAsync(WriteOperationKind writeOperation, MediafileService service, int? id)
+        public async Task PublishMediafile(WriteOperationKind writeOperation, MediafileService service, string publishTo, int? id)
         {
             if (writeOperation != WriteOperationKind.DeleteResource &&
                 writeOperation != WriteOperationKind.RemoveFromRelationship &&
                 writeOperation != WriteOperationKind.AddToRelationship &&
                 id != null)
-                _ = await service.MakePublic((int)id);
+                _ = await service.Publish((int)id, publishTo);
         }
     }
 }

@@ -2,8 +2,10 @@
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
+using Auth0.ManagementApi.Models;
 using SIL.Transcriber.Models;
 using System.Net;
+using System.Text;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -131,6 +133,8 @@ namespace SIL.Transcriber.Services
     public class S3Service : IS3Service
     {
         private readonly string USERFILES_BUCKET;
+        private readonly string PUBLISHREQ_BUCKET;
+        private readonly string PUBLISHED_BUCKET;
         private readonly IAmazonS3 _client;
         protected ILogger<S3Service> Logger { get; set; }
 
@@ -138,6 +142,8 @@ namespace SIL.Transcriber.Services
         {
             _client = client;
             USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
+            PUBLISHREQ_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHREQ_BUCKET");
+            PUBLISHED_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHED_BUCKET");
             this.Logger = loggerFactory.CreateLogger<S3Service>();
         }
 
@@ -175,11 +181,12 @@ namespace SIL.Transcriber.Services
             GetObjectMetadataResponse data = _client.GetObjectMetadataAsync(USERFILES_BUCKET, key).Result;
             return data;
         }
-        public async Task<bool> FileExistsAsync(string fileName, string folder = "")
+        public async Task<bool> FileExistsAsync(string fileName, string folder = "",
+            bool userfile = true)
         {
             fileName = ProperFolder(folder) + fileName;
             ListObjectsResponse response = await _client.ListObjectsAsync(
-                USERFILES_BUCKET,
+                userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
                 fileName
             );
             //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
@@ -210,6 +217,19 @@ namespace SIL.Transcriber.Services
                     + ext
                 : newfilename;
         }
+        public async Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey) { 
+            try
+            {
+                string json = $"{{\"id\":{id},\"inputBucket\":\"{USERFILES_BUCKET}\",\"inputKey\":\"{inputKey}\",\"outputBucket\":\"{PUBLISHED_BUCKET}\",\"outputKey\":\"{outputKey}\"}}";
+                string requestKey = id + ".key";
+                using Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+                return await UploadFileAsync(stream, true, requestKey, "", false);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
         public async Task<S3Response> CreateBucketAsync(string bucketName)
         {
             try
@@ -236,13 +256,13 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public async Task<S3Response> MakePublic(string fileName, string folder = "")
+        public async Task<S3Response> MakePublic(string fileName, string folder = "", bool userfile = true)
         {
             try
             {
                 PutACLRequest request = new()
                 {
-                    BucketName = USERFILES_BUCKET,
+                    BucketName = userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
                     Key = ProperFolder(folder) + fileName,
                     CannedACL = S3CannedACL.PublicRead,
                 };
@@ -317,28 +337,28 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public string GetPublicUrl(string fileName, string folder = "")
+        public string GetPublicUrl(string fileName, string folder = "", bool userfile = true)
         {
-            return "https://" + USERFILES_BUCKET + ".s3.amazonaws.com/" + ProperFolder(folder) + fileName;
+            return $"https://{(userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET)}.s3.amazonaws.com/{ProperFolder(folder)}{fileName}";
         }
         public async Task<S3Response> UploadFileAsync(
             Stream stream,
             bool overwriteifExists,
-            string ContentType,
             string fileName,
-            string folder = ""
+            string folder = "",
+            bool userfile = true
         )
         {
             try
             {
-                if (overwriteifExists && await FileExistsAsync(fileName, folder))
+                if (overwriteifExists && await FileExistsAsync(fileName, folder,userfile))
                 {
-                    _ = await RemoveFile(fileName, folder);
+                    _ = await RemoveFile(fileName, folder, userfile);
                 }
                 TransferUtility fileTransferUtility = new(_client);
                 await fileTransferUtility.UploadAsync(
                     stream,
-                    USERFILES_BUCKET,
+                    userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
                     ProperFolder(folder) + fileName
                 );
 
@@ -346,7 +366,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = fileName,
                     Status = HttpStatusCode.OK,
-                    FileURL = GetPublicUrl(fileName,folder)
+                    FileURL = GetPublicUrl(fileName,folder,userfile)
                 };
             }
             catch (AmazonS3Exception e)
@@ -359,7 +379,7 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        public async Task<S3Response> RemoveFile(string fileName, string folder = "")
+        public async Task<S3Response> RemoveFile(string fileName, string folder = "", bool userfile = true)
         {
             //var client = new AmazonS3Client(accessKey, accessSecret, Amazon.RegionEndpoint.EUCentral1);
             try
@@ -367,7 +387,8 @@ namespace SIL.Transcriber.Services
                 //check if it exists
                 //check if file with metadata OriginalFileName = fileName exists
                 DeleteObjectRequest request =
-                    new() { BucketName = USERFILES_BUCKET, Key = ProperFolder(folder) + fileName, };
+                    new() { BucketName = userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
+                        Key = ProperFolder(folder) + fileName, };
 
                 DeleteObjectResponse response = await _client.DeleteObjectAsync(request);
                 return S3Response(fileName, response.HttpStatusCode);
@@ -398,7 +419,6 @@ namespace SIL.Transcriber.Services
                 s3response = await UploadFileAsync(
                     s3response.FileStream,
                     true,
-                    s3response.ContentType,
                     newFileName,
                     newFolder
                 );

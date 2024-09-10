@@ -113,5 +113,21 @@ namespace SIL.Transcriber.Repositories
                     .FirstOrDefault();
             return org != null ? org.Slug + "/" + plan.Slug : throw new Exception("No org in DirectoryName");
         }
+        public string BibleId(int planid)
+        {
+            Plan? plan = GetWithProject(planid);
+            return plan != null ? BibleId(plan) : "";
+        }
+        public string BibleId(Plan plan)
+        {
+            if (plan.Project?.OrganizationId != null)
+            {
+                Organizationbible? orgb = dbContext.OrganizationbiblesData
+                .SingleOrDefault(o => o.OrganizationId == plan.Project.OrganizationId);
+                if (orgb != null)
+                    return orgb.Bible.BibleId;
+            }
+            return "";
+        }
     }
 }

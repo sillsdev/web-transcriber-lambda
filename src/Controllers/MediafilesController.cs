@@ -111,7 +111,13 @@ namespace SIL.Transcriber.Controllers
         {
             return Ok(_service.WBTUpdate());
         }
-
+        [HttpPatch("{id}/publish/{publishTo}")]
+        public async Task<IActionResult> PublishMediafileAsync([FromRoute] int id, [FromRoute] string publishTo)
+        {
+            string ok = await _service.Publish(id, publishTo);
+            return Ok(ok);
+        }
+        
         [AllowAnonymous]
         [HttpPatch("{id}/fileinfo/{filesize}/{duration}")]
         public async Task<IActionResult> UpdateFileInformationAsync(

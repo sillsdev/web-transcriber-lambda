@@ -4,12 +4,7 @@ namespace SIL.Transcriber.Utility.Extensions
     {
         public static T ToEnum<T>(this string value, T defaultValue)
         {
-            if (string.IsNullOrEmpty(value))
-            {
-                return defaultValue;
-            }
-
-            return (T)Enum.Parse(typeof(T), value, true);
+            return string.IsNullOrEmpty(value) ? defaultValue : (T)Enum.Parse(typeof(T), value, true);
         }
 
         public static DateTime DateTimeFromISO8601(this string value)

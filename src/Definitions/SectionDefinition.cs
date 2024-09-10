@@ -43,7 +43,7 @@ public class SectionDefinition : BaseDefinition<Section>
             PublishSection(resource, resource.Published);
         } 
         if (resource.Published || resource.Level < 3) //always do titles and movements
-            _ = MakeMediafilePublicAsync(writeOperation, MediafileService, resource.TitleMediafileId);
+            _ = PublishMediafile(writeOperation, MediafileService, PublishTitle, resource.TitleMediafileId);
         await base.OnWritingAsync(resource, writeOperation, cancellationToken);
     }
 
@@ -51,11 +51,11 @@ public class SectionDefinition : BaseDefinition<Section>
     {
         string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
         HttpContext?.SetFP("publish");
-        PublishPassages(section.Id, publish);
+        PublishPassages(section.Id,section.PublishTo, publish);
         AppDbContext.SaveChanges();
         HttpContext?.SetFP(fp);
     }
-    private void PublishPassages(int sectionid, bool publish) {
+    private void PublishPassages(int sectionid, string publishTo, bool publish) {
         List<Passage> passages = AppDbContext.Passages.Where(p => p.SectionId == sectionid).ToList();
         foreach (Passage? passage in passages)
         {
@@ -86,10 +86,13 @@ public class SectionDefinition : BaseDefinition<Section>
 #pragma warning restore CS8604 // Possible null reference argument.
 
             medialist.ForEach(mediafile => {
-                mediafile.ReadyToShare = publish;
-                AppDbContext.Mediafiles.Update(mediafile);
                 if (publish)
-                    _ = MakeMediafilePublicAsync(WriteOperationKind.UpdateResource, MediafileService, mediafile.Id);
+                    _ = PublishMediafile(WriteOperationKind.UpdateResource, MediafileService, publishTo, mediafile.Id);
+                else
+                {
+                    mediafile.ReadyToShare = false;
+                    AppDbContext.Mediafiles.Update(mediafile);
+                }
             });
         }
     }

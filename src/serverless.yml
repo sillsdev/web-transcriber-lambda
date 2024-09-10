@@ -30,6 +30,8 @@ provider:
     SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID}
     SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET}
     SIL_TR_USERFILES_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_USERFILES_BUCKET}
+    SIL_TR_PUBLISHREQ_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PUBLISHREQ_BUCKET}
+    SIL_TR_PUBLISHED_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PUBLISHED_BUCKET}
     SIL_TR_PARATEXT_CLIENT_ID:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_ID}
     SIL_TR_PARATEXT_CLIENT_SECRET:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_SECRET}
     SIL_TR_PARATEXT_AUTH0_CONNECTION:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_AUTH0_CONNECTION}
