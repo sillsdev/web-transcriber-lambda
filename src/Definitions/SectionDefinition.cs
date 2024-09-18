@@ -38,7 +38,7 @@ public class SectionDefinition : BaseDefinition<Section>
     CancellationToken cancellationToken
     )
     {
-        if (AppDbContext.Sections.Any(s => s.Id == resource.Id && s.Published != resource.Published))
+        if (AppDbContext.Sections.Any(s => s.Id == resource.Id && s.PublishTo != resource.PublishTo))
         {
             PublishSection(resource, resource.Published);
         } 
