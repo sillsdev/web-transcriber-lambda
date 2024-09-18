@@ -6,8 +6,8 @@ custom:
         devx: "DEV"
         qa: "QA"
         prod: "PROD"
-    userName: ${file(./serverless.env.yml):${self:custom.myStage}.MasterUsername}
-    pwd: ${file(./serverless.env.yml):${self:custom.myStage}.MasterUserPassword}
+    userName: ${file(./serverless.env.yml):xxx.MasterUsername}
+    pwd: ${file(./serverless.env.yml):xxx.MasterUserPassword}
 
 service: transcriberAPI
 configValidationMode: warn
@@ -34,15 +34,17 @@ provider:
     SIL_TR_PUBLISHED_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PUBLISHED_BUCKET}
     SIL_TR_PARATEXT_CLIENT_ID:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_ID}
     SIL_TR_PARATEXT_CLIENT_SECRET:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_SECRET}
-    SIL_TR_PARATEXT_AUTH0_CONNECTION:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_AUTH0_CONNECTION}
+    SIL_TR_PARATEXT_AUTH0_CONNECTION:  ${file(./serverless.env.yml):xxx.SIL_TR_PARATEXT_AUTH0_CONNECTION}
     SIL_TR_PARATEXT_DATA:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_DATA}
     SIL_TR_PARATEXT_REGISTRY:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_REGISTRY}
     SIL_TR_EMAIL_FROM:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_FROM}
-    SIL_TR_EMAIL_HOST:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_HOST}
+    SIL_TR_EMAIL_HOST:  ${file(./serverless.env.yml):xxx.SIL_TR_EMAIL_HOST}
     SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}
     SIL_TR_WEBHOOK_PASSWORD:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_PASSWORD}
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
     SIL_TR_EXPORT_QUEUE:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EXPORT_QUEUE}
+    SIL_TR_BIBLEBRAIN:  ${file(./serverless.env.yml):xxx.SIL_TR_BIBLEBRAIN}
+    SIL_TR_AQUIFER:  ${file(./serverless.env.yml):xxx.SIL_TR_AQUIFER}
 
 
 package:

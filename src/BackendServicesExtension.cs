@@ -72,9 +72,11 @@ namespace SIL.Transcriber
 
         public static void RegisterServices(this IServiceCollection services)
         {
+            services.AddScoped<AquiferService>();
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
             services.AddScoped<BibleService>();
+            services.AddScoped<BibleBrainService>();
             services.AddScoped<CommentService>();
             services.AddScoped<CurrentversionService>();
             services.AddScoped<DataChangeService>();

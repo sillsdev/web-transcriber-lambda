@@ -214,11 +214,13 @@ namespace SIL.Transcriber.Services
             string[]? parts = seq?.ToString().Split(".");
             return parts?[0].PadLeft(3, '0') + (parts?.Length > 1 ? "." + parts [1] : "");
         }
-        private string PublishFilename(Mediafile m)
+        private string PublishFilename(Mediafile m, string publishTo)
         {
             Passage? p = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
+            
             string bibleId = PlanRepository.BibleId(m.PlanId);
-            if (bibleId == "") throw new Exception("No BibleId found");
+            if ((publishTo.Contains("Public") || publishTo.Contains("Beta"))
+                    && bibleId == "") throw new Exception("No BibleId found");
             string fileName = m.PublishedAs??"";
             if (fileName == "")
             {
@@ -272,19 +274,23 @@ namespace SIL.Transcriber.Services
             return fileName;
         }
 
-        public async Task<string> Publish(int id, string publishTo)
+        public async Task<Mediafile?> PublishM(int id, Mediafile m)
+        {
+            return await Publish(id, m.PublishTo ?? "{}");
+        }
+        public async Task<Mediafile?> Publish(int id, string publishTo)
         {
             Mediafile? m = MyRepository.Get(id);
             if (m == null)
             {
-                return "";
+                return null;
             }
             if (m.S3File == null)
             {
                 m = await Reload(m);
             }
             Plan? plan = PlanRepository.GetWithProject(m.PlanId);
-            string outputKey = PublishFilename(m);
+            string outputKey = PublishFilename(m, publishTo);
             string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
             S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey);
             if ( response.Status == HttpStatusCode.OK)
@@ -296,7 +302,7 @@ namespace SIL.Transcriber.Services
                 context.Mediafiles.Update(m);
                 context.SaveChanges(); 
             }
-            return response.Message;
+            return m;
         }
         public Mediafile? GetLatest(int passageId)
         {

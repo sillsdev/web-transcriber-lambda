@@ -7,12 +7,7 @@ namespace SIL.Transcriber.Utility.Extensions
         // https://stackoverflow.com/a/424380/356849
         public static string? AsString<T>(this T enumValue) where T : IConvertible
         {
-            if (!typeof(T).IsEnum)
-            {
-                throw new ArgumentException("T must be an enumerated type");
-            }
-
-            return Enum.GetName(typeof(T), enumValue);
+            return !typeof(T).IsEnum ? throw new ArgumentException("T must be an enumerated type") : Enum.GetName(typeof(T), enumValue);
         }
     }
 }
