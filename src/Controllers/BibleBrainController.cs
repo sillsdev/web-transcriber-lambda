@@ -16,22 +16,32 @@ public class BiblebrainController : Controller
     }
     [AllowAnonymous]
     [HttpGet("languages")]
-    public async Task<string> GetLanguages()
+    public async Task<string> GetLanguages([FromQuery] string country,
+        [FromQuery] string languageCode,
+        [FromQuery] string languageName,
+        [FromQuery] string includeTranslations,
+        [FromQuery] string l10n,
+        [FromQuery] string page,
+        [FromQuery] string limit)
     {
-        return await _bibleBrainService.GetLanguages();
+        return await _bibleBrainService.GetLanguages(country, languageCode, languageName, includeTranslations, l10n, page, limit);
 
     }
     [AllowAnonymous]
     [HttpGet("bibles/{lang}")]
-    public async Task<string> GetBibles([FromRoute] string lang)
+    public async Task<string> GetBibles([FromRoute] string lang, [FromQuery] string? media, [FromQuery] string? page, [FromQuery] string? limit)
     {
-        return await _bibleBrainService.GetBibles(lang, false);
+        short.TryParse(page, out short nPage);
+        short.TryParse(limit, out short nLimit);
+        return await _bibleBrainService.GetBibles(lang, media, false, nPage, nLimit);
     }
     [AllowAnonymous]
     [HttpGet("bibles/{lang}/timing")]
-    public async Task<string> GetBiblesWithTiming([FromRoute] string lang)
+    public async Task<string> GetBiblesWithTiming([FromRoute] string lang, [FromQuery] string? media, [FromQuery] string? page, [FromQuery] string? limit)
     {
-        return await _bibleBrainService.GetBibles(lang, true);
+        short.TryParse(page, out short nPage);
+        short.TryParse(limit, out short nLimit);
+        return await _bibleBrainService.GetBibles(lang, media, true, nPage, nLimit);
     }
 
 

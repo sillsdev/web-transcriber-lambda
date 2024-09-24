@@ -11,12 +11,12 @@ public class AquiferItem
 }
 public class AquiferService
 {
-    private static readonly string _domain = "https://api.aquifer.bible/";
-    private readonly HttpClient _client = new() { BaseAddress = new Uri(_domain) };
-    private string _key = GetVarOrThrow("SIL_TR_AQUIFER");
-    private async Task<string> DoApiCall(string path, params (string Name, string Value) [] myparams)
+    private const string Domain = "https://api.aquifer.bible/";
+    private readonly HttpClient _client = new() { BaseAddress = new Uri(Domain) };
+    private readonly string _key = GetVarOrThrow("SIL_TR_AQUIFER");
+    private async Task<string> DoApiCall(string path, params (string Name, string Value) []? myparams)
     {
-        Uri uri = new($"{_domain}{path}");
+        Uri uri = new($"{Domain}{path}");
         if (myparams != null && myparams.Length > 0)
         {
             uri = uri.AddParameter(myparams);

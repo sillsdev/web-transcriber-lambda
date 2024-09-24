@@ -1,17 +1,31 @@
 ﻿using System.Diagnostics.Eventing.Reader;
+using System.Diagnostics.Metrics;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using static SIL.Transcriber.Utility.Extensions.UriExtensions;
 
 namespace SIL.Transcriber.Services;
 
 public class BibleBrainService
 {
-    private static readonly string _domain = "https://4.dbt.io/api/";
-    private readonly HttpClient _client = new() { BaseAddress = new Uri(_domain) };
-    private string _key = GetVarOrThrow("SIL_TR_BIBLEBRAIN");
-    private async Task<string> DoApiCall(string uri)
+    private const string Domain = "https://4.dbt.io/api/";
+    private readonly HttpClient _client = new() { BaseAddress = new Uri(Domain) };
+    private static string _key = GetVarOrThrow("SIL_TR_BIBLEBRAIN");
+    private static List<(string Name, string Value)> AddParam(List<(string Name, string Value)> p, string Name, string? Value)
     {
+        if ((Value ?? "") != "")
+            p.Add((Name, Value ?? ""));
+        return p;
+    }
+    private async Task<string> DoApiCall(string path, List<(string Name, string Value)> myParams)
+    {
+        Uri uri = new($"{Domain}{path}");
+        List<(string Name, string Value)>  p = new (myParams);
+        AddParam(p, "v", "4");
+        AddParam(p, "key", _key);
+        uri = uri.AddParameter(p.ToArray());
+        Console.WriteLine("***URI***", uri);
         HttpRequestMessage request = new (HttpMethod.Get, uri);
-        request.Headers.Add("key", _key);
         HttpResponseMessage response = await _client.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
@@ -25,26 +39,28 @@ public class BibleBrainService
                                           );
         }
     }
-    public async Task<string> GetLanguages(bool withAudio = false)
+    public async Task<string> GetLanguages(string? country, string? languageCode, string? languageName, string? includeTranslations, string? l10n, string? page, string? limit)
     {
-        string uri = "languages?v=4";
-        if (withAudio)
-        {
-            uri += "&media=audio";
-        }
-        return await DoApiCall(uri);
+        List<(string Name, string Value)> p = new();
+        AddParam(p, "country", country);
+        AddParam(p, "language_code", languageCode);
+        AddParam(p, "language_name", languageName);
+        AddParam(p, "includeTranslations", includeTranslations);
+        AddParam(p, "l10n", l10n);
+        AddParam(p, "page", page ?? "1");
+        AddParam(p, "limit", limit ?? "100");
+
+        return await DoApiCall("languages", p);
     }
-    public async Task<string> GetBibles(string lang, bool timingonly, int? limit = 50, int? page = 1 )
+    public async Task<string> GetBibles(string lang, string? media, bool timingOnly = false, int? page = 1, int? limit = 50)
     {
-        string uri = $"bibles?v=4&page={page}&limit={limit}";
-        if (lang != "")
-        {
-            uri += $"&language_code={lang}";
-        }
-        if (timingonly)
-        {
-            uri += "&audio_timing=true";
-        }
-        return await DoApiCall(uri);
+        List<(string Name, string Value)> p = new();
+        AddParam(p, "language_code", lang);
+        if (media != null)
+            AddParam(p, "media", media);
+        AddParam(p, "page", page != null ? page.ToString() : "1");
+        AddParam(p, "limit", limit != null ? limit.ToString() : "100");
+
+        return await DoApiCall("bibles", p);
     }
 }
