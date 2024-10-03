@@ -43,7 +43,7 @@ public class AquiferController : Controller
 
     [AllowAnonymous]
     [HttpPost]
-    public async Task<string> Post([FromBody] AquiferItem[] content)
+    public async Task<string> Post([FromBody] AquiferPost content)
     {
         Console.WriteLine(content);
         //return content?.ToString()??"Null";

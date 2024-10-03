@@ -308,7 +308,7 @@ namespace SIL.Transcriber.Services
             try
             {
                 return S3Response(
-                    SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET, ""),
+                    fileName == "" ? "" : SignedUrl(ProperFolder(folder) + fileName, HttpVerb.GET, ""),
                     HttpStatusCode.OK
                 );
             }

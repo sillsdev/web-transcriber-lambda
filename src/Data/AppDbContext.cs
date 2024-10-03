@@ -28,6 +28,8 @@ namespace SIL.Transcriber.Data
         public DbSet<Artifactcategory> Artifactcategorys => Set<Artifactcategory>();
         public DbSet<Artifacttype> Artifacttypes => Set<Artifacttype>();
         public DbSet<Bible> Bibles => Set<Bible>();
+        public DbSet<Biblebrainbible> BibleBrainBibles => Set<Biblebrainbible>();
+        public DbSet<Biblebrainfileset> BibleBrainFilesets => Set<Biblebrainfileset>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<CopyProject> Copyprojects => Set<CopyProject>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
@@ -74,6 +76,8 @@ namespace SIL.Transcriber.Data
         public DbSet<User> Users => Set<User>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
+        public DbSet<Vwbiblebrainbible> VWbiblebrainbibles => Set<Vwbiblebrainbible>();
+        public DbSet<Vwbiblebrainlanguage> VWbiblebrainlanguages => Set<Vwbiblebrainlanguage>();
         public DbSet<VWChecksum> VWChecksums => Set<VWChecksum>();
         public DbSet<VWProject> VWProjects => Set<VWProject>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
@@ -138,6 +142,16 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Bible>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Biblebrainbible>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Biblebrainfileset>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);

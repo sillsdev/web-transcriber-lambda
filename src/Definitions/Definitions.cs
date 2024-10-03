@@ -316,6 +316,18 @@ namespace SIL.Transcriber.Definitions
             IJsonApiRequest Request
         ) : base(resourceGraph, loggerFactory, Request) { }
     }
+    public class VWBiblebrainBibleDefinition : JsonApiResourceDefinition<Vwbiblebrainbible, int>
+    {
+        public VWBiblebrainBibleDefinition(
+            IResourceGraph resourceGraph
+        ) : base(resourceGraph) { }
+    }
+    public class VWBiblebrainLanguageDefinition : JsonApiResourceDefinition<Vwbiblebrainlanguage, int>
+    {
+        public VWBiblebrainLanguageDefinition(
+            IResourceGraph resourceGraph
+        ) : base(resourceGraph) { }
+    }
     public class VWChecksumDefinition : JsonApiResourceDefinition<VWChecksum, int>
     {
         public VWChecksumDefinition(

@@ -42,6 +42,7 @@ public class BibleBrainService
     public async Task<string> GetLanguages(string? country, string? languageCode, string? languageName, string? includeTranslations, string? l10n, string? page, string? limit)
     {
         List<(string Name, string Value)> p = new();
+        AddParam(p, "media", "audio");
         AddParam(p, "country", country);
         AddParam(p, "language_code", languageCode);
         AddParam(p, "language_name", languageName);
@@ -56,10 +57,11 @@ public class BibleBrainService
     {
         List<(string Name, string Value)> p = new();
         AddParam(p, "language_code", lang);
-        if (media != null)
-            AddParam(p, "media", media);
+        AddParam(p, "media", media);
         AddParam(p, "page", page != null ? page.ToString() : "1");
         AddParam(p, "limit", limit != null ? limit.ToString() : "100");
+        if (timingOnly)
+            AddParam(p, "audio_timing", "true");
 
         return await DoApiCall("bibles", p);
     }

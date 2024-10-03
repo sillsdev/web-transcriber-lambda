@@ -95,8 +95,7 @@ namespace SIL.Transcriber.Repositories
             string idList
         )
         {
-            if (entities == null)
-                entities = GetAll();
+            entities ??= GetAll();
             return ProjectsComments(entities, idList);
         }
 
