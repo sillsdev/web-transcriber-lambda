@@ -6,6 +6,7 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Utility;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 
 
 namespace SIL.Transcriber.Services;
@@ -218,9 +219,15 @@ public class BibleBrainService : BaseResourceService
 
         TimingData? startt =  timing.Find(t => t.verse_start == startv.ToString());
         TimingData? endt = timing.Find(t => t.verse_start == (endv+1).ToString());
-        endt ??= timing.Last();
         double [] ret = { startt?.timestamp??0, endt?.timestamp??duration };
         return ret;
+    }
+    private static string CalcDesc(Passage startp, Passage lastp, string desc, int chapter)
+    {
+        int startverse = startp.StartChapter == chapter ? (startp.StartVerse??1) : 1;
+        int endverse = lastp.EndChapter == chapter ? lastp.EndVerse??-1 : -1;
+        string end = endverse == -1 ?  "-Ω" : startverse == endverse ? "" : $"-{endverse}";
+        return $"{desc} {chapter}:{startverse}{end}";
     }
     public async Task<string> Post(BiblebrainPost post)
     {
@@ -232,7 +239,7 @@ public class BibleBrainService : BaseResourceService
         HttpContext?.SetFP("biblebrain");
 
         Section? section = DbContext.SectionsData.Where(s => s.Id == sectionId).FirstOrDefault();
-        Artifacttype? artifacttype = DbContext.Artifacttypes.Where(a => a.Typename == "resource" && !a.Archived).FirstOrDefault();
+        Artifacttype? artifacttype = DbContext.Artifacttypes.Where(a => a.Typename == (post.Timing ? "resource" : "projectresource") && !a.Archived).FirstOrDefault();
         Artifactcategory? artifactcategory = DbContext.Artifactcategorys.Where(c => c.Categoryname == "scripture" && !c.Archived).FirstOrDefault();
         int lastseq = DbContext.Sectionresources.Where(sr => sr.SectionId == sectionId).OrderByDescending(sr => sr.SequenceNum).FirstOrDefault()?.SequenceNum ?? 0;
         //get filesets with timing for this bibleid
@@ -285,7 +292,7 @@ public class BibleBrainService : BaseResourceService
                 {
                     if (post.Passages)
                     {
-                        string mydesc = $"{desc} {ps.Reference}";
+                        string mydesc = CalcDesc(ps, ps, desc, chapter);
                         double [] times = GetStartEnd(ps, generalresource.Timing, generalresource.Duration, chapter);
                         string segments = Segments(times[0], times[1]);
                         Mediafile m = CreateMedia(generalresource.FileName, generalresource.ContentType, mydesc, ps.Id, planId, artifacttype?.Id ?? 0, lang, generalresource.FileName, Folder, artifactcategory?.Id, generalresource.MediafileId, segments);
@@ -294,21 +301,21 @@ public class BibleBrainService : BaseResourceService
                     }
                     if (post.Sections && sectionids.FindIndex(s => s == ps.SectionId) == -1)
                     {
-                        IQueryable<Passage> mypsgs = passages.Where(p => p.SectionId == ps.SectionId && (p.StartChapter == chapter || p.EndChapter == chapter));
-                        Passage startp = mypsgs.First();
-                        Passage lastp = mypsgs.Last();
-                        //THIS IS WRONG - FIND START VERSE OF CURRENT CHAPTER
-                        int startChap = startp.StartChapter??1;
-                        int endChap = lastp.EndChapter??1;
-                        string end = startChap == endChap ?  $"{lastp.EndVerse}" : $"{endChap}:{lastp.EndVerse}";
-                        string mydesc = $"{desc} {startChap}:{startp.StartVerse}-{end}";
-                        double [] startv = GetStartEnd(startp, generalresource.Timing, generalresource.Duration, chapter);
-                        double [] endv = GetStartEnd(lastp, generalresource.Timing, generalresource.Duration, chapter);
-                        string segments = Segments(startv[0], endv[1]);
-                        Mediafile m = CreateMedia(generalresource.FileName, generalresource.ContentType, mydesc, null, planId, artifacttype?.Id ?? 0, lang, generalresource.FileName, Folder, artifactcategory?.Id, generalresource.MediafileId,segments);
-                        mediaids.Add(m.Id);
-                        srids.Add(CreateSR(mydesc, ++lastseq, m.Id, ps.SectionId, null, post.OrgWorkflowStep).Id);
-                        sectionids.Add(ps.SectionId);
+                        List<Passage> mypsgs = passages.Where(p => p.SectionId == ps.SectionId && (p.StartChapter == chapter || p.EndChapter == chapter)).ToList();
+                        if (mypsgs.Count > 1 || !post.Passages)
+                        {
+                            
+                            Passage startp = mypsgs.First();
+                            Passage lastp = mypsgs.Last();
+                            string mydesc = CalcDesc(startp, lastp, desc, chapter);
+                            double [] startv = GetStartEnd(startp, generalresource.Timing, generalresource.Duration, chapter);
+                            double [] endv = GetStartEnd(lastp, generalresource.Timing, generalresource.Duration, chapter);
+                            string segments = Segments(startv[0], endv[1]);
+                            Mediafile m = CreateMedia(generalresource.FileName, generalresource.ContentType, mydesc, null, planId, artifacttype?.Id ?? 0, lang, generalresource.FileName, Folder, artifactcategory?.Id, generalresource.MediafileId,segments);
+                            mediaids.Add(m.Id);
+                            srids.Add(CreateSR(mydesc, ++lastseq, m.Id, ps.SectionId, null, post.OrgWorkflowStep).Id);
+                            sectionids.Add(ps.SectionId);
+                        }
                     }
                 }
             }

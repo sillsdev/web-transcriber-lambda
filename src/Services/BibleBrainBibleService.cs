@@ -34,9 +34,9 @@ namespace SIL.Transcriber.Services
             )
         { }
         public override async Task<Biblebrainbible?> CreateAsync(
-    Biblebrainbible resource,
-    CancellationToken cancellationToken
-)
+                                        Biblebrainbible resource,
+                                        CancellationToken cancellationToken
+                                    )
         {
             //if we already have it, just return it.
             Biblebrainbible? x = resource.BibleId == null ? null : Repo.Get().Where(t =>
