@@ -16,5 +16,7 @@ public class Biblebrainbible : BaseModel
     public string ShortName { get; set; } = ""; //vname
     [Attr(PublicName = "bibleid")]
     public string BibleId { get; set; } = "";// abbr
+    [Attr(PublicName = "pubdate")]
+    public string Pubdate { get; set; } = "";// date
 
 }

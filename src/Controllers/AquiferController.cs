@@ -14,13 +14,11 @@ public class AquiferController : Controller
         _aquiferService = service;
         Logger = loggerFactory.CreateLogger<BiblebrainController>();
     }
-    [AllowAnonymous]
     [HttpGet("languages")]
     public async Task<string> GetLanguages()
     {
         return await _aquiferService.GetLanguages();
     }
-    [AllowAnonymous]
     [HttpGet("aquifer-search")]
     public async Task<string> Search([FromQuery] string bookCode, 
                                      [FromQuery] string languageCode, 
@@ -34,14 +32,12 @@ public class AquiferController : Controller
     {
         return await _aquiferService.Search(bookCode, languageCode, limit, offset, startChapter, startVerse, endChapter, endVerse, query);
     }
-    [AllowAnonymous]
     [HttpGet("content/{contentid}")]
     public async Task<string> GetContent([FromRoute] string contentid, [FromQuery] string contentTextType)
     {
         return await _aquiferService.GetContent(contentid, contentTextType);
     }
 
-    [AllowAnonymous]
     [HttpPost]
     public async Task<string> Post([FromBody] AquiferPost content)
     {

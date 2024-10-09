@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
+using System.Drawing;
 
 namespace SIL.Transcriber.Controllers;
 
@@ -14,7 +15,12 @@ public class BiblebrainController : Controller
         _bibleBrainService = service;
         Logger = loggerFactory.CreateLogger<BiblebrainController>();
     }
-    [AllowAnonymous]
+    [HttpGet("{bibleid}/{size}/{timing}/copyright")]
+    public async Task<string> GetCopyright([FromRoute] string bibleid, [FromRoute] string Size, [FromRoute] bool timing)
+    {
+        return await _bibleBrainService.GetCopyright(bibleid, Size, timing);
+    }
+    /*
     [HttpGet("languages")]
     public async Task<string> GetLanguages([FromQuery] string country,
         [FromQuery] string languageCode,
@@ -27,7 +33,6 @@ public class BiblebrainController : Controller
         return await _bibleBrainService.GetLanguages(country, languageCode, languageName, includeTranslations, l10n, page, limit);
 
     }
-    [AllowAnonymous]
     [HttpGet("bibles/{lang}")]
     public async Task<string> GetBibles([FromRoute] string lang, [FromQuery] string? media, [FromQuery] string? page, [FromQuery] string? limit)
     {
@@ -35,7 +40,6 @@ public class BiblebrainController : Controller
         short.TryParse(limit, out short nLimit);
         return await _bibleBrainService.GetBibles(lang, media, false, nPage, nLimit);
     }
-    [AllowAnonymous]
     [HttpGet("bibles/{lang}/timing")]
     public async Task<string> GetBiblesWithTiming([FromRoute] string lang, [FromQuery] string? media, [FromQuery] string? page, [FromQuery] string? limit)
     {
@@ -43,6 +47,13 @@ public class BiblebrainController : Controller
         short.TryParse(limit, out short nLimit);
         return await _bibleBrainService.GetBibles(lang, media, true, nPage, nLimit);
     }
+    */
 
-
+    [HttpPost]
+    public async Task<string> Post([FromBody] BiblebrainPost content)
+    {
+        Console.WriteLine(content);
+        //return content?.ToString()??"Null";
+        return await _bibleBrainService.Post(content);
+    }
 }

@@ -147,7 +147,7 @@ public class AquiferService: BaseResourceService
                             desc = $"{stuff?.localizedName} {Path.GetFileNameWithoutExtension(entryName)}";
                             Mediafile m = CreateMedia(zipName+entryName, contentType, desc, passage?.Id, section?.PlanId ?? 0, artifacttype?.Id ?? 0, (string)(stuff?.language.code ?? ""), s3.Message, Folder);
                             mediaids.Add(m.Id);
-                            srids.Add(CreateSR(desc, ++lastseq, m.Id, sectionId ?? 0, passage?.Id, post.OrgWorkflowStep ?? 0, section?.Plan?.ProjectId ?? 0).Id);
+                            srids.Add(CreateSR(desc, ++lastseq, m.Id, sectionId ?? 0, passage?.Id, post.OrgWorkflowStep ?? 0).Id);
                         }
                         break;
 
@@ -158,7 +158,7 @@ public class AquiferService: BaseResourceService
                         string fileName = await UrlToS3(url, Folder);
                         Mediafile m = CreateMedia(fileName, contentType, desc, passage?.Id, section?.PlanId ?? 0, artifacttype?.Id ?? 0, (string)(stuff?.language.code ?? ""), fileName, Folder);
                         mediaids.Add(m.Id);
-                        srids.Add(CreateSR(desc, ++lastseq, m.Id, sectionId ?? 0, passage?.Id, post.OrgWorkflowStep ?? 0, section?.Plan?.ProjectId ?? 0).Id);
+                        srids.Add(CreateSR(desc, ++lastseq, m.Id, sectionId ?? 0, passage?.Id, post.OrgWorkflowStep ?? 0).Id);
                     }
                     break;
                 }
@@ -169,7 +169,7 @@ public class AquiferService: BaseResourceService
                     string fileName = await UrlToS3(url, Folder);
                     Mediafile m = CreateMedia(fileName, contentType, desc, passage?.Id, section?.PlanId ?? 0, artifacttype?.Id ?? 0, (string)(stuff?.language.code ?? ""), fileName, Folder);
                     mediaids.Add(m.Id);
-                    srids.Add(CreateSR(desc, ++lastseq, m.Id, sectionId ?? 0, passage?.Id, post.OrgWorkflowStep ?? 0, section?.Plan?.ProjectId ?? 0).Id);
+                    srids.Add(CreateSR(desc, ++lastseq, m.Id, sectionId ?? 0, passage?.Id, post.OrgWorkflowStep ?? 0).Id);
                 }
                 break;
                 case "Text":
@@ -180,7 +180,7 @@ public class AquiferService: BaseResourceService
                         desc = $"{stuff?.localizedName} {(cnt > 1 ? (ic + 1).ToString() : "")}";
                         Mediafile m = CreateMedia((string)(stuff?.content[ic]??""),"text/markdown", desc, passage?.Id, section?.PlanId ?? 0, artifacttype?.Id ?? 0, (string)(stuff?.language.code??""), "", "");
                         mediaids.Add(m.Id);
-                        Sectionresource sr = CreateSR(desc, ++lastseq, m.Id, sectionId??0, passage?.Id, post.OrgWorkflowStep??0, section?.Plan?.ProjectId??0);
+                        Sectionresource sr = CreateSR(desc, ++lastseq, m.Id, sectionId??0, passage?.Id, post.OrgWorkflowStep??0);
                         srids.Add(sr.Id);
                     }
                 }

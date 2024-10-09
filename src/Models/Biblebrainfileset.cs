@@ -19,10 +19,12 @@ public class Biblebrainfileset : BaseModel
     public string FilesetSize { get; set; } = ""; // NT, OT, ??
     [Attr(PublicName = "timing")]
     public bool Timing { get; set; }
+
     [Attr(PublicName = "codec")]
     public string? Codec { get; set; }  //mp3, opus
     [Attr(PublicName = "container")]
     public string? Container { get; set; } //mp3, webm,
     [Attr(PublicName = "licensor")]
     public string Licensor { get; set; } = ""; //licensor
+
 }

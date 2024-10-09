@@ -20,7 +20,7 @@ public class BaseResourceService
         S3service = s3Service;
     }
     protected Mediafile CreateMedia(string originalFile, string contentType, string desc, int? passageId, int planId,
-                                int artifacttypeId, string lang, string s3file, string folder)
+                                int artifacttypeId, string lang, string s3file, string folder, int? artifactcategoryId = null, int? sourceMediaId=null, string? segments= "{}")
     {
         Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Mediafile> m =
                             DbContext.Mediafiles.Add(new Mediafile
@@ -37,13 +37,15 @@ public class BaseResourceService
                                 S3File = s3file,
                                 S3Folder = folder,
                                 Link = false,
-                                AudioUrl =  S3service.SignedUrlForPut(originalFile, folder, contentType).Message
-                            }); ;
-        ;
+                                AudioUrl =  S3service.SignedUrlForPut(originalFile, folder, contentType).Message,
+                                ArtifactCategoryId = artifactcategoryId,
+                                SourceMediaId = sourceMediaId,
+                                Segments=segments,
+                            }); 
         DbContext.SaveChanges();
         return m.Entity;
     }
-    protected Sectionresource CreateSR(string desc, int seq, int mediafileId, int sectionId, int? passageId, int orgWorkflowStepId, int projectId)
+    protected Sectionresource CreateSR(string desc, int seq, int mediafileId, int sectionId, int? passageId, int orgWorkflowStepId)
     {
         Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Sectionresource> sr =
             DbContext.Sectionresources.Add(new Sectionresource
@@ -53,9 +55,7 @@ public class BaseResourceService
                 MediafileId = mediafileId,
                 SectionId = sectionId,
                 PassageId = passageId,
-                OrgWorkflowStepId = orgWorkflowStepId,
-                ProjectId = projectId,
-
+                OrgWorkflowStepId = orgWorkflowStepId
             });
         DbContext.SaveChanges();
         return sr.Entity;
