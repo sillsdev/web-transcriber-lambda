@@ -1,9 +1,6 @@
-﻿using Amazon.Auth.AccessControlPolicy;
-using SIL.Transcriber.Data;
+﻿using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 using System.Net;
-using System.Net.Mime;
 
 namespace SIL.Transcriber.Services;
 

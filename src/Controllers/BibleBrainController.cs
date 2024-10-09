@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
-using System.Drawing;
 
 namespace SIL.Transcriber.Controllers;
 
@@ -16,7 +14,9 @@ public class BiblebrainController : Controller
         Logger = loggerFactory.CreateLogger<BiblebrainController>();
     }
     [HttpGet("{bibleid}/{size}/{timing}/copyright")]
-    public async Task<string> GetCopyright([FromRoute] string bibleid, [FromRoute] string Size, [FromRoute] bool timing)
+    public async Task<string> GetCopyright([FromRoute] string bibleid, 
+                                            [FromRoute] string Size, 
+                                            [FromRoute] bool timing)
     {
         return await _bibleBrainService.GetCopyright(bibleid, Size, timing);
     }

@@ -10,7 +10,6 @@ using static SIL.Transcriber.Utility.Extensions.UriExtensions;
 
 namespace SIL.Transcriber.Services;
 
-
 public class AquiferItem
 {
     public string ContentId { get; set; } = "0";

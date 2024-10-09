@@ -5,8 +5,6 @@ using static SIL.Transcriber.Utility.Extensions.UriExtensions;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Utility;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
 
 
 namespace SIL.Transcriber.Services;
