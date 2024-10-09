@@ -5,8 +5,6 @@ VisualStudioVersion = 17.2.32505.173
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TranscriberAPI", "src\TranscriberAPI.csproj", "{320E9C6D-EE62-44BE-A20C-CE097693BC6F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TranscriberAPI.Tests", "test\TranscriberAPITest\TranscriberAPI.Tests.csproj", "{FD4B5E3A-D00F-4183-AEF4-E32D38AE274E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{320E9C6D-EE62-44BE-A20C-CE097693BC6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{320E9C6D-EE62-44BE-A20C-CE097693BC6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{320E9C6D-EE62-44BE-A20C-CE097693BC6F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FD4B5E3A-D00F-4183-AEF4-E32D38AE274E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FD4B5E3A-D00F-4183-AEF4-E32D38AE274E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FD4B5E3A-D00F-4183-AEF4-E32D38AE274E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FD4B5E3A-D00F-4183-AEF4-E32D38AE274E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

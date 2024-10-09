@@ -83,7 +83,7 @@ namespace SIL.Transcriber.Services
 
         public string DirectoryName(Mediafile entity)
         {
-            return PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
+            return entity.S3Folder ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
         }
 
         public string? GetAudioUrl(Mediafile mf)
@@ -370,8 +370,11 @@ namespace SIL.Transcriber.Services
         {
             //do this here because we know how to do it here...
             //but then capture it in the repository before it gets lost
-            resource.S3File = GetNewFileNameAsync(resource).Result;
-            resource.AudioUrl = GetAudioUrl(resource);
+            if (!resource.ContentType?.StartsWith("text")??true)
+            {
+                resource.S3File = GetNewFileNameAsync(resource).Result;
+                resource.AudioUrl = GetAudioUrl(resource);
+            }
             return await base.CreateAsync(resource, cancellationToken);
         }
         public List<Mediafile> GetIPMedia(IQueryable<Organization> orgs)

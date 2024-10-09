@@ -11,7 +11,7 @@ custom:
 
 service: transcriberAPI
 configValidationMode: warn
-frameworkVersion: ^3.19.0
+#frameworkVersion: ^3.19.0
 
 provider:
   name: aws

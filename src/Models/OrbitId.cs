@@ -7,6 +7,11 @@
             Type = mytype;
             Ids = new List<int>();
         }
+        public OrbitId(string mytype, List<int> newIds)
+        {
+            Type = mytype;
+            Ids = newIds;
+        }
         public string Type { get; set; }
         public List<int> Ids { get; set; }
 

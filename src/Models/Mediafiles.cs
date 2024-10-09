@@ -48,6 +48,8 @@ namespace SIL.Transcriber.Models
         public string? OriginalFile { get; set; }
         [Attr(PublicName = "s3file")]
         public string? S3File { get; set; }
+        [Attr(PublicName = "s3folder")]
+        public string? S3Folder { get; set; }
         [Attr(PublicName = "published-as")]
         public string? PublishedAs { get; set; }
 

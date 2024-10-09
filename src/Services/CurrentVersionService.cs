@@ -59,9 +59,7 @@ namespace SIL.Transcriber.Services
                     .FirstOrDefault();
             else if (version.Contains("rc"))
                 cv = cvs?.Where(v => (v.DesktopVersion ?? "").Contains("rc")).FirstOrDefault();
-            if (cv != null)
-                return cv;
-            return cvs?.FirstOrDefault() ?? new();
+            return cv ?? cvs?.FirstOrDefault() ?? new();
         }
     }
 }
