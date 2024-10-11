@@ -263,15 +263,13 @@ namespace SIL.Transcriber.Services
                         fileName = $"{fileName}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, ".mp3"))}";
                 }
             }
-            if (!fileName.StartsWith(bibleId))
-            {                 
-                fileName = $"{bibleId}_{fileName}";
-            } 
+
             if (!fileName.EndsWith(".mp3"))
             {
                 fileName = $"{fileName}.mp3";
             }
-            return fileName;
+            return $"{bibleId}/{fileName}";
+            ;
         }
 
         public async Task<Mediafile?> PublishM(int id, Mediafile m)
@@ -295,12 +293,14 @@ namespace SIL.Transcriber.Services
             S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey);
             if ( response.Status == HttpStatusCode.OK)
             {
-                using AppDbContext context = GetMyOwnContext();
+                //why did I think this was necessary???
+                //if it is...load m from this context to prevent update of all orgmem etc...
+                //using AppDbContext context = GetMyOwnContext();
                 m.PublishedAs = outputKey;
                 m.ReadyToShare = true;
                 m.PublishTo = publishTo;
-                context.Mediafiles.Update(m);
-                context.SaveChanges(); 
+                dbContext.Mediafiles.Update(m);
+                //context.SaveChanges(); 
             }
             return m;
         }

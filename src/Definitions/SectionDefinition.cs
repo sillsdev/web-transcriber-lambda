@@ -53,7 +53,6 @@ public class SectionDefinition : BaseDefinition<Section>
         HttpContext?.SetFP("publish");
         PublishPassages(section.Id,section.PublishTo, publish);
         AppDbContext.SaveChanges();
-        HttpContext?.SetFP(fp);
     }
     private void PublishPassages(int sectionid, string publishTo, bool publish) {
         List<Passage> passages = AppDbContext.Passages.Where(p => p.SectionId == sectionid).ToList();
@@ -91,6 +90,7 @@ public class SectionDefinition : BaseDefinition<Section>
                 else
                 {
                     mediafile.ReadyToShare = false;
+                    mediafile.PublishTo = "{}";
                     AppDbContext.Mediafiles.Update(mediafile);
                 }
             });
