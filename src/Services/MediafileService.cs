@@ -193,9 +193,9 @@ namespace SIL.Transcriber.Services
                                    CurrentUserContext,
                                    HttpContextAccessor, LoggerFactory);
         }
-        private async Task<Mediafile> Reload(Mediafile m)
+        private async Task<Mediafile> Reload(Mediafile m, AppDbContext? context = null)
         {
-            using AppDbContext context = GetMyOwnContext();
+            context ??= GetMyOwnContext();
             await context.Entry(m).ReloadAsync();
             return context.Entry(m).Entity;
         }
@@ -293,14 +293,17 @@ namespace SIL.Transcriber.Services
             S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey);
             if ( response.Status == HttpStatusCode.OK)
             {
-                //why did I think this was necessary???
-                //if it is...load m from this context to prevent update of all orgmem etc...
-                //using AppDbContext context = GetMyOwnContext();
-                m.PublishedAs = outputKey;
-                m.ReadyToShare = true;
-                m.PublishTo = publishTo;
-                dbContext.Mediafiles.Update(m);
-                //context.SaveChanges(); 
+                //load m from this context to prevent update of all orgmem etc...
+                using AppDbContext context = GetMyOwnContext();
+                Mediafile? myM = context.Mediafiles.Where(x => x.Id == m.Id).FirstOrDefault();
+                if (myM != null)
+                {
+                    myM.PublishedAs = outputKey;
+                    myM.ReadyToShare = true;
+                    myM.PublishTo = publishTo;
+                    context.Mediafiles.Update(myM);
+                    context.SaveChanges();
+                }
             }
             return m;
         }
