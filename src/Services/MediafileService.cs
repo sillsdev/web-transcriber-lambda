@@ -15,12 +15,15 @@ using System.Xml.Linq;
 using TranscriberAPI.Utility.Extensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using static SIL.Transcriber.Utility.Extensions.ObjectExtensions;
 
 namespace SIL.Transcriber.Services
 {
+
     public class MediafileService : BaseArchiveService<Mediafile>
     {
         private IS3Service S3service { get; }
+        private AeroService Aeroservice { get; }
         private PlanRepository PlanRepository { get; set; }
         private PassageRepository PassageRepository { get; set; }
         private MediafileRepository MyRepository { get; set; }
@@ -29,6 +32,12 @@ namespace SIL.Transcriber.Services
         private readonly ICurrentUserContext CurrentUserContext;
         private readonly ILoggerFactory LoggerFactory;
         private readonly IHttpContextAccessor HttpContextAccessor;
+        private class StatusInfo
+        {
+            public Mediafile? mediafile;
+            public string s3File="";
+            public string folder="";
+        }
         public MediafileService(
             IResourceRepositoryAccessor repositoryAccessor,
             IQueryLayerComposer queryLayerComposer,
@@ -41,6 +50,7 @@ namespace SIL.Transcriber.Services
             PlanRepository planRepository,
             PassageRepository passageRepository,
             IS3Service service,
+            AeroService aeroService,
             MediafileRepository myRepository,
             IHttpContextAccessor httpContextAccessor,
             AppDbContextResolver contextResolver,
@@ -59,6 +69,7 @@ namespace SIL.Transcriber.Services
             )
         {
             S3service = service;
+            Aeroservice = aeroService;
             PlanRepository = planRepository;
             PassageRepository = passageRepository;
             MyRepository = myRepository;
@@ -145,9 +156,10 @@ namespace SIL.Transcriber.Services
                 return new S3Response { Message = "", Status = HttpStatusCode.NotFound };
             }
             Plan? plan = PlanRepository.GetWithProject(mf.PlanId);
+            string folder = mf.S3Folder ?? PlanRepository.DirectoryName(plan);
             if (
                 mf.S3File.Length == 0
-                || !(await S3service.FileExistsAsync(mf.S3File, PlanRepository.DirectoryName(plan)))
+                || !(await S3service.FileExistsAsync(mf.S3File, folder))
             )
                 return new S3Response
                 {
@@ -314,6 +326,13 @@ namespace SIL.Transcriber.Services
                 .OrderByDescending(mf => mf.VersionNumber)
                 .FirstOrDefault();
         }
+        public Mediafile? GetLatest(int passageId, int? typeId)
+        {
+            return dbContext.MediafilesData
+                .Where(mf => mf.PassageId == passageId && mf.ArtifactTypeId == typeId)
+                .OrderByDescending(mf => mf.VersionNumber)
+                .FirstOrDefault();
+        }
 
         public string EAF(Mediafile mf)
         {
@@ -386,5 +405,111 @@ namespace SIL.Transcriber.Services
             return ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
         }
 
+
+        #region AI
+        public static byte[] ConvertStreamToByteArray(Stream stream)
+        {
+            using (MemoryStream memoryStream = new())
+            {
+                stream.CopyTo(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
+        private Mediafile? CreateNewMediafile(StatusInfo info)
+        {
+            Mediafile newmf = new ();
+            info.mediafile?.CopyProperties(newmf);
+            newmf.S3File = info.s3File;
+            newmf.S3Folder = info.folder;
+            int lastVers =  GetLatest(info.mediafile?.PassageId??0, info.mediafile?.ArtifactTypeId)?.VersionNumber??0;
+            newmf.VersionNumber = ++lastVers;
+            newmf.DateCreated = null;
+            newmf.DateUpdated = null;
+            dbContext.Mediafiles.Add(newmf);
+            dbContext.SaveChanges();
+            return newmf;
+        }
+        private StatusInfo GetStatusInfo(int id, string postfix)
+        {
+            StatusInfo ret = new ();
+            Mediafile? mf = MyRepository.Get(id);
+            if (mf == null)
+                return ret;
+            Plan? plan = PlanRepository.GetWithProject(mf.PlanId);
+            ret.mediafile = mf;
+            ret.folder = mf.S3Folder ?? PlanRepository.DirectoryName(plan);
+            ret.s3File =  mf.S3File?[..(mf.S3File.Length - Path.GetExtension(mf.S3File)?.Length??0)] + postfix + Path.GetExtension(mf.S3File);
+            return ret;
+        }
+        public async Task<Mediafile?> NoiseRemovalAsync(int id)
+        {
+            Mediafile? mf = MyRepository.Get(id);
+            if (mf == null)
+                return null;
+            S3Response response = await GetFile(id);
+            //get a taskid from aero
+            if (response?.FileStream != null)
+            {
+                byte[] data =  ConvertStreamToByteArray(response.FileStream);
+                string? taskid = await Aeroservice.NoiseRemoval(data, mf.S3File??"");
+                mf.TextQuality = taskid;
+            }
+            return mf;
+        }
+        public async Task<Mediafile?> NoiseRemovalStatusAsync(int id, string taskId)
+        {
+            StatusInfo info = GetStatusInfo(id, "nr");
+            
+            //get a status...if done create a mediafile and return the new id
+            string? result = await Aeroservice.NoiseRemovalStatus(taskId, info.s3File, info.folder );
+            if (info.mediafile != null) info.mediafile.AudioQuality = result;
+            return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
+        }
+
+        public async Task<string?> VoiceConversion(int id)
+        {
+            Mediafile? mf = MyRepository.Get(id);
+            if (mf == null)
+                return null;
+            S3Response response = await GetFile(id);
+            //get a taskid from aero
+            if (response?.FileStream != null)
+            {
+                byte[] data =  ConvertStreamToByteArray(response.FileStream);
+                return await Aeroservice.VoiceConversion(data, mf.S3File??"");
+            }
+            return null;
+        }
+        public async Task<string?> VoiceConversionStatus(int id, string TaskId)
+        {
+            StatusInfo info = GetStatusInfo(id, "nr");
+
+            //get a status...if done create a mediafile and return the new id
+            return await Aeroservice.VoiceConversionStatus(TaskId);
+        }
+        public async Task<int> TranscriptionLanguages()
+        {
+            return await Aeroservice.TranscriptionLanguages();
+        }
+        public async Task<string?> Transcription(int id)
+        {
+            Mediafile? mf = MyRepository.Get(id);
+            if (mf == null)
+                return null;
+            S3Response response = await GetFile(id);
+            //get a taskid from aero
+            if (response?.FileStream != null)
+            {
+                byte[] data =  ConvertStreamToByteArray(response.FileStream);
+
+                return await Aeroservice.Transcription(data, mf.S3File??"");
+            }
+            return null;
+        }
+        public async Task<string> TranscriptionStatus(string TaskId)
+        {
+            return await Aeroservice.TranscriptionStatus(TaskId);
+        }
+        #endregion
     }
 }

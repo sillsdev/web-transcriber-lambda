@@ -72,6 +72,7 @@ namespace SIL.Transcriber
 
         public static void RegisterServices(this IServiceCollection services)
         {
+            services.AddScoped<AeroService>();
             services.AddScoped<AquiferService>();
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
