@@ -136,5 +136,20 @@ namespace SIL.Transcriber.Controllers
             Mediafile? mf = await _service.UpdateFileInfoAsync(id, filesize, duration);
             return mf != null ? Ok(mf) : NotFound();
         }
+        [AllowAnonymous]
+        [HttpGet("{id}/noiseremoval")]
+        public async Task<IActionResult> NoiseRemovalAsync([FromRoute] int id)
+        {
+            Mediafile? mf = await _service.NoiseRemovalAsync(id);
+            return mf?.TextQuality != null ? Ok(mf) : NotFound();
+        }
+        [AllowAnonymous]
+        [HttpGet("{id}/noiseremoval/{taskId}")]
+        public async Task<IActionResult> NoiseRemovalStatusAsync([FromRoute] int id, [FromRoute] string taskId)
+        {
+            Mediafile? mf = await _service.NoiseRemovalStatusAsync(id, taskId);
+            //probably need to have a status or class returned...
+            return Ok(mf);
+        }
     }
 }
