@@ -217,10 +217,24 @@ namespace SIL.Transcriber.Services
                     + ext
                 : newfilename;
         }
-        public async Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey) { 
+        public async Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey, string tags) {
+            /*
+            {
+                "id": 12345678,
+                "inputBucket": "sil-transcriber-userfiles-dev",
+                "inputKey": "3434_Obtco/3671_Matth/JOS1_2-ver3_l3671_Matth.wav",
+                "outputBucket": "apm-published-dev",
+                "outputKey": "OBTENG/OBTENG_JON1_3_3.mp3",
+                "tags": {
+                    "title": "Chapter 1",
+                    "artist": "SJH",
+                    "album": "This Bible",
+		            "cover": "https://sil-transcriber-userfiles-dev.s3.us-east-1.amazonaws.com/graphics/002_NOTE_General_0.01_0.01_3911_13357_31744_graphic-512.webp"
+                }
+            } */
             try
             {
-                string json = $"{{\"id\":{id},\"inputBucket\":\"{USERFILES_BUCKET}\",\"inputKey\":\"{inputKey}\",\"outputBucket\":\"{PUBLISHED_BUCKET}\",\"outputKey\":\"{outputKey}\"}}";
+                string json = $"{{\"id\":{id},\"inputBucket\":\"{USERFILES_BUCKET}\",\"inputKey\":\"{inputKey}\",\"outputBucket\":\"{PUBLISHED_BUCKET}\",\"outputKey\":\"{outputKey}\", \"tags\":{tags}}}";
                 string requestKey = id + ".key";
                 using Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
                 return await UploadFileAsync(stream, true, requestKey, "", false);

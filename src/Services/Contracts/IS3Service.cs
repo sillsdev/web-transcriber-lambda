@@ -17,7 +17,7 @@ namespace SIL.Transcriber.Services
         Task<string> GetFilename(string folder, string filename, bool overwrite = false, string suffix = "");
         Task<S3Response> MakePublic(string fileName, string folder = "", bool userfile = true);
         string GetPublicUrl(string fileName, string folder = "", bool userfile = true);
-        Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey);
+        Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey, string tags);
 
 
 

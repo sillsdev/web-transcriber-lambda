@@ -16,9 +16,17 @@ using TranscriberAPI.Utility.Extensions;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.Extensions.ObjectExtensions;
+using Newtonsoft.Json;
 
 namespace SIL.Transcriber.Services
 {
+    class Tags
+    {
+        public string title = "";
+        public string artist = "";
+        public string album= "";
+        public string cover="";
+    }
 
     public class MediafileService : BaseArchiveService<Mediafile>
     {
@@ -226,62 +234,81 @@ namespace SIL.Transcriber.Services
             string[]? parts = seq?.ToString().Split(".");
             return parts?[0].PadLeft(3, '0') + (parts?.Length > 1 ? "." + parts [1] : "");
         }
-        private string PublishFilename(Mediafile m, string publishTo)
+        private string PublishGraphic(Mediafile m)
         {
-            Passage? p = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
-            
-            string bibleId = PlanRepository.BibleId(m.PlanId);
-            if ((publishTo.Contains("Public") || publishTo.Contains("Beta"))
-                    && bibleId == "") throw new Exception("No BibleId found");
-            string fileName = m.PublishedAs??"";
-            if (fileName == "")
+            Graphic? graphic = null;
+            if (m.PassageId != null)
             {
-                string book = p?.Book ?? "";
-                fileName = $"{book}{PadSeqNum(p?.Section?.Sequencenum)}{PadSeqNum(p?.Sequencenum)}";
-                if (fileName.Length > 0)
-                    fileName += "_";
-                if (p?.StartChapter != null)
+                graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == m.PassageId && g.ResourceType == "passage");
+                if (graphic == null)
                 {
-                    string startChap = p.StartChapter?.ToString().PadLeft(3, '0') ?? "";
-                    string endChap = p.EndChapter?.ToString().PadLeft(3, '0') ?? "";
-                    string startVerse = p.StartVerse?.ToString().PadLeft(3, '0') ?? "";
-                    string endVerse = (p.EndVerse ?? p.StartVerse)?.ToString().PadLeft(3, '0') ?? "";
-                    fileName = startChap == endChap ?
-                        startVerse == endVerse ?
-                            $"{fileName}_c{startChap}_{startVerse}" :
-                            $"{fileName}_c{startChap}_{startVerse}-{endVerse}"
-                        : $"{fileName}_c{startChap}_{startVerse}-c{endChap}_{endVerse}";
-                }
-                else if (p?.Passagetype?.Abbrev == "NOTE")
-                {
-                    Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId);
-                    sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
-                    fileName = (sr?.Title ?? "") != ""
-                        ? $"{fileName}NOTE_{FileName.CleanFileName(sr?.Title ?? "")}"
-                        : $"{fileName}{Path.ChangeExtension(m.OriginalFile, ".mp3")}";
-                }
-                else if (p?.Passagetype?.Abbrev == "CHNUM")
-                {
-                    fileName = $"{fileName}{FileName.CleanFileName(p.Reference??Path.ChangeExtension(m.OriginalFile, ".mp3")??p.Id.ToString())}";
-                }
-                else
-                {
-                    Section? s = dbContext.SectionsData.SingleOrDefault(s => s.TitleMediafileId == m.Id);
-                    if (s != null)
-                    {
-                        fileName = $"{fileName}{FileName.CleanFileName(s.Plan?.Name??"")}{PadSeqNum(s.Sequencenum)}{FileName.CleanFileName(s.Name)}";
-                    }
-                    else if (m.OriginalFile != null)
-                        fileName = $"{fileName}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, ".mp3"))}";
+                    int sectionId = m.Passage?.Id ?? 0;
+                    graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == sectionId && g.ResourceType == "section");
                 }
             }
+            if (graphic == null)
+            {
+                Section? s = dbContext.SectionsData.SingleOrDefault(s => s.TitleMediafileId == m.Id);
+                if (s != null)
+                    graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == s.Id && g.ResourceType == "section");
+            }
+            dynamic? json = JsonConvert.DeserializeObject(graphic?.Info ?? "{}");
+            return json?["512"]?["content"] ?? "";
+        }
+        private string PublishTitle(Mediafile m)
+        {
+            Passage? p = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
+            string book = p?.Book ?? "";
+            string title = $"{book}{PadSeqNum(p?.Section?.Sequencenum)}{PadSeqNum(p?.Sequencenum)}";
+            if (title.Length > 0)
+                title += "_";
+            if (p?.StartChapter != null)
+            {
+                string startChap = p.StartChapter?.ToString().PadLeft(3, '0') ?? "";
+                string endChap = p.EndChapter?.ToString().PadLeft(3, '0') ?? "";
+                string startVerse = p.StartVerse?.ToString().PadLeft(3, '0') ?? "";
+                string endVerse = (p.EndVerse ?? p.StartVerse)?.ToString().PadLeft(3, '0') ?? "";
+                title = startChap == endChap ?
+                    startVerse == endVerse ?
+                        $"{title}_c{startChap}_{startVerse}" :
+                        $"{title}_c{startChap}_{startVerse}-{endVerse}"
+                    : $"{title}_c{startChap}_{startVerse}-c{endChap}_{endVerse}";
+            }
+            else if (p?.Passagetype?.Abbrev == "NOTE")
+            {
+                Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId);
+                sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
+                title = (sr?.Title ?? "") != ""
+                    ? $"{title}NOTE_{FileName.CleanFileName(sr?.Title ?? "")}"
+                    : $"{title}{Path.ChangeExtension(m.OriginalFile, ".mp3")}";
+            }
+            else if (p?.Passagetype?.Abbrev == "CHNUM")
+            {
+                title = $"{title}{FileName.CleanFileName(p.Reference ?? Path.ChangeExtension(m.OriginalFile, ".mp3") ?? p.Id.ToString())}";
+            }
+            else
+            {
+                Section? s = dbContext.SectionsData.SingleOrDefault(s => s.TitleMediafileId == m.Id);
+                if (s != null)
+                {
+                    title = $"{title}{FileName.CleanFileName(s.Plan?.Name ?? "")}{PadSeqNum(s.Sequencenum)}{FileName.CleanFileName(s.Name)}";
+                }
+                else if (m.OriginalFile != null)
+                    title = $"{title}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, ".mp3"))}";
+            }
+            return title.EndsWith(".mp3") ? title.Substring(0, title.Length - 4) : title;
+        }
+        private string PublishFilename(string title, string publishTo, string bibleId)
+        {
+            if ((publishTo.Contains("Public") || publishTo.Contains("Beta"))
+                    && bibleId == "") throw new Exception("No BibleId found");
+            string fileName = title;
 
             if (!fileName.EndsWith(".mp3"))
             {
                 fileName = $"{fileName}.mp3";
             }
             return $"{bibleId}/{fileName}";
-            ;
         }
 
         public async Task<Mediafile?> PublishM(int id, Mediafile m)
@@ -299,10 +326,19 @@ namespace SIL.Transcriber.Services
             {
                 m = await Reload(m);
             }
-            Plan? plan = PlanRepository.GetWithProject(m.PlanId);
-            string outputKey = PublishFilename(m, publishTo);
+            Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+            Bible? bible = PlanRepository.Bible(plan) ?? throw new Exception("no bible");
+            string title =  title =  PublishTitle(m);
+            string outputKey = PublishFilename(title, publishTo, bible.BibleId);
             string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
-            S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey);
+            Tags tags = new()
+            {
+                title = title,
+                artist = m.PerformedBy??"",
+                album = bible.BibleName,
+                cover= PublishGraphic(m),
+            };
+            S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
             if ( response.Status == HttpStatusCode.OK)
             {
                 //load m from this context to prevent update of all orgmem etc...
@@ -322,14 +358,14 @@ namespace SIL.Transcriber.Services
         public Mediafile? GetLatest(int passageId)
         {
             return dbContext.MediafilesData
-                .Where(mf => mf.PassageId == passageId)
+                .Where(mf => mf.PassageId == passageId && !mf.Archived)
                 .OrderByDescending(mf => mf.VersionNumber)
                 .FirstOrDefault();
         }
         public Mediafile? GetLatest(int passageId, int? typeId)
         {
             return dbContext.MediafilesData
-                .Where(mf => mf.PassageId == passageId && mf.ArtifactTypeId == typeId)
+                .Where(mf => mf.PassageId == passageId && mf.ArtifactTypeId == typeId && !mf.Archived)
                 .OrderByDescending(mf => mf.VersionNumber)
                 .FirstOrDefault();
         }
