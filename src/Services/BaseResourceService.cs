@@ -1,4 +1,5 @@
-﻿using SIL.Transcriber.Data;
+﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using System.Net;
 
@@ -19,7 +20,7 @@ public class BaseResourceService
     protected Mediafile CreateMedia(string originalFile, string contentType, string desc, int? passageId, int planId,
                                 int artifacttypeId, string lang, string s3file, string folder, int? artifactcategoryId = null, int? sourceMediaId=null, string? segments= "{}")
     {
-        Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Mediafile> m =
+        EntityEntry<Mediafile> m =
                             DbContext.Mediafiles.Add(new Mediafile
                             {
                                 ContentType = contentType,

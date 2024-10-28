@@ -101,14 +101,14 @@ namespace SIL.Transcriber.Repositories
         public Mediafile? GetLatestShared(int passageId)
         {
             return GetAll()
-                .Where(p => p.PassageId == passageId && p.ReadyToShare)
+                .Where(p => p.PassageId == passageId && p.ReadyToShare && !p.Archived)
                 .OrderBy(m => m.VersionNumber)
                 .LastOrDefault();
         }
         public Mediafile? GetLatestForPassage(int passageId)
         {
             return GetAll()
-                .Where(p => p.PassageId == passageId)
+                .Where(p => p.PassageId == passageId && !p.Archived)
                 .OrderBy(m => m.VersionNumber)
                 .LastOrDefault();
         }
