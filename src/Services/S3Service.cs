@@ -385,6 +385,7 @@ namespace SIL.Transcriber.Services
             }
             catch (AmazonS3Exception e)
             {
+                Logger.LogCritical("UploadFileAsync Error {message} {code} {inner}", e.Message, e.ErrorCode, e.InnerException?.Message);
                 return S3Response(e.Message, e.StatusCode);
             }
             catch (Exception e)

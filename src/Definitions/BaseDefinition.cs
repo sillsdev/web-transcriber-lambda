@@ -59,13 +59,14 @@ namespace SIL.Transcriber.Definitions
                 ? null 
                 : base.OnApplyFilter(existingFilter);
         }
-        public async Task PublishMediafile(WriteOperationKind writeOperation, MediafileService service, string publishTo, int? id)
+        public async Task<Mediafile?> PublishMediafile(WriteOperationKind writeOperation, MediafileService service, string publishTo, int? id)
         {
-            if (writeOperation != WriteOperationKind.DeleteResource &&
+            return writeOperation != WriteOperationKind.DeleteResource &&
                 writeOperation != WriteOperationKind.RemoveFromRelationship &&
                 writeOperation != WriteOperationKind.AddToRelationship &&
-                id != null)
-                _ = await service.Publish((int)id, publishTo);
+                id != null
+                ? await service.Publish((int)id, publishTo)
+                : null;
         }
     }
 }

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace SIL.Transcriber.Controllers;
 [Route("api/[controller]")]
-[ApiController]
 public class BiblebrainbiblesController : BaseController<Biblebrainbible>
 {
     public BiblebrainbiblesController(

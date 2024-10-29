@@ -76,7 +76,7 @@ namespace SIL.Transcriber.Services
                     };
                 return new UserSecret { ParatextTokens = newPTTokens };
             }
-            Logger.LogInformation("Paratext Login - no connection");
+            Logger.LogCritical("Paratext Login - no connection");
             return null;
         }
 
@@ -94,7 +94,7 @@ namespace SIL.Transcriber.Services
                     };
                 return new UserSecret { ParatextTokens = newPTTokens };
             }
-            Logger.LogInformation("Paratext Login - no connection");
+            Logger.LogCritical("Paratext Login - no connection");
             return null;
         }
 
