@@ -17,6 +17,7 @@ using static SIL.Transcriber.Utility.ResourceHelpers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.Extensions.ObjectExtensions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Services
 {
@@ -91,7 +92,32 @@ namespace SIL.Transcriber.Services
         public Mediafile? GetFromFile(int plan, string s3File)
         {
             IEnumerable<Mediafile> files = MyRepository.Get(); //bypass user check
-            return files.SingleOrDefault(p => p.S3File == s3File && p.PlanId == plan);
+            return files.FirstOrDefault(p => p.S3File == s3File && p.PlanId == plan && !p.Archived);
+        }
+        //This has only been tested with resource files.  Their segments are in a different format than other mediafiles
+        public Mediafile? GetFromFile(int plan, string s3File, string segments)
+        {
+            IEnumerable<Mediafile> files = MyRepository.Get(); //bypass user check
+            dynamic? s = JsonConvert.DeserializeObject(segments);
+            if (s is null or not JArray)
+                return GetFromFile(plan, s3File);
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            dynamic? start = s[0].regionInfo?[0]?.start;
+            dynamic? end = s[0].regionInfo?[0]?.end;
+            IEnumerable<Mediafile> resources = files.Where(p => p.S3File == s3File && p.PlanId == plan && !p.Archived);
+            foreach (Mediafile item in resources)
+            {
+                if (item.Segments != null)
+                {
+                    dynamic? i =  JsonConvert.DeserializeObject(item.Segments);
+                    if (i is null or not JArray)
+                        continue;
+                    if (i[0].regionInfo is JArray && i[0].regionInfo[0]?.start == start && i[0].regionInfo[0]?.end == end)
+                        return item;
+                }
+            }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+            return null;
         }
         public IEnumerable<Mediafile>? WBTUpdate()
         {
@@ -121,7 +147,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<string> GetNewFileNameAsync(Mediafile mf, string suffix = "")
         {
-            return await S3service.GetFilename(DirectoryName(mf), mf.OriginalFile??"", mf.SourceMedia != null, suffix);
+            return await S3service.GetFilename(DirectoryName(mf), mf.OriginalFile ?? "", (mf.S3Folder??"") != "" || mf.SourceMedia != null, suffix);
         }
 
         public IEnumerable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId)

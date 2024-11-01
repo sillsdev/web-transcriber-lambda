@@ -2,10 +2,9 @@
 using SIL.Transcriber.Models;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.Extensions.UriExtensions;
+using static SIL.Transcriber.Utility.HttpContextHelpers;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Utility;
-using Newtonsoft.Json.Linq;
-
 
 namespace SIL.Transcriber.Services;
 
@@ -21,39 +20,6 @@ public class BiblebrainPost
     public bool Passages { get; set; } = false;
     public string Scope { get; set; } = "";
 }
-#pragma warning disable IDE1006 // Naming Styles
-public class TimingData
-{
-    public string book { get; set; } = "";
-    public string chapter { get; set; } = "";
-    public string verse_start { get; set; } = "";
-    public string verse_start_alt { get; set; } = "";
-    public double timestamp { get; set; } = 0;
-}
-public class Region
-{
-    public double start { get; set; } = 0;
-    public double end { get; set; } = 0;
-}
-public class RegionInfo
-{
-    public Region [] regions { get; set; } = Array.Empty<Region>();
-}
-public class Segment
-{
-    public string name { get; set; } = "";
-    public Region[] regionInfo { get; set; } = Array.Empty<Region>();
-}
-#pragma warning restore IDE1006 // Naming Styles
-public class GeneralResource
-{
-    public List<TimingData>Timing { get; set; }  = new();
-    public int MediafileId { get; set; }
-    public string FileName { get; set; } = "";
-    public string ContentType { get; set; } = "";
-    public double Duration { get; set; }
-}
-
 
 public class BibleBrainService : BaseResourceService
 {
@@ -62,12 +28,15 @@ public class BibleBrainService : BaseResourceService
     private readonly HttpClient _client = new() { BaseAddress = new Uri(Domain) };
     private static string _key = GetVarOrThrow("SIL_TR_BIBLEBRAIN");
     readonly private HttpContext? HttpContext;
+    readonly private ISQSService _SQSService;
     public BibleBrainService(
        IHttpContextAccessor httpContextAccessor,
        AppDbContextResolver contextResolver,
-       IS3Service s3Service) : base(contextResolver, s3Service)
+       ISQSService sqsService,
+    IS3Service s3Service) : base(contextResolver, s3Service)
     {
         HttpContext = httpContextAccessor.HttpContext;
+        _SQSService = sqsService;
     }
     private static List<(string Name, string Value)> AddParam(List<(string Name, string Value)> p, string Name, string? Value)
     {
@@ -141,6 +110,11 @@ public class BibleBrainService : BaseResourceService
         dynamic? stuff = JsonConvert.DeserializeObject(fscr);
         return stuff?.copyright.copyright ?? "Unable to get copyright info";
     }
+
+    public async Task<int> GetMessageCount()
+    {
+        return await _SQSService.BBMessageCount();
+    }
     public async Task<string> GetCopyright(string bibleid, string testament, bool timing)
     {
         return await GetCopyright(CalcFileset(bibleid, testament, timing));
@@ -159,96 +133,47 @@ public class BibleBrainService : BaseResourceService
         }
         return contentType;
     }
-    private async Task<GeneralResource> CreateGeneralResource(Biblebrainfileset fileset, string book, int chapter, int planId, string lang, string desc, int artifactTypeId, int? artifactCategoryId)
-    {
-        GeneralResource gr = new();
-        string fs = await DoApiCall($"bibles/filesets/{fileset.FilesetId}/{book}/{chapter}", null);
-        dynamic? stuff = JsonConvert.DeserializeObject(fs);
-        if (stuff != null)
-        {
-            //upload files(s) to our folder
-            JArray x = stuff.data;
-            JToken data = x[0];
-            string url = data["path"]?.ToString()??"";
-            gr.Duration = (double)(data ["duration"] ?? 0);
-            gr.ContentType = ContentType(fileset, url);
-            gr.FileName = await UrlToS3(url, Folder);
-            //create general resource mediafile
-            Mediafile m = CreateMedia(gr.FileName, gr.ContentType, desc, null, planId, artifactTypeId,lang, gr.FileName, Folder, artifactCategoryId);
-            gr.MediafileId = m.Id;
-            //get timing file for this fileset
-            fs = await DoApiCall($"timestamps/{fileset.FilesetId}/{book}/{chapter}", null);
-            stuff = JsonConvert.DeserializeObject(fs);
-            if (stuff != null)
-            {
-                //upload files(s) to our folder
-                gr.Timing = stuff.data.ToObject<List<TimingData>>();
-            }
-        }
-        return gr;
-    }
-    private static string Segments(double start, double end)
-    {
-        //[{ "name": "ProjRes", "regionInfo": "[{\"start\":428.6,\"end\":471.4}]"}]
-        //[{"name": "ProjRes", "regionInfo": "{\"regions\":\"[{\\\"start\\\":13.572532580196208,\\\"end\\\":25.624781413788742},{\\\"start\\\":0,\\\"end\\\":13.572532580196208},{\\\"start\\\":25.624781413788742,\\\"end\\\":192.936}]\"}"}]
-        Region r = new ()
-        {
-            start = start,
-            end = end
-        };
-        Region[] value = { r };
-        /*
-        RegionInfo ri = new()
-        {
-            regions = value
-        }; */
-        Segment seg = new ()
-        {
-            name = "ProjRes",
-            regionInfo = value
-        };
-        Segment [] segArray = { seg };
-        return JsonConvert.SerializeObject(segArray);
-    }
-    private static double [] GetStartEnd (Passage p, List<TimingData> timing, double duration, int chapter)
-    {
-        int? startv = p.StartChapter == chapter ? p.StartVerse : 1;
-        int? endv = p.EndChapter == chapter ? p.EndVerse : 1000;
-
-        TimingData? startt =  timing.Find(t => t.verse_start == startv.ToString());
-        TimingData? endt = timing.Find(t => t.verse_start == (endv+1).ToString());
-        double [] ret = { startt?.timestamp??0, endt?.timestamp??duration };
-        return ret;
-    }
-    private static string CalcDesc(Passage startp, Passage lastp, string desc, int chapter)
+    private static int[] CalcStartEnd(Passage startp, Passage lastp, int chapter)
     {
         int startverse = startp.StartChapter == chapter ? (startp.StartVerse??1) : 1;
         int endverse = lastp.EndChapter == chapter ? lastp.EndVerse??-1 : -1;
+        int[] myArray = {startverse, endverse};
+        return myArray;
+    }
+    private static string CalcDesc(int startverse, int endverse, string desc, int chapter)
+    {
         string end = endverse == -1 ?  "-Ω" : startverse == endverse ? "" : $"-{endverse}";
         return $"{desc} {chapter}:{startverse}{end}";
     }
-    public async Task<string> Post(BiblebrainPost post)
+    private string CreateGeneralResourceRequest(Biblebrainfileset fileset, string book, int chapter, int planId, string lang, string desc, int artifactTypeId, int? artifactCategoryId, string token)
     {
-        List<int> mediaids = new();
-        List<int> srids = new();
+        return _SQSService.SendBBGeneralMessage(fileset.FilesetId, fileset.Codec, book, chapter, planId, lang, desc, artifactTypeId, artifactCategoryId, token);
+    }
+    private string CreateResourceRequest(Biblebrainfileset fileset, string book, int chapter, int? psgId, int sectionId, int planId, string lang, string desc, int startverse, int endverse, int seq, int artifactTypeId, int? artifactCategoryId, int orgWorkflowStepId, string token)
+    {
+        return _SQSService.SendBBResourceMessage(fileset.FilesetId,book, chapter, psgId, sectionId, planId, lang, desc, startverse, endverse, seq, artifactTypeId, artifactCategoryId, orgWorkflowStepId, token);
+    }
+    public async Task<int> Post(BiblebrainPost post)
+    {
         Passage passage = DbContext.PassagesData.Where(p => p.Id == post.PassageId).FirstOrDefault() ?? throw new Exception("No Passage");
         int sectionId = (post.SectionId ?? passage?.SectionId) ?? throw new Exception("No SectionId");
         string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
         HttpContext?.SetFP("biblebrain");
 
         Section? section = DbContext.SectionsData.Where(s => s.Id == sectionId).FirstOrDefault();
-        Artifacttype? artifacttype = DbContext.Artifacttypes.Where(a => a.Typename == (post.Timing ? "resource" : "projectresource") && !a.Archived).FirstOrDefault();
+        Artifacttype? grartifacttype = DbContext.Artifacttypes.Where(a => a.Typename == (post.Timing ? "resource" : "projectresource") && !a.Archived).FirstOrDefault();
+        Artifacttype ? artifacttype = DbContext.Artifacttypes.Where(a => a.Typename == "resource" && !a.Archived).FirstOrDefault();
         Artifactcategory? artifactcategory = DbContext.Artifactcategorys.Where(c => c.Categoryname == "scripture" && !c.Archived).FirstOrDefault();
         int lastseq = DbContext.Sectionresources.Where(sr => sr.SectionId == sectionId).OrderByDescending(sr => sr.SequenceNum).FirstOrDefault()?.SequenceNum ?? 0;
         //get filesets with timing for this bibleid
         Biblebrainbible? bible = DbContext.BibleBrainBibles.Where(b => b.BibleId == post.Bibleid).FirstOrDefault();
-        Biblebrainfileset? fileset = CalcFileset(post.Bibleid, post.NT ? "NT" : "OT", post.Timing);
-        if (fileset == null)
-            return "no fileset";
-        if (passage == null)
-            return "no passage";
-        int planId = section?.PlanId ?? 0;
+        Biblebrainfileset? fileset = CalcFileset(post.Bibleid, post.NT ? "NT" : "OT", post.Timing) ?? throw new Exception("no fileset");
 
+        int planId = section?.PlanId ?? 0;
+        string token = HttpContext != null ? await HttpContextHelpers.GetJWT(HttpContext) : "notoken";
+        if (passage == null) //already threw above
+            return 0;
+        string book = passage.Book ?? "";
         //not handling movements
         IQueryable<Passage> passages = post.Scope switch
         {
@@ -262,67 +187,52 @@ public class BibleBrainService : BaseResourceService
                                                     .OrderBy(p => p.StartChapter).ThenBy(p => p.StartVerse),
             _ => DbContext.PassagesData.Where(p => p.Id == 0),
         };
-        ;
+        int count = 0;
         List<int> sectionids = new();
         List<Passage> psgs = passages.ToList();
-        int chapter = 0;
         string desc = bible?.BibleName??post.Bibleid;
         string lang = bible?.Iso??"eng";
-        GeneralResource generalresource = new();
-        TimingData[] timing = Array.Empty<TimingData>();
+
+        IEnumerable<int> schapters = psgs.Select(p => p.StartChapter??0).Distinct();
+        IEnumerable<int> echapters = psgs.Select(p => p.EndChapter??0).Distinct();
+        List<int> allChapters = schapters.Concat(echapters).Distinct().Where(c => c != 0).ToList();
+        foreach (int chapter in allChapters)
+        {
+            count++;
+            string id = CreateGeneralResourceRequest(fileset, book, chapter, planId, lang, desc, grartifacttype?.Id ?? 0, artifactcategory?.Id, token);
+        }
+        if (!post.Timing)
+            return count;
         for (int ix =  0; ix < psgs.Count; ix++)
         {
             Passage ps = psgs[ix];
-            for (int chap = ps.StartChapter ?? 1; chap <= (ps.EndChapter ?? 1); chap++)
+            for (int chapter = ps.StartChapter ?? 1; chapter <= (ps.EndChapter ?? 1); chapter++)
             {
-                if (chap != chapter)
+                if (post.Passages)
                 {
-                    chapter = chap;
-                    generalresource = await CreateGeneralResource(fileset, ps.Book ?? "", chapter, planId, lang, desc, artifacttype?.Id ?? 0, artifactcategory?.Id);
-                    mediaids.Add(generalresource.MediafileId);
-                    if (!post.Timing)
-                    {
-                        //make it a general resource somehow...
-                        Console.WriteLine("TODO");
-                    }
+                    int[] se = CalcStartEnd(ps, ps, chapter);
+                    string mydesc = CalcDesc(se[0], se[1], desc, chapter);
+                    string pid = CreateResourceRequest(fileset, book, chapter, ps.Id, ps.SectionId, planId, lang, mydesc, se[0], se[1],  ++lastseq, artifacttype?.Id ?? 0, artifactcategory?.Id,  post.OrgWorkflowStep, token);
+                    count++;
                 }
-                if (post.Timing)
+                if (post.Sections && sectionids.FindIndex(s => s == ps.SectionId) == -1)
                 {
-                    if (post.Passages)
+                    List<Passage> mypsgs = passages.Where(p => p.SectionId == ps.SectionId && (p.StartChapter == chapter || p.EndChapter == chapter)).ToList();
+                    if (mypsgs.Count > 1 || !post.Passages)
                     {
-                        string mydesc = CalcDesc(ps, ps, desc, chapter);
-                        double [] times = GetStartEnd(ps, generalresource.Timing, generalresource.Duration, chapter);
-                        string segments = Segments(times[0], times[1]);
-                        Mediafile m = CreateMedia(generalresource.FileName, generalresource.ContentType, mydesc, ps.Id, planId, artifacttype?.Id ?? 0, lang, generalresource.FileName, Folder, artifactcategory?.Id, generalresource.MediafileId, segments);
-                        mediaids.Add(m.Id);
-                        srids.Add(CreateSR(mydesc, ++lastseq, m.Id, ps.SectionId, ps.Id, post.OrgWorkflowStep).Id);
-                    }
-                    if (post.Sections && sectionids.FindIndex(s => s == ps.SectionId) == -1)
-                    {
-                        List<Passage> mypsgs = passages.Where(p => p.SectionId == ps.SectionId && (p.StartChapter == chapter || p.EndChapter == chapter)).ToList();
-                        if (mypsgs.Count > 1 || !post.Passages)
-                        {
                             
-                            Passage startp = mypsgs.First();
-                            Passage lastp = mypsgs.Last();
-                            string mydesc = CalcDesc(startp, lastp, desc, chapter);
-                            double [] startv = GetStartEnd(startp, generalresource.Timing, generalresource.Duration, chapter);
-                            double [] endv = GetStartEnd(lastp, generalresource.Timing, generalresource.Duration, chapter);
-                            string segments = Segments(startv[0], endv[1]);
-                            Mediafile m = CreateMedia(generalresource.FileName, generalresource.ContentType, mydesc, null, planId, artifacttype?.Id ?? 0, lang, generalresource.FileName, Folder, artifactcategory?.Id, generalresource.MediafileId,segments);
-                            mediaids.Add(m.Id);
-                            srids.Add(CreateSR(mydesc, ++lastseq, m.Id, ps.SectionId, null, post.OrgWorkflowStep).Id);
-                            sectionids.Add(ps.SectionId);
-                        }
+                        Passage startp = mypsgs.First();
+                        Passage lastp = mypsgs.Last();
+                        int[] se = CalcStartEnd(startp, lastp, chapter);
+                        string mydesc = CalcDesc(se[0], se[1], desc, chapter);
+                        string sid = CreateResourceRequest(fileset, book, chapter, null, ps.SectionId, planId, lang, mydesc, se[0], se[1],  ++lastseq,artifacttype?.Id ?? 0, artifactcategory?.Id,  post.OrgWorkflowStep, token);
+                        sectionids.Add(ps.SectionId);
+                        count++;
                     }
                 }
             }
         }
         HttpContext?.SetFP(fp);
-        OrbitId[] ret = {
-            new("mediafile", mediaids),
-            new("sectionresource", srids)};
-
-        return JsonConvert.SerializeObject(ret);
+        return count;
     }
 }

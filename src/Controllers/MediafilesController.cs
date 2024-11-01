@@ -53,7 +53,17 @@ namespace SIL.Transcriber.Controllers
             Mediafile? response = _service.GetFromFile(plan, s3File);
             return response == null ? NotFound() : Ok(response);
         }
-
+        [AllowAnonymous]
+        [HttpGet("fromfile/{plan}/{s3File}/{segments}")]
+        public IActionResult GetFromFileSegments(
+            [FromRoute] int plan,
+            [FromRoute] string s3File,
+            [FromRoute] string segments
+)
+        {
+            Mediafile? response = _service.GetFromFile(plan, s3File, segments);
+            return response == null ? NotFound() : Ok(response);
+        }
 
         [Authorize]
         [HttpGet("{id}/fileurl")]

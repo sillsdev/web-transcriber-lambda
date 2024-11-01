@@ -20,6 +20,11 @@ public class BiblebrainController : Controller
     {
         return await _bibleBrainService.GetCopyright(bibleid, Size, timing);
     }
+    [HttpGet("count")]
+    public async Task<int> GetMessageCount()
+    {
+        return await _bibleBrainService.GetMessageCount();
+    }
     /*
     [HttpGet("languages")]
     public async Task<string> GetLanguages([FromQuery] string country,
@@ -50,7 +55,7 @@ public class BiblebrainController : Controller
     */
 
     [HttpPost]
-    public async Task<string> Post([FromBody] BiblebrainPost content)
+    public async Task<int> Post([FromBody] BiblebrainPost content)
     {
         Console.WriteLine(content);
         //return content?.ToString()??"Null";
