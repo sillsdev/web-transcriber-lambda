@@ -44,6 +44,7 @@ provider:
     ASPNETCORE_ENVIRONMENT: ${file(./serverless.env.yml):${self:custom.myStage}.ASPNETCORE_ENVIRONMENT}
     SIL_TR_EXPORT_QUEUE:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EXPORT_QUEUE}
     SIL_TR_BIBLEBRAIN:  ${file(./serverless.env.yml):xxx.SIL_TR_BIBLEBRAIN}
+    SIL_TR_BIBLEBRAIN_QUEUE:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_BIBLEBRAIN_QUEUE}
     SIL_TR_AQUIFER:  ${file(./serverless.env.yml):xxx.SIL_TR_AQUIFER}
     SIL_TR_AQUA_PASSWORD: ${file(./serverless.env.yml):xxx.SIL_TR_AQUA_PASSWORD}
 

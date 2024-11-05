@@ -120,14 +120,18 @@ namespace SIL.Transcriber.Repositories
         }
         public string BibleId(Plan plan)
         {
+            return Bible(plan)?.BibleId ?? "";
+        }
+        public Bible? Bible(Plan plan)
+        {
             if (plan.Project?.OrganizationId != null)
             {
                 Organizationbible? orgb = dbContext.OrganizationbiblesData
                 .SingleOrDefault(o => o.OrganizationId == plan.Project.OrganizationId);
                 if (orgb != null)
-                    return orgb.Bible.BibleId;
+                    return orgb.Bible;
             }
-            return "";
+            return null;
         }
     }
 }

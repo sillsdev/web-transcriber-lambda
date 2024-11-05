@@ -45,7 +45,7 @@ public class BaseResourceService
     }
     protected Sectionresource CreateSR(string desc, int seq, int mediafileId, int sectionId, int? passageId, int orgWorkflowStepId)
     {
-        Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Sectionresource> sr =
+        EntityEntry<Sectionresource> sr =
             DbContext.Sectionresources.Add(new Sectionresource
             {
                 Description = desc,
