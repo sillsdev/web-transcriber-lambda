@@ -265,11 +265,8 @@ namespace SIL.Transcriber.Repositories
             }
             return title.EndsWith(".mp3") ? title.Substring(0, title.Length - 4) : title;
         }
-        private static string PublishFilename(string title, string publishTo, string bibleId)
+        private static string PublishFilename(string title, string bibleId)
         {
-            if ((publishTo.Contains("Public") || publishTo.Contains("Beta"))
-                    && bibleId == "")
-                throw new Exception("No BibleId found");
             string fileName = title;
 
             if (!fileName.EndsWith(".mp3"))
@@ -307,30 +304,41 @@ namespace SIL.Transcriber.Repositories
             {
                 return null;
             }
-            Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
-            Bible? bible = PlanRepository.Bible(plan) ?? throw new Exception("no bible");
-            string title =  PublishTitle(m);
-            string outputKey = PublishFilename(title, publishTo, bible.BibleId);
-            string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
-            Tags tags = new()
+            if (PublishToAkuo(publishTo))
             {
-                title = title,
-                artist = m.PerformedBy??"",
-                album = bible.BibleName,
-                cover= PublishGraphic(m),
-            }; 
-            S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
-            Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
-            if (response.Status == HttpStatusCode.OK)
-            {
-                m.PublishedAs = outputKey;
+                Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+                Bible? bible = PlanRepository.Bible(plan) ?? throw new Exception("no bible");
+                string title =  PublishTitle(m);
+                string outputKey = PublishFilename(title, bible.BibleId);
+                string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
+                Tags tags = new()
+                {
+                    title = title,
+                    artist = m.PerformedBy??"",
+                    album = bible.BibleName,
+                    cover= PublishGraphic(m),
+                };
+                S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
+                Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
+                if (response.Status == HttpStatusCode.OK)
+                {
+                    m.PublishedAs = outputKey;
+                    m.ReadyToShare = true;
+                    m.PublishTo = publishTo;
+                    dbContext.Mediafiles.Update(m);
+                    if (doSave)
+                        dbContext.SaveChanges();
+                }
+            }
+            else if (!m.ReadyToShare || m.PublishTo != publishTo)
+            { 
                 m.ReadyToShare = true;
                 m.PublishTo = publishTo;
                 dbContext.Mediafiles.Update(m);
-                if (doSave) dbContext.SaveChanges();
+                if (doSave)
+                    dbContext.SaveChanges();
             }
             return m;
         }
-
     }
 }
