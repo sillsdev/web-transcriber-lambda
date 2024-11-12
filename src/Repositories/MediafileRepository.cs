@@ -1,4 +1,5 @@
-﻿using JsonApiDotNetCore.Configuration;
+﻿using Amazon.SimpleEmail.Model;
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility;
 using System.Net;
+using static SIL.Transcriber.Utility.HttpContextHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -16,8 +18,9 @@ namespace SIL.Transcriber.Repositories
         readonly private PlanRepository PlanRepository;
         readonly private ProjectRepository ProjectRepository;
         readonly private IS3Service S3service;
-
+        readonly private HttpContext? HttpContext;
         public MediafileRepository(
+            IHttpContextAccessor httpContextAccessor,
             ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph,
@@ -44,6 +47,7 @@ namespace SIL.Transcriber.Repositories
             PlanRepository = planRepository;
             ProjectRepository = projectRepository;
             S3service = service;
+            HttpContext = httpContextAccessor.HttpContext;
         }
 
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, int project)
@@ -222,24 +226,27 @@ namespace SIL.Transcriber.Repositories
             string[]? parts = seq?.ToString().Split(".");
             return parts?[0].PadLeft(3, '0') + (parts?.Length > 1 ? "." + parts[1] : "");
         }
-        private string PublishTitle(Mediafile m)
+        private string PublishTitle(Mediafile m, Passage? p, bool pretty)
         {
-            Passage? p = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
             string book = p?.Book ?? "";
-            string title = $"{book}{PadSeqNum(p?.Section?.Sequencenum)}{PadSeqNum(p?.Sequencenum)}";
+            string title = book;
+            if (!pretty)
+                title += $"{PadSeqNum(p?.Section?.Sequencenum)}{PadSeqNum(p?.Sequencenum)}";
             if (title.Length > 0)
-                title += "_";
+                title += pretty ? " " : "_";
             if (p?.StartChapter != null)
             {
+                string separator =  pretty ? " " : "_";
+                string chapsep = pretty ? ":" : "_";
                 string startChap = p.StartChapter?.ToString().PadLeft(3, '0') ?? "";
                 string endChap = p.EndChapter?.ToString().PadLeft(3, '0') ?? "";
                 string startVerse = p.StartVerse?.ToString().PadLeft(3, '0') ?? "";
                 string endVerse = (p.EndVerse ?? p.StartVerse)?.ToString().PadLeft(3, '0') ?? "";
                 title = startChap == endChap ?
                     startVerse == endVerse ?
-                        $"{title}_c{startChap}_{startVerse}" :
-                        $"{title}_c{startChap}_{startVerse}-{endVerse}"
-                    : $"{title}_c{startChap}_{startVerse}-c{endChap}_{endVerse}";
+                        $"{title}c{startChap}{chapsep}{startVerse}" :
+                        $"{title}c{startChap}{chapsep}{startVerse}-{endVerse}"
+                    : $"{title}c{startChap}{chapsep}{startVerse}-c{endChap}{chapsep}{endVerse}";
             }
             else if (p?.Passagetype?.Abbrev == "NOTE")
             {
@@ -263,7 +270,7 @@ namespace SIL.Transcriber.Repositories
                 else if (m.OriginalFile != null)
                     title = $"{title}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, ".mp3"))}";
             }
-            return title.EndsWith(".mp3") ? title.Substring(0, title.Length - 4) : title;
+            return title.EndsWith(".mp3") ? title[..^4] : title;
         }
         private static string PublishFilename(string title, string bibleId)
         {
@@ -283,7 +290,7 @@ namespace SIL.Transcriber.Repositories
                 graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == m.PassageId && g.ResourceType == "passage");
                 if (graphic == null)
                 {
-                    int sectionId = m.Passage?.Id ?? 0;
+                    int sectionId = m.Passage?.SectionId ?? 0;
                     graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == sectionId && g.ResourceType == "section");
                 }
             }
@@ -296,7 +303,69 @@ namespace SIL.Transcriber.Repositories
             dynamic? json = JsonConvert.DeserializeObject(graphic?.Info ?? "{}");
             return json?["512"]?["content"] ?? "";
         }
-
+        private Sharedresource? GetSharedResource(Passage p)
+        {
+            Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId);
+            sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
+            return sr;
+        }
+        private static bool PublishAsSharedResource(string publishTo)
+        {
+            return publishTo.Contains("Internalization");
+        }
+        public Sharedresource? CreateSharedResource(Mediafile m, Passage p)
+        {
+            string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
+            HttpContext?.SetFP("publish");
+            Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+            Artifactcategory? ac = dbContext.ArtifactcategoriesData.SingleOrDefault(ac => !ac.Archived && ac.OrganizationId == null && ac.Categoryname == (p.Passagetype == null ? "scripture" : "translationresource"));
+            Sharedresource sr = new ()
+            {
+                PassageId = m.PassageId,
+                Title = PublishTitle(m, p, true),
+                Description = "",
+                Languagebcp47 = $"{plan.Project.LanguageName??""}|{plan.Project.Language}",
+                ArtifactCategoryId = ac?.Id,
+                Note = p.PassagetypeId != null,
+            };
+            dbContext.Sharedresources.Add(sr);
+            dbContext.SaveChanges();
+            Sharedresourcereference srr = new ()
+            {
+                SharedResourceId = sr.Id,
+                Book = p.Book ?? "",
+            };
+            string verses = "";
+            if (p.StartChapter != null)
+            {
+                srr.Chapter = (int)p.StartChapter;
+                if (p.StartChapter == p.EndChapter)
+                {
+                    for (int ix = p.StartVerse ?? 0; ix <= (p.EndVerse ?? -1);  ix++)
+                        verses += ix.ToString() + ",";
+                    srr.Verses = verses[..^1];
+                    dbContext.Sharedresourcereferences.Add(srr);
+                }
+                else
+                {
+                    srr.Verses = p.StartVerse?.ToString() ?? "";
+                    dbContext.Sharedresourcereferences.Add(srr);
+                    Sharedresourcereference srr2 = new ()
+                    {
+                        SharedResourceId = sr.Id,
+                        Book = p.Book ?? "",
+                        Chapter = p.EndChapter??0,
+                    };
+                    for (int ix = 1; ix <= (p.EndVerse ?? -1); ix++)
+                        verses += ix.ToString() + ",";
+                    srr2.Verses = verses[..^1];
+                    dbContext.Sharedresourcereferences.Add(srr2);
+                }
+            }
+            dbContext.SaveChanges();
+            HttpContext?.SetFP(fp);
+            return sr;
+        }
         public async Task<Mediafile?> Publish(int id, string publishTo, bool doSave)
         {
             Mediafile? m = Get(id);
@@ -304,11 +373,12 @@ namespace SIL.Transcriber.Repositories
             {
                 return null;
             }
+            Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
             if (PublishToAkuo(publishTo))
             {
                 Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
                 Bible? bible = PlanRepository.Bible(plan) ?? throw new Exception("no bible");
-                string title =  PublishTitle(m);
+                string title =  PublishTitle(m,passage, false);
                 string outputKey = PublishFilename(title, bible.BibleId);
                 string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
                 Tags tags = new()
@@ -330,8 +400,14 @@ namespace SIL.Transcriber.Repositories
                         dbContext.SaveChanges();
                 }
             }
-            else if (!m.ReadyToShare || m.PublishTo != publishTo)
-            { 
+            if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
+            {
+                Sharedresource? sr = GetSharedResource(passage);
+                if (sr == null)
+                    _ = CreateSharedResource(m, passage);
+            }
+            if (!m.ReadyToShare || m.PublishTo != publishTo)
+            {
                 m.ReadyToShare = true;
                 m.PublishTo = publishTo;
                 dbContext.Mediafiles.Update(m);

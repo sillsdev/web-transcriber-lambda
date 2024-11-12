@@ -5,6 +5,7 @@ using static SIL.Transcriber.Utility.Extensions.UriExtensions;
 using static SIL.Transcriber.Utility.HttpContextHelpers;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Utility;
+using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Services;
 
@@ -102,13 +103,14 @@ public class BibleBrainService : BaseResourceService
 
     public async Task<string> GetCopyright(Biblebrainfileset? fs)
     {
+
         if (fs == null)
             return "";
         List <(string Name, string Value)> p = new();
         string fscr = await DoApiCall($"bibles/filesets/{fs.FilesetId}/copyright", p);
         //array of {id, type, size, copyright}
         dynamic? stuff = JsonConvert.DeserializeObject(fscr);
-        return stuff?.copyright.copyright ?? "Unable to get copyright info";
+        return stuff?.copyright?.GetType() == typeof(JObject) ? stuff?.copyright?.copyright??"" : "";
     }
 
     public async Task<int> GetMessageCount()
