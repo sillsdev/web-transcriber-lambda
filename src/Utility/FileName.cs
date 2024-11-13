@@ -1,4 +1,6 @@
-﻿namespace SIL.Transcriber.Utility;
+﻿using System.Text.RegularExpressions;
+
+namespace SIL.Transcriber.Utility;
 
 public static class FileName
 {
@@ -10,10 +12,8 @@ public static class FileName
     /// </remarks>
     public static string CleanFileName(string filename)
     {
-        string invalidChars = System.Text.RegularExpressions.Regex.Escape(
-                new string(Path.GetInvalidFileNameChars()) + "'()"
-            );
-        string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);
+        string invalidChars = Regex.Escape(
+               new string(Path.GetInvalidFileNameChars()));
 
         string[] reservedWords = new[]
             {
@@ -44,8 +44,14 @@ public static class FileName
                 "LPT9"
             };
 
-        string sanitizedName = System.Text.RegularExpressions.Regex.Replace(
+        string sanitizedName = Regex.Replace(
                 filename,
+                @"['()*?/<\[\]\\,""| ]+",
+                "_"
+            );
+        string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);
+        sanitizedName = Regex.Replace(
+                sanitizedName,
                 invalidReStr,
                 "_"
             );
@@ -55,11 +61,11 @@ public static class FileName
         foreach (string reservedWord in reservedWords)
         {
             string reservedWordPattern = string.Format("^{0}(\\.|$)", reservedWord);
-            sanitizedName = System.Text.RegularExpressions.Regex.Replace(
+            sanitizedName = Regex.Replace(
                 sanitizedName,
                 reservedWordPattern,
                 "_reservedWord_$1",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                RegexOptions.IgnoreCase
             );
         }
 
