@@ -251,7 +251,7 @@ namespace SIL.Transcriber.Repositories
             else if (p?.Passagetype?.Abbrev == "NOTE")
             {
                 Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId);
-                sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
+                sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id && !sr.Archived);
                 title = (sr?.Title ?? "") != ""
                     ? $"{title}NOTE_{FileName.CleanFileName(sr?.Title ?? "")}"
                     : $"{title}{Path.ChangeExtension(m.OriginalFile, ".mp3")}";
@@ -270,7 +270,7 @@ namespace SIL.Transcriber.Repositories
                 else if (m.OriginalFile != null)
                     title = $"{title}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, ".mp3"))}";
             }
-            return title.EndsWith(".mp3") ? title[..^4] : title;
+            return FileName.CleanFileName(title.EndsWith(".mp3") ? title[..^4] : title);
         }
         private static string PublishFilename(string title, string bibleId)
         {
@@ -318,7 +318,9 @@ namespace SIL.Transcriber.Repositories
             string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
             HttpContext?.SetFP("publish");
             Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
-            Artifactcategory? ac = dbContext.ArtifactcategoriesData.SingleOrDefault(ac => !ac.Archived && ac.OrganizationId == null && ac.Categoryname == (p.Passagetype == null ? "scripture" : "translationresource"));
+            Artifactcategory? ac = null;
+            if (p.Passagetype == null)
+                ac = dbContext.ArtifactcategoriesData.SingleOrDefault(ac => !ac.Archived && ac.OrganizationId == null && ac.Categoryname == "scripture");
             Sharedresource sr = new ()
             {
                 PassageId = m.PassageId,
