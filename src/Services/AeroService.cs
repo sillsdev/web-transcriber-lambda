@@ -3,12 +3,13 @@ using SIL.Transcriber.Models;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using System.Text;
 
 namespace SIL.Transcriber.Services;
 
 public class AeroService : BaseResourceService
 {
-    private const string Domain = "https://aero-async.multilingualai.com";
+    private const string Domain = "https://aero-async-dev.multilingualai.com";
     readonly private HttpContext? HttpContext;
 
     public AeroService(
@@ -22,15 +23,15 @@ public class AeroService : BaseResourceService
     private static async Task<string> GetToken()
     {
         using HttpClient httpClient = new();
-        using (MultipartFormDataContent content = new ())
+        using MultipartFormDataContent content = new()
         {
             // Add username and password as string content
-            content.Add(new StringContent("user_apm"), "username");
-            content.Add(new StringContent(GetVarOrThrow("SIL_TR_AQUA_PASSWORD")), "password");
-            HttpResponseMessage response = await httpClient.PostAsync($"{Domain}/token", content);
-            dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
-            return x?["access_token"]??"";
-        }
+            { new StringContent("user_apm"), "username" },
+            { new StringContent(GetVarOrThrow("SIL_TR_AQUA_PASSWORD")), "password" }
+        };
+        HttpResponseMessage response = await httpClient.PostAsync($"{Domain}/token", content);
+        dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
+        return x?["access_token"] ?? "";
     }
     private static async Task<HttpClient> Httpclient() {
         string token = await GetToken();

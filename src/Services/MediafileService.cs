@@ -378,10 +378,17 @@ namespace SIL.Transcriber.Services
             Mediafile? mf = MyRepository.Get(id);
             if (mf == null)
                 return ret;
+            string nextVers="";
+            if (mf.PassageId != null)
+            {
+                Mediafile? ver = GetLatest(mf.PassageId??0, null);
+                if (ver != null) nextVers = ((ver.VersionNumber ?? 0) + 1).ToString();
+            }
+
             Plan? plan = PlanRepository.GetWithProject(mf.PlanId);
             ret.mediafile = mf;
             ret.folder = mf.S3Folder ?? PlanRepository.DirectoryName(plan);
-            ret.s3File =  mf.S3File?[..(mf.S3File.Length - Path.GetExtension(mf.S3File)?.Length??0)] + postfix + Path.GetExtension(mf.S3File);
+            ret.s3File =  $"{mf.S3File?[..(mf.S3File.Length - Path.GetExtension(mf.S3File)?.Length??0)]}{nextVers}{postfix}{Path.GetExtension(mf.S3File)}";
             return ret;
         }
         public async Task<Mediafile?> NoiseRemovalAsync(int id)
