@@ -350,14 +350,6 @@ namespace SIL.Transcriber.Services
 
 
         #region AI
-        public static byte[] ConvertStreamToByteArray(Stream stream)
-        {
-            using (MemoryStream memoryStream = new())
-            {
-                stream.CopyTo(memoryStream);
-                return memoryStream.ToArray();
-            }
-        }
         private Mediafile? CreateNewMediafile(StatusInfo info)
         {
             Mediafile newmf = new ();
@@ -400,8 +392,7 @@ namespace SIL.Transcriber.Services
             //get a taskid from aero
             if (response?.FileStream != null)
             {
-                byte[] data =  ConvertStreamToByteArray(response.FileStream);
-                string? taskid = await Aeroservice.NoiseRemoval(data, mf.S3File??"");
+                string? taskid = await Aeroservice.NoiseRemoval(response.FileStream, mf.S3File??"");
                 mf.TextQuality = taskid;
             }
             return mf;
@@ -425,8 +416,7 @@ namespace SIL.Transcriber.Services
             //get a taskid from aero
             if (response?.FileStream != null)
             {
-                byte[] data =  ConvertStreamToByteArray(response.FileStream);
-                return await Aeroservice.VoiceConversion(data, mf.S3File??"");
+                return await Aeroservice.VoiceConversion(response.FileStream, mf.S3File??"");
             }
             return null;
         }
@@ -450,9 +440,7 @@ namespace SIL.Transcriber.Services
             //get a taskid from aero
             if (response?.FileStream != null)
             {
-                byte[] data =  ConvertStreamToByteArray(response.FileStream);
-
-                return await Aeroservice.Transcription(data, mf.S3File??"");
+                return await Aeroservice.Transcription(response.FileStream, mf.S3File??"");
             }
             return null;
         }
