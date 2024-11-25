@@ -71,11 +71,31 @@ namespace SIL.Transcriber.Controllers
         }
 
 
-        [HttpDelete("{fileName}")]
-        public async Task<IActionResult> RemoveFile([FromRoute] string fileName)
+        [HttpDelete("{folder}/{fileName}")]
+        public async Task<IActionResult> RemoveFile(
+            [FromRoute] string folder,
+            [FromRoute] string fileName)
         {
-            S3Response response = await _service.RemoveFile(fileName);
+            S3Response response = await _service.RemoveFile(fileName, folder);
             return Ok(response);
+        }
+        [HttpGet("put/{folder}/{fileName}/{contentType}")]
+        public IActionResult PutURL(
+            [FromRoute] string folder,
+            [FromRoute] string fileName,
+            [FromRoute] string contentType)
+        {
+            contentType = "audio/" + contentType;
+            return Ok(_service.SignedUrlForPut(fileName, folder, contentType).Message);
+        }
+        [HttpGet("get/{folder}/{fileName}/{contentType}")]
+        public IActionResult GetURL(
+                [FromRoute] string folder,
+                [FromRoute] string fileName,
+                [FromRoute] string contentType)
+        {
+            contentType = "audio/" + contentType;
+            return Ok(_service.SignedUrlForGet(fileName, folder, contentType).Message);
         }
     }
 }

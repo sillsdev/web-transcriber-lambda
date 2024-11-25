@@ -1,11 +1,8 @@
-﻿using SIL.Transcriber.Data;
+﻿using Newtonsoft.Json;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using System.Text;
-using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
 
 namespace SIL.Transcriber.Services;
 
@@ -21,7 +18,7 @@ public class AeroService : BaseResourceService
            IS3Service s3Service) : base(contextResolver, s3Service)
     {
         HttpContext = httpContextAccessor.HttpContext;
-        Logger = loggerFactory.CreateLogger("Aero");
+        Logger = loggerFactory.CreateLogger("AeroService");
         Domain = GetVarOrThrow("SIL_TR_AERO_DOMAIN");
     }
 
@@ -38,7 +35,8 @@ public class AeroService : BaseResourceService
         dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
         return x?["access_token"] ?? "";
     }
-    private async Task<HttpClient> Httpclient() {
+    private async Task<HttpClient> Httpclient()
+    {
         string token = await GetToken();
         HttpClient client = new ();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -78,16 +76,24 @@ public class AeroService : BaseResourceService
         using MultipartFormDataContent multipartContent = new();
         using Stream fileStream = file.OpenReadStream();
         using StreamContent fileContent = new (fileStream);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
         // Add the file content to the multipart form-data under the name 'file' to match FastAPI's expected parameter
         multipartContent.Add(fileContent, "file", file.FileName);
         // Optionally, add other form data if needed (e.g., s3_upload boolean or user data)
         multipartContent.Add(new StringContent("true"), "s3_upload"); // Sends 's3_upload=True' in the request
-                                                                        // Send the HTTP POST request to the FastAPI endpoint
-                                                   
+
         HttpResponseMessage response = await httpClient.PostAsync($"{Domain}/noise_removal", multipartContent);
         response.EnsureSuccessStatusCode();
         dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
         return x?["task_id"];
+    }
+    public async Task<string?> NoiseRemoval(string fileUrl)
+    {
+        HttpClient client = new ();
+        Uri uri = new (fileUrl);
+        string filename = Path.GetFileName(uri.LocalPath);
+        Stream fileStream = await client.GetStreamAsync(fileUrl);
+        return await NoiseRemoval(fileStream, filename);
     }
     public async Task<string?> NoiseRemoval(Stream stream, string filename)
     {
@@ -117,7 +123,7 @@ public class AeroService : BaseResourceService
             return null;
         Stream stream = content.ReadAsStream();
         if (stream != null)
-        { 
+        {
             S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder, true);
             return s3resp.Message;
         }

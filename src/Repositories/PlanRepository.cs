@@ -88,6 +88,8 @@ namespace SIL.Transcriber.Repositories
                 .Where(p => p.Id == id)
                 .Include(p => p.Project)
                 .ThenInclude(pr => pr.Organization)
+                .Include(p => p.Project)
+                .ThenInclude(project => project.Projecttype)
                 .FirstOrDefault();
         }
 
