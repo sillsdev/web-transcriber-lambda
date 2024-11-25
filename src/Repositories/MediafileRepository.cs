@@ -1,5 +1,4 @@
-﻿using Amazon.SimpleEmail.Model;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
@@ -79,7 +78,8 @@ namespace SIL.Transcriber.Repositories
         public IEnumerable<Mediafile>? WBTUpdate()
         {
             Artifacttype? newAT = dbContext.Artifacttypes.Where(at => at.Typename == "wholebacktranslation").FirstOrDefault();
-            if (newAT == null) return null;
+            if (newAT == null)
+                return null;
             IEnumerable<Mediafile>? entities = FromCurrentUser().Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), m => m.ArtifactTypeId, a => a.Id, (m, a) => m).Where(m => m.SourceSegments == null).ToList();
             foreach (Mediafile m in entities)
             {
@@ -319,7 +319,7 @@ namespace SIL.Transcriber.Repositories
             HttpContext?.SetFP("publish");
             Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
             Artifactcategory? ac = null;
-            if (p.Passagetype == null)
+            if (p.Passagetype == null && plan.Project.Projecttype.Name == "Scripture")
                 ac = dbContext.ArtifactcategoriesData.SingleOrDefault(ac => !ac.Archived && ac.OrganizationId == null && ac.Categoryname == "scripture");
             Sharedresource sr = new ()
             {
@@ -343,7 +343,7 @@ namespace SIL.Transcriber.Repositories
                 srr.Chapter = (int)p.StartChapter;
                 if (p.StartChapter == p.EndChapter)
                 {
-                    for (int ix = p.StartVerse ?? 0; ix <= (p.EndVerse ?? -1);  ix++)
+                    for (int ix = p.StartVerse ?? 0; ix <= (p.EndVerse ?? -1); ix++)
                         verses += ix.ToString() + ",";
                     srr.Verses = verses[..^1];
                     dbContext.Sharedresourcereferences.Add(srr);
@@ -391,7 +391,7 @@ namespace SIL.Transcriber.Repositories
                     cover= PublishGraphic(m),
                 };
                 S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
-                Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
+                //Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
                 if (response.Status == HttpStatusCode.OK)
                 {
                     m.PublishedAs = outputKey;
