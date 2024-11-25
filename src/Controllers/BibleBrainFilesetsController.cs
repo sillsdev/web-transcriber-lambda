@@ -1,16 +1,14 @@
-﻿using SIL.Transcriber.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
-using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using System.Runtime.CompilerServices;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers;
 
 [Route("api/[controller]")]
-[ApiController]
 public class BiblebrainfilesetsController : BaseController<Biblebrainfileset>
 {
     BibleBrainFilesetService _service;
@@ -37,7 +35,8 @@ public class BiblebrainfilesetsController : BaseController<Biblebrainfileset>
     public IActionResult PostAllowed([FromBody] Biblebrainfileset entity)
     {
         AllowedFileset? afs = JsonConvert.DeserializeObject<AllowedFileset>(entity.Allowed);
-        if (afs is null) return BadRequest("Invalid Allowed Fileset");
+        if (afs is null)
+            return BadRequest("Invalid Allowed Fileset");
         Biblebrainfileset? fs = _service.PostAllowed(afs);
         return Ok(fs);
     }
@@ -54,7 +53,7 @@ public class BiblebrainfilesetsController : BaseController<Biblebrainfileset>
     {
         await _service.UpdateTiming(filesetid);
         return Ok();
-    }   
+    }
     [AllowAnonymous]
     [HttpPatch("{id}")]
     public override Task<IActionResult> PatchAsync([FromRoute] int id, [FromBody] Biblebrainfileset entity, CancellationToken ct) => base.PatchAsync(id, entity, ct);
