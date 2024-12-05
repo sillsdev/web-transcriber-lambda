@@ -1,5 +1,6 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.IdentityModel.Logging;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -19,6 +20,7 @@ namespace SIL.Transcriber
         // This method gets called by the runtime. Use this method to add services to the container.
         public virtual void ConfigureServices(IServiceCollection services)
         {
+            IdentityModelEventSource.ShowPII = true; //Add this line
             _ = services.Configure<CookiePolicyOptions>(options => {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
                 options.CheckConsentNeeded = context => true;
@@ -45,25 +47,23 @@ namespace SIL.Transcriber
             if (env.IsDevelopment())
             {
                 //always do what it will do in production
-               // _ = app.UseDeveloperExceptionPage();
+                // _ = app.UseDeveloperExceptionPage();
                 _ = app.UseSwagger();
                 _ = app.UseSwaggerUI();
             }
-            
-            _ = app.UseExceptionHandler(exceptionHandlerApp =>
-            {
-                exceptionHandlerApp.Run(async context =>
-                {
+
+            _ = app.UseExceptionHandler(exceptionHandlerApp => {
+                exceptionHandlerApp.Run(async context => {
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                     context.Response.ContentType = Text.Plain;
-                        
+
                     IExceptionHandlerPathFeature? exceptionHandlerPathFeature =
                                 context.Features.Get<IExceptionHandlerPathFeature>();
                     //circumvent their security features and write the damn information
                     await context.Response.WriteAsync(exceptionHandlerPathFeature?.Error.InnerException?.Message ?? exceptionHandlerPathFeature?.Error.Message ?? "");
                 });
             });
-                
+
             AWSLoggerConfigSection config = Configuration.GetAWSLoggingConfigSection();
             _ = loggerFactory.AddAWSProvider(config);
 

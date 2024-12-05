@@ -49,7 +49,7 @@ public class AeroService : BaseResourceService
         // Prepare the multipart content
         using MultipartFormDataContent multipartContent = new();
         // Create the ByteArrayContent for the file
-        ByteArrayContent fileContent = new ByteArrayContent(data);
+        ByteArrayContent fileContent = new (data);
         // Add the required headers for the file content
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         // Add the file content to the multipart form-data under the name 'file' to match FastAPI's expected parameter
@@ -87,7 +87,13 @@ public class AeroService : BaseResourceService
         dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
         return x?["task_id"];
     }
-    public async Task<string?> NoiseRemoval(string fileUrl)
+    public async Task<string?> NoiseRemoval(string base64data, string filename)
+    {
+        byte[] fileBytes = Convert.FromBase64String(base64data);
+        MemoryStream fileStream = new (fileBytes);
+        return await NoiseRemoval(fileStream, filename);
+    }
+    public async Task<string?> NoiseRemovalS3(string fileUrl)
     {
         HttpClient client = new ();
         Uri uri = new (fileUrl);

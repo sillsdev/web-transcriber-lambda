@@ -2,12 +2,10 @@
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
-using Auth0.ManagementApi.Models;
 using SIL.Transcriber.Models;
 using System.Net;
 using System.Text;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SIL.Transcriber.Services
 {
@@ -64,14 +62,14 @@ namespace SIL.Transcriber.Services
         }
 
         // Turn reads into S3 calls
-        public override int Read(byte [] buffer, int offset, int count)
+        public override int Read(byte[] buffer, int offset, int count)
         {
             //Logger.LogInformation("S3WrapperStream Read from {o} len {c} bufstart {ls} buflen {lc}", _offset, count, _localStart, _localLength);
 
             if (count > _localBuffer.Length)
             {
                 // A big read goes directly to S3
-                GetObjectRequest req = new() 
+                GetObjectRequest req = new()
                 {
                     BucketName = _bucket,
                     Key = _key,
@@ -85,7 +83,7 @@ namespace SIL.Transcriber.Services
                 {
                     // We didn't get enough data to fill the request, so we're at the end of the file
                     Logger.LogInformation("partial content {r} {c}", read, count);
-                    read += resp.ResponseStream.ReadAsync(buffer, offset+read, count - read).Result;
+                    read += resp.ResponseStream.ReadAsync(buffer, offset + read, count - read).Result;
                 }
                 _offset += read;
                 return read;
@@ -110,7 +108,7 @@ namespace SIL.Transcriber.Services
                     {
                         // We didn't get enough data to fill the request, so we're at the end of the file
                         Logger.LogInformation("partial content {r} {c}", read, count);
-                        read += resp.ResponseStream.ReadAsync(_localBuffer, read, _localBuffer.Length-read).Result;
+                        read += resp.ResponseStream.ReadAsync(_localBuffer, read, _localBuffer.Length - read).Result;
                     }
                     Logger.LogInformation("S3WrapperStream Fill Buffer offset {s} {e} {cl} returned {r}", req.ByteRange.Start, req.ByteRange.End, resp.ContentLength, read);
                     _localStart = _offset;
@@ -127,7 +125,7 @@ namespace SIL.Transcriber.Services
         public override bool CanWrite => false;
         public override void Flush() { throw new NotImplementedException(); }
         public override void SetLength(long value) { throw new NotImplementedException(); }
-        public override void Write(byte [] buffer, int offset, int count) { throw new NotImplementedException(); }
+        public override void Write(byte[] buffer, int offset, int count) { throw new NotImplementedException(); }
     }
 
     public class S3Service : IS3Service
@@ -194,7 +192,7 @@ namespace SIL.Transcriber.Services
             {
                 for (int o = 0; o < response.S3Objects.Count; o++)
                 {
-                    if (response.S3Objects [o].Key == fileName)
+                    if (response.S3Objects[o].Key == fileName)
                         return true;
                 }
             }
@@ -205,19 +203,20 @@ namespace SIL.Transcriber.Services
             }
             return false;
         }
-        public async Task<string> GetFilename (string folder, string filename, bool overwrite = false, string suffix = "")
+        public async Task<string> GetFilename(string folder, string filename, bool overwrite = false, string suffix = "")
         {
-           string ext = Path.GetExtension(filename)??"";
-           string newfilename = Path.GetFileNameWithoutExtension(filename) +suffix + ext;
-           return !overwrite && await FileExistsAsync(newfilename, folder)
-                ? Path.GetFileNameWithoutExtension(filename)
-                    + "__"
-                    + Guid.NewGuid()
-                    + suffix
-                    + ext
-                : newfilename;
+            string ext = Path.GetExtension(filename)??"";
+            string newfilename = Path.GetFileNameWithoutExtension(filename) +suffix + ext;
+            return !overwrite && await FileExistsAsync(newfilename, folder)
+                 ? Path.GetFileNameWithoutExtension(filename)
+                     + "__"
+                     + Guid.NewGuid()
+                     + suffix
+                     + ext
+                 : newfilename;
         }
-        public async Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey, string tags) {
+        public async Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey, string tags)
+        {
             /*
             {
                 "id": 12345678,
@@ -291,7 +290,7 @@ namespace SIL.Transcriber.Services
             {
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
-        }   
+        }
         private string SignedUrl(string key, HttpVerb action, string mimetype)
         {
             AmazonS3Client s3Client = new();
@@ -365,7 +364,7 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                if (overwriteifExists && await FileExistsAsync(fileName, folder,userfile))
+                if (overwriteifExists && await FileExistsAsync(fileName, folder, userfile))
                 {
                     _ = await RemoveFile(fileName, folder, userfile);
                 }
@@ -380,7 +379,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = fileName,
                     Status = HttpStatusCode.OK,
-                    FileURL = GetPublicUrl(fileName,folder,userfile)
+                    FileURL = GetPublicUrl(fileName, folder, userfile)
                 };
             }
             catch (AmazonS3Exception e)
@@ -402,8 +401,11 @@ namespace SIL.Transcriber.Services
                 //check if it exists
                 //check if file with metadata OriginalFileName = fileName exists
                 DeleteObjectRequest request =
-                    new() { BucketName = userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
-                        Key = ProperFolder(folder) + fileName, };
+                    new()
+                    {
+                        BucketName = userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
+                        Key = ProperFolder(folder) + fileName,
+                    };
 
                 DeleteObjectResponse response = await _client.DeleteObjectAsync(request);
                 return S3Response(fileName, response.HttpStatusCode);
@@ -489,9 +491,9 @@ namespace SIL.Transcriber.Services
                     {
                         list += string.Format(
                             "{{\"Key\":\"{0}\",\"Size\":\"{1}\",\"LastModified\":\"{2}\"}},",
-                            response.S3Objects [o].Key,
-                            response.S3Objects [o].Size,
-                            response.S3Objects [o].LastModified
+                            response.S3Objects[o].Key,
+                            response.S3Objects[o].Size,
+                            response.S3Objects[o].LastModified
                         );
                     }
                     list += "]";

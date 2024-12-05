@@ -8,11 +8,13 @@ namespace SIL.Transcriber.Controllers;
 public class AeroController : Controller
 {
     private readonly AeroService _service;
+    private readonly IS3Service _s3;
     private ILogger Logger { get; set; }
-    public AeroController(AeroService service, ILoggerFactory loggerFactory)
+    public AeroController(AeroService service, ILoggerFactory loggerFactory, IS3Service s3)
     {
         _service = service;
         Logger = loggerFactory.CreateLogger("AeroController");
+        _s3 = s3;
     }
     private static async Task<MemoryStream> ConvertToMemoryStream(IFormFile formFile)
     {
@@ -24,12 +26,14 @@ public class AeroController : Controller
 
     [AllowAnonymous]
     [HttpPost("noiseremoval")]
-    public async Task<IActionResult> PostNR(IFormFile file)
+    public async Task<IActionResult> PostNR([FromBody] FileUploadModel model)
     {
-        Logger.LogCritical("File name: {FileName}", file.FileName);
-        Logger.LogCritical("File length: {FileLength}", file.Length);
-        //IFormFile file = Request.Form.Files[0];
-        string? taskId = await _service.NoiseRemoval(file);
+        if (model == null || string.IsNullOrEmpty(model.Data))
+        {
+            return BadRequest("Invalid file data.");
+        }
+
+        string? taskId = await _service.NoiseRemoval(model.Data, model.FileName);
         return Ok(taskId);
     }
     [AllowAnonymous]
@@ -42,7 +46,7 @@ public class AeroController : Controller
         }
         Logger.LogInformation("Received S3 signed URL: {FileUrl}", request.FileUrl);
 
-        string? taskId = await _service.NoiseRemoval(request.FileUrl);
+        string? taskId = await _service.NoiseRemovalS3(request.FileUrl);
         return Ok(taskId);
     }
 
@@ -55,16 +59,41 @@ public class AeroController : Controller
         if (content != null)
         {
             // Read the response content as a stream
-            Stream stream = await content.ReadAsStreamAsync();
+            byte[] fileBytes = await content.ReadAsByteArrayAsync();
+            string base64String = Convert.ToBase64String(fileBytes);
 
-            // Return the stream as a file in the API response
-            return File(stream, content.Headers.ContentType?.MediaType ?? "audio/mpeg", content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "downloaded.mp3");
+            return Ok(new
+            {
+                FileName = content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "downloaded.wav",
+                ContentType = content.Headers.ContentType?.MediaType ?? "audio/wav",
+                Data = base64String,
+                IsBase64Encoded = true,
+            });
         }
         return Ok(null);
 
+    }
+    [AllowAnonymous]
+    [HttpGet("noiseremoval/s3/{taskId}")]
+    public async Task<IActionResult> CheckNRFile([FromRoute] string taskId)
+    {
+        string outputFile = taskId + ".wav";
+        string? response = await _service.NoiseRemovalStatus(taskId, outputFile, "AI");
+        if (response != null)
+        {
+            Models.S3Response url = _s3.SignedUrlForGet(outputFile, "AI", "audio/wav");
+            return Ok(url);
+        }
+        return Ok(null);
     }
 }
 public class FileUrlRequest
 {
     public string FileUrl { get; set; } = "";
+}
+public class FileUploadModel
+{
+    public string FileName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public string Data { get; set; } = "";
 }
