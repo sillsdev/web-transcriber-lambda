@@ -6,7 +6,6 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.Net;
 using System.Net.Mime;
-using System.Text.Json;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -45,7 +44,7 @@ namespace SIL.Transcriber.Controllers
         //called from s3 trigger - no auth
         [AllowAnonymous]
         [HttpGet("fromfile/{plan}/{s3File}")]
-        public  IActionResult  GetFromFile(
+        public IActionResult GetFromFile(
             [FromRoute] int plan,
             [FromRoute] string s3File
         )
@@ -129,12 +128,12 @@ namespace SIL.Transcriber.Controllers
             {
                 return Ok(await _service.PublishM(id, media));
             }
-            catch 
+            catch
             {
                 return NotFound();
-            }   
+            }
         }
-        
+
         [AllowAnonymous]
         [HttpPatch("{id}/fileinfo/{filesize}/{duration}")]
         public async Task<IActionResult> UpdateFileInformationAsync(
@@ -146,14 +145,14 @@ namespace SIL.Transcriber.Controllers
             Mediafile? mf = await _service.UpdateFileInfoAsync(id, filesize, duration);
             return mf != null ? Ok(mf) : NotFound();
         }
-        [AllowAnonymous]
+
         [HttpGet("{id}/noiseremoval")]
         public async Task<IActionResult> NoiseRemovalAsync([FromRoute] int id)
         {
             Mediafile? mf = await _service.NoiseRemovalAsync(id);
             return mf?.TextQuality != null ? Ok(mf) : NotFound();
         }
-        [AllowAnonymous]
+
         [HttpGet("{id}/noiseremoval/{taskId}")]
         public async Task<IActionResult> NoiseRemovalStatusAsync([FromRoute] int id, [FromRoute] string taskId)
         {
