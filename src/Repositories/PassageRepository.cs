@@ -95,7 +95,10 @@ namespace SIL.Transcriber.Repositories
                 .Where(p => p.ReadyToSync);
             return passages;
         }
-
+        public Passage? Get(int id)
+        {
+            return dbContext.PassagesData.SingleOrDefault(p => p.Id == id);
+        }
         public int? ProjectId(Passage passage)
         {
             return dbContext.Sections

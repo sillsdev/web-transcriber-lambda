@@ -4,14 +4,17 @@ using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using static SIL.Transcriber.Utility.HttpContextHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
     public class SectionRepository : BaseRepository<Section>
     {
         readonly private PlanRepository PlanRepository;
-
+        readonly private MediafileRepository MediafileRepository;
+        readonly private HttpContext? HttpContext;
         public SectionRepository(
+            IHttpContextAccessor httpContextAccessor,
             ITargetedFields targetedFields,
             AppDbContextResolver contextResolver,
             IResourceGraph resourceGraph,
@@ -20,7 +23,9 @@ namespace SIL.Transcriber.Repositories
             ILoggerFactory loggerFactory,
             IResourceDefinitionAccessor resourceDefinitionAccessor,
             CurrentUserRepository currentUserRepository,
-            PlanRepository planRepository
+            PlanRepository planRepository,
+            MediafileRepository mediafileRepository
+
         )
             : base(
                 targetedFields,
@@ -34,6 +39,8 @@ namespace SIL.Transcriber.Repositories
             )
         {
             PlanRepository = planRepository;
+            MediafileRepository = mediafileRepository;
+            HttpContext = httpContextAccessor.HttpContext;
         }
 
         #region ScopeToUser
@@ -128,5 +135,68 @@ namespace SIL.Transcriber.Repositories
             return ss;
         }
         #endregion
+
+        private async Task PublishSection(Section section, bool publish)
+        {
+            string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
+            HttpContext?.SetFP("publish");
+            await PublishPassages(section.Id, section.PublishTo, publish);
+        }
+        private async Task PublishPassages(int sectionid, string publishTo, bool publish)
+        {
+            List<Passage> passages = dbContext.Passages.Where(p => p.SectionId == sectionid).ToList();
+            foreach (Passage? passage in passages)
+            {
+                IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
+                        .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
+                        .OrderByDescending(m => m.VersionNumber);
+#pragma warning disable CS8604 // Possible null reference argument.
+                List < Mediafile > medialist = publish && mediafiles.Any()
+                ? new List<Mediafile>
+                {
+                    mediafiles.FirstOrDefault()
+                }
+                : mediafiles.ToList();
+                //if we are publishing, turn on shared notes.  If not publishing, leave them as they are
+                if (publish && passage.SharedResourceId != null)
+                {
+                    Sharedresource? note = dbContext.Sharedresources.Where(n => n.Id == passage.SharedResourceId).FirstOrDefault();
+                    if (note != null)
+                    {
+                        int? notepsgid = note.PassageId;
+                        Mediafile? notemediafile = dbContext.Mediafiles
+                            .Where(m => m.PassageId == notepsgid && m.ArtifactTypeId == null && !m.Archived)
+                            .OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                        if (notemediafile != null)
+                            medialist.Add(notemediafile);
+                    }
+                }
+#pragma warning restore CS8604 // Possible null reference argument.
+                foreach(Mediafile mediafile in medialist)
+                {
+                    if (publish)
+                        await MediafileRepository.Publish(mediafile.Id, publishTo, false);
+                    else if (mediafile.ReadyToShare)
+                    {
+                        mediafile.ReadyToShare = false;
+                        mediafile.PublishTo = "{}";
+                        mediafile.PublishedAs = "";
+                        dbContext.Mediafiles.Update(mediafile);
+                    }
+                };
+                dbContext.SaveChanges();
+            }
+        }
+
+        public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
+        {
+            if (resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
+            {
+                await PublishSection(resourceFromRequest, resourceFromRequest.Published);
+            }
+            if (resourceFromRequest.TitleMediafileId != null && PublishToAkuo(resourceFromRequest.PublishTo)) //always do titles and movements
+                await MediafileRepository.Publish((int)resourceFromRequest.TitleMediafileId, "{'Public': 'true'}", true);
+            await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
+        }
     }
 }

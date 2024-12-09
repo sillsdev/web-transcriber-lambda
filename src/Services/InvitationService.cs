@@ -167,8 +167,7 @@ namespace SIL.Transcriber.Services
                 );
                 if (entity.GroupId != null)
                 {
-                    if (entity.GroupRoleId == null)
-                        entity.GroupRoleId = (int)RoleName.Transcriber;
+                    entity.GroupRoleId ??= (int)RoleName.Transcriber;
                     _ = GroupMembershipService.JoinGroup(
                         currentUser.Id,
                         (int)entity.GroupId,

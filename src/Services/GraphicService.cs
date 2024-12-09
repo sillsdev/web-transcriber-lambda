@@ -57,7 +57,7 @@ namespace SIL.Transcriber.Services
                     try
                     {
                         using MemoryStream ms = new(Convert.FromBase64String(base64Data));
-                        S3Response fileinfo = await S3service.UploadFileAsync(ms, true, graphic["type"]?.ToString() ?? "", graphic["name"]?.ToString() ?? "", "graphics");
+                        S3Response fileinfo = await S3service.UploadFileAsync(ms, true, graphic["name"]?.ToString() ?? "", "graphics");
                         graphic ["content"] = fileinfo.FileURL;
                         await S3service.MakePublic(fileinfo.Message, "graphics");
                         info [size] = graphic;

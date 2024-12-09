@@ -1,6 +1,5 @@
 ﻿using IdentityModel;
 using Microsoft.EntityFrameworkCore.Storage;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Logging.Models;
 using SIL.Paratext.Models;
@@ -8,7 +7,6 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Utility;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -18,7 +16,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
-using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Services
 {
@@ -51,8 +48,8 @@ namespace SIL.Transcriber.Services
             IHttpContextAccessor httpContextAccessor,
             ICurrentUserContext currentUserContext,
             PassageService passageService,
-            MediafileService mediafileService,
             SectionService sectionService,
+            MediafileService mediafileService,
             ProjectService projectService,
             CurrentUserRepository currentUserRepository,
             ProjectIntegrationRepository piRepo,

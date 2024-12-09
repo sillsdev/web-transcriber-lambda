@@ -31,10 +31,7 @@ namespace SIL.Transcriber.Controllers
             CancellationToken cancelled
         )
         {
-            if (entity.Owner == null)
-            {
-                entity.Owner = CurrentUser;
-            }
+            entity.Owner ??= CurrentUser;
             return await base.PostAsync(entity, cancelled);
         }
     }

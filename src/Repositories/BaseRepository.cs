@@ -83,6 +83,10 @@ namespace SIL.Transcriber.Repositories
             ResourceGraph = resourceGraph;
         }
 
+        public bool PublishToAkuo(string publishTo)
+        {
+            return publishTo.Contains("Public") || publishTo.Contains("Beta");
+        }
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {
             return dbContext.Database.BeginTransaction();

@@ -15,7 +15,7 @@ using System.Text.Json;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 using SIL.Transcriber.Utility;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-
+using TranscriberAPI.Utility;
 
 namespace SIL.Transcriber.Services
 {
@@ -356,69 +356,6 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        /// <summary>
-        /// Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
-        /// </summary>
-        /// <remarks>
-        /// http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
-        /// </remarks>
-        public static string CleanFileName(string filename)
-        {
-            string invalidChars = System.Text.RegularExpressions.Regex.Escape(
-                new string(Path.GetInvalidFileNameChars()) + "'()"
-            );
-            string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);
-
-            string[] reservedWords = new[]
-            {
-                "CON",
-                "PRN",
-                "AUX",
-                "CLOCK$",
-                "NUL",
-                "COM0",
-                "COM1",
-                "COM2",
-                "COM3",
-                "COM4",
-                "COM5",
-                "COM6",
-                "COM7",
-                "COM8",
-                "COM9",
-                "LPT0",
-                "LPT1",
-                "LPT2",
-                "LPT3",
-                "LPT4",
-                "LPT5",
-                "LPT6",
-                "LPT7",
-                "LPT8",
-                "LPT9"
-            };
-
-            string sanitizedName = System.Text.RegularExpressions.Regex.Replace(
-                filename,
-                invalidReStr,
-                "_"
-            );
-            while (sanitizedName.IndexOf("__") > -1)
-                sanitizedName = sanitizedName.Replace("__", "_");
-
-            foreach (string reservedWord in reservedWords)
-            {
-                string reservedWordPattern = string.Format("^{0}(\\.|$)", reservedWord);
-                sanitizedName = System.Text.RegularExpressions.Regex.Replace(
-                    sanitizedName,
-                    reservedWordPattern,
-                    "_reservedWord_$1",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase
-                );
-            }
-
-            return sanitizedName;
-        }
 
         private bool CheckAdd<TResource>(
             int check,
@@ -546,7 +483,7 @@ namespace SIL.Transcriber.Services
             ms.Position = 0;
             fileName += ext;
             s3response = _S3Service
-                .UploadFileAsync(ms, true, contentType, fileName, ExportFolder)
+                .UploadFileAsync(ms, true, fileName, ExportFolder)
                 .Result;
             return s3response.Status == HttpStatusCode.OK
                 ? new Fileresponse()
@@ -744,7 +681,7 @@ namespace SIL.Transcriber.Services
             }
             if (name.Replace("_", "") == "" || name.StartsWith("_v"))
                 name = "S" + section.Sequencenum.ToString().PadLeft(3, '0') + (flat ? "" : "_P" + passage.Sequencenum.ToString().PadLeft(3, '0'));
-            return CleanFileName(name) + Path.GetExtension(m.S3File);
+            return FileName.CleanFileName(name) + Path.GetExtension(m.S3File);
         }
         private void AddAttachedMedia(ZipArchive zipArchive, List<Mediafile> mediafiles, string? nameTemplate)
         {
@@ -778,7 +715,7 @@ namespace SIL.Transcriber.Services
             string fileName = string.Format(
                 "{0}{1}_{2}_{3}",
                 addElan ? "Elan" : "Audio",
-                CleanFileName(project.Name + artifactType),
+                FileName.CleanFileName(project.Name + artifactType),
                 project.Id.ToString(),
                 CurrentUser()?.Id
             );
@@ -831,7 +768,7 @@ namespace SIL.Transcriber.Services
             Project project = projects.First();
             string fileName = string.Format(
                 "Burrito{0}_{1}_{2}",
-                CleanFileName(project.Name),
+                FileName.CleanFileName(project.Name),
                 project.Id.ToString(),
                 CurrentUser()?.Id
             );
@@ -978,7 +915,7 @@ namespace SIL.Transcriber.Services
             Project project = projects.First();
             string fileName = string.Format(
                 "APM{0}_{1}_{2}",
-                CleanFileName(project.Name),
+                FileName.CleanFileName(project.Name),
                 project.Id.ToString(),
                 CurrentUser()?.Id
             );
@@ -1433,7 +1370,7 @@ namespace SIL.Transcriber.Services
             // Project project = dbContext.Projects.Where(p => p.Id == id).First();
             string fileName = string.Format(
                 "{0}_{1}{2}",
-                CleanFileName(Path.GetFileNameWithoutExtension(sFile)),
+                FileName.CleanFileName(Path.GetFileNameWithoutExtension(sFile)),
                 DateTime.Now.Ticks,
                 extension
             );
@@ -1678,7 +1615,6 @@ namespace SIL.Transcriber.Services
                 S3Response response = await _S3Service.UploadFileAsync(
                     ms,
                     true,
-                    m.ContentType ?? "",
                     m.S3File ?? "",
                     mediaService.DirectoryName(m)
                 );

@@ -35,6 +35,7 @@ namespace SIL.Transcriber.Definitions
                 resource.VersionNumber ??= 1;
                 resource.Link ??= false;
                 resource.Transcriptionstate ??= "transcribeReady";
+                resource.PublishTo ??= "{}";
                 if (resource.ResourcePassageId == null)
                 {
                     if (resource.IsVernacular && resource.Passage != null)
@@ -79,9 +80,16 @@ namespace SIL.Transcriber.Definitions
                     _ = AppDbContext.Passagestatechanges.Add(psc);
                     resource.EafUrl = "";
                 }
-            } else if (resource.ReadyToShare )//&& AppDbContext.Mediafiles.Any(s => s.Id == resource.Id && !s.ReadyToShare))
-                _ = MakeMediafilePublicAsync(writeOperation, MediafileService, resource.Id);
-
+            }
+            else if (resource.ReadyToShare)
+            { //&& AppDbContext.Mediafiles.Any(s => s.Id == resource.Id && !s.ReadyToShare))
+                Mediafile? newInfo = await PublishMediafile(writeOperation, MediafileService, resource.PublishTo ?? PublishTitle, resource.Id);
+                if (newInfo != null)
+                {
+                    resource.PublishedAs = newInfo.PublishedAs;
+                    resource.PublishTo = newInfo.PublishTo;
+                }
+            }
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
         }
     }

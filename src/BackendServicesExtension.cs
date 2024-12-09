@@ -72,9 +72,14 @@ namespace SIL.Transcriber
 
         public static void RegisterServices(this IServiceCollection services)
         {
+            services.AddScoped<AeroService>();
+            services.AddScoped<AquiferService>();
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
             services.AddScoped<BibleService>();
+            services.AddScoped<BibleBrainBibleService>();
+            services.AddScoped<BibleBrainFilesetService>();
+            services.AddScoped<BibleBrainService>();
             services.AddScoped<CommentService>();
             services.AddScoped<CurrentversionService>();
             services.AddScoped<DataChangeService>();
@@ -114,6 +119,8 @@ namespace SIL.Transcriber
             services.AddScoped<UserService>();
             services.AddScoped<UserVersionService>();
             services.AddScoped<StatehistoryService>();
+            services.AddScoped<VWBibleBrainBibleService>();
+            services.AddScoped<VWBibleBrainLanguageService>();
             services.AddScoped<VWChecksumService>();
             services.AddScoped<WorkflowStepService>();
         }
@@ -124,6 +131,8 @@ namespace SIL.Transcriber
             services.AddScoped<ArtifactCategoryRepository>();
             services.AddScoped<ArtifactTypeRepository>();
             services.AddScoped<BibleRepository>();
+            services.AddScoped<BibleBrainBibleRepository>();
+            services.AddScoped<BibleBrainFilesetRepository>();
             services.AddScoped<CommentRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<CurrentversionRepository>();
@@ -169,6 +178,8 @@ namespace SIL.Transcriber
             services.AddScoped<UserRepository>();
             services.AddScoped<UserVersionRepository>();
             services.AddScoped<StatehistoryRepository>();
+            services.AddScoped<VWBibleBrainBibleRepository>();
+            services.AddScoped<VWBibleBrainLanguageRepository>();
             services.AddScoped<VWChecksumRepository>();
             services.AddScoped<WorkflowStepRepository>();
         }

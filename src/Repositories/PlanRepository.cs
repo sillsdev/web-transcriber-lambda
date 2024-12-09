@@ -88,6 +88,8 @@ namespace SIL.Transcriber.Repositories
                 .Where(p => p.Id == id)
                 .Include(p => p.Project)
                 .ThenInclude(pr => pr.Organization)
+                .Include(p => p.Project)
+                .ThenInclude(project => project.Projecttype)
                 .FirstOrDefault();
         }
 
@@ -112,6 +114,26 @@ namespace SIL.Transcriber.Repositories
                     .Where(o => o.Id == proj.OrganizationId)
                     .FirstOrDefault();
             return org != null ? org.Slug + "/" + plan.Slug : throw new Exception("No org in DirectoryName");
+        }
+        public string BibleId(int planid)
+        {
+            Plan? plan = GetWithProject(planid);
+            return plan != null ? BibleId(plan) : "";
+        }
+        public string BibleId(Plan plan)
+        {
+            return Bible(plan)?.BibleId ?? "";
+        }
+        public Bible? Bible(Plan plan)
+        {
+            if (plan.Project?.OrganizationId != null)
+            {
+                Organizationbible? orgb = dbContext.OrganizationbiblesData
+                .SingleOrDefault(o => o.OrganizationId == plan.Project.OrganizationId);
+                if (orgb != null)
+                    return orgb.Bible;
+            }
+            return null;
         }
     }
 }
