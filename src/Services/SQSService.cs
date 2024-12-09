@@ -25,7 +25,7 @@ namespace SIL.Transcriber.Services
         public string FilesetId { get; set; } = "";
         public string Book { get; set; } = "";
         public int Chapter { get; set; }
-        public int? PassageId {  get; set; }
+        public int? PassageId { get; set; }
         public int SectionId { get; set; }
         public int PlanId { get; set; }
         public string Lang { get; set; } = "";
@@ -38,7 +38,7 @@ namespace SIL.Transcriber.Services
         public int OrgWorkflowStepId { get; set; }
         public string Token { get; set; } = "";
     }
-    
+
     public class SQSExportMessageBody
     {
         public string Folder { get; set; } = "";
@@ -46,7 +46,7 @@ namespace SIL.Transcriber.Services
         public int ProjectId { get; set; }
         public int Start { get; set; }
     }
-    public class SQSService: ISQSService
+    public class SQSService : ISQSService
     {
         private readonly IAmazonSQS _client;
         protected ILogger<SQSService> Logger { get; set; }
@@ -58,12 +58,12 @@ namespace SIL.Transcriber.Services
         }
         public async Task<int> MessageCount(string queue)
         {
-            GetQueueAttributesResponse attributes = await _client.GetQueueAttributesAsync(new 
+            GetQueueAttributesResponse attributes = await _client.GetQueueAttributesAsync(new
                 GetQueueAttributesRequest
-                {
-                    QueueUrl = queue,
-                    AttributeNames = new List<string> { "ApproximateNumberOfMessages" }
-                });
+            {
+                QueueUrl = queue,
+                AttributeNames = new List<string> { "ApproximateNumberOfMessages" }
+            });
 
             return attributes.Attributes.TryGetValue("ApproximateNumberOfMessages", out string? messageCount)
                 ? int.TryParse(messageCount, out int count) ? count : 0
@@ -111,7 +111,7 @@ namespace SIL.Transcriber.Services
             };
             string url = GetVarOrThrow("SIL_TR_BIBLEBRAIN_QUEUE");
             string msg = JsonConvert.SerializeObject(body);
-            return SendMessage(url, msg, $"{filesetId}{sectionId}{psgId??0}", filesetId.ToString());
+            return SendMessage(url, msg, $"{filesetId}{sectionId}{psgId ?? 0}", filesetId.ToString());
         }
         public string SendBBGeneralMessage(string filesetId,
                                    string? codec,
@@ -153,7 +153,7 @@ namespace SIL.Transcriber.Services
             string url = GetVarOrDefault("SIL_TR_EXPORT_QUEUE", "https://sqs.us-east-1.amazonaws.com/620141372223/APMExportQueue-dev.fifo");
             return SendMessage(url, JsonConvert.SerializeObject(body), $"{projectId}_{start}", projectId.ToString());
         }
-        public string SendMessage(string url, string body, string? deDup,  string? groupId)
+        public string SendMessage(string url, string body, string? deDup, string? groupId)
         {
             try
             {
@@ -164,16 +164,16 @@ namespace SIL.Transcriber.Services
                     MessageGroupId = groupId,
                     MessageDeduplicationId = string.Concat(deDup ?? "", Guid.NewGuid().ToString())
                 };
-                Console.WriteLine("***** body {0} groupId {1} deDup {2}", sendMessageRequest.MessageBody, sendMessageRequest.MessageGroupId, sendMessageRequest.MessageDeduplicationId);
+                Logger.LogCritical("***** body {m} groupId {g} deDup {d}", sendMessageRequest.MessageBody, sendMessageRequest.MessageGroupId, sendMessageRequest.MessageDeduplicationId);
                 SendMessageResponse sqsSend = _client.SendMessageAsync(sendMessageRequest).Result;
                 return sqsSend.MessageId;
             }
             catch (AmazonSQSException ex)
             {
-                Console.WriteLine(ex);
+                Logger.LogError("SendMessageError {e} {m}", ex.Message, ex.InnerException?.Message);
                 return "error";
             }
         }
-      
+
     }
 }

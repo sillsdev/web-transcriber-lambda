@@ -10,12 +10,14 @@ namespace SIL.Transcriber.Controllers
     public class OfflinedataController : ControllerBase
     {
         private readonly IOfflineDataService _service;
-
+        protected ILogger<OfflinedataController> Logger { get; set; }
         public OfflinedataController(
+            ILoggerFactory loggerFactory,
             IOfflineDataService service
         ) : base()
         {
             _service = service;
+            Logger = loggerFactory.CreateLogger<OfflinedataController>();
         }
 
         [HttpGet("project/export/{id}/{start}")]
@@ -80,7 +82,7 @@ namespace SIL.Transcriber.Controllers
             return await _service.ImportSyncFileAsync(filename, 0, 0);
         }
         [HttpPut("sync/{filename}/{fileIndex}/{start}")]
-        public async Task<ActionResult<Fileresponse>> ProcessSyncFileAsyncV2([FromRoute] string filename, 
+        public async Task<ActionResult<Fileresponse>> ProcessSyncFileAsyncV2([FromRoute] string filename,
             int fileIndex, int start)
         {
             return await _service.ImportSyncFileAsync(filename, fileIndex, start);

@@ -1,11 +1,12 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using SIL.Transcriber.Controllers;
+using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.Extensions.UriExtensions;
 using static SIL.Transcriber.Utility.HttpContextHelpers;
-using SIL.Transcriber.Data;
-using SIL.Transcriber.Utility;
-using Newtonsoft.Json.Linq;
 
 namespace SIL.Transcriber.Services;
 
@@ -30,14 +31,17 @@ public class BibleBrainService : BaseResourceService
     private static string _key = GetVarOrThrow("SIL_TR_BIBLEBRAIN");
     readonly private HttpContext? HttpContext;
     readonly private ISQSService _SQSService;
+    private readonly ILogger Logger;
     public BibleBrainService(
-       IHttpContextAccessor httpContextAccessor,
-       AppDbContextResolver contextResolver,
-       ISQSService sqsService,
-    IS3Service s3Service) : base(contextResolver, s3Service)
+        IHttpContextAccessor httpContextAccessor,
+        AppDbContextResolver contextResolver,
+        ISQSService sqsService,
+        IS3Service s3Service,
+        ILoggerFactory loggerFactory) : base(contextResolver, s3Service)
     {
         HttpContext = httpContextAccessor.HttpContext;
         _SQSService = sqsService;
+        Logger = loggerFactory.CreateLogger<BiblebrainController>();
     }
     private static List<(string Name, string Value)> AddParam(List<(string Name, string Value)> p, string Name, string? Value)
     {
@@ -110,7 +114,7 @@ public class BibleBrainService : BaseResourceService
         string fscr = await DoApiCall($"bibles/filesets/{fs.FilesetId}/copyright", p);
         //array of {id, type, size, copyright}
         dynamic? stuff = JsonConvert.DeserializeObject(fscr);
-        return stuff?.copyright?.GetType() == typeof(JObject) ? stuff?.copyright?.copyright??"" : "";
+        return stuff?.copyright?.GetType() == typeof(JObject) ? stuff?.copyright?.copyright ?? "" : "";
     }
 
     public async Task<int> GetMessageCount()
@@ -153,10 +157,11 @@ public class BibleBrainService : BaseResourceService
     }
     private string CreateResourceRequest(Biblebrainfileset fileset, string book, int chapter, int? psgId, int sectionId, int planId, string lang, string desc, int startverse, int endverse, int seq, int artifactTypeId, int? artifactCategoryId, int orgWorkflowStepId, string token)
     {
-        return _SQSService.SendBBResourceMessage(fileset.FilesetId,book, chapter, psgId, sectionId, planId, lang, desc, startverse, endverse, seq, artifactTypeId, artifactCategoryId, orgWorkflowStepId, token);
+        return _SQSService.SendBBResourceMessage(fileset.FilesetId, book, chapter, psgId, sectionId, planId, lang, desc, startverse, endverse, seq, artifactTypeId, artifactCategoryId, orgWorkflowStepId, token);
     }
     public async Task<int> Post(BiblebrainPost post)
     {
+
         Passage passage = DbContext.PassagesData.Where(p => p.Id == post.PassageId).FirstOrDefault() ?? throw new Exception("No Passage");
         int sectionId = (post.SectionId ?? passage?.SectionId) ?? throw new Exception("No SectionId");
         string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
@@ -205,7 +210,7 @@ public class BibleBrainService : BaseResourceService
         }
         if (!post.Timing)
             return count;
-        for (int ix =  0; ix < psgs.Count; ix++)
+        for (int ix = 0; ix < psgs.Count; ix++)
         {
             Passage ps = psgs[ix];
             for (int chapter = ps.StartChapter ?? 1; chapter <= (ps.EndChapter ?? 1); chapter++)
@@ -222,7 +227,7 @@ public class BibleBrainService : BaseResourceService
                     List<Passage> mypsgs = passages.Where(p => p.SectionId == ps.SectionId && (p.StartChapter == chapter || p.EndChapter == chapter)).ToList();
                     if (mypsgs.Count > 1 || !post.Passages)
                     {
-                            
+
                         Passage startp = mypsgs.First();
                         Passage lastp = mypsgs.Last();
                         int[] se = CalcStartEnd(startp, lastp, chapter);

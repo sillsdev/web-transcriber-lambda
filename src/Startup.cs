@@ -20,7 +20,7 @@ namespace SIL.Transcriber
         // This method gets called by the runtime. Use this method to add services to the container.
         public virtual void ConfigureServices(IServiceCollection services)
         {
-            IdentityModelEventSource.ShowPII = true; //Add this line
+            IdentityModelEventSource.ShowPII = true;
             _ = services.Configure<CookiePolicyOptions>(options => {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
                 options.CheckConsentNeeded = context => true;
