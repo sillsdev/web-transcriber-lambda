@@ -7,21 +7,15 @@ using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services;
 
-public class AeroService : BaseResourceService
+public class AeroService(
+       IHttpContextAccessor httpContextAccessor,
+       AppDbContextResolver contextResolver,
+       ILoggerFactory loggerFactory,
+       IS3Service s3Service) : BaseResourceService(contextResolver, s3Service)
 {
-    readonly private HttpContext? HttpContext;
-    readonly private string Domain;
-    private ILogger Logger { get; set; }
-    public AeroService(
-           IHttpContextAccessor httpContextAccessor,
-           AppDbContextResolver contextResolver,
-           ILoggerFactory loggerFactory,
-           IS3Service s3Service) : base(contextResolver, s3Service)
-    {
-        HttpContext = httpContextAccessor.HttpContext;
-        Logger = loggerFactory.CreateLogger("AeroService");
-        Domain = GetVarOrThrow("SIL_TR_AERO_DOMAIN");
-    }
+    readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
+    readonly private string Domain = GetVarOrThrow("SIL_TR_AERO_DOMAIN");
+    private ILogger Logger { get; set; } = loggerFactory.CreateLogger("AeroService");
 
     private async Task<string> GetToken()
     {
@@ -51,7 +45,7 @@ public class AeroService : BaseResourceService
     {
         byte[] data = ConvertStreamToByteArray(stream);
         // Prepare the multipart content
-        using MultipartFormDataContent multipartContent = content ?? new();
+        using MultipartFormDataContent multipartContent = content ?? [];
         // Create the ByteArrayContent for the file
         ByteArrayContent fileContent = new (data);
         // Add the required headers for the file content

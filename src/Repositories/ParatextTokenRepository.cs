@@ -6,21 +6,18 @@ using SIL.Transcriber.Data;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class ParatextTokenRepository : AppDbContextRepository<ParatextToken>
+    public class ParatextTokenRepository(
+        ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository
+            ) : AppDbContextRepository<ParatextToken>(targetedFields, contextResolver, resourceGraph, resourceFactory,
+            constraintProviders, loggerFactory, resourceDefinitionAccessor)
     {
-        private readonly CurrentUserRepository CurrentUserRepository;
-        public ParatextTokenRepository(
-            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
-                constraintProviders, loggerFactory, resourceDefinitionAccessor)
-        {
-            CurrentUserRepository = currentUserRepository;
-        }
+        private readonly CurrentUserRepository CurrentUserRepository = currentUserRepository;
+
         protected override IQueryable<ParatextToken> GetAll()
         {
             Models.User? currentUser = CurrentUserRepository.GetCurrentUser();

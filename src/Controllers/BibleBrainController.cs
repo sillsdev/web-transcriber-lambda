@@ -4,15 +4,11 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers;
 
 [Route("api/[controller]")]
-public class BiblebrainController : Controller
+public class BiblebrainController(BibleBrainService service, ILoggerFactory loggerFactory) : Controller
 {
-    private readonly BibleBrainService _bibleBrainService;
-    private readonly ILogger Logger;
-    public BiblebrainController(BibleBrainService service, ILoggerFactory loggerFactory)
-    {
-        _bibleBrainService = service;
-        Logger = loggerFactory.CreateLogger<BiblebrainController>();
-    }
+    private readonly BibleBrainService _bibleBrainService = service;
+    private readonly ILogger Logger = loggerFactory.CreateLogger<BiblebrainController>();
+
     [HttpGet("{bibleid}/{size}/{timing}/copyright")]
     public async Task<string> GetCopyright([FromRoute] string bibleid, 
                                             [FromRoute] string Size, 

@@ -4,24 +4,18 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers;
 
+/// <summary>
+/// API to interact with Aero services
+/// </summary>
+/// <param name="service"></param>
+/// <param name="loggerFactory"></param>
+/// <param name="s3"></param>
 [Route("api/[controller]")]
-public class AeroController : Controller
+public class AeroController(AeroService service, ILoggerFactory loggerFactory, IS3Service s3) : Controller
 {
-    private readonly AeroService _service;
-    private readonly IS3Service _s3;
-    private ILogger Logger { get; set; }
-    /// <summary>
-    /// API to interact with Aero services
-    /// </summary>
-    /// <param name="service"></param>
-    /// <param name="loggerFactory"></param>
-    /// <param name="s3"></param>
-    public AeroController(AeroService service, ILoggerFactory loggerFactory, IS3Service s3)
-    {
-        _service = service;
-        Logger = loggerFactory.CreateLogger("AeroController");
-        _s3 = s3;
-    }
+    private readonly AeroService _service = service;
+    private readonly IS3Service _s3 = s3;
+    private ILogger Logger { get; set; } = loggerFactory.CreateLogger("AeroController");
     #region NoiseRemoval
     /// <summary>
     /// send uploaded audio to send on to aero noise removal

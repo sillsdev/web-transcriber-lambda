@@ -8,28 +8,25 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Services
 {
-    public class FileresponseService : JsonApiResourceService<Fileresponse, int>
-    {
-        public FileresponseService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Fileresponse> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor
+    public class FileresponseService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Fileresponse> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor
+        ) : JsonApiResourceService<Fileresponse, int>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor
             )
-        { }
+    {
     }
 }

@@ -9,6 +9,7 @@ using SIL.Logging.Repositories;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Services.Contracts;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using System.Security.Claims;
@@ -224,12 +225,10 @@ namespace SIL.Transcriber
                 });
 
 
-            services.AddAuthorization(options => {
-                options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            services.AddAuthorizationBuilder()
+                .SetFallbackPolicy(new AuthorizationPolicyBuilder()
                   .RequireAuthenticatedUser()
-                  .Build();
-
-            });
+                  .Build());
 
             return services;
         }

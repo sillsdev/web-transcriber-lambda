@@ -115,14 +115,9 @@ namespace SIL.Transcriber.Serialization
         /// <summary>
         /// Enables to explicitly set the inclusion chain to use, which is normally based on the '?include=' query string parameter.
         /// </summary>
-        private sealed class IncludeCache : IEvaluatedIncludeCache
+        private sealed class IncludeCache(IncludeExpression? include) : IEvaluatedIncludeCache
         {
-            private IncludeExpression? _include;
-
-            public IncludeCache(IncludeExpression? include)
-            {
-                _include = include;
-            }
+            private IncludeExpression? _include = include;
 
             public void Set(IncludeExpression include)
             {

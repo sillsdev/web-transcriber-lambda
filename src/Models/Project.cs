@@ -115,7 +115,7 @@ namespace SIL.Transcriber.Models
             tmp?.ForEach((List<object> item) => {
                 if (!decimal.TryParse(item[0]?.ToString(), out decimal num))
                     num = 0;
-                ret = ret.Append(new SectionMap { Sequencenum = num, Label = item [1]?.ToString() ?? "" }).ToArray();
+                ret = [.. ret, new SectionMap { Sequencenum = num, Label = item [1]?.ToString() ?? "" }];
             });
             return ret;
         }

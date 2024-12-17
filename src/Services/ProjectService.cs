@@ -9,35 +9,29 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class ProjectService : BaseArchiveService<Project>
-    {
-        private readonly ProjectRepository MyRepository;
-
-        public ProjectService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Project> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            ProjectRepository myRepository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                myRepository
+    public class ProjectService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Project> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        ProjectRepository myRepository
+        ) : BaseArchiveService<Project>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            myRepository
             )
-        {
-            MyRepository = myRepository;
-        }
+    {
+        private readonly ProjectRepository MyRepository = myRepository;
 
         public async Task<Project?> GetWithPlansAsync(int id)
         {

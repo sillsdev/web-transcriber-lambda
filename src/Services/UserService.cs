@@ -11,41 +11,33 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class UserService : BaseArchiveService<User>
-    {
-        private CurrentUserRepository CurrentUserRepository { get; }
-        private UserRepository UserRepository { get; }
-        protected readonly AppDbContext dbContext;
-
-        public UserService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<User> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            UserRepository repository,
-            AppDbContextResolver contextResolver
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class UserService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<User> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        UserRepository repository,
+        AppDbContextResolver contextResolver
+        ) : BaseArchiveService<User>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        {
-            CurrentUserRepository = currentUserRepository;
-            UserRepository = repository;
-            dbContext = (AppDbContext)contextResolver.GetContext();
-        }
+    {
+        private CurrentUserRepository CurrentUserRepository { get; } = currentUserRepository;
+        private UserRepository UserRepository { get; } = repository;
+        protected readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
 
         public User CreateUser(User newUser)
         {

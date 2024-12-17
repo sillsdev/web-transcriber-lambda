@@ -14,54 +14,40 @@ using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgDataRepository : BaseRepository<Orgdata>
-    {
-        protected readonly OrganizationRepository organizationRepository;
-        protected readonly GroupMembershipRepository gmRepository;
-        protected readonly GroupRepository groupRepository;
-        protected readonly IResourceGraph _resourceGraph;
-        protected readonly IResourceFactory _resourceFactory;
-        protected readonly IEnumerable<IQueryConstraintProvider> _constraintProviders;
-        protected readonly IJsonApiOptions _options;
-        protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
-        protected readonly IMetaBuilder _metaBuilder;
-
-        public OrgDataRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            OrganizationRepository orgRepository,
-            GroupMembershipRepository grpMemRepository,
-            GroupRepository grpRepository,
-            IMetaBuilder metaBuilder,
-            IJsonApiOptions options
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class OrgDataRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        OrganizationRepository orgRepository,
+        GroupMembershipRepository grpMemRepository,
+        GroupRepository grpRepository,
+        IMetaBuilder metaBuilder,
+        IJsonApiOptions options
+        ) : BaseRepository<Orgdata>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            organizationRepository = orgRepository;
-            gmRepository = grpMemRepository;
-            groupRepository = grpRepository;
-            _resourceGraph = resourceGraph;
-            _resourceFactory = resourceFactory;
-            _constraintProviders = constraintProviders;
-            _options = options;
-            _resourceDefinitionAccessor = resourceDefinitionAccessor;
-            _metaBuilder = metaBuilder;
-        }
+    {
+        protected readonly OrganizationRepository organizationRepository = orgRepository;
+        protected readonly GroupMembershipRepository gmRepository = grpMemRepository;
+        protected readonly GroupRepository groupRepository = grpRepository;
+        protected readonly IResourceGraph _resourceGraph = resourceGraph;
+        protected readonly IResourceFactory _resourceFactory = resourceFactory;
+        protected readonly IEnumerable<IQueryConstraintProvider> _constraintProviders = constraintProviders;
+        protected readonly IJsonApiOptions _options = options;
+        protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor = resourceDefinitionAccessor;
+        protected readonly IMetaBuilder _metaBuilder = metaBuilder;
 
         private string ToJson<TResource>(IEnumerable<TResource> resources)
              where TResource : class, IIdentifiable
@@ -101,7 +87,7 @@ namespace SIL.Transcriber.Repositories
             int lastId = -1;
             if (starttable == check)
             {
-                List<Graphic>? lst = startId > 0 ? list.Where(m => m.Id >= startId).ToList() : list.ToList();
+                List<Graphic>? lst = startId > 0 ? [.. list.Where(m => m.Id >= startId)] : [.. list];
                 string thisData = ToJson(lst);
 
                 while (thisData.Length > (1000000 * 4))
@@ -109,7 +95,7 @@ namespace SIL.Transcriber.Repositories
                     int cnt = lst.Count;
                     Graphic mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = list.Where(m => m.Id >= startId && m.Id < lastId).ToList();
+                    lst = [.. list.Where(m => m.Id >= startId && m.Id < lastId)];
                     thisData = ToJson(lst);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
@@ -278,7 +264,7 @@ namespace SIL.Transcriber.Repositories
                         cats.Union(sharedres.Join(dbContext.ArtifactcategoriesData, s => s.ArtifactCategoryId, c => c.Id, (s, c) => c), new RecordEqualityComparer<Artifactcategory>());
                     }
                     //Category Title Media
-                    List<Mediafile> linkedmedia = dbContext.MediafilesData.Where(x => !x.Archived).Join(cats, m => m.Id, c => c.TitleMediafileId, (m, c) => m).ToList();
+                    List<Mediafile> linkedmedia = [.. dbContext.MediafilesData.Where(x => !x.Archived).Join(cats, m => m.Id, c => c.TitleMediafileId, (m, c) => m)];
 
                     if (!CheckAdd(16,
                             ToJson(cats),
@@ -397,7 +383,7 @@ namespace SIL.Transcriber.Repositories
 
         protected override IQueryable<Orgdata> GetAll()
         {
-            List<Orgdata> entities = new() { new Orgdata() };
+            List<Orgdata> entities = [new Orgdata()];
             return entities.AsAsyncQueryable();
         }
 

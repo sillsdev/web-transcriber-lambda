@@ -15,24 +15,19 @@ namespace SIL.Transcriber.Controllers
     //[HttpReadOnly]
     [Route("api/[controller]")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class DatachangesController : JsonApiController<Datachanges, int>
-    {
-        private readonly DataChangeService service;
-
-        public DatachangesController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<Datachanges, int> resourceService
-        ) : base(
-                options,
-                resourceGraph,
-                loggerFactory,
-                resourceService
+    public class DatachangesController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<Datachanges, int> resourceService
+        ) : JsonApiController<Datachanges, int>(
+            options,
+            resourceGraph,
+            loggerFactory,
+            resourceService
             )
-        {
-            service = (DataChangeService)resourceService;
-        }
+    {
+        private readonly DataChangeService service = (DataChangeService)resourceService;
 
         [HttpGet("since/{since}")]
         public ActionResult GetDatachanges([FromRoute] string since, string origin)

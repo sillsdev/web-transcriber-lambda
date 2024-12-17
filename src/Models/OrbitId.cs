@@ -5,7 +5,7 @@
         public OrbitId(string mytype)
         {
             Type = mytype;
-            Ids = new List<int>();
+            Ids = [];
         }
         public OrbitId(string mytype, List<int> newIds)
         {

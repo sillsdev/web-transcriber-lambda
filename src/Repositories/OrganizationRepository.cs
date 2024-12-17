@@ -8,35 +8,30 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrganizationRepository : BaseRepository<Organization>
-    {
-        private readonly ProjectRepository ProjectRepository;
-
-        public OrganizationRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            ProjectRepository projectRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class OrganizationRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        ProjectRepository projectRepository
+        ) : BaseRepository<Organization>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            ProjectRepository =
+    {
+        private readonly ProjectRepository ProjectRepository =
                 projectRepository ?? throw new ArgumentNullException(nameof(projectRepository));
-        }
+
         public bool AnyPublished(int id)
         {
             return dbContext.Organizations.Where(o => o.Id == id)

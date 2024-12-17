@@ -11,25 +11,20 @@ namespace SIL.Transcriber.Controllers
     //[HttpReadOnly]
     [Route("api/[controller]")]
 
-    public class DashboardsController : JsonApiController<Dashboard, int>
-    {
-        private readonly DashboardRepository repo;
-
-        public DashboardsController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<Dashboard, int> resourceService,
-            DashboardRepository repository
-        ) : base(
-                options,
-                resourceGraph,
-                loggerFactory,
-                resourceService
+    public class DashboardsController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<Dashboard, int> resourceService,
+        DashboardRepository repository
+        ) : JsonApiController<Dashboard, int>(
+            options,
+            resourceGraph,
+            loggerFactory,
+            resourceService
             )
-        {
-            repo = repository;
-        }
+    {
+        private readonly DashboardRepository repo = repository;
 
         [AllowAnonymous]
         [HttpGet()]

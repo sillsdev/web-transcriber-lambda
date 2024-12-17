@@ -8,31 +8,27 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class PlanService : BaseArchiveService<Plan>
-    {
-        public PlanService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Plan> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            PlanRepository myRepository,
-            IEnumerable<IQueryConstraintProvider> constraintProviders
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                myRepository
+    public class PlanService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Plan> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        PlanRepository myRepository
+        ) : BaseArchiveService<Plan>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            myRepository
             )
-        { }
+    {
     }
 }

@@ -8,31 +8,28 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class BibleBrainBibleService : BaseService<Biblebrainbible>
-    {
-        public BibleBrainBibleService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Biblebrainbible> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            BibleBrainBibleRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class BibleBrainBibleService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Biblebrainbible> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        BibleBrainBibleRepository repository
+        ) : BaseService<Biblebrainbible>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        { }
+    {
         public override async Task<Biblebrainbible?> CreateAsync(
                                         Biblebrainbible resource,
                                         CancellationToken cancellationToken

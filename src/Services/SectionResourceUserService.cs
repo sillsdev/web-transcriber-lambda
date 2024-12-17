@@ -8,30 +8,27 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionResourceUserService : BaseArchiveService<Sectionresourceuser>
-    {
-        public SectionResourceUserService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Sectionresourceuser> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            SectionResourceUserRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class SectionResourceUserService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Sectionresourceuser> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        SectionResourceUserRepository repository
+        ) : BaseArchiveService<Sectionresourceuser>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        { }
+    {
     }
 }

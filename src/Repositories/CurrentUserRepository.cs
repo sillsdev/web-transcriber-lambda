@@ -10,29 +10,22 @@ using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class CurrentUserRepository : EntityFrameworkCoreRepository<CurrentUser, int>
+    public class CurrentUserRepository(
+        ITargetedFields targetedFields, AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        ICurrentUserContext currentUserContext
+       ) : EntityFrameworkCoreRepository<CurrentUser, int>(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
+       loggerFactory, resourceDefinitionAccessor)
     {
         // NOTE: this repository MUST not rely on any other repositories or services
-        protected readonly AppDbContext dbContext;
-
-        public CurrentUserRepository(
-            ITargetedFields targetedFields, AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            ICurrentUserContext currentUserContext
-       ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory, constraintProviders,
-           loggerFactory, resourceDefinitionAccessor)
-        {
-            dbContext = (AppDbContext)contextResolver.GetContext();
-            CurrentUserContext = currentUserContext;
-            Logger = loggerFactory.CreateLogger<User>();
-        }
+        protected readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
 
         //private AppDbContext DBContext { get; }
-        private ICurrentUserContext CurrentUserContext { get; }
-        protected ILogger<User> Logger { get; set; }
+        private ICurrentUserContext CurrentUserContext { get; } = currentUserContext;
+        protected ILogger<User> Logger { get; set; } = loggerFactory.CreateLogger<User>();
         private User? curUser;
         // memoize once per local thread,
         // since the current user can't change in a single request

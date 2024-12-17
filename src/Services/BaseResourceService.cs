@@ -5,18 +5,14 @@ using System.Net;
 
 namespace SIL.Transcriber.Services;
 
-public class BaseResourceService
+public class BaseResourceService(
+   AppDbContextResolver contextResolver,
+   IS3Service s3Service)
 {
-    protected readonly AppDbContext DbContext;
-    protected readonly IS3Service S3service;
+    protected readonly AppDbContext DbContext = (AppDbContext)contextResolver.GetContext();
+    protected readonly IS3Service S3service = s3Service;
     protected readonly HttpClient Client = new();
-    public BaseResourceService(
-       AppDbContextResolver contextResolver,
-       IS3Service s3Service)
-    {
-        DbContext = (AppDbContext)contextResolver.GetContext();
-        S3service = s3Service;
-    }
+
     protected Mediafile CreateMedia(string originalFile, string contentType, string desc, int? passageId, int planId,
                                 int artifacttypeId, string lang, string s3file, string folder, int? artifactcategoryId = null, int? sourceMediaId=null, string? segments= "{}")
     {

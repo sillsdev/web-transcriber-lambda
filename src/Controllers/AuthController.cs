@@ -7,17 +7,10 @@ namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class AuthController : ControllerBase
+    public class AuthController(ICurrentUserContext currentUserContext, IAuthService authService) : ControllerBase()
     {
-        protected IAuthService service;
-        protected ICurrentUserContext currentUserContext;
-
-        public AuthController(ICurrentUserContext currentUserContext, IAuthService authService)
-            : base()
-        {
-            this.service = authService;
-            this.currentUserContext = currentUserContext;
-        }
+        protected IAuthService service = authService;
+        protected ICurrentUserContext currentUserContext = currentUserContext;
 
         [HttpGet("resend")]
         public Task Resend()

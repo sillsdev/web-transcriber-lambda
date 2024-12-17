@@ -15,44 +15,34 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionPassageService : JsonApiResourceService<Sectionpassage, int>
+    public class SectionPassageService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Sectionpassage> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        SectionPassageRepository myRepository,
+        AppDbContextResolver contextResolver
+        ) : JsonApiResourceService<Sectionpassage, int>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor
+            )
     {
-        protected SectionPassageRepository MyRepository { get; }
-        protected readonly AppDbContext dbContext;
+        protected SectionPassageRepository MyRepository { get; } = myRepository;
+        protected readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
 
         //protected IJsonApiOptions options { get; }
-        protected ILogger<Sectionpassage> Logger { get; set; }
-        protected IResourceChangeTracker<Sectionpassage> ResourceChangeTracker;
-
-        public SectionPassageService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Sectionpassage> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            SectionPassageRepository myRepository,
-            AppDbContextResolver contextResolver
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor
-            )
-        {
-            MyRepository = myRepository;
-            Logger = loggerFactory.CreateLogger<Sectionpassage>();
-            ResourceChangeTracker = resourceChangeTracker;
-            dbContext = (AppDbContext)contextResolver.GetContext();
-
-        }
+        protected ILogger<Sectionpassage> Logger { get; set; } = loggerFactory.CreateLogger<Sectionpassage>();
+        protected IResourceChangeTracker<Sectionpassage> ResourceChangeTracker = resourceChangeTracker;
 
 #pragma warning disable CS8609 // Nullability of reference types in return type doesn't match overridden member.
         public override async Task<Sectionpassage?> GetAsync(int id, CancellationToken cancelled)
@@ -114,7 +104,7 @@ namespace SIL.Transcriber.Services
                 );
 
                 //add all sections
-                List<Section> updsections = new();
+                List<Section> updsections = [];
 
                 foreach (JArray item in updsecs)
                 {
@@ -136,9 +126,9 @@ namespace SIL.Transcriber.Services
                 }
                 int lastSectionId = 0;
                 /* process all the passages now */
-                List<JToken> updpass = new();
-                List<Passage> updpassages = new();
-                List<Passage> delpassages = new();
+                List<JToken> updpass = [];
+                List<Passage> updpassages = [];
+                List<Passage> delpassages = [];
 #pragma warning disable CS8604 // Possible null reference argument.
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
                 foreach (JArray item in data)
@@ -210,7 +200,7 @@ namespace SIL.Transcriber.Services
                 IEnumerable<JToken> delsecs = data.Where(
                     d => ((bool?)d[0]?["issection"] ?? false) && ((bool?)d[0]?["deleted"] ?? false)
                 );
-                List<Section> delsections = new();
+                List<Section> delsections = [];
                 foreach (JArray item in delsecs)
                 {
                     delsections.Add(MyRepository.GetSection((int?)item [0] ["id"] ?? 0));

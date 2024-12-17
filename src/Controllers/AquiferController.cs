@@ -4,15 +4,11 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers;
 
 [Route("api/[controller]")]
-public class AquiferController : Controller
+public class AquiferController(AquiferService service, ILoggerFactory loggerFactory) : Controller
 {
-    private readonly AquiferService _aquiferService;
-    private readonly ILogger Logger;
-    public AquiferController(AquiferService service, ILoggerFactory loggerFactory)
-    {
-        _aquiferService = service;
-        Logger = loggerFactory.CreateLogger<BiblebrainController>();
-    }
+    private readonly AquiferService _aquiferService = service;
+    private readonly ILogger Logger = loggerFactory.CreateLogger<BiblebrainController>();
+
     [HttpGet("languages")]
     public async Task<string> GetLanguages()
     {

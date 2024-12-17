@@ -15,32 +15,29 @@ namespace SIL.Transcriber.Services
         public string licensor { get; set; } = "";
         public string fileset_id { get; set; } = "";
     }
-    public class BibleBrainFilesetService : BaseService<Biblebrainfileset>
-    {
-        private BibleBrainFilesetRepository _repo;
-        public BibleBrainFilesetService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Biblebrainfileset> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            BibleBrainFilesetRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class BibleBrainFilesetService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Biblebrainfileset> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        BibleBrainFilesetRepository repository
+        ) : BaseService<Biblebrainfileset>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        { _repo = repository; }
+    {
+        private BibleBrainFilesetRepository _repo = repository;
 
         public Biblebrainfileset? PostAllowed(AllowedFileset fileset)
         {

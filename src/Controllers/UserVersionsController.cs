@@ -6,14 +6,9 @@ namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
 
-    public class UserversionsController : ControllerBase
+    public class UserversionsController(UserVersionService resourceService) : ControllerBase()
     {
-        private readonly UserVersionService ResourceService;
-
-        public UserversionsController(UserVersionService resourceService) : base()
-        {
-            ResourceService = resourceService;
-        }
+        private readonly UserVersionService ResourceService = resourceService;
 
         [AllowAnonymous]
         [HttpPost("{version}")]

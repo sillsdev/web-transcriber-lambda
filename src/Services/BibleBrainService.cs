@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Controllers;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services.Contracts;
 using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.Extensions.UriExtensions;
@@ -23,26 +24,21 @@ public class BiblebrainPost
     public string Scope { get; set; } = "";
 }
 
-public class BibleBrainService : BaseResourceService
+public class BibleBrainService(
+    IHttpContextAccessor httpContextAccessor,
+    AppDbContextResolver contextResolver,
+    ISQSService sqsService,
+    IS3Service s3Service,
+    ILoggerFactory loggerFactory) : BaseResourceService(contextResolver, s3Service)
 {
     private const string Domain = "https://4.dbt.io/api/";
     private const string Folder = "biblebrain/";
     private readonly HttpClient _client = new() { BaseAddress = new Uri(Domain) };
-    private static string _key = GetVarOrThrow("SIL_TR_BIBLEBRAIN");
-    readonly private HttpContext? HttpContext;
-    readonly private ISQSService _SQSService;
-    private readonly ILogger Logger;
-    public BibleBrainService(
-        IHttpContextAccessor httpContextAccessor,
-        AppDbContextResolver contextResolver,
-        ISQSService sqsService,
-        IS3Service s3Service,
-        ILoggerFactory loggerFactory) : base(contextResolver, s3Service)
-    {
-        HttpContext = httpContextAccessor.HttpContext;
-        _SQSService = sqsService;
-        Logger = loggerFactory.CreateLogger<BiblebrainController>();
-    }
+    private static readonly string _key = GetVarOrThrow("SIL_TR_BIBLEBRAIN");
+    readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
+    readonly private ISQSService _SQSService = sqsService;
+    private readonly ILogger Logger = loggerFactory.CreateLogger<BiblebrainController>();
+
     private static List<(string Name, string Value)> AddParam(List<(string Name, string Value)> p, string Name, string? Value)
     {
         if ((Value ?? "") != "")
@@ -52,11 +48,11 @@ public class BibleBrainService : BaseResourceService
     private async Task<string> DoApiCall(string path, List<(string Name, string Value)>? myParams)
     {
         Uri uri = new($"{Domain}{path}");
-        List<(string Name, string Value)>  p = new (myParams??new());
+        List<(string Name, string Value)>  p = new (myParams??[]);
         AddParam(p, "v", "4");
         AddParam(p, "key", _key);
-        uri = uri.AddParameter(p.ToArray());
-        Console.WriteLine("***URI***", uri);
+        uri = uri.AddParameter([.. p]);
+        Console.WriteLine("***URI*** {0}", uri);
         HttpRequestMessage request = new (HttpMethod.Get, uri);
         HttpResponseMessage response = await _client.SendAsync(request);
         if (response.IsSuccessStatusCode)
@@ -110,7 +106,7 @@ public class BibleBrainService : BaseResourceService
 
         if (fs == null)
             return "";
-        List <(string Name, string Value)> p = new();
+        List <(string Name, string Value)> p = [];
         string fscr = await DoApiCall($"bibles/filesets/{fs.FilesetId}/copyright", p);
         //array of {id, type, size, copyright}
         dynamic? stuff = JsonConvert.DeserializeObject(fscr);
@@ -143,7 +139,7 @@ public class BibleBrainService : BaseResourceService
     {
         int startverse = startp.StartChapter == chapter ? (startp.StartVerse??1) : 1;
         int endverse = lastp.EndChapter == chapter ? lastp.EndVerse??-1 : -1;
-        int[] myArray = {startverse, endverse};
+        int[] myArray = [startverse, endverse];
         return myArray;
     }
     private static string CalcDesc(int startverse, int endverse, string desc, int chapter)
@@ -195,8 +191,8 @@ public class BibleBrainService : BaseResourceService
             _ => DbContext.PassagesData.Where(p => p.Id == 0),
         };
         int count = 0;
-        List<int> sectionids = new();
-        List<Passage> psgs = passages.ToList();
+        List<int> sectionids = [];
+        List<Passage> psgs = [.. passages];
         string desc = bible?.BibleName??post.Bibleid;
         string lang = bible?.Iso??"eng";
 
@@ -224,7 +220,7 @@ public class BibleBrainService : BaseResourceService
                 }
                 if (post.Sections && sectionids.FindIndex(s => s == ps.SectionId) == -1)
                 {
-                    List<Passage> mypsgs = passages.Where(p => p.SectionId == ps.SectionId && (p.StartChapter == chapter || p.EndChapter == chapter)).ToList();
+                    List<Passage> mypsgs = [.. passages.Where(p => p.SectionId == ps.SectionId && (p.StartChapter == chapter || p.EndChapter == chapter))];
                     if (mypsgs.Count > 1 || !post.Passages)
                     {
 

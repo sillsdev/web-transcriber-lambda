@@ -149,10 +149,10 @@ namespace SIL.Transcriber.Services
                 "orgs"
             );
             JArray orgArray = JArray.Parse(response);
-            List<ParatextOrg> orgs = new();
+            List<ParatextOrg> orgs = [];
             foreach (JObject o in orgArray)
             {
-                List<string> domains = new();
+                List<string> domains = [];
                 JToken? dsrc = o["domains"];
                 if (dsrc != null)
                     foreach (string? d in dsrc)
@@ -200,7 +200,7 @@ namespace SIL.Transcriber.Services
             if (reposElem == null)
                 return null;
 
-            List<ParatextProject> projects = new();
+            List<ParatextProject> projects = [];
             foreach (XElement repoElem in reposElem.Elements("repo"))
             {
                 string? projId = (string?)repoElem.Element("projid");
@@ -615,16 +615,11 @@ namespace SIL.Transcriber.Services
             return chapter;
         }
 
-        private class BookChapter : IEquatable<BookChapter>
+        private class BookChapter(string? book, int? chapter) : IEquatable<BookChapter>
         {
-            public string Book { get; }
-            public int Chapter { get; }
+            public string Book { get; } = book ?? "";
+            public int Chapter { get; } = chapter ?? 0;
 
-            public BookChapter(string? book, int? chapter)
-            {
-                Book = book ?? "";
-                Chapter = chapter ?? 0;
-            }
             public override bool Equals(object? obj)
             {
                 //   http://go.microsoft.com/fwlink/?LinkID=85237  
@@ -672,7 +667,7 @@ namespace SIL.Transcriber.Services
             IEnumerable<BookChapter> book_chapters
         )
         {
-            List<ParatextChapter> chapterList = new();
+            List<ParatextChapter> chapterList = [];
 
             foreach (BookChapter bc in book_chapters)
             {
@@ -803,10 +798,9 @@ namespace SIL.Transcriber.Services
         }
         public static List<Mediafile> GetTranscriptionMedia(int psgId, IEnumerable<Mediafile> mediafiles)
         {
-            return mediafiles
+            return [.. mediafiles
                     .Where(m => m.PassageId == psgId)
-                    .OrderBy(m => m.DateCreated) //this is not sufficient! TODO!
-                    .ToList();
+                    .OrderBy(m => m.DateCreated)];
         }   
         public static string GetTranscription(List<Mediafile> mediafiles)
         {
@@ -1058,7 +1052,7 @@ namespace SIL.Transcriber.Services
                 planId,
                 artifactTypeId
             );
-            List<Passage> passages = new();
+            List<Passage> passages = [];
             foreach (Mediafile m in mediafiles)
             {
                 if (passages.FindIndex(p => p.Id == m.PassageId) < 0 && m.Passage != null)
@@ -1077,7 +1071,7 @@ namespace SIL.Transcriber.Services
             }
             return passages.Any() 
                 ? await SyncPassages(userSecret, passages, mediafiles, artifactTypeId) 
-                : new List<ParatextChapter>();
+                : [];
         }
         public async Task<List<ParatextChapter>> SyncPassageAsync(
             UserSecret userSecret,
@@ -1089,13 +1083,13 @@ namespace SIL.Transcriber.Services
                 passageId,
                 artifactTypeId
             );
-            if (!mediafiles.Any()) return new List<ParatextChapter>();
+            if (!mediafiles.Any()) return [];
 
 #pragma warning disable CS8604 // Possible null reference argument.
-            List<Passage> passages = new()
-            {
+            List<Passage> passages =
+            [
                 mediafiles.First().Passage
-            };
+            ];
             return await SyncPassages(userSecret, passages, mediafiles, artifactTypeId);
 #pragma warning restore CS8604 // Possible null reference argument.
         }
@@ -1107,7 +1101,7 @@ namespace SIL.Transcriber.Services
         )
         {
             Project? project = await ProjectService.GetWithPlansAsync(projectId);
-            List<ParatextChapter> chapters = new();
+            List<ParatextChapter> chapters = [];
             if (project != null && project.Plans != null)
                 foreach (Plan p in project.Plans)
                 {
