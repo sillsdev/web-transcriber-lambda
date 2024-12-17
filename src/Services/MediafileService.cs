@@ -4,6 +4,8 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
@@ -13,11 +15,9 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml.Linq;
 using TranscriberAPI.Utility.Extensions;
-using static SIL.Transcriber.Utility.ResourceHelpers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.Extensions.ObjectExtensions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Services
 {
@@ -101,7 +101,6 @@ namespace SIL.Transcriber.Services
             dynamic? s = JsonConvert.DeserializeObject(segments);
             if (s is null or not JArray)
                 return GetFromFile(plan, s3File);
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
             dynamic? start = s[0].regionInfo?[0]?.start;
             dynamic? end = s[0].regionInfo?[0]?.end;
             IEnumerable<Mediafile> resources = files.Where(p => p.S3File == s3File && p.PlanId == plan && !p.Archived);
@@ -116,7 +115,6 @@ namespace SIL.Transcriber.Services
                         return item;
                 }
             }
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
             return null;
         }
         public IEnumerable<Mediafile>? WBTUpdate()
@@ -147,7 +145,7 @@ namespace SIL.Transcriber.Services
 
         public async Task<string> GetNewFileNameAsync(Mediafile mf, string suffix = "")
         {
-            return await S3service.GetFilename(DirectoryName(mf), mf.OriginalFile ?? "", (mf.S3Folder??"") != "" || mf.SourceMedia != null, suffix);
+            return await S3service.GetFilename(DirectoryName(mf), mf.OriginalFile ?? "", (mf.S3Folder ?? "") != "" || mf.SourceMedia != null, suffix);
         }
 
         public IEnumerable<Mediafile> ReadyToSync(int PlanId, int artifactTypeId)
@@ -335,7 +333,7 @@ namespace SIL.Transcriber.Services
         {
             //do this here because we know how to do it here...
             //but then capture it in the repository before it gets lost
-            if (!resource.ContentType?.StartsWith("text")??true)
+            if (!resource.ContentType?.StartsWith("text") ?? true)
             {
                 resource.S3File = GetNewFileNameAsync(resource).Result;
                 resource.AudioUrl = GetAudioUrl(resource);
@@ -374,80 +372,85 @@ namespace SIL.Transcriber.Services
             if (mf.PassageId != null)
             {
                 Mediafile? ver = GetLatest(mf.PassageId??0, null);
-                if (ver != null) nextVers = ((ver.VersionNumber ?? 0) + 1).ToString();
+                if (ver != null)
+                    nextVers = ((ver.VersionNumber ?? 0) + 1).ToString();
             }
 
             Plan? plan = PlanRepository.GetWithProject(mf.PlanId);
             ret.mediafile = mf;
             ret.folder = mf.S3Folder ?? PlanRepository.DirectoryName(plan);
-            ret.s3File =  $"{mf.S3File?[..(mf.S3File.Length - Path.GetExtension(mf.S3File)?.Length??0)]}{nextVers}{postfix}{Path.GetExtension(mf.S3File)}";
+            ret.s3File = $"{mf.S3File?[..(mf.S3File.Length - Path.GetExtension(mf.S3File)?.Length ?? 0)]}{nextVers}{postfix}{Path.GetExtension(mf.S3File)}";
             return ret;
+        }
+        private static void SaveTask(Mediafile mf, string task, string taskId)
+        {
+            dynamic? tasks = JsonConvert.DeserializeObject(mf.TextQuality??"{}");
+            if (tasks != null)
+                tasks[task] = taskId;
+            mf.TextQuality = JsonConvert.ToString(tasks);
         }
         public async Task<Mediafile?> NoiseRemovalAsync(int id)
         {
-            Mediafile? mf = MyRepository.Get(id);
-            if (mf == null)
+            Mediafile? mf = GetFileSignedUrl(id);
+            if (mf?.AudioUrl == null)
                 return null;
-            S3Response response = await GetFile(id);
-            //get a taskid from aero
-            if (response?.FileStream != null)
-            {
-                string? taskid = await Aeroservice.NoiseRemoval(response.FileStream, mf.S3File??"");
-                mf.TextQuality = taskid;
-            }
+            string taskid = await Aeroservice.NoiseRemoval(mf.AudioUrl) ??throw new Exception("Noise Removal failed to start");
+            SaveTask(mf, "NR", taskid);
             return mf;
         }
         public async Task<Mediafile?> NoiseRemovalStatusAsync(int id, string taskId)
         {
-            StatusInfo info = GetStatusInfo(id, "nr");
-            
+            StatusInfo info = GetStatusInfo(id, "NR");
+
             //get a status...if done create a mediafile and return the new id
             string? result = await Aeroservice.NoiseRemovalStatus(taskId, info.s3File, info.folder );
-            if (info.mediafile != null) info.mediafile.AudioQuality = result;
+            if (info.mediafile != null)
+                info.mediafile.AudioQuality = result;
             return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
         }
 
-        public async Task<string?> VoiceConversion(int id)
+        public async Task<Mediafile?> VoiceConversion(int id, string targetUrl)
         {
-            Mediafile? mf = MyRepository.Get(id);
-            if (mf == null)
+            Mediafile? mf = GetFileSignedUrl(id);
+            if (mf?.AudioUrl == null)
                 return null;
-            S3Response response = await GetFile(id);
-            //get a taskid from aero
-            if (response?.FileStream != null)
-            {
-                return await Aeroservice.VoiceConversion(response.FileStream, mf.S3File??"");
-            }
-            return null;
+            string taskId = await Aeroservice.VoiceConversion(mf.AudioUrl, targetUrl) ?? throw new Exception("Voice Conversion failed to start");
+            SaveTask(mf, "VC", taskId);
+            return mf;
         }
-        public async Task<string?> VoiceConversionStatus(int id, string TaskId)
+        public async Task<Mediafile?> VoiceConversionStatus(int id, string taskId)
         {
-            StatusInfo info = GetStatusInfo(id, "nr");
+            StatusInfo info = GetStatusInfo(id, "VC");
 
             //get a status...if done create a mediafile and return the new id
-            return await Aeroservice.VoiceConversionStatus(TaskId);
+            string? result = await Aeroservice.VoiceConversionStatus(taskId, info.s3File, info.folder );
+            if (info.mediafile != null)
+                info.mediafile.AudioQuality = result;
+            return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
         }
-        public async Task<int> TranscriptionLanguages()
+
+        public async Task<Mediafile?> Transcription(int id, string iso, bool romanize)
         {
-            return await Aeroservice.TranscriptionLanguages();
-        }
-        public async Task<string?> Transcription(int id)
-        {
-            Mediafile? mf = MyRepository.Get(id);
-            if (mf == null)
+            Mediafile? mf = GetFileSignedUrl(id);
+            if (mf?.AudioUrl == null)
                 return null;
-            S3Response response = await GetFile(id);
-            //get a taskid from aero
-            if (response?.FileStream != null)
+            string taskId = await Aeroservice.Transcription(mf.AudioUrl, iso, romanize) ?? throw new Exception("Transcription failed to start");
+            SaveTask(mf, "TR", taskId);
+            return mf;
+        }
+        public async Task<Mediafile?> TranscriptionStatus(int id, string taskId)
+        {
+            //get a status...if done create a mediafile and return the new id
+            TranscriptionResponse? result = await Aeroservice.TranscriptionStatus(taskId);
+            if (result != null)
             {
-                return await Aeroservice.Transcription(response.FileStream, mf.S3File??"");
+                Mediafile mf = MyRepository.Get(id) ?? throw new Exception("Mediafile not found");
+                mf.Transcription = result.Transcription ?? result.Phonetic;
+                return mf;
             }
             return null;
         }
-        public async Task<string> TranscriptionStatus(string TaskId)
-        {
-            return await Aeroservice.TranscriptionStatus(TaskId);
-        }
+
         #endregion
     }
 }

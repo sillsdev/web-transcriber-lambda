@@ -10,6 +10,7 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Services;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
@@ -240,7 +241,7 @@ namespace SIL.Transcriber
                     "v1",
                     new OpenApiInfo
                     {
-                        Version = "v2.16.6",
+                        Version = "v3.3",
                         Title = "Transcriber API",
                         Contact = new OpenApiContact
                         {
@@ -249,6 +250,10 @@ namespace SIL.Transcriber
                         },
                     }
                 );
+                // Set the comments path for the Swagger JSON and UI.
+                string xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                options.IncludeXmlComments(xmlPath);
                 options.AddSecurityDefinition(
                     "Bearer",
                     new OpenApiSecurityScheme()
