@@ -9,14 +9,9 @@ using System.Net.Mime;
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
-    public class S3FilesController : ControllerBase
+    public class S3FilesController(IS3Service service) : ControllerBase
     {
-        private readonly IS3Service _service;
-
-        public S3FilesController(IS3Service service)
-        {
-            _service = service;
-        }
+        private readonly IS3Service _service = service;
 
         [HttpGet]
         public async Task<IActionResult> ListFiles()
@@ -36,7 +31,7 @@ namespace SIL.Transcriber.Controllers
 
             if (response.Status == HttpStatusCode.OK)
             {
-                Response.Headers.Add(
+                Response.Headers.Append(
                     "Content-Disposition",
                     new ContentDisposition
                     {

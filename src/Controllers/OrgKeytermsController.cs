@@ -5,22 +5,20 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers;
 
-public class OrgKeytermsController : BaseController<Orgkeyterm>
-{
-    public OrgKeytermsController(
-    ILoggerFactory loggerFactory,
-    IJsonApiOptions options,
-    IResourceGraph resourceGraph,
-    IResourceService<Orgkeyterm, int> resourceService,
-    ICurrentUserContext currentUserContext,
-    UserService userService
-) : base(
-        loggerFactory,
-        options,
-        resourceGraph,
-        resourceService,
-        currentUserContext,
-        userService
+public class OrgKeytermsController(
+ILoggerFactory loggerFactory,
+IJsonApiOptions options,
+IResourceGraph resourceGraph,
+IResourceService<Orgkeyterm, int> resourceService,
+ICurrentUserContext currentUserContext,
+UserService userService
+) : BaseController<Orgkeyterm>(
+    loggerFactory,
+    options,
+    resourceGraph,
+    resourceService,
+    currentUserContext,
+    userService
     )
-    { }
+{
 }

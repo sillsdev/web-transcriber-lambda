@@ -11,23 +11,17 @@ using System.Collections.Immutable;
 
 namespace SIL.Transcriber.Definitions
 {
-    public class BaseDefinition<TEntity> : JsonApiResourceDefinition<TEntity, int>
+    public class BaseDefinition<TEntity>(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request
+        ) : JsonApiResourceDefinition<TEntity, int>(resourceGraph)
         where TEntity : BaseModel
     {
-        protected ILogger<TEntity> Logger { get; set; }
+        protected ILogger<TEntity> Logger { get; set; } = loggerFactory.CreateLogger<TEntity>();
         protected string PublishTitle = "{'Public': 'true'}";
-        readonly private IJsonApiRequest Request;
+        readonly private IJsonApiRequest Request = request;
         private bool TopLevel = true;
-
-        public BaseDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request
-        ) : base(resourceGraph)
-        {
-            Logger = loggerFactory.CreateLogger<TEntity>();
-            Request = request;
-        }
 
         public bool Has(StringValues parameterValue, string param)
         {
@@ -55,8 +49,8 @@ namespace SIL.Transcriber.Definitions
 
         public override FilterExpression? OnApplyFilter(FilterExpression? existingFilter)
         {
-            return existingFilter != null && existingFilter.Has(FilterConstants.DATA_START_INDEX) 
-                ? null 
+            return existingFilter != null && existingFilter.Has(FilterConstants.DATA_START_INDEX)
+                ? null
                 : base.OnApplyFilter(existingFilter);
         }
         public async Task<Mediafile?> PublishMediafile(WriteOperationKind writeOperation, MediafileService service, string publishTo, int? id)

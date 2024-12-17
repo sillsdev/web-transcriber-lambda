@@ -8,40 +8,33 @@ using static SIL.Transcriber.Utility.HttpContextHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class SectionRepository : BaseRepository<Section>
-    {
-        readonly private PlanRepository PlanRepository;
-        readonly private MediafileRepository MediafileRepository;
-        readonly private HttpContext? HttpContext;
-        public SectionRepository(
-            IHttpContextAccessor httpContextAccessor,
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            PlanRepository planRepository,
-            MediafileRepository mediafileRepository
+    public class SectionRepository(
+        IHttpContextAccessor httpContextAccessor,
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        PlanRepository planRepository,
+        MediafileRepository mediafileRepository
 
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+        ) : BaseRepository<Section>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            PlanRepository = planRepository;
-            MediafileRepository = mediafileRepository;
-            HttpContext = httpContextAccessor.HttpContext;
-        }
+    {
+        readonly private PlanRepository PlanRepository = planRepository;
+        readonly private MediafileRepository MediafileRepository = mediafileRepository;
+        readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
 
         #region ScopeToUser
         //get my sections in these projects
@@ -108,7 +101,7 @@ namespace SIL.Transcriber.Repositories
             int chapter
         )
         {
-            IList<SectionSummary> ss = new List<SectionSummary>();
+            IList<SectionSummary> ss = [];
             var passagewithsection = dbContext.Passages
                 .Join(
                     dbContext.Sections.Where(section => section.PlanId == PlanId),
@@ -144,19 +137,18 @@ namespace SIL.Transcriber.Repositories
         }
         private async Task PublishPassages(int sectionid, string publishTo, bool publish)
         {
-            List<Passage> passages = dbContext.Passages.Where(p => p.SectionId == sectionid).ToList();
+            List<Passage> passages = [.. dbContext.Passages.Where(p => p.SectionId == sectionid)];
             foreach (Passage? passage in passages)
             {
                 IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
                         .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
                         .OrderByDescending(m => m.VersionNumber);
-#pragma warning disable CS8604 // Possible null reference argument.
                 List < Mediafile > medialist = publish && mediafiles.Any()
-                ? new List<Mediafile>
-                {
+                ?
+                [
                     mediafiles.FirstOrDefault()
-                }
-                : mediafiles.ToList();
+                ]
+                : [.. mediafiles];
                 //if we are publishing, turn on shared notes.  If not publishing, leave them as they are
                 if (publish && passage.SharedResourceId != null)
                 {
@@ -171,8 +163,7 @@ namespace SIL.Transcriber.Repositories
                             medialist.Add(notemediafile);
                     }
                 }
-#pragma warning restore CS8604 // Possible null reference argument.
-                foreach(Mediafile mediafile in medialist)
+                foreach (Mediafile mediafile in medialist)
                 {
                     if (publish)
                         await MediafileRepository.Publish(mediafile.Id, publishTo, false);

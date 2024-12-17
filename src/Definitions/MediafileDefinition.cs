@@ -6,23 +6,16 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Definitions
 {
-    public class MediafileDefinition : BaseDefinition<Mediafile>
+    public class MediafileDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request,
+        AppDbContext appDbContext,
+         MediafileService mediafileService
+        ) : BaseDefinition<Mediafile>(resourceGraph, loggerFactory, Request)
     {
-        private readonly AppDbContext AppDbContext;
-        private readonly MediafileService MediafileService;
-        public MediafileDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request,
-            AppDbContext appDbContext,
-             MediafileService mediafileService
-        ) : base(resourceGraph, loggerFactory, Request)
-        {
-            AppDbContext = appDbContext;
-            MediafileService = mediafileService;
-            //Do not use a service here...the dbContext in the service isn't correct when called from definition
-            //at least in onWritingAsync
-        }
+        private readonly AppDbContext AppDbContext = appDbContext;
+        private readonly MediafileService MediafileService = mediafileService;
 
         public override async Task OnWritingAsync(
             Mediafile resource,

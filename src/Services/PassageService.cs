@@ -9,36 +9,29 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class PassageService : BaseArchiveService<Passage>
-    {
-        private readonly PassageRepository MyRepository;
-
-        public PassageService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Passage> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            IHttpContextAccessor httpContextAccessor,
-            PassageRepository myRepository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                myRepository
+    public class PassageService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Passage> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        PassageRepository myRepository
+        ) : BaseArchiveService<Passage>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            myRepository
             )
-        {
-            MyRepository = myRepository;
-        }
+    {
+        private readonly PassageRepository MyRepository = myRepository;
 
         public IQueryable<Passage> GetBySection(int SectionId)
         {

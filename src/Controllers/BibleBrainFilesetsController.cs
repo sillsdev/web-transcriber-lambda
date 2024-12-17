@@ -9,27 +9,24 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers;
 
 [Route("api/[controller]")]
-public class BiblebrainfilesetsController : BaseController<Biblebrainfileset>
-{
-    BibleBrainFilesetService _service;
-    public BiblebrainfilesetsController(
-    ILoggerFactory loggerFactory,
-    IJsonApiOptions options,
-    IResourceGraph resourceGraph,
-    IResourceService<Biblebrainfileset, int> resourceService,
-    ICurrentUserContext currentUserContext,
-    UserService userService
-) : base(
-        loggerFactory,
-        options,
-        resourceGraph,
-        resourceService,
-        currentUserContext,
-        userService
+public class BiblebrainfilesetsController(
+ILoggerFactory loggerFactory,
+IJsonApiOptions options,
+IResourceGraph resourceGraph,
+IResourceService<Biblebrainfileset, int> resourceService,
+ICurrentUserContext currentUserContext,
+UserService userService
+) : BaseController<Biblebrainfileset>(
+    loggerFactory,
+    options,
+    resourceGraph,
+    resourceService,
+    currentUserContext,
+    userService
     )
-    {
-        _service = (BibleBrainFilesetService)resourceService;
-    }
+{
+    BibleBrainFilesetService _service = (BibleBrainFilesetService)resourceService;
+
     [AllowAnonymous]
     [HttpPost("allowed")]
     public IActionResult PostAllowed([FromBody] Biblebrainfileset entity)

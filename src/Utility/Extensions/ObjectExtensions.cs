@@ -20,18 +20,18 @@ public static class ObjectExtensions
 
     public static List<T> AsList<T>(this T element)
     {
-        return new List<T>
-        {
+        return
+        [
             element
-        };
+        ];
     }
 
     public static HashSet<T> AsHashSet<T>(this T element)
     {
-        return new HashSet<T>
-        {
+        return
+        [
             element
-        };
+        ];
     }
 
     public static void CopyProperties<T>(this T source, T destination)

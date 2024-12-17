@@ -11,21 +11,14 @@ using static SIL.Transcriber.Data.DbContextExtentions;
 
 namespace SIL.Transcriber.Data
 {
-    public class LoggingDbContext : DbContext
+    public class LoggingDbContext(
+        DbContextOptions<LoggingDbContext> options,
+        IHttpContextAccessor httpContextAccessor
+        ) : DbContext(options)
     {
-        public HttpContext? HttpContext { get; }
-        public DbContextOptions Options { get; }
-        public IHttpContextAccessor HttpContextAccessor { get; }
-
-        public LoggingDbContext(
-            DbContextOptions<LoggingDbContext> options,
-            IHttpContextAccessor httpContextAccessor
-        ) : base(options)
-        {
-            HttpContext = httpContextAccessor.HttpContext;
-            HttpContextAccessor = httpContextAccessor;
-            Options = options;
-        }
+        public HttpContext? HttpContext { get; } = httpContextAccessor.HttpContext;
+        public DbContextOptions Options { get; } = options;
+        public IHttpContextAccessor HttpContextAccessor { get; } = httpContextAccessor;
 
         private static void DefineLastModifiedByUser(ModelBuilder builder)
         {
@@ -118,14 +111,9 @@ namespace SIL.Transcriber.Data
         public DbSet<Paratexttokenhistory> Paratexttokenhistory => Set<Paratexttokenhistory>();
     }
 
-    public class LoggingDbContextResolver : IDbContextResolver
+    public class LoggingDbContextResolver(LoggingDbContext context) : IDbContextResolver
     {
-        private readonly LoggingDbContext _context;
-
-        public LoggingDbContextResolver(LoggingDbContext context)
-        {
-            _context = context;
-        }
+        private readonly LoggingDbContext _context = context;
 
         public DbContext GetContext()
         {
@@ -138,26 +126,24 @@ namespace SIL.Transcriber.Data
         }
     }
 
-    public class LoggingDbContextRepository<TResource>
-        : EntityFrameworkCoreRepository<TResource, int> where TResource : class, IIdentifiable<int>
+    public class LoggingDbContextRepository<TResource>(
+        ITargetedFields targetedFields,
+        LoggingDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor
+        )
+        : EntityFrameworkCoreRepository<TResource, int>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor
+            ) where TResource : class, IIdentifiable<int>
     {
-        public LoggingDbContextRepository(
-            ITargetedFields targetedFields,
-            LoggingDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor
-        ) : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor
-            )
-        { }
     }
 }

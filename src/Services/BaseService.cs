@@ -9,37 +9,31 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class BaseService<TResource> : JsonApiResourceService<TResource, int>
+    public class BaseService<TResource>(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<TResource> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        BaseRepository<TResource> baseRepo
+        ) : JsonApiResourceService<TResource, int>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor
+            )
         where TResource : BaseModel
     {
-        protected ILogger<TResource> Logger { get; set; }
-        protected readonly BaseRepository<TResource> Repo;
+        protected ILogger<TResource> Logger { get; set; } = loggerFactory.CreateLogger<TResource>();
+        protected readonly BaseRepository<TResource> Repo = baseRepo;
 
-        public BaseService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<TResource> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            BaseRepository<TResource> baseRepo
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor
-            )
-        {
-            Logger = loggerFactory.CreateLogger<TResource>();
-            Repo = baseRepo;
-        }
         //GetAsync will apply FromCurrentUser - so do that first to see if the id is in that result set
 #pragma warning disable CS8609 // Nullability of reference types in return type doesn't match overridden member.
         public override async Task<TResource?> GetAsync(int id, CancellationToken cancellationToken)
@@ -70,7 +64,7 @@ namespace SIL.Transcriber.Services
         )
         {
             return entities == null
-                ? new List<TResource>()
+                ? []
                 : currentuser > 0
                 ? entities.Where(p =>
                         (p.LastModifiedBy != currentuser || p.LastModifiedOrigin != origin) &&
@@ -92,7 +86,7 @@ namespace SIL.Transcriber.Services
             CancellationToken cancellationToken
         )
         {
-            
+
             //orbit sometimes sends two in a row...see if we already know about this one
             TResource? x = resource.DateCreated == null ? null : Repo.Get().Where(t =>
                         t.DateCreated == resource.DateCreated

@@ -11,39 +11,32 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
-    public class GroupMembershipService : BaseArchiveService<Groupmembership>
-    {
-        readonly private HttpContext? HttpContext;
-        private readonly AppDbContext dbContext;
-
-        public GroupMembershipService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Groupmembership> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            GroupMembershipRepository repository,
-            IHttpContextAccessor httpContextAccessor,
-            AppDbContextResolver contextResolver
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class GroupMembershipService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Groupmembership> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        GroupMembershipRepository repository,
+        IHttpContextAccessor httpContextAccessor,
+        AppDbContextResolver contextResolver
+        ) : BaseArchiveService<Groupmembership>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        {
-            HttpContext = httpContextAccessor.HttpContext;
-            dbContext = (AppDbContext)contextResolver.GetContext();
-        }
+    {
+        readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
+        private readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
 
         public override async Task<Groupmembership?> CreateAsync(
             Groupmembership entity,

@@ -11,28 +11,23 @@ namespace SIL.Transcriber.Controllers
     //HttpReadOnly]
     [Route("api/statehistory")] //ignored...it's statehistories now
 
-    public class StatehistoryController : BaseController<Statehistory>
-    {
-        readonly private StatehistoryService myService;
-
-        public StatehistoryController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            StatehistoryService resourceService,
-            ICurrentUserContext currentUserContext,
-            UserService userService
-        ) : base(
-                loggerFactory,
-                options,
-                resourceGraph,
-                resourceService,
-                currentUserContext,
-                userService
+    public class StatehistoryController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        StatehistoryService resourceService,
+        ICurrentUserContext currentUserContext,
+        UserService userService
+        ) : BaseController<Statehistory>(
+            loggerFactory,
+            options,
+            resourceGraph,
+            resourceService,
+            currentUserContext,
+            userService
             )
-        {
-            myService = resourceService;
-        }
+    {
+        readonly private StatehistoryService myService = resourceService;
 
         [AllowAnonymous]
         [HttpGet("since/{since}")]

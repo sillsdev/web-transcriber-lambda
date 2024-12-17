@@ -12,8 +12,8 @@ namespace SIL.Transcriber.Models
     {
         public User() : base()
         {
-            OrganizationMemberships = new List<Organizationmembership>();
-            GroupMemberships = new List<Groupmembership>();
+            OrganizationMemberships = [];
+            GroupMemberships = [];
         }
 
         // Full Name of User

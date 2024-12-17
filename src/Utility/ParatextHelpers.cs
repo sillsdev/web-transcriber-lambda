@@ -236,7 +236,7 @@ namespace SIL.Transcriber.Utility
         }
         public static SortedList<string, XElement> GetExistingVerses(int chapter, XElement? chapterContent, Passage currentPassage, out XElement? thisVerse)
         {
-            SortedList<string, XElement> existing = new ();
+            SortedList<string, XElement> existing = [];
             XElement? exactVerse = null;
             if (chapterContent != null)
             {
@@ -277,7 +277,7 @@ namespace SIL.Transcriber.Utility
         private static IEnumerable<Passage> ParseTranscription(Passage currentPassage, int chapter, string transcription)
         {
             string pattern = @"(\\v\s*([0-9]*)-?([0-9]*))";
-            List<Passage> ret = new ();
+            List<Passage> ret = [];
             // Create a Regex  
             Regex rg = new (pattern);
 

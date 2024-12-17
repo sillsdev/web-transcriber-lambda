@@ -6,7 +6,7 @@ using Amazon.SimpleEmail.Model;
 using Newtonsoft.Json;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
-namespace TranscriberAPI.Utility
+namespace SIL.Transcriber.Utility
 {
     public static class Email
     {
@@ -29,12 +29,12 @@ namespace TranscriberAPI.Utility
         {
             public EmailData() : base()
             {
-                ToAddresses = Array.Empty<string>();
+                ToAddresses = [];
                 BodyHtml = "";
                 Subject = "";
                 FromEmail = "";
             }
-            public string [] ToAddresses { get; set; }
+            public string[] ToAddresses { get; set; }
             public string BodyHtml { get; set; }
             public string Subject { get; set; }
             public string FromEmail { get; set; }
@@ -83,7 +83,7 @@ namespace TranscriberAPI.Utility
                 Source = FROM,
                 Destination = new Destination
                 {
-                    ToAddresses = new List<string> { To }
+                    ToAddresses = [To]
                 },
                 Message = new Message
                 {

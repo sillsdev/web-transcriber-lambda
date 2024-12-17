@@ -1,6 +1,7 @@
 ﻿using Amazon.SQS;
 using Amazon.SQS.Model;
 using Newtonsoft.Json;
+using SIL.Transcriber.Services.Contracts;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services
@@ -46,23 +47,18 @@ namespace SIL.Transcriber.Services
         public int ProjectId { get; set; }
         public int Start { get; set; }
     }
-    public class SQSService : ISQSService
+    public class SQSService(IAmazonSQS client, ILoggerFactory loggerFactory) : ISQSService
     {
-        private readonly IAmazonSQS _client;
-        protected ILogger<SQSService> Logger { get; set; }
+        private readonly IAmazonSQS _client = client;
+        protected ILogger<SQSService> Logger { get; set; } = loggerFactory.CreateLogger<SQSService>();
 
-        public SQSService(IAmazonSQS client, ILoggerFactory loggerFactory)
-        {
-            _client = client;
-            this.Logger = loggerFactory.CreateLogger<SQSService>();
-        }
         public async Task<int> MessageCount(string queue)
         {
             GetQueueAttributesResponse attributes = await _client.GetQueueAttributesAsync(new
                 GetQueueAttributesRequest
             {
                 QueueUrl = queue,
-                AttributeNames = new List<string> { "ApproximateNumberOfMessages" }
+                AttributeNames = ["ApproximateNumberOfMessages"]
             });
 
             return attributes.Attributes.TryGetValue("ApproximateNumberOfMessages", out string? messageCount)

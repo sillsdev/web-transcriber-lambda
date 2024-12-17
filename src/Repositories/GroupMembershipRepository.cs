@@ -7,35 +7,28 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class GroupMembershipRepository : BaseRepository<Groupmembership>
-    {
-        private readonly GroupRepository GroupRepository;
-
-        public GroupMembershipRepository(
-            IHttpContextAccessor httpContextAccessor,
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            GroupRepository groupRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class GroupMembershipRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        GroupRepository groupRepository
+        ) : BaseRepository<Groupmembership>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            GroupRepository = groupRepository;
-        }
+    {
+        private readonly GroupRepository GroupRepository = groupRepository;
 
         public IQueryable<Groupmembership> GroupsGroupMemberships(
             IQueryable<Groupmembership> entities,
@@ -50,10 +43,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Group>? groups = null
         )
         {
-            if (groups == null)
-            {
-                groups = GroupRepository.UsersGroups(dbContext.Groups);
-            }
+            groups ??= GroupRepository.UsersGroups(dbContext.Groups);
             return GroupsGroupMemberships(entities, groups);
         }
 

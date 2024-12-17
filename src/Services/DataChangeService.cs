@@ -16,137 +16,98 @@ namespace SIL.Transcriber.Services
         public DateTime since;
     }
 
-    public class DataChangeService : BaseService<Datachanges>
-    {
-        public ICurrentUserContext CurrentUserContext { get; }
-        private readonly ArtifactCategoryService ArtifactCategoryService;
-        private readonly ArtifactTypeService ArtifactTypeService;
-        private readonly BibleService BibleService;
-        private readonly CommentService CommentService;
-        private readonly DiscussionService DiscussionService;
-        private readonly GraphicService GraphicService; 
-        private readonly GroupMembershipService GMService;
-        private readonly GroupService GroupService;
-        private readonly IntellectualPropertyService IntellectualPropertyService;
-        private readonly InvitationService InvitationService;
-        private readonly MediafileService MediafileService;
-        private readonly PassagetypeService PassagetypeService;
-        private readonly OrganizationBibleService OrgBibleService;
-        private readonly OrganizationMembershipService OrgMemService;
-        private readonly OrganizationService OrganizationService;
-        private readonly OrgKeytermService OrgKeytermService;
-        private readonly OrgKeytermReferenceService OrgKeytermReferenceService;
-        private readonly OrgKeytermTargetService OrgKeytermTargetService;
-        private readonly OrgWorkflowStepService OrgWorkflowStepService;
-        private readonly PassageService PassageService;
-        private readonly PassageStateChangeService PassageStateChangeService;
-        private readonly PlanService PlanService;
-        private readonly ProjectIntegrationService ProjIntService;
-        private readonly ProjectService ProjectService;
-        private readonly SectionResourceService SectionResourceService;
-        private readonly SectionResourceUserService SectionResourceUserService;
-        private readonly SectionService SectionService;
-        private readonly SharedResourceService SharedResourceService;
-        private readonly SharedResourceReferenceService SharedResourceReferenceService;
-        private readonly UserService UserService;
-        private readonly WorkflowStepService WorkflowStepService;
-        private readonly CurrentUserRepository CurrentUserRepository;
-        private readonly List<OrbitId> changes = new();
-        private readonly List<OrbitId> deleted = new();
-        protected readonly AppDbContext dbContext;
-
-        public DataChangeService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Datachanges> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            ICurrentUserContext currentUserContext,
-            DatachangesRepository repository,
-            ArtifactCategoryService artifactCategoryService,
-            ArtifactTypeService artifactTypeService,
-            BibleService bibleService,
-            CommentService commentService,
-            DiscussionService discussionService,
-            GraphicService graphicService,
-            GroupMembershipService gmService,
-            GroupService groupService,
-            IntellectualPropertyService intellectualPropertyService,
-            InvitationService invitationService,
-            MediafileService mediafileService,
-            OrganizationBibleService orgBibleService,
-            OrganizationMembershipService omService,
-            OrganizationService organizationService,
-            OrgWorkflowStepService orgWorkflowStepService,
-            OrgKeytermService orgKeytermService,
-            OrgKeytermReferenceService orgKeytermReferenceService,
-            OrgKeytermTargetService orgKeytermTargetService,
-            PassageService passageService,
-            PassageStateChangeService passageStateChangeService,
-            PassagetypeService passagetypeService,
-            PlanService planService,
-            ProjectIntegrationService piService,
-            ProjectService projectService,
-            SectionService sectionService,
-            SectionResourceService sectionResourceService,
-            SectionResourceUserService sectionResourceUserService,
-            SharedResourceService sharedResourceService,
-            SharedResourceReferenceService sharedResourceReferenceService,
-            UserService userService,
-            WorkflowStepService workflowStepService,
-            CurrentUserRepository currentUserRepository,
-            AppDbContextResolver contextResolver
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class DataChangeService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Datachanges> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        ICurrentUserContext currentUserContext,
+        DatachangesRepository repository,
+        ArtifactCategoryService artifactCategoryService,
+        ArtifactTypeService artifactTypeService,
+        BibleService bibleService,
+        CommentService commentService,
+        DiscussionService discussionService,
+        GraphicService graphicService,
+        GroupMembershipService gmService,
+        GroupService groupService,
+        IntellectualPropertyService intellectualPropertyService,
+        InvitationService invitationService,
+        MediafileService mediafileService,
+        OrganizationBibleService orgBibleService,
+        OrganizationMembershipService omService,
+        OrganizationService organizationService,
+        OrgWorkflowStepService orgWorkflowStepService,
+        OrgKeytermService orgKeytermService,
+        OrgKeytermReferenceService orgKeytermReferenceService,
+        OrgKeytermTargetService orgKeytermTargetService,
+        PassageService passageService,
+        PassageStateChangeService passageStateChangeService,
+        PassagetypeService passagetypeService,
+        PlanService planService,
+        ProjectIntegrationService piService,
+        ProjectService projectService,
+        SectionService sectionService,
+        SectionResourceService sectionResourceService,
+        SectionResourceUserService sectionResourceUserService,
+        SharedResourceService sharedResourceService,
+        SharedResourceReferenceService sharedResourceReferenceService,
+        UserService userService,
+        WorkflowStepService workflowStepService,
+        CurrentUserRepository currentUserRepository,
+        AppDbContextResolver contextResolver
+        ) : BaseService<Datachanges>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        {
-            dbContext = (AppDbContext)contextResolver.GetContext();
-            CurrentUserContext = currentUserContext;
-            ArtifactCategoryService = artifactCategoryService;
-            ArtifactTypeService = artifactTypeService;
-            BibleService = bibleService;
-            CommentService = commentService;
-            DiscussionService = discussionService;
-            GraphicService = graphicService;
-            GMService = gmService;
-            GroupService = groupService;
-            IntellectualPropertyService = intellectualPropertyService;
-            InvitationService = invitationService;
-            MediafileService = mediafileService;
-            OrgBibleService = orgBibleService;
-            OrgMemService = omService;
-            OrganizationService = organizationService;
-            OrgKeytermService = orgKeytermService;
-            OrgKeytermReferenceService = orgKeytermReferenceService;
-            OrgKeytermTargetService = orgKeytermTargetService;
-            OrgWorkflowStepService = orgWorkflowStepService;
-            PassageService = passageService;
-            PassageStateChangeService = passageStateChangeService;
-            PassagetypeService = passagetypeService;
-            PlanService = planService;
-            ProjIntService = piService;
-            ProjectService = projectService;
-            SectionService = sectionService;
-            SectionResourceService = sectionResourceService;
-            SectionResourceUserService = sectionResourceUserService;
-            SharedResourceService = sharedResourceService;
-            SharedResourceReferenceService = sharedResourceReferenceService;
-            UserService = userService;
-            WorkflowStepService = workflowStepService;
-            CurrentUserRepository = currentUserRepository;
-        }
+    {
+        public ICurrentUserContext CurrentUserContext { get; } = currentUserContext;
+        private readonly ArtifactCategoryService ArtifactCategoryService = artifactCategoryService;
+        private readonly ArtifactTypeService ArtifactTypeService = artifactTypeService;
+        private readonly BibleService BibleService = bibleService;
+        private readonly CommentService CommentService = commentService;
+        private readonly DiscussionService DiscussionService = discussionService;
+        private readonly GraphicService GraphicService = graphicService;
+        private readonly GroupMembershipService GMService = gmService;
+        private readonly GroupService GroupService = groupService;
+        private readonly IntellectualPropertyService IntellectualPropertyService = intellectualPropertyService;
+        private readonly InvitationService InvitationService = invitationService;
+        private readonly MediafileService MediafileService = mediafileService;
+        private readonly PassagetypeService PassagetypeService = passagetypeService;
+        private readonly OrganizationBibleService OrgBibleService = orgBibleService;
+        private readonly OrganizationMembershipService OrgMemService = omService;
+        private readonly OrganizationService OrganizationService = organizationService;
+        private readonly OrgKeytermService OrgKeytermService = orgKeytermService;
+        private readonly OrgKeytermReferenceService OrgKeytermReferenceService = orgKeytermReferenceService;
+        private readonly OrgKeytermTargetService OrgKeytermTargetService = orgKeytermTargetService;
+        private readonly OrgWorkflowStepService OrgWorkflowStepService = orgWorkflowStepService;
+        private readonly PassageService PassageService = passageService;
+        private readonly PassageStateChangeService PassageStateChangeService = passageStateChangeService;
+        private readonly PlanService PlanService = planService;
+        private readonly ProjectIntegrationService ProjIntService = piService;
+        private readonly ProjectService ProjectService = projectService;
+        private readonly SectionResourceService SectionResourceService = sectionResourceService;
+        private readonly SectionResourceUserService SectionResourceUserService = sectionResourceUserService;
+        private readonly SectionService SectionService = sectionService;
+        private readonly SharedResourceService SharedResourceService = sharedResourceService;
+        private readonly SharedResourceReferenceService SharedResourceReferenceService = sharedResourceReferenceService;
+        private readonly UserService UserService = userService;
+        private readonly WorkflowStepService WorkflowStepService = workflowStepService;
+        private readonly CurrentUserRepository CurrentUserRepository = currentUserRepository;
+        private readonly List<OrbitId> changes = [];
+        private readonly List<OrbitId> deleted = [];
+        protected readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
 
         private User? CurrentUser()
         {
@@ -165,7 +126,7 @@ namespace SIL.Transcriber.Services
             int ix = 0;
             int startId = -1; //where to start next time
             int stop = Math.Min(500, recs.Count());
-            foreach(BaseModel m in recs)
+            foreach (BaseModel m in recs)
             {
                 if (ix > stop)
                 {
@@ -206,14 +167,14 @@ namespace SIL.Transcriber.Services
                 Id = 1,
                 Startnext = startId,
                 Querydate = dtNow,
-                Changes = changes.ToArray(),
-                Deleted = deleted.ToArray()
+                Changes = [.. changes],
+                Deleted = [.. deleted]
             };
         }
 
         public Datachanges GetProjectChanges(
             string origin,
-            ProjDate? [] projects,
+            ProjDate?[] projects,
             string version = "1",
             int start = 0
         )
@@ -221,8 +182,8 @@ namespace SIL.Transcriber.Services
             DateTime dtNow = DateTime.UtcNow;
             if (!int.TryParse(version, out int dbVersion))
                 dbVersion = 1;
-            List<OrbitId> changes = new();
-            List<OrbitId> deleted = new();
+            List<OrbitId> changes = [];
+            List<OrbitId> deleted = [];
             DCReturn? ret = null;
             //we don't pass in an array anymore but backward compatibility
             foreach (ProjDate? pd in projects)
@@ -243,8 +204,8 @@ namespace SIL.Transcriber.Services
                 Id = 1,
                 Startnext = start,
                 Querydate = dtNow,
-                Changes = changes.ToArray(),
-                Deleted = deleted.ToArray()
+                Changes = [.. changes],
+                Deleted = [.. deleted]
             };
         }
 
@@ -274,8 +235,8 @@ namespace SIL.Transcriber.Services
                     Id = 1,
                     Startnext = ret.startNext,
                     Querydate = dtNow,
-                    Changes = changes.ToArray(),
-                    Deleted = deleted.ToArray()
+                    Changes = [.. changes],
+                    Deleted = [.. deleted]
                 };
             }
             catch
@@ -292,18 +253,11 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        public class DCReturn
+        public class DCReturn(List<OrbitId> Changes, List<OrbitId> Deleted, int StartNext)
         {
-            public int startNext;
-            public List<OrbitId> changes;
-            public List<OrbitId> deleted;
-
-            public DCReturn(List<OrbitId> Changes, List<OrbitId> Deleted, int StartNext)
-            {
-                changes = Changes;
-                deleted = Deleted;
-                startNext = StartNext;
-            }
+            public int startNext = StartNext;
+            public List<OrbitId> changes = Changes;
+            public List<OrbitId> deleted = Deleted;
         }
 
         private static int CheckStart(DateTime dtBail, int completed)
@@ -455,20 +409,28 @@ namespace SIL.Transcriber.Services
             int start
         )
         {
-            string[] tables = { "user", "organization", "organizationmembership", 
+            string[] tables = [ "user", "organization", "organizationmembership",
                 "group", "groupmembership", "project", "plan", "section", "passage", "passagestatechange",
-                "projectintegration", "invitation", "mediafile"};
+                "projectintegration", "invitation", "mediafile"];
             if (dbVersion > 3)
-                tables = tables.Concat(new string [] { "artifactcategory", "artifactttype",
-                    "discussion", "comment", "orgworkflowstep","sectionresource", "sectionresourceuser",
-                "workflowstep", "intellectualproperty"}).ToArray();
+                tables =
+                [
+                    .. tables,
+                    .. new string[] { "artifactcategory", "artifactttype",
+                        "discussion", "comment", "orgworkflowstep","sectionresource", "sectionresourceuser",
+                    "workflowstep", "intellectualproperty"},
+                ];
             if (dbVersion > 5)
-                tables = tables.Concat(new string [] { "orgkeyterm", "orgkeytermreference", "orgkeytermtarget",
-                    "sharedresource", "sharedresourcereference" }).ToArray();
+                tables =
+                [
+                    .. tables,
+                    .. new string[] { "orgkeyterm", "orgkeytermreference", "orgkeytermtarget",
+                        "sharedresource", "sharedresourcereference" },
+                ];
             if (dbVersion > 6)
-                tables = tables.Concat(new string [] { "graphic" }).ToArray();
+                tables = [.. tables, .. new string[] { "graphic" }];
             if (dbVersion > 7)
-                tables = tables.Concat(new string [] { "bible", "organizationbible" }).ToArray();
+                tables = [.. tables, .. new string[] { "bible", "organizationbible" }];
             //Logger.LogCritical("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);

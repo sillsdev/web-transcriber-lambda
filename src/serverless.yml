@@ -15,7 +15,7 @@ configValidationMode: warn
 
 provider:
   name: aws
-  runtime: dotnet6
+  runtime: dotnet8
   region: us-east-1
   stage: qa     #cli build params will override this!!
   profile: transcriber  #aws credentials file 
@@ -51,7 +51,7 @@ provider:
 
 
 package:
-  artifact: bin/release/net6.0/deploy-package_${self:custom.myStage}.zip
+  artifact: bin/release/net8.0/deploy-package_${self:custom.myStage}.zip
 
 functions:
   api:

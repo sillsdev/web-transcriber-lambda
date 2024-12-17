@@ -10,39 +10,35 @@ namespace SIL.Transcriber.Services
 {
     public interface IBaseArchiveService<T1, T2> where T1 : BaseModel { }
 
-    public class BaseArchiveService<TResource> : BaseService<TResource>
+    public class BaseArchiveService<TResource>(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<TResource> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        BaseRepository<TResource> baseRepo
+        ) : BaseService<TResource>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            baseRepo
+            )
         where TResource : BaseModel, IArchive
     {
-        public BaseArchiveService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<TResource> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            BaseRepository<TResource> baseRepo
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                baseRepo
-            )
-        { }
-
         public override IEnumerable<TResource> GetChanges(
             IQueryable<TResource> entities,
             int currentuser,
             string origin,
             DateTime since,
-            int project, 
+            int project,
             int startId
         )
         {
@@ -95,8 +91,8 @@ namespace SIL.Transcriber.Services
             //return unarchived
             TResource? existing = await base.GetAsync(id, new CancellationToken());
             if ((existing?.Archived ?? true) && !entity.Archived)
-                    entity.Archived = true;
-                return await base.UpdateAsync(id, entity, cancellationToken);
+                entity.Archived = true;
+            return await base.UpdateAsync(id, entity, cancellationToken);
         }
 
         public async Task<TResource?> NoCheckUpdateAsync(

@@ -4,38 +4,31 @@ using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class UserRepository : BaseRepository<User>
-    {
-        readonly private OrganizationMembershipRepository OrgMemRepository;
-
-        public UserRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            CurrentUserRepository currentUserRepository,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            OrganizationMembershipRepository orgmemRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class UserRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        CurrentUserRepository currentUserRepository,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        OrganizationMembershipRepository orgmemRepository
+        ) : BaseRepository<User>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            OrgMemRepository = orgmemRepository;
-        }
+    {
+        readonly private OrganizationMembershipRepository OrgMemRepository = orgmemRepository;
 
         public IQueryable<User> OrgMemUsers(
             IQueryable<User> entities,
@@ -52,7 +45,7 @@ namespace SIL.Transcriber.Repositories
             entities = mems.ToList().GroupBy(u => u.Id).Select(g => g.First()).AsAsyncQueryable();
             if (entities.Any() || CurrentUser == null)
                 return entities;
-            List<User> justMe = new() { CurrentUser };
+            List<User> justMe = [CurrentUser];
             return justMe.AsAsyncQueryable();
         }
 

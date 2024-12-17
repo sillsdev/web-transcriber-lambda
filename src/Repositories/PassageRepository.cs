@@ -8,34 +8,28 @@ using SIL.Transcriber.Utility.Extensions.JSONAPI;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class PassageRepository : BaseRepository<Passage>
-    {
-        readonly private SectionRepository SectionRepository;
-
-        public PassageRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            SectionRepository sectionRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class PassageRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        SectionRepository sectionRepository
+        ) : BaseRepository<Passage>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            SectionRepository = sectionRepository;
-        }
+    {
+        readonly private SectionRepository SectionRepository = sectionRepository;
 
         public IQueryable<Passage> UsersPassages(
             IQueryable<Passage> entities,

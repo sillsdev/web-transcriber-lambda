@@ -18,7 +18,7 @@
         }
     }
 
-    public struct Attempt<T>
+    public struct Attempt<T>(bool success, T? result = default, string err = "")
     {
         public static Attempt<T> Failure { get; } = new Attempt<T>();
 
@@ -27,16 +27,9 @@
         {
         }
 
-        public Attempt(bool success, T? result = default, string err = "")
-        {
-            Success = success;
-            Result = result;
-            Err = err;
-        }
-
-        public T? Result { get; }
-        public bool Success { get; }
-        public string Err { get; }
+        public T? Result { get; } = result;
+        public bool Success { get; } = success;
+        public string Err { get; } = err;
 
         public bool TryResult(out T? result)
         {

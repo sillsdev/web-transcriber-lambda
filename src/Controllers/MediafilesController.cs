@@ -10,28 +10,23 @@ using System.Net.Mime;
 namespace SIL.Transcriber.Controllers
 {
 
-    public class MediafilesController : BaseController<Mediafile>
-    {
-        private readonly MediafileService _service;
-
-        public MediafilesController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<Mediafile, int> resourceService,
-            ICurrentUserContext currentUserContext,
-            UserService userService
-        ) : base(
-                loggerFactory,
-                options,
-                resourceGraph,
-                resourceService,
-                currentUserContext,
-                userService
+    public class MediafilesController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<Mediafile, int> resourceService,
+        ICurrentUserContext currentUserContext,
+        UserService userService
+        ) : BaseController<Mediafile>(
+            loggerFactory,
+            options,
+            resourceGraph,
+            resourceService,
+            currentUserContext,
+            userService
             )
-        {
-            _service = (MediafileService)resourceService;
-        }
+    {
+        private readonly MediafileService _service = (MediafileService)resourceService;
 
         //POST will return your new mediafile with a PUT signed url in Audiourl.
         //POST/file expects mediafile and file to be in MultiPartForm. It will upload the file and return new mediafile with nothing in audiourl.
@@ -81,7 +76,7 @@ namespace SIL.Transcriber.Controllers
 
             if (response.Status == HttpStatusCode.OK && response.FileStream != null)
             {
-                Response.Headers.Add(
+                Response.Headers.Append(
                     "Content-Disposition",
                     new ContentDisposition
                     {

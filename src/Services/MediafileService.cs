@@ -29,64 +29,50 @@ namespace SIL.Transcriber.Services
         public string cover="";
     }
 
-    public class MediafileService : BaseArchiveService<Mediafile>
+    public class MediafileService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Mediafile> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        PlanRepository planRepository,
+        PassageRepository passageRepository,
+        IS3Service service,
+        AeroService aeroService,
+        MediafileRepository myRepository,
+        IHttpContextAccessor httpContextAccessor,
+        AppDbContextResolver contextResolver,
+        ICurrentUserContext currentUserContext
+        ) : BaseArchiveService<Mediafile>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            myRepository
+            )
     {
-        private IS3Service S3service { get; }
-        private AeroService Aeroservice { get; }
-        private PlanRepository PlanRepository { get; set; }
-        private PassageRepository PassageRepository { get; set; }
-        private MediafileRepository MyRepository { get; set; }
-        private readonly AppDbContext dbContext;
-        readonly private HttpContext? HttpContext;
-        private readonly ICurrentUserContext CurrentUserContext;
-        private readonly ILoggerFactory LoggerFactory;
-        private readonly IHttpContextAccessor HttpContextAccessor;
+        private IS3Service S3service { get; } = service;
+        private AeroService Aeroservice { get; } = aeroService;
+        private PlanRepository PlanRepository { get; set; } = planRepository;
+        private PassageRepository PassageRepository { get; set; } = passageRepository;
+        private MediafileRepository MyRepository { get; set; } = myRepository;
+        private readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
+        readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
+        private readonly ICurrentUserContext CurrentUserContext = currentUserContext;
+        private readonly ILoggerFactory LoggerFactory = loggerFactory;
+        private readonly IHttpContextAccessor HttpContextAccessor = httpContextAccessor;
         private class StatusInfo
         {
             public Mediafile? mediafile;
             public string s3File="";
             public string folder="";
-        }
-        public MediafileService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Mediafile> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            PlanRepository planRepository,
-            PassageRepository passageRepository,
-            IS3Service service,
-            AeroService aeroService,
-            MediafileRepository myRepository,
-            IHttpContextAccessor httpContextAccessor,
-            AppDbContextResolver contextResolver,
-            ICurrentUserContext currentUserContext
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                myRepository
-            )
-        {
-            S3service = service;
-            Aeroservice = aeroService;
-            PlanRepository = planRepository;
-            PassageRepository = passageRepository;
-            MyRepository = myRepository;
-            HttpContextAccessor = httpContextAccessor;
-            HttpContext = httpContextAccessor.HttpContext;
-            dbContext = (AppDbContext)contextResolver.GetContext();
-            CurrentUserContext = currentUserContext;
-            LoggerFactory = loggerFactory;
         }
 
         public Mediafile? GetFromFile(int plan, string s3File)
@@ -342,7 +328,7 @@ namespace SIL.Transcriber.Services
         }
         public List<Mediafile> GetIPMedia(IQueryable<Organization> orgs)
         {
-            IEnumerable<Intellectualproperty>? ip = dbContext.IntellectualPropertys.Join(orgs, ip => ip.OrganizationId, o => o.Id, (ip, o) => ip).ToList();
+            IEnumerable<Intellectualproperty>? ip = [.. dbContext.IntellectualPropertys.Join(orgs, ip => ip.OrganizationId, o => o.Id, (ip, o) => ip)];
             return ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
         }
 
