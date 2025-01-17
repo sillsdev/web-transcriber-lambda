@@ -6,7 +6,7 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class BibleBrainBibleRepository(
+    public class BibleBrainSectionRepository(
         ITargetedFields targetedFields,
         AppDbContextResolver contextResolver,
         IResourceGraph resourceGraph,
@@ -15,7 +15,7 @@ namespace SIL.Transcriber.Repositories
         ILoggerFactory loggerFactory,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
         CurrentUserRepository currentUserRepository
-        ) : BaseRepository<Biblebrainbible>(
+        ) : BaseRepository<Biblebrainsection>(
             targetedFields,
             contextResolver,
             resourceGraph,
@@ -26,42 +26,37 @@ namespace SIL.Transcriber.Repositories
             currentUserRepository
             )
     {
-        public IQueryable<Biblebrainbible> UsersBibles(
-            IQueryable<Biblebrainbible> entities
+        public IQueryable<Biblebrainsection> UsersBibles(
+            IQueryable<Biblebrainsection> entities
         )
         {
             return entities;
         }
 
-        public IQueryable<Biblebrainbible> ProjectBibles(
-            IQueryable<Biblebrainbible> entities,
-#pragma warning disable IDE0060 // Remove unused parameter
+        public IQueryable<Biblebrainsection> ProjectBibles(
+            IQueryable<Biblebrainsection> entities,
             string projectid
-#pragma warning restore IDE0060 // Remove unused parameter
         )
         {
             return entities;
         }
-        public IQueryable<Biblebrainbible> HasTiming()
-        {
-            return Get().Join(dbContext.BibleBrainFilesets.Where(fs => fs.Timing), b => b.BibleId, fs => fs.BibleId, (b, fs) => b).Distinct();
-        }
-        #region Overrides
 
-        public override IQueryable<Biblebrainbible> FromProjectList(
-            IQueryable<Biblebrainbible>? entities,
+        #region Overrides
+        public override IQueryable<Biblebrainsection> FromProjectList(
+            IQueryable<Biblebrainsection>? entities,
             string idList
         )
         {
             return ProjectBibles(entities ?? GetAll(), idList);
         }
 
-        public override IQueryable<Biblebrainbible> FromCurrentUser(
-            IQueryable<Biblebrainbible>? entities = null
+        public override IQueryable<Biblebrainsection> FromCurrentUser(
+            IQueryable<Biblebrainsection>? entities = null
         )
         {
             return UsersBibles(entities ?? GetAll());
         }
         #endregion
+
     }
 }

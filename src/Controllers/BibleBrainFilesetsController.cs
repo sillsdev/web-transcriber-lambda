@@ -25,7 +25,7 @@ UserService userService
     userService
     )
 {
-    BibleBrainFilesetService _service = (BibleBrainFilesetService)resourceService;
+    readonly BibleBrainFilesetService _service = (BibleBrainFilesetService)resourceService;
 
     [AllowAnonymous]
     [HttpPost("allowed")]
@@ -54,4 +54,5 @@ UserService userService
     [AllowAnonymous]
     [HttpPatch("{id}")]
     public override Task<IActionResult> PatchAsync([FromRoute] int id, [FromBody] Biblebrainfileset entity, CancellationToken ct) => base.PatchAsync(id, entity, ct);
+
 }

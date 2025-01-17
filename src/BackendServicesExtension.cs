@@ -81,6 +81,7 @@ namespace SIL.Transcriber
             services.AddScoped<BibleService>();
             services.AddScoped<BibleBrainBibleService>();
             services.AddScoped<BibleBrainFilesetService>();
+            services.AddScoped<BibleBrainSectionService>();
             services.AddScoped<BibleBrainService>();
             services.AddScoped<CommentService>();
             services.AddScoped<CurrentversionService>();
@@ -135,6 +136,7 @@ namespace SIL.Transcriber
             services.AddScoped<BibleRepository>();
             services.AddScoped<BibleBrainBibleRepository>();
             services.AddScoped<BibleBrainFilesetRepository>();
+            services.AddScoped<BibleBrainSectionRepository>();
             services.AddScoped<CommentRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<CurrentversionRepository>();

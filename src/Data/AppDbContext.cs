@@ -35,6 +35,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Bible> Bibles => Set<Bible>();
         public DbSet<Biblebrainbible> BibleBrainBibles => Set<Biblebrainbible>();
         public DbSet<Biblebrainfileset> BibleBrainFilesets => Set<Biblebrainfileset>();
+        public DbSet<Biblebrainsection> BibleBrainSections => Set<Biblebrainsection>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<CopyProject> Copyprojects => Set<CopyProject>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
@@ -144,6 +145,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Biblebrainfileset>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Biblebrainsection>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);

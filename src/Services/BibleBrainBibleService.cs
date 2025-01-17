@@ -43,5 +43,8 @@ namespace SIL.Transcriber.Services
             return x ?? await base.CreateAsync(resource, cancellationToken);
 
         }
+        public IReadOnlyCollection<Biblebrainbible> HasTiming() => [.. ((BibleBrainBibleRepository)Repo).HasTiming()];
+
     }
+
 }

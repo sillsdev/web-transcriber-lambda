@@ -20,7 +20,7 @@ public class AquiferPost
     public int? PassageId { get; set; }
     public int? SectionId { get; set; }
     public int? OrgWorkflowStep { get; set; }
-    public AquiferItem []? Items { get; set; }
+    public AquiferItem[]? Items { get; set; }
 }
 public class AquiferService(
        IHttpContextAccessor httpContextAccessor,
@@ -32,7 +32,7 @@ public class AquiferService(
     private readonly string Key = GetVarOrThrow("SIL_TR_AQUIFER");
     readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
 
-    private async Task<string> DoApiCall(string path, params (string Name, string Value) [] myparams)
+    private async Task<string> DoApiCall(string path, params (string Name, string Value)[] myparams)
     {
         Uri uri = new Uri($"{Domain}{path}").AddParameter(myparams);
 
@@ -123,7 +123,7 @@ public class AquiferService(
                     string contentType = url != "" ? "audio/mp3" : "audio/webm";
                     if (url == "")
                         url = stuff?.content.webm.url ?? "";
-                    
+
                     if (url.EndsWith(".zip"))
                     {
                         string zipName = Path.GetFileNameWithoutExtension(url);
@@ -160,7 +160,7 @@ public class AquiferService(
                 case "Image":
                 {
                     string url = stuff?.content.url ?? "";
-                    string contentType = $"image/{Path.GetExtension(url).Substring(1)}";
+                    string contentType = $"image/{Path.GetExtension(url)[1..]}";
                     string fileName = await UrlToS3(url, Folder);
                     Mediafile m = CreateMedia(fileName, contentType, desc, passage?.Id, section?.PlanId ?? 0, artifacttype?.Id ?? 0, (string)(stuff?.language.code ?? ""), fileName, Folder);
                     mediaids.Add(m.Id);
@@ -179,17 +179,17 @@ public class AquiferService(
                         srids.Add(sr.Id);
                     }
                 }
-                    break;
+                break;
                 default:
                     Console.WriteLine(stuff?.grouping.mediaType);
                     break;
             }
         };
         HttpContext?.SetFP(fp);
-        OrbitId[] ret = {
+        OrbitId[] ret = [
             new OrbitId("mediafile", mediaids),
-            new OrbitId("sectionresource", srids)};
-        
+            new OrbitId("sectionresource", srids)];
+
         return JsonConvert.SerializeObject(ret);
     }
 }

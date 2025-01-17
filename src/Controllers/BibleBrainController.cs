@@ -1,17 +1,18 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers;
 
 [Route("api/[controller]")]
-public class BiblebrainController(BibleBrainService service, ILoggerFactory loggerFactory) : Controller
+public class BiblebrainController(BibleBrainService service) : Controller
 {
     private readonly BibleBrainService _bibleBrainService = service;
-    private readonly ILogger Logger = loggerFactory.CreateLogger<BiblebrainController>();
+    //private readonly ILogger Logger = loggerFactory.CreateLogger<BiblebrainController>();
 
     [HttpGet("{bibleid}/{size}/{timing}/copyright")]
-    public async Task<string> GetCopyright([FromRoute] string bibleid, 
-                                            [FromRoute] string Size, 
+    public async Task<string> GetCopyright([FromRoute] string bibleid,
+                                            [FromRoute] string Size,
                                             [FromRoute] bool timing)
     {
         return await _bibleBrainService.GetCopyright(bibleid, Size, timing);
@@ -21,6 +22,9 @@ public class BiblebrainController(BibleBrainService service, ILoggerFactory logg
     {
         return await _bibleBrainService.GetMessageCount();
     }
+    [AllowAnonymous]
+    [HttpPatch("copyright")]
+    public async Task<IActionResult> PostCopyrightAsync() => Ok(await _bibleBrainService.PostCopyrightAsync());
     /*
     [HttpGet("languages")]
     public async Task<string> GetLanguages([FromQuery] string country,
@@ -57,4 +61,5 @@ public class BiblebrainController(BibleBrainService service, ILoggerFactory logg
         //return content?.ToString()??"Null";
         return await _bibleBrainService.Post(content);
     }
+
 }

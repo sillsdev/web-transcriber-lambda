@@ -8,6 +8,7 @@ using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.Extensions.UriExtensions;
 using static SIL.Transcriber.Utility.HttpContextHelpers;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace SIL.Transcriber.Services;
 
@@ -23,12 +24,18 @@ public class BiblebrainPost
     public bool Passages { get; set; } = false;
     public string Scope { get; set; } = "";
 }
-
+public class Copyright
+{
+    public bool Timing { get; set; }
+    public string? OT { get; set; }
+    public string? NT { get; set; }
+}
 public class BibleBrainService(
     IHttpContextAccessor httpContextAccessor,
     AppDbContextResolver contextResolver,
     ISQSService sqsService,
     IS3Service s3Service,
+    BibleBrainBibleService bibleservice,
     ILoggerFactory loggerFactory) : BaseResourceService(contextResolver, s3Service)
 {
     private const string Domain = "https://4.dbt.io/api/";
@@ -37,6 +44,7 @@ public class BibleBrainService(
     private static readonly string _key = GetVarOrThrow("SIL_TR_BIBLEBRAIN");
     readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
     readonly private ISQSService _SQSService = sqsService;
+
     private readonly ILogger Logger = loggerFactory.CreateLogger<BiblebrainController>();
 
     private static List<(string Name, string Value)> AddParam(List<(string Name, string Value)> p, string Name, string? Value)
@@ -237,5 +245,31 @@ public class BibleBrainService(
         }
         HttpContext?.SetFP(fp);
         return count;
+    }
+
+    public async Task<int> PostCopyrightAsync()
+    {
+        int ix = 0;
+        IEnumerable<Biblebrainbible> bibles = bibleservice.HasTiming().Where(b => b.Copyright == null);
+        foreach (Biblebrainbible bible in bibles)
+        {
+            string nt = await GetCopyright(bible.BibleId, "NT", true);
+            string ot = await GetCopyright(bible.BibleId, "OT", true);
+            bible.Copyright = JsonConvert.SerializeObject(new Copyright() { Timing = true, NT = nt, OT = ot });
+            DbContext.BibleBrainBibles.Update(bible);
+            ix++;
+        }
+        DbContext.SaveChanges();
+        bibles = [.. DbContext.BibleBrainBibles.Where(b => b.Copyright == null)];
+        foreach (Biblebrainbible bible in bibles)
+        {
+            string nt = await GetCopyright(bible.BibleId, "NT", false);
+            string ot = await GetCopyright(bible.BibleId, "OT", false);
+            bible.Copyright = JsonConvert.SerializeObject(new Copyright() { Timing = false, NT = nt, OT = ot });
+            DbContext.BibleBrainBibles.Update(bible);
+            ix++;
+        }
+        DbContext.SaveChanges();
+        return ix;
     }
 }
