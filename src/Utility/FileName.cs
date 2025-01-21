@@ -15,8 +15,8 @@ public static class FileName
         string invalidChars = Regex.Escape(
                new string(Path.GetInvalidFileNameChars()));
 
-        string[] reservedWords = new[]
-            {
+        string[] reservedWords =
+            [
                 "CON",
                 "PRN",
                 "AUX",
@@ -42,11 +42,11 @@ public static class FileName
                 "LPT7",
                 "LPT8",
                 "LPT9"
-            };
+            ];
 
         string sanitizedName = Regex.Replace(
                 filename,
-                @"['()*?/<\[\]\\,""| ]+",
+                @"['()*?/<\[\]\\,""| \r\n]+",
                 "_"
             );
         string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);

@@ -129,14 +129,15 @@ namespace SIL.Transcriber.Repositories
         }
         #endregion
 
-        private async Task PublishSection(Section section, bool publish)
+        private async Task PublishSection(Section section)
         {
             string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
             HttpContext?.SetFP("publish");
-            await PublishPassages(section.Id, section.PublishTo, publish);
+            await PublishPassages(section.Id, section.PublishTo);
         }
-        private async Task PublishPassages(int sectionid, string publishTo, bool publish)
+        private async Task PublishPassages(int sectionid, string publishTo)
         {
+            bool publish = PublishToAkuo(publishTo) || PublishAsSharedResource(publishTo);
             List<Passage> passages = [.. dbContext.Passages.Where(p => p.SectionId == sectionid)];
             foreach (Passage? passage in passages)
             {
@@ -170,12 +171,11 @@ namespace SIL.Transcriber.Repositories
                     else if (mediafile.ReadyToShare)
                     {
                         mediafile.ReadyToShare = false;
-                        mediafile.PublishTo = "{}";
-                        mediafile.PublishedAs = "";
+                        mediafile.PublishTo = "{\"PublishPassages\": false}";
                         dbContext.Mediafiles.Update(mediafile);
                     }
                 };
-                dbContext.SaveChanges();
+                _ = dbContext.SaveChanges();
             }
         }
 
@@ -183,7 +183,7 @@ namespace SIL.Transcriber.Repositories
         {
             if (resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
             {
-                await PublishSection(resourceFromRequest, resourceFromRequest.Published);
+                await PublishSection(resourceFromRequest);
             }
             if (resourceFromRequest.TitleMediafileId != null && PublishToAkuo(resourceFromRequest.PublishTo)) //always do titles and movements
                 await MediafileRepository.Publish((int)resourceFromRequest.TitleMediafileId, "{'Public': 'true'}", true);

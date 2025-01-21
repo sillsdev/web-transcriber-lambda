@@ -79,10 +79,13 @@ namespace SIL.Transcriber.Repositories
             ResourceDefinitionAccessor = resourceDefinitionAccessor;
             ResourceGraph = resourceGraph;
         }
-
+        public bool PublishAsSharedResource(string publishTo)
+        {
+            return publishTo.Contains("Internalization");
+        }
         public bool PublishToAkuo(string publishTo)
         {
-            return publishTo.Contains("Public") || publishTo.Contains("Beta");
+            return publishTo.Contains("Public") || publishTo.Contains("Beta") || publishTo.Contains("OBTHelps");
         }
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {

@@ -41,11 +41,12 @@ public class AeroService(
     {
         content.Add(new StringContent(upload.ToString()), "s3_upload"); // Sends 's3_upload=True' in the request
     }
+
     private static MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
     {
         byte[] data = ConvertStreamToByteArray(stream);
         // Prepare the multipart content
-        using MultipartFormDataContent multipartContent = content ?? [];
+        MultipartFormDataContent multipartContent = content ?? [];
         // Create the ByteArrayContent for the file
         ByteArrayContent fileContent = new (data);
         // Add the required headers for the file content
@@ -72,8 +73,33 @@ public class AeroService(
         stream.CopyTo(memoryStream);
         return memoryStream.ToArray();
     }
+    /*
+    private static async void PrintContent(MultipartContent multipartContent)
+    {
+        foreach (HttpContent content in multipartContent)
+        {
+            if (content is StringContent stringContent)
+            {
+                string? name = content.Headers.ContentDisposition?.Name;
+                string value = await stringContent.ReadAsStringAsync();
+                Debug.WriteLine($"StringContent Name: {name}, Value: {value}");
+            }
+            else if (content is StreamContent streamcontent)
+            {
+                string? name = content.Headers.ContentDisposition?.Name;
+                Debug.WriteLine($"StreamContent Name: {name}, Length: {content.Headers.ContentLength} , Type: {content.Headers.ContentType}");
+            }
+            else if (content is ByteArrayContent bcontent)
+            {
+                string? name = content.Headers.ContentDisposition?.Name;
+                Debug.WriteLine($"ByteArrayContent Name: {name}, Length: {content.Headers.ContentLength} , Type: {content.Headers.ContentType}");
+            }
+        }
+    }
+    */
     private async Task<string?> GetTaskId(string api, MultipartFormDataContent multipartContent)
     {
+        //PrintContent(multipartContent);
         using HttpClient httpClient = await Httpclient();
         HttpResponseMessage response = await httpClient.PostAsync(api, multipartContent);
         response.EnsureSuccessStatusCode();
@@ -187,11 +213,11 @@ public class AeroService(
     }
     private async Task<string?> Transcription(Stream stream, string filename, string lang_iso, bool romanize)
     {
+        string api = $"{Domain}/transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
         MultipartFormDataContent content =  AddFileToRequest(stream, filename, "file");
-        content.Add(new StringContent(lang_iso), "sister_lang_iso");
-        content.Add(new StringContent(romanize.ToString()), "romanize");
-        return await GetTaskId($"{Domain}/transcription", content);
+        return await GetTaskId(api, content);
     }
+
     /// <summary>
     /// 
     /// </summary>
@@ -210,13 +236,16 @@ public class AeroService(
         if (content != null)
         {
             dynamic? x = JsonConvert.DeserializeObject(await content.ReadAsStringAsync());
-            TranscriptionResponse response = new()
+            if (x != null)
             {
-                Phonetic = x?["phonetic_transcription"] ?? "",
-                Transcription = x?["sister_transcription"] ?? "",
-                TranscriptionId = x?["transcription_id"] ?? 0
-            };
-            return response;
+                TranscriptionResponse response = new()
+                {
+                    Phonetic = x.result.phonetic_transcription ?? "",
+                    Transcription =x.result.sister_transcription ?? "",
+                    TranscriptionId = x.result.transcription_id ?? 0
+                };
+                return response;
+            }
         };
         return null;
     }

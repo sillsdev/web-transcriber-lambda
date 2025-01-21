@@ -301,10 +301,6 @@ namespace SIL.Transcriber.Repositories
             sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
             return sr;
         }
-        private static bool PublishAsSharedResource(string publishTo)
-        {
-            return publishTo.Contains("Internalization");
-        }
         public Sharedresource? CreateSharedResource(Mediafile m, Passage p)
         {
             string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
@@ -368,6 +364,12 @@ namespace SIL.Transcriber.Repositories
                 return null;
             }
             Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
+            if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
+            {
+                Sharedresource? sr = GetSharedResource(passage);
+                if (sr == null)
+                    _ = CreateSharedResource(m, passage);
+            }
             if (PublishToAkuo(publishTo))
             {
                 Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
@@ -394,13 +396,7 @@ namespace SIL.Transcriber.Repositories
                         dbContext.SaveChanges();
                 }
             }
-            if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
-            {
-                Sharedresource? sr = GetSharedResource(passage);
-                if (sr == null)
-                    _ = CreateSharedResource(m, passage);
-            }
-            if (!m.ReadyToShare || m.PublishTo != publishTo)
+            else if (!m.ReadyToShare || m.PublishTo != publishTo)
             {
                 m.ReadyToShare = true;
                 m.PublishTo = publishTo;
