@@ -16,21 +16,21 @@ namespace SIL.Transcriber.Models
 
         public Section UpdateFrom(JToken item)
         {
-            Name = item ["title"]?.ToString() ?? "";
-            Sequencenum = decimal.TryParse(item ["sequencenum"]?.ToString() ?? "", out decimal trydec)
+            Name = item["title"]?.ToString() ?? "";
+            Sequencenum = decimal.TryParse(item["sequencenum"]?.ToString() ?? "", out decimal trydec)
                 ? trydec
                 : 0;
-            Level = int.TryParse(item ["level"]?.ToString() ?? "", out int tryint)
+            Level = int.TryParse(item["level"]?.ToString() ?? "", out int tryint)
                 ? tryint
                 : 3;
-            Published = bool.TryParse(item ["published"]?.ToString() ?? "false", out bool trybool)
+            Published = bool.TryParse(item["published"]?.ToString() ?? "false", out bool trybool)
 && trybool;
 
             PublishTo = item["publishTo"]?.ToString() ?? "{}";
-            TitleMediafileId = int.TryParse(item ["titlemediafile"]?.ToString() ?? "", out tryint)
+            TitleMediafileId = int.TryParse(item["titlemediafile"]?.ToString() ?? "", out tryint)
                 ? tryint
                 : null;
-            State = item ["reference"]?.ToString();
+            State = item["reference"]?.ToString();
             return this;
         }
 
@@ -81,7 +81,7 @@ namespace SIL.Transcriber.Models
         public bool Published { get; set; }
         [Attr(PublicName = "publish-to")]
         [Column(TypeName = "jsonb")]
-        public string PublishTo { get; set; } = "{}";
+        public string? PublishTo { get; set; }
 
         [Attr(PublicName = "level")]
         public int Level { get; set; }
@@ -94,7 +94,7 @@ namespace SIL.Transcriber.Models
         public bool Archived { get; set; }
 
 
-        public string SectionHeader(bool addNumbers, SectionMap [] sectionMap)
+        public string SectionHeader(bool addNumbers, SectionMap[] sectionMap)
         {
             SectionMap? map = sectionMap.FirstOrDefault(m => m.Sequencenum== Sequencenum);
             string numstr = "";
@@ -103,7 +103,8 @@ namespace SIL.Transcriber.Models
                 if (map != null)
                 {
                     numstr = map.Label + " - ";
-                } else
+                }
+                else
                 {
                     int num = (int)Math.Floor(Sequencenum);
                     numstr = (num == Sequencenum ? num.ToString() : Sequencenum.ToString()) + " - ";

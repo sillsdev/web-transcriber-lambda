@@ -2,6 +2,7 @@
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using static SIL.Transcriber.Utility.HttpContextHelpers;
@@ -131,9 +132,8 @@ namespace SIL.Transcriber.Repositories
 
         private async Task PublishSection(Section section)
         {
-            string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
             HttpContext?.SetFP("publish");
-            await PublishPassages(section.Id, section.PublishTo);
+            await PublishPassages(section.Id, section.PublishTo ?? "{}");
         }
         private async Task PublishPassages(int sectionid, string publishTo)
         {
@@ -168,10 +168,12 @@ namespace SIL.Transcriber.Repositories
                 {
                     if (publish)
                         await MediafileRepository.Publish(mediafile.Id, publishTo, false);
-                    else if (mediafile.ReadyToShare)
+                    else if (mediafile.ReadyToShare && (publishTo != "{}"))
                     {
+                        JObject pt = JObject.Parse(publishTo);
+                        pt.Add("PublishPassage", false);
                         mediafile.ReadyToShare = false;
-                        mediafile.PublishTo = "{\"PublishPassages\": false}";
+                        mediafile.PublishTo = pt.ToString();
                         dbContext.Mediafiles.Update(mediafile);
                     }
                 };
@@ -181,7 +183,8 @@ namespace SIL.Transcriber.Repositories
 
         public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
         {
-            if (resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
+            //if we meant to send it it will have destinationsetbyuser:true in it
+            if ((resourceFromRequest.PublishTo ?? "{}") != "{}" && resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
             {
                 await PublishSection(resourceFromRequest);
             }

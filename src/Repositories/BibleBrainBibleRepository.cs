@@ -35,7 +35,9 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Biblebrainbible> ProjectBibles(
             IQueryable<Biblebrainbible> entities,
+#pragma warning disable IDE0060 // Remove unused parameter
             string projectid
+#pragma warning restore IDE0060 // Remove unused parameter
         )
         {
             return entities;

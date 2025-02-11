@@ -83,9 +83,9 @@ namespace SIL.Transcriber.Repositories
         {
             return publishTo.Contains("Internalization");
         }
-        public bool PublishToAkuo(string publishTo)
+        public bool PublishToAkuo(string? publishTo)
         {
-            return publishTo.Contains("Public") || publishTo.Contains("Beta") || publishTo.Contains("OBTHelps");
+            return publishTo != null && (publishTo.Contains("Public") || publishTo.Contains("Beta") || publishTo.Contains("OBTHelps"));
         }
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {

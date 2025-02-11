@@ -25,7 +25,7 @@ UserService userService
     userService
     )
 {
-    BibleBrainFilesetService _service = (BibleBrainFilesetService)resourceService;
+    private readonly BibleBrainFilesetService _service = (BibleBrainFilesetService)resourceService;
 
     [AllowAnonymous]
     [HttpPost("allowed")]

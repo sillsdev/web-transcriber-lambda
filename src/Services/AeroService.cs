@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
@@ -41,17 +42,27 @@ public class AeroService(
     {
         content.Add(new StringContent(upload.ToString()), "s3_upload"); // Sends 's3_upload=True' in the request
     }
-
-    private static MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
+    private static ByteArrayContent GetFileContent(Stream stream)
     {
         byte[] data = ConvertStreamToByteArray(stream);
-        // Prepare the multipart content
-        MultipartFormDataContent multipartContent = content ?? [];
         // Create the ByteArrayContent for the file
         ByteArrayContent fileContent = new (data);
         // Add the required headers for the file content
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        // Add the file content to the multipart form-data under the name 'file' to match FastAPI's expected parameter
+        /* this breaks it
+        fileContent.Headers.ContentDisposition = new ContentDispositionHeaderValue(fileName)
+        {
+            FileName = fileName
+        };
+        */
+        return fileContent;
+    }
+
+    private static MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
+    {
+        ByteArrayContent fileContent = GetFileContent(stream);
+        // Prepare the multipart content
+        MultipartFormDataContent multipartContent = content ?? [];
         multipartContent.Add(fileContent, param, filename);
 
         return multipartContent;
@@ -73,7 +84,7 @@ public class AeroService(
         stream.CopyTo(memoryStream);
         return memoryStream.ToArray();
     }
-    /*
+
     private static async void PrintContent(MultipartContent multipartContent)
     {
         foreach (HttpContent content in multipartContent)
@@ -91,26 +102,32 @@ public class AeroService(
             }
             else if (content is ByteArrayContent bcontent)
             {
-                string? name = content.Headers.ContentDisposition?.Name;
+                string? name = content.Headers.ContentDisposition?.Name??content.Headers.ContentDisposition?.FileName;
                 Debug.WriteLine($"ByteArrayContent Name: {name}, Length: {content.Headers.ContentLength} , Type: {content.Headers.ContentType}");
             }
         }
     }
-    */
-    private async Task<string?> GetTaskId(string api, MultipartFormDataContent multipartContent)
+    private async Task<string[]?> GetTaskIds(string api, MultipartFormDataContent content)
     {
-        //PrintContent(multipartContent);
+        string? result = (await GetResult(api, content, "task_ids"))?.ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']','"', ' ').Replace("\"", "");
+        return result?.Split(',');
+    }
+
+
+    private async Task<string?> GetResult(string api, MultipartFormDataContent multipartContent, string result)
+    {
+        PrintContent(multipartContent);
         using HttpClient httpClient = await Httpclient();
         HttpResponseMessage response = await httpClient.PostAsync(api, multipartContent);
         response.EnsureSuccessStatusCode();
         dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
-        return x?["task_id"];
+        return x?[result].ToString();
     }
     public async Task<string?> NoiseRemoval(Stream stream, string filename)
     {
         MultipartFormDataContent multipartContent = AddFileToRequest(stream, filename, "file");
         AddSaveS3(multipartContent, false);
-        return await GetTaskId($"{Domain}/noise_removal", multipartContent);
+        return await GetResult($"{Domain}/noise_removal", multipartContent, "task_id");
     }
     public async Task<string?> NoiseRemoval(IFormFile file)
     {
@@ -136,7 +153,7 @@ public class AeroService(
         if (response.Headers.TryGetValues("task-state", out IEnumerable<string>? taskStates))
         {
             string? taskState = taskStates.FirstOrDefault();
-            return taskState == "SUCCESS"
+            return taskState is "SUCCESS" or "finished"
                 ? response.Content
                 : taskState == "FAILURE" ?
                     throw new Exception(taskState)
@@ -175,7 +192,7 @@ public class AeroService(
         MultipartFormDataContent multipartContent =  AddFileToRequest(source, sourcefilename, "source_file");
         AddFileToRequest(target, targetfilename, "target_file", multipartContent);
         AddSaveS3(multipartContent, false);
-        return await GetTaskId($"{Domain}/voice_conversion", multipartContent);
+        return await GetResult($"{Domain}/voice_conversion", multipartContent, "task_id");
     }
     public async Task<string?> VoiceConversion(string sourceUrl, string targetUrl)
     {
@@ -211,28 +228,49 @@ public class AeroService(
         return filteredArray.ToString();
 
     }
-    private async Task<string?> Transcription(Stream stream, string filename, string lang_iso, bool romanize)
+    private async Task<string?> Transcription(
+        Stream stream, string filename, string lang_iso, bool romanize, List<int>? timing)
     {
-        string api = $"{Domain}/transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
-        MultipartFormDataContent content =  AddFileToRequest(stream, filename, "file");
-        return await GetTaskId(api, content);
+        string api = $"{Domain}/batch_transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
+        if (timing != null)
+            api += $"&timestamps={timing}";
+        MultipartFormDataContent content =  AddFileToRequest(stream, filename, "files");
+        string[]? tasks = await GetTaskIds(api, content);
+        string? task = tasks?.FirstOrDefault();
+        return task;
     }
-
+    public async Task<string[]?> Transcription(string[] fileUrls, string lang_iso, bool romanize)
+    {
+        string api = $"{Domain}/batch_transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
+        MultipartFormDataContent multipartContent = [];
+        List<ByteArrayContent> files = [];
+        int count = 1;
+        foreach (string fileUrl in fileUrls)
+        {
+            Stream stream = await GetStream(fileUrl);
+            string filename = GetFileName(fileUrl);
+            AddFileToRequest(stream, count.ToString() + filename, "files", multipartContent);
+            count++;
+        }
+        string[]? tasks = await GetTaskIds(api, multipartContent);
+        return tasks;
+    }
     /// <summary>
     /// 
     /// </summary>
     /// <param name="fileUrl">The file containing the audio to transcribe.</param>
     /// <param name="lang_iso">The ISO code of the language to transcribe the audio into</param>
     /// <param name="romanize">Whether to romanize the transcription</param>
+    /// <param name="timing">verse timing</param>
     /// <returns></returns>
-    public async Task<string?> Transcription(string fileUrl, string lang_iso, bool romanize)
+    public async Task<string?> Transcription(string fileUrl, string lang_iso, bool romanize, List<int>? timing = null)
     {
-        return await Transcription(await GetStream(fileUrl), GetFileName(fileUrl), lang_iso, romanize);
+        return await Transcription(await GetStream(fileUrl), GetFileName(fileUrl), lang_iso, romanize, timing);
     }
 
     public async Task<TranscriptionResponse?> TranscriptionStatus(string? taskId)
     {
-        HttpContent? content = await GetStatus("transcription", taskId);
+        HttpContent? content = await GetStatus("batch_transcription", taskId);
         if (content != null)
         {
             dynamic? x = JsonConvert.DeserializeObject(await content.ReadAsStringAsync());

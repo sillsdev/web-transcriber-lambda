@@ -36,7 +36,9 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Biblebrainfileset> ProjectBibles(
             IQueryable<Biblebrainfileset> entities,
+#pragma warning disable IDE0060 // Remove unused parameter
             string projectid
+#pragma warning restore IDE0060 // Remove unused parameter
         )
         {
             return entities;
@@ -64,12 +66,13 @@ namespace SIL.Transcriber.Repositories
             if (dbContext.BibleBrainFilesets.Any(f => f.FilesetId == fs.fileset_id))
             {
                 return dbContext.BibleBrainFilesets.First(f => f.FilesetId == fs.fileset_id);
-            }   
-            Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Biblebrainfileset> newfs = 
-                dbContext.BibleBrainFilesets.Add(new Biblebrainfileset { 
-                    FilesetId = fs.fileset_id, 
-                    MediaType = fs.type, 
-                    Licensor = fs.licensor 
+            }
+            Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Biblebrainfileset> newfs =
+                dbContext.BibleBrainFilesets.Add(new Biblebrainfileset
+                {
+                    FilesetId = fs.fileset_id,
+                    MediaType = fs.type,
+                    Licensor = fs.licensor
                 });
             dbContext.SaveChanges();
             return newfs.Entity;

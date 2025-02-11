@@ -19,7 +19,7 @@ namespace SIL.Transcriber.Definitions
         where TEntity : BaseModel
     {
         protected ILogger<TEntity> Logger { get; set; } = loggerFactory.CreateLogger<TEntity>();
-        protected string PublishTitle = "{'Public': 'true'}";
+        protected string PublishTitle = "{\"Public\": \"true\"}";
         readonly private IJsonApiRequest Request = request;
         private bool TopLevel = true;
 

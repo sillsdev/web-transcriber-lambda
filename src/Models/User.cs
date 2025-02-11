@@ -131,11 +131,11 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         public IEnumerable<int> OrganizationIds =>
             OrganizationMemberships?.Where(om => !om.Archived).Select(o => o.OrganizationId)
-            ?? new List<int>();
+            ?? [];
 
         [NotMapped]
         public IEnumerable<int> GroupIds =>
-            GroupMemberships?.Where(gm => !gm.Archived).Select(g => g.GroupId) ?? new List<int>();
+            GroupMemberships?.Where(gm => !gm.Archived).Select(g => g.GroupId) ?? [];
 
         public static explicit operator User(ResourceObject v)
         {

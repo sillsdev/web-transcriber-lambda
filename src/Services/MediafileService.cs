@@ -368,12 +368,97 @@ namespace SIL.Transcriber.Services
             ret.s3File = $"{mf.S3File?[..(mf.S3File.Length - Path.GetExtension(mf.S3File)?.Length ?? 0)]}{nextVers}{postfix}{Path.GetExtension(mf.S3File)}";
             return ret;
         }
-        private static void SaveTask(Mediafile mf, string task, string taskId)
+        private async Task SaveTasks(Mediafile[] mfs, string taskName, string[] taskIds)
         {
-            dynamic? tasks = JsonConvert.DeserializeObject(mf.TextQuality??"{}");
-            if (tasks != null)
-                tasks[task] = taskId;
-            mf.TextQuality = JsonConvert.ToString(tasks);
+            if (mfs.Length != taskIds.Length)
+                throw new Exception($"Save Tasks mediafiles {mfs.Length} tasks {taskIds.Length}");
+            for (int cnt = 0; cnt < mfs.Length; cnt++)
+            {
+                await SaveTask(mfs[cnt], taskName, taskIds[cnt]);
+            }
+        }
+        private async Task UpdateSegments(Mediafile mf, string title, JObject segment, JObject ri, JArray regions)
+        {
+            dynamic? segments = JsonConvert.DeserializeObject(mf.Segments??"{}");
+            if (segments is not JArray)
+            {
+                segments = new[] { segment };
+            }
+            else
+            {
+                List<JToken> oldtasks = ((JArray)segments).Where(x => x is JObject j && j.ContainsKey("name") && j["name"]?.Value<string>() == title).ToList();
+                if (oldtasks.Count > 0)
+                {
+                    dynamic oldtask = oldtasks.First();
+                    dynamic? oldri = oldtask.regionInfo;
+                    if (oldri == null)
+                        oldtask.regionInfo = ri;
+                    else
+                        oldri.regions = regions;
+                }
+                else
+                {
+                    ((JArray)segments).Add(segment);
+                }
+            }
+            mf.Segments = JsonConvert.SerializeObject(segments);
+            await UpdateAsync(mf.Id, mf, new CancellationToken());
+        }
+        private async Task SaveTasks(Mediafile mf, string taskName, int[] times, string[] taskIds)
+        {
+            if (times.Length != taskIds.Length)
+                throw new Exception($"Save Tasks times {times.Length} tasks {taskIds.Length}");
+            string title = taskName+"Task";
+            List<JObject> regions = [];
+
+            for (int cnt = 0; cnt < times.Length - 1; cnt++)
+            {
+                regions.Add(new(new JProperty("start", times[cnt]), new JProperty("end", times[cnt + 1]), new JProperty("label", taskIds[cnt])));
+            }
+            regions.Add(new(new JProperty("start", times[^1]), new JProperty("end", mf.Duration ?? 0), new JProperty("label", taskIds[^1])));
+            JObject ri = new(new JProperty("regions", regions));
+            JObject segment = new(new JProperty("name", title), new JProperty("regionInfo", ri));
+            await UpdateSegments(mf, title, segment, ri, [.. regions]);
+        }
+        private static List<int>? GetVerseTiming(Mediafile mf)
+        {
+            dynamic? segments = JsonConvert.DeserializeObject(mf.Segments??"{}");
+            if (segments == null)
+                return null;
+            dynamic? verse = ((JArray)segments).Where(x => x is JObject j && j.ContainsKey("name") && j["name"]?.Value<string>() == "Verse").ToList().FirstOrDefault();
+            if (verse != null)
+            {
+                dynamic? ri = verse.regionInfo;
+                if (ri is string)
+                    ri = JsonConvert.DeserializeObject(ri);
+                dynamic? regions = ri?.regions;
+                if (regions == null)
+                    return null;
+                if (regions is string)
+                    regions = JsonConvert.DeserializeObject(regions);
+                //array of {start,end,label}
+                List<int> timing = [];
+                if (regions is JArray)
+                {
+                    foreach (dynamic region in regions)
+                    {
+                        timing.Add(region.start);
+                    }
+                    return timing;
+                }
+
+            }
+            return null;
+        }
+        private async Task SaveTask(Mediafile mf, string taskName, string id)
+        {
+            string title = taskName+"Task";
+            //string str = $"{{\"{title}\":\"{id}\"}}";
+            JObject newtask = new(new JProperty("start", 0), new JProperty("end", 0), new JProperty("label", id));
+            JArray regions = [newtask];
+            JObject ri = new(new JProperty("regions", regions));
+            JObject segment = new(new JProperty("name", title), new JProperty("regionInfo", ri));
+            await UpdateSegments(mf, title, segment, ri, regions);
         }
         public async Task<Mediafile?> NoiseRemovalAsync(int id)
         {
@@ -381,7 +466,7 @@ namespace SIL.Transcriber.Services
             if (mf?.AudioUrl == null)
                 return null;
             string taskid = await Aeroservice.NoiseRemoval(mf.AudioUrl) ??throw new Exception("Noise Removal failed to start");
-            SaveTask(mf, "NR", taskid);
+            await SaveTask(mf, "NR", taskid);
             return mf;
         }
         public async Task<Mediafile?> NoiseRemovalStatusAsync(int id, string taskId)
@@ -401,7 +486,7 @@ namespace SIL.Transcriber.Services
             if (mf?.AudioUrl == null)
                 return null;
             string taskId = await Aeroservice.VoiceConversion(mf.AudioUrl, targetUrl) ?? throw new Exception("Voice Conversion failed to start");
-            SaveTask(mf, "VC", taskId);
+            await SaveTask(mf, "VC", taskId);
             return mf;
         }
         public async Task<Mediafile?> VoiceConversionStatus(int id, string taskId)
@@ -420,8 +505,20 @@ namespace SIL.Transcriber.Services
             Mediafile? mf = GetFileSignedUrl(id);
             if (mf?.AudioUrl == null)
                 return null;
-            string taskId = await Aeroservice.Transcription(mf.AudioUrl, iso, romanize) ?? throw new Exception("Transcription failed to start");
-            SaveTask(mf, "TR", taskId);
+            bool testBatch = false;
+            if (testBatch)
+            {
+                string[] filesurls = [mf.AudioUrl,mf.AudioUrl];
+                string[] tasks = await Aeroservice.Transcription(filesurls, iso, romanize) ?? throw new Exception("Transcription failed to start");
+                await SaveTasks([mf, mf], "TR", tasks);
+            }
+            else
+            {
+                //see if I have verse timing info
+                List<int>? timing = GetVerseTiming(mf);
+                string taskId = await Aeroservice.Transcription(mf.AudioUrl, iso, romanize, timing) ?? throw new Exception("Transcription failed to start");
+                await SaveTask(mf, "TR", taskId);
+            }
             return mf;
         }
         public async Task<Mediafile?> TranscriptionStatus(int id, string taskId)

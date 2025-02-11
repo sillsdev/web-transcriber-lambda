@@ -1,7 +1,6 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
 using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {
@@ -20,6 +19,7 @@ namespace SIL.Transcriber.Models
         public string RightsHolder { get; set; } = string.Empty;
 
         [Attr(PublicName = "notes")]
+        [Column(TypeName = "jsonb")]
         public string? Notes { get; set; }
         public int? ReleaseMediafileId { get; set; }
         [HasOne(PublicName = "release-mediafile")]
