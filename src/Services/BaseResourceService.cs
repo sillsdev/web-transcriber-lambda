@@ -5,6 +5,7 @@ using System.Net;
 
 namespace SIL.Transcriber.Services;
 
+public class BaseResourceService(
    AppDbContextResolver contextResolver,
    IS3Service s3Service)
 {

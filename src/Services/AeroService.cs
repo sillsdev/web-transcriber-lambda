@@ -57,7 +57,7 @@ public class AeroService(
         return fileContent;
     }
 
-    private MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
+    private static MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
     {
         ByteArrayContent fileContent = GetFileContent(stream);
         // Prepare the multipart content
@@ -184,7 +184,7 @@ public class AeroService(
         Uri uri = new (sourceUrl);
         return Path.GetFileName(uri.LocalPath);
     }
-    private async Task<Stream> GetStream(string sourceUrl)
+    private static async Task<Stream> GetStream(string sourceUrl)
     {
         HttpClient client = new ();
         Stream s = await client.GetStreamAsync(sourceUrl);

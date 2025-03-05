@@ -1,5 +1,3 @@
-#pragma warning disable AV1130 // Return type in method signature should be an interface to an unchangeable collection
-
 using System.Reflection;
 
 namespace SIL.Transcriber.Utility.Extensions;
@@ -10,12 +8,12 @@ public static class ObjectExtensions
         yield return element;
     }
 
-    public static T [] AsArray<T>(this T element)
+    public static T[] AsArray<T>(this T element)
     {
-        return new []
-        {
+        return
+        [
             element
-        };
+        ];
     }
 
     public static List<T> AsList<T>(this T element)
@@ -37,7 +35,7 @@ public static class ObjectExtensions
     public static void CopyProperties<T>(this T source, T destination)
     {
         if (source == null || destination == null)
-            throw new ArgumentNullException("Source or/and Destination Objects are null");
+            throw new ArgumentNullException(source == null ? "source" : "destination");
 
         Type type = typeof(T);
         PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -52,21 +50,4 @@ public static class ObjectExtensions
         }
     }
 
-    public static void CopyProperties<T>(this T source, T destination)
-    {
-        if (source == null || destination == null)
-            throw new ArgumentNullException("Source or/and Destination Objects are null");
-
-        Type type = typeof(T);
-        PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-
-        foreach (PropertyInfo property in properties)
-        {
-            if (property.Name != "Id" && property.Name != "StringId" && property.CanRead && property.CanWrite)
-            {
-                object? value = property.GetValue(source);
-                property.SetValue(destination, value);
-            }
-        }
-    }
 }
