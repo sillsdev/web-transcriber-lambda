@@ -31,12 +31,12 @@ namespace SIL.Transcriber.Definitions
                 resource.PublishTo ??= "{}";
                 if (resource.ResourcePassageId == null)
                 {
-                    if (resource.IsVernacular && resource.Passage != null)
+                    if (resource.Passage != null)
                     {
                         Mediafile? mfs = AppDbContext.Mediafiles
                             .Where(mf => mf.PassageId == resource.Passage.Id && !mf.Archived)
                             .ToList()
-                            .Where(mf => mf.ArtifactTypeId is null) //mf.IsVernacular)
+                            .Where(mf => mf.ArtifactTypeId == resource.ArtifactTypeId) //mf.IsVernacular)
                             .OrderBy(m => m.VersionNumber)
                             .LastOrDefault();
                         if (mfs != null)

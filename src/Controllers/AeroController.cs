@@ -43,6 +43,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     [HttpPost("noiseremoval/fromfile")]
     public async Task<IActionResult> PostS3NR([FromBody] FileUrlRequest request)
     {
+        Logger.LogCritical("PostS3NR");
         if (string.IsNullOrEmpty(request.FileUrl))
         {
             return BadRequest("File URL is missing.");
@@ -190,8 +191,8 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
         Logger.LogInformation("Received URL: {S} {L}", request.FileUrl, request.Iso);
 
-        string? taskId = await _service.Transcription(request.FileUrl, request.Iso, request.Romanize);
-        return Ok(taskId);
+        string[]? tasks = await _service.Transcription(request.FileUrl, request.Iso, request.Romanize);
+        return Ok(tasks?.FirstOrDefault());
     }
     /// <summary>
     /// check to see if voice conversion task is complete

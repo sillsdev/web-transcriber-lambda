@@ -28,7 +28,11 @@ namespace SIL.Transcriber.Services
         public string album= "";
         public string cover="";
     }
-
+    class Timing
+    {
+        public float start =  0;
+        public string verse = "";
+    }
     public class MediafileService(
         IResourceRepositoryAccessor repositoryAccessor,
         IQueryLayerComposer queryLayerComposer,
@@ -380,13 +384,34 @@ namespace SIL.Transcriber.Services
         private async Task UpdateSegments(Mediafile mf, string title, JObject segment, JObject ri, JArray regions)
         {
             dynamic? segments = JsonConvert.DeserializeObject(mf.Segments??"{}");
+            JArray newsegments = [];
+
             if (segments is not JArray)
             {
-                segments = new[] { segment };
+                newsegments.Add(segment);
             }
             else
             {
-                List<JToken> oldtasks = ((JArray)segments).Where(x => x is JObject j && j.ContainsKey("name") && j["name"]?.Value<string>() == title).ToList();
+                //deserialize everything
+                foreach (dynamic? seg in segments)
+                {
+                    dynamic? regionInfo = seg.regionInfo;
+                    if (regionInfo.Type == JTokenType.String)
+                    {
+                        regionInfo = JsonConvert.DeserializeObject(regionInfo.ToString());
+                        seg.regionInfo = regionInfo;
+                    }
+                    if (regionInfo != null)
+                    {
+                        dynamic? newregions = regionInfo.regions;
+                        if (newregions?.Type == JTokenType.String)
+                        {
+                            regionInfo.regions = JsonConvert.DeserializeObject(newregions?.ToString());
+                        }
+                    }
+                    newsegments.Add(seg);
+                }
+                List<JToken> oldtasks = newsegments.Where(x => x is JObject j && j.ContainsKey("name") && j["name"]?.Value<string>() == title).ToList();
                 if (oldtasks.Count > 0)
                 {
                     dynamic oldtask = oldtasks.First();
@@ -398,55 +423,56 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
-                    ((JArray)segments).Add(segment);
+                    (newsegments).Add(segment);
                 }
             }
-            mf.Segments = JsonConvert.SerializeObject(segments);
+            mf.Segments = JsonConvert.SerializeObject(newsegments);
             await UpdateAsync(mf.Id, mf, new CancellationToken());
         }
-        private async Task SaveTasks(Mediafile mf, string taskName, int[] times, string[] taskIds)
+        private async Task SaveTasks(Mediafile mf, string taskName, List<Timing> times, string[] taskIds)
         {
-            if (times.Length != taskIds.Length)
-                throw new Exception($"Save Tasks times {times.Length} tasks {taskIds.Length}");
+            if (times.Count != taskIds.Length)
+                throw new Exception($"Save Tasks times {times.Count} tasks {taskIds.Length}");
             string title = taskName+"Task";
             List<JObject> regions = [];
-
-            for (int cnt = 0; cnt < times.Length - 1; cnt++)
+            int cnt = 0;
+            foreach (Timing timing in times)
             {
-                regions.Add(new(new JProperty("start", times[cnt]), new JProperty("end", times[cnt + 1]), new JProperty("label", taskIds[cnt])));
+                regions.Add(new(new JProperty("start", timing.start), new JProperty("end", 0), new JProperty("label", $"{taskIds[cnt++]}|{timing.verse}")));
             }
-            regions.Add(new(new JProperty("start", times[^1]), new JProperty("end", mf.Duration ?? 0), new JProperty("label", taskIds[^1])));
             JObject ri = new(new JProperty("regions", regions));
             JObject segment = new(new JProperty("name", title), new JProperty("regionInfo", ri));
             await UpdateSegments(mf, title, segment, ri, [.. regions]);
         }
-        private static List<int>? GetVerseTiming(Mediafile mf)
+        private static List<Timing>? GetVerseTiming(Mediafile mf)
         {
             dynamic? segments = JsonConvert.DeserializeObject(mf.Segments??"{}");
-            if (segments == null)
+            if (segments is null or not JArray)
                 return null;
             dynamic? verse = ((JArray)segments).Where(x => x is JObject j && j.ContainsKey("name") && j["name"]?.Value<string>() == "Verse").ToList().FirstOrDefault();
             if (verse != null)
             {
                 dynamic? ri = verse.regionInfo;
-                if (ri is string)
-                    ri = JsonConvert.DeserializeObject(ri);
+                if (ri.Type == JTokenType.String)
+                    ri = JsonConvert.DeserializeObject(ri.ToString());
                 dynamic? regions = ri?.regions;
                 if (regions == null)
                     return null;
-                if (regions is string)
-                    regions = JsonConvert.DeserializeObject(regions);
+                if (regions.Type == JTokenType.String)
+                    regions = JsonConvert.DeserializeObject(regions.ToString());
                 //array of {start,end,label}
-                List<int> timing = [];
+                List<Timing> timing = [];
                 if (regions is JArray)
                 {
                     foreach (dynamic region in regions)
                     {
-                        timing.Add(region.start);
+                        string s = region.label.Value.ToString();
+                        string[] parts = s.Split(':');
+                        string v = parts.Length > 1 ? parts[1] : parts[0];
+                        timing.Add(new Timing() { start = (float)region.start.Value, verse = v });
                     }
                     return timing;
                 }
-
             }
             return null;
         }
@@ -515,9 +541,36 @@ namespace SIL.Transcriber.Services
             else
             {
                 //see if I have verse timing info
-                List<int>? timing = GetVerseTiming(mf);
-                string taskId = await Aeroservice.Transcription(mf.AudioUrl, iso, romanize, timing) ?? throw new Exception("Transcription failed to start");
-                await SaveTask(mf, "TR", taskId);
+                List<Timing>? timing = GetVerseTiming(mf);
+                float[]? times = null;
+                if (timing != null)
+                    times = timing.Select(t => t.start).ToArray();
+                string[]? tasks = await Aeroservice.Transcription(mf.AudioUrl, iso, romanize, times) ?? throw new Exception("Transcription failed to start");
+                if (tasks == null || tasks.Length == 0)
+                    return mf;
+                bool fakeIt = false;
+                if (tasks.Length == 1)
+                {
+                    if (timing == null || !fakeIt)
+                        await SaveTask(mf, "TR", tasks.First());
+                    else
+                    {
+                        string[] otherTasks = ["84db7cd4-1ff6-4f1d-aa61-98fe82ab29e1", "6b73c406-e783-42d6-ac5a-e2b1bb3cd1b9", "993c1da0-344a-4079-bc48-43b878b945e4", "747214d4-38fb-4b4b-a2e7-1006d8ab5f88","84db7cd4-1ff6-4f1d-aa61-98fe82ab29e1", "6b73c406-e783-42d6-ac5a-e2b1bb3cd1b9", "993c1da0-344a-4079-bc48-43b878b945e4", "747214d4-38fb-4b4b-a2e7-1006d8ab5f88"];
+                        List<string> fakeTasks = [tasks.First()];
+                        for (int ix = 1; ix < timing.Count; ix++)
+                        {
+                            fakeTasks.Add(otherTasks[ix - 1]);
+                        }
+                        await SaveTasks(mf, "TR", timing, [.. fakeTasks]);
+                    }
+                }
+                else
+                {
+                    if (timing != null)
+                        await SaveTasks(mf, "TR", timing, tasks);
+                    else
+                        await SaveTask(mf, "TR", tasks.First());
+                }
             }
             return mf;
         }

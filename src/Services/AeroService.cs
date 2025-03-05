@@ -2,7 +2,6 @@
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using System.Diagnostics;
 using System.Net.Http.Headers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
@@ -58,13 +57,12 @@ public class AeroService(
         return fileContent;
     }
 
-    private static MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
+    private MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
     {
         ByteArrayContent fileContent = GetFileContent(stream);
         // Prepare the multipart content
         MultipartFormDataContent multipartContent = content ?? [];
         multipartContent.Add(fileContent, param, filename);
-
         return multipartContent;
     }
     private async Task<HttpResponseMessage> SendBinaryDataToApiAsync(Stream stream, string filename, string apiUrl)
@@ -85,7 +83,7 @@ public class AeroService(
         return memoryStream.ToArray();
     }
 
-    private static async void PrintContent(MultipartContent multipartContent)
+    private static async void PrintContent(MultipartContent multipartContent, ILogger Logger)
     {
         foreach (HttpContent content in multipartContent)
         {
@@ -93,32 +91,36 @@ public class AeroService(
             {
                 string? name = content.Headers.ContentDisposition?.Name;
                 string value = await stringContent.ReadAsStringAsync();
-                Debug.WriteLine($"StringContent Name: {name}, Value: {value}");
+                Logger.LogDebug("StringContent Name: {name}, Value: {value}", name, value);
             }
             else if (content is StreamContent streamcontent)
             {
                 string? name = content.Headers.ContentDisposition?.Name;
-                Debug.WriteLine($"StreamContent Name: {name}, Length: {content.Headers.ContentLength} , Type: {content.Headers.ContentType}");
+                Logger.LogDebug("StreamContent Name: {n}, Length: {l} , Type: {t}", name, content.Headers.ContentLength, content.Headers.ContentType);
             }
             else if (content is ByteArrayContent bcontent)
             {
                 string? name = content.Headers.ContentDisposition?.Name??content.Headers.ContentDisposition?.FileName;
-                Debug.WriteLine($"ByteArrayContent Name: {name}, Length: {content.Headers.ContentLength} , Type: {content.Headers.ContentType}");
+                Logger.LogDebug("ByteArrayContent Name: {n}, Length: {l} , Type: {t}", name, content.Headers.ContentLength, content.Headers.ContentType);
             }
         }
     }
     private async Task<string[]?> GetTaskIds(string api, MultipartFormDataContent content)
     {
-        string? result = (await GetResult(api, content, "task_ids"))?.ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']','"', ' ').Replace("\"", "");
+        string? tmp = await GetResult(api, content, "task_ids");
+        string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']','"', ' ');
         return result?.Split(',');
     }
 
 
     private async Task<string?> GetResult(string api, MultipartFormDataContent multipartContent, string result)
     {
-        PrintContent(multipartContent);
+        Logger.LogCritical("GetResult");
+        PrintContent(multipartContent, Logger);
         using HttpClient httpClient = await Httpclient();
-        HttpResponseMessage response = await httpClient.PostAsync(api, multipartContent);
+        Logger.LogCritical("{api}", api);
+        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent);
+        Logger.LogCritical("{s} {r}", response.StatusCode, response.ReasonPhrase);
         response.EnsureSuccessStatusCode();
         dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
         return x?[result].ToString();
@@ -126,7 +128,7 @@ public class AeroService(
     public async Task<string?> NoiseRemoval(Stream stream, string filename)
     {
         MultipartFormDataContent multipartContent = AddFileToRequest(stream, filename, "file");
-        AddSaveS3(multipartContent, false);
+        AddSaveS3(multipartContent, true);
         return await GetResult($"{Domain}/noise_removal", multipartContent, "task_id");
     }
     public async Task<string?> NoiseRemoval(IFormFile file)
@@ -182,10 +184,12 @@ public class AeroService(
         Uri uri = new (sourceUrl);
         return Path.GetFileName(uri.LocalPath);
     }
-    private static async Task<Stream> GetStream(string sourceUrl)
+    private async Task<Stream> GetStream(string sourceUrl)
     {
         HttpClient client = new ();
-        return await client.GetStreamAsync(sourceUrl);
+        Stream s = await client.GetStreamAsync(sourceUrl);
+        return s;
+
     }
     private async Task<string?> VoiceConversion(Stream source, string sourcefilename, Stream target, string targetfilename)
     {
@@ -228,16 +232,17 @@ public class AeroService(
         return filteredArray.ToString();
 
     }
-    private async Task<string?> Transcription(
-        Stream stream, string filename, string lang_iso, bool romanize, List<int>? timing)
+    private async Task<string[]?> Transcription(
+        Stream stream, string filename, string lang_iso, bool romanize, float[]? timing = null)
     {
         string api = $"{Domain}/batch_transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
-        if (timing != null)
-            api += $"&timestamps={timing}";
+        for (int ix = 0; ix < timing?.Length; ix++)
+        {
+            api += $"&timestamps={timing[ix]}";
+        }
+
         MultipartFormDataContent content =  AddFileToRequest(stream, filename, "files");
-        string[]? tasks = await GetTaskIds(api, content);
-        string? task = tasks?.FirstOrDefault();
-        return task;
+        return await GetTaskIds(api, content);
     }
     public async Task<string[]?> Transcription(string[] fileUrls, string lang_iso, bool romanize)
     {
@@ -263,7 +268,7 @@ public class AeroService(
     /// <param name="romanize">Whether to romanize the transcription</param>
     /// <param name="timing">verse timing</param>
     /// <returns></returns>
-    public async Task<string?> Transcription(string fileUrl, string lang_iso, bool romanize, List<int>? timing = null)
+    public async Task<string[]?> Transcription(string fileUrl, string lang_iso, bool romanize, float[]? timing = null)
     {
         return await Transcription(await GetStream(fileUrl), GetFileName(fileUrl), lang_iso, romanize, timing);
     }

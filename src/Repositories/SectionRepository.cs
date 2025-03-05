@@ -132,8 +132,11 @@ namespace SIL.Transcriber.Repositories
 
         private async Task PublishSection(Section section)
         {
-            HttpContext?.SetFP("publish");
-            await PublishPassages(section.Id, section.PublishTo ?? "{}");
+            if (section.PublishTo?.Contains("Propagate") ?? false)
+            {
+                HttpContext?.SetFP("publish");
+                await PublishPassages(section.Id, section.PublishTo ?? "{}");
+            }
         }
         private async Task PublishPassages(int sectionid, string publishTo)
         {
@@ -188,8 +191,9 @@ namespace SIL.Transcriber.Repositories
             {
                 await PublishSection(resourceFromRequest);
             }
-            if (resourceFromRequest.TitleMediafileId != null && PublishToAkuo(resourceFromRequest.PublishTo)) //always do titles and movements
-                await MediafileRepository.Publish((int)resourceFromRequest.TitleMediafileId, "{'Public': 'true'}", true);
+            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
+            if (titleMedia != null && PublishToAkuo(resourceFromRequest.PublishTo)) //always do titles and movements
+                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
     }
