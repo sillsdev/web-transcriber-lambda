@@ -1,11 +1,13 @@
-﻿using SIL.Transcriber.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
-using JsonApiDotNetCore.Configuration;
-using SIL.Transcriber.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SIL.Transcriber.Models;
+using SIL.Transcriber.Services;
+
 
 namespace SIL.Transcriber.Controllers;
+
 [Route("api/[controller]")]
 public class BiblebrainbiblesController(
 ILoggerFactory loggerFactory,
@@ -23,9 +25,8 @@ UserService userService
     userService
     )
 {
-    }
+
     [AllowAnonymous]
     [HttpPost]
     public override Task<IActionResult> PostAsync([FromBody] Biblebrainbible entity, CancellationToken ct) => base.PostAsync(entity, ct);
-
 }
