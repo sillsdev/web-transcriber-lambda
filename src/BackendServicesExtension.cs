@@ -237,10 +237,10 @@ namespace SIL.Transcriber
         {
             services.AddSwaggerGen(options => {
                 options.SwaggerDoc(
-                    "v1",
+                    "v4.1",
                     new OpenApiInfo
                     {
-                        Version = "v3.3",
+                        Version = "v4.1",
                         Title = "Transcriber API",
                         Contact = new OpenApiContact
                         {
