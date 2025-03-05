@@ -9,24 +9,22 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers
 {
     [Route("api/[controller]")]
-    public class PassagestatechangesController : BaseController<Passagestatechange>
-    {
-        public PassagestatechangesController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<Passagestatechange, int> resourceService,
-            ICurrentUserContext currentUserContext,
-            UserService userService
-        ) : base(
-                loggerFactory,
-                options,
-                resourceGraph,
-                resourceService,
-                currentUserContext,
-                userService
+    public class PassagestatechangesController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<Passagestatechange, int> resourceService,
+        ICurrentUserContext currentUserContext,
+        UserService userService
+        ) : BaseController<Passagestatechange>(
+            loggerFactory,
+            options,
+            resourceGraph,
+            resourceService,
+            currentUserContext,
+            userService
             )
-        { }
+    {
 
 #pragma warning disable 1998
         [HttpDelete("{id}")]

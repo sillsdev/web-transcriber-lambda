@@ -8,32 +8,28 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class StatehistoryService : BaseService<Statehistory>
-    {
-        public StatehistoryService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Statehistory> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            StatehistoryRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class StatehistoryService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Statehistory> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        StatehistoryRepository repository
+        ) : BaseService<Statehistory>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        { }
-
+    {
         public IEnumerable<Statehistory> GetHistorySince(DateTime since)
         {
             return GetAsync(new CancellationToken()).Result

@@ -20,7 +20,7 @@ namespace SIL.Transcriber.Services
         public AuthService()
         {
             string domain = GetVarOrThrow("SIL_TR_AUTH0_DOMAIN");
-            if (!domain.EndsWith("/"))
+            if (!domain.EndsWith('/'))
                 domain += "/";
             _httpClient = new HttpClient { BaseAddress = new Uri(domain) };
         }
@@ -37,11 +37,8 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        public async Task<User> GetUserAsync(string Auth0Id)
-        {
-            //auth0User = ManagementApiClient.Users.GetAsync(Auth0Id, "user_metadata", true).Result;
-            return await ManagementApiClient.Users.GetAsync(Auth0Id);
-        }
+        public async Task<User> GetUserAsync(string Auth0Id) =>
+            await ManagementApiClient.Users.GetAsync(Auth0Id);
 
         public Task ResendVerification(string authId)
         {

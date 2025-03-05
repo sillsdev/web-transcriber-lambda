@@ -10,55 +10,43 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Serialization;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class ProjDataRepository : BaseRepository<Projdata>
-    {
-        protected readonly SectionService SectionService;
-        protected readonly SectionRepository SectionRepository;
-        protected readonly MediafileService MediaService;
-        protected readonly IJsonApiOptions _options;
-        protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor;
-        protected readonly IMetaBuilder _metaBuilder;
-        protected readonly IResourceGraph _resourceGraph;
-
-        public ProjDataRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            SectionService sectionService,
-            SectionRepository sectionRepository,
-            MediafileService mediaService,
-            IMetaBuilder metaBuilder,
-            IJsonApiOptions options
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public partial class ProjDataRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        SectionService sectionService,
+        SectionRepository sectionRepository,
+        MediafileService mediaService,
+        IMetaBuilder metaBuilder,
+        IJsonApiOptions options
+        ) : BaseRepository<Projdata>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            SectionService = sectionService;
-            SectionRepository = sectionRepository;
-            MediaService = mediaService;
-            _options = options;
-            _resourceDefinitionAccessor = resourceDefinitionAccessor;
-            _metaBuilder = metaBuilder;
-            _resourceGraph = resourceGraph;
-        }
+    {
+        protected readonly SectionService SectionService = sectionService;
+        protected readonly SectionRepository SectionRepository = sectionRepository;
+        protected readonly MediafileService MediaService = mediaService;
+        protected readonly IJsonApiOptions _options = options;
+        protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor = resourceDefinitionAccessor;
+        protected readonly IMetaBuilder _metaBuilder = metaBuilder;
+        protected readonly IResourceGraph _resourceGraph = resourceGraph;
+
         protected bool CheckAddMedia(
             int check,
             IQueryable<Mediafile> media,
@@ -75,7 +63,7 @@ namespace SIL.Transcriber.Repositories
             int lastId = -1;
             if (starttable == check)
             {
-                List<Mediafile>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
+                List<Mediafile>? lst = startId > 0 ? [.. media.Where(m => m.Id >= startId)] : [.. media];
                 string thisData = ToJson(lst);
 
                 while (thisData.Length > (1000000 * 4))
@@ -83,7 +71,7 @@ namespace SIL.Transcriber.Repositories
                     int cnt = lst.Count;
                     Mediafile mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = media.Where(m => m.Id >= startId && m.Id < lastId).ToList();
+                    lst = [.. media.Where(m => m.Id >= startId && m.Id < lastId)];
                     thisData = ToJson(lst);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
@@ -109,16 +97,16 @@ namespace SIL.Transcriber.Repositories
             int startId = -1;
             int starttable = StartIndex.GetStart(start, ref startId);
             int lastId = -1;
-            if (starttable == check )
+            if (starttable == check)
             {
-                List<Passagestatechange>? lst = startId > 0 ? media.Where(m => m.Id >= startId).ToList() : media.ToList();
+                List<Passagestatechange>? lst = startId > 0 ? [.. media.Where(m => m.Id >= startId)] : [.. media];
                 string thisData = ToJson(lst);
                 while (thisData.Length > (1000000 * 4))
                 {
                     int cnt = lst.Count;
                     Passagestatechange mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = media.Where(m => m.Id >= startId && m.Id < lastId).ToList();
+                    lst = [.. media.Where(m => m.Id >= startId && m.Id < lastId)];
                     thisData = ToJson(lst);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
@@ -147,8 +135,8 @@ namespace SIL.Transcriber.Repositories
                 tmp.Remove("included");
                 withIncludes = tmp.ToString();
             }
-            Regex rgxnewlines = new("\r\n|\n");
-            Regex rgxmultiplespaces = new("\t|\\s+");
+            Regex rgxnewlines = NewLineRegex();
+            Regex rgxmultiplespaces = TabOrSpaceRegex();
             //will this take it out of transcriptions also?? Seems to be ok!!
             withIncludes = rgxnewlines.Replace(withIncludes, "");
             return rgxmultiplespaces.Replace(withIncludes, " ");
@@ -183,7 +171,7 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Section> sections = dbContext.SectionsData
                     .Join(plans, s => s.PlanId, pl => pl.Id, (s, pl) => s)
                     .Where(x => !x.Archived);
-                
+
                 //passages
                 IQueryable<Passage> passages = dbContext.PassagesData
                     .Join(sections, p => p.SectionId, s => s.Id, (p, s) => p)
@@ -193,7 +181,7 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Passage> linkedpassages = linkedresources
                     .Join(dbContext.PassagesData, r => r.PassageId, p => p.Id, (r, p) => p)
                     .Where(x => !x.Archived);
-                 IQueryable<Section> linkedsections = linkedpassages
+                IQueryable<Section> linkedsections = linkedpassages
                     .Join(dbContext.SectionsData, p => p.SectionId, s => s.Id, (p, s) => s)
                     .Where(x => !x.Archived);
                 if (!CheckAdd(0, ToJson(sections.ToList().Union(linkedsections)), dtBail, ref iStartNext, ref data))
@@ -201,7 +189,7 @@ namespace SIL.Transcriber.Repositories
                 if (!CheckAdd(1, ToJson(passages.ToList().Union(linkedpassages)), dtBail, ref iStartNext, ref data))
                     break;
 
-                List<Mediafile>linkedmediafiles = new();
+                List<Mediafile>linkedmediafiles = [];
                 linkedpassages.ToList().ForEach(p => {
                     Mediafile? m = MediaService.GetLatest(p.Id);
                     if (m != null)
@@ -224,7 +212,7 @@ namespace SIL.Transcriber.Repositories
                                 p => p.Id,
                                 (psc, p) => psc
                             ).OrderBy(m => m.Id), dtBail, ref iStartNext, ref data))
-                        break;
+                    break;
 
 
                 if (version > 3)
@@ -319,8 +307,7 @@ namespace SIL.Transcriber.Repositories
 
         protected override IQueryable<Projdata> GetAll()
         {
-            List<Projdata> entities = new()
-            { new Projdata() };
+            List<Projdata> entities = [new Projdata()];
             return entities.AsAsyncQueryable();
         }
 
@@ -328,5 +315,10 @@ namespace SIL.Transcriber.Repositories
         {
             return GetAll();
         }
+
+        [GeneratedRegex("\r\n|\n")]
+        private static partial Regex NewLineRegex();
+        [GeneratedRegex("\t|\\s+")]
+        private static partial Regex TabOrSpaceRegex();
     }
 }

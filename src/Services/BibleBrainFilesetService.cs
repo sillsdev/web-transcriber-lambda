@@ -10,37 +10,36 @@ namespace SIL.Transcriber.Services
 {
     public class AllowedFileset
     {
+#pragma warning disable IDE1006 // Naming Styles
         public string type { get; set; } = "";
         public string language { get; set; } = "";
         public string licensor { get; set; } = "";
         public string fileset_id { get; set; } = "";
+#pragma warning restore IDE1006 // Naming Styles
     }
-    public class BibleBrainFilesetService : BaseService<Biblebrainfileset>
-    {
-        private BibleBrainFilesetRepository _repo;
-        public BibleBrainFilesetService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Biblebrainfileset> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            BibleBrainFilesetRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class BibleBrainFilesetService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Biblebrainfileset> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        BibleBrainFilesetRepository repository
+        ) : BaseService<Biblebrainfileset>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        { _repo = repository; }
+    {
+        private readonly BibleBrainFilesetRepository _repo = repository;
 
         public Biblebrainfileset? PostAllowed(AllowedFileset fileset)
         {
@@ -56,7 +55,7 @@ namespace SIL.Transcriber.Services
             if (fs == null)
             {
                 return null;
-            }   
+            }
             fs.Timing = true;
             await _repo.UpdateAsync(fs, fs, new CancellationToken());
             return fs;

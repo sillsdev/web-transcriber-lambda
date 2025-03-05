@@ -8,31 +8,28 @@ using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class BibleRepository : BaseRepository<Bible>
-    {
-        private readonly OrganizationRepository OrganizationRepository;
-        public BibleRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            OrganizationRepository organizationRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class BibleRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        OrganizationRepository organizationRepository
+        ) : BaseRepository<Bible>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        { OrganizationRepository = organizationRepository; }
+    {
+        private readonly OrganizationRepository OrganizationRepository = organizationRepository;
 
         public IQueryable<Bible> UsersBibles(
             IQueryable<Bible> entities

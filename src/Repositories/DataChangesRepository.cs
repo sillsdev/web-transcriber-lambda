@@ -6,30 +6,26 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class DatachangesRepository : BaseRepository<Datachanges>
-    {
-        public DatachangesRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class DatachangesRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository
+        ) : BaseRepository<Datachanges>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        { }
-
+    {
         public override IQueryable<Datachanges> FromCurrentUser(
             IQueryable<Datachanges>? entities = null
         )

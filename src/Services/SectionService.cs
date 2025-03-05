@@ -9,35 +9,29 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class SectionService : BaseArchiveService<Section>
-    {
-        private readonly SectionRepository MyRepository;
-
-        public SectionService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Section> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            SectionRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class SectionService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Section> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        SectionRepository repository
+        ) : BaseArchiveService<Section>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        {
-            MyRepository = repository;
-        }
+    {
+        private readonly SectionRepository MyRepository = repository;
 
         public int? GetProjectId(int sectionId)
         {

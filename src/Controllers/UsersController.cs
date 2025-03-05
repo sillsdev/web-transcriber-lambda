@@ -6,28 +6,23 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class UsersController : BaseController<User>
-    {
-        private readonly UserService _userService;
-
-        public UsersController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<User, int> resourceService,
-            ICurrentUserContext currentUserContext,
-            UserService userService
-        ) : base(
-                loggerFactory,
-                options,
-                resourceGraph,
-                resourceService,
-                currentUserContext,
-                userService
+    public class UsersController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<User, int> resourceService,
+        ICurrentUserContext currentUserContext,
+        UserService userService
+        ) : BaseController<User>(
+            loggerFactory,
+            options,
+            resourceGraph,
+            resourceService,
+            currentUserContext,
+            userService
             )
-        {
-            _userService = (UserService)resourceService;
-        }
+    {
+        private readonly UserService _userService = (UserService)resourceService;
 
         /*  this makes the api not work...
         [HttpPost]

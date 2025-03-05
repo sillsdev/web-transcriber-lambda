@@ -6,34 +6,28 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgKeytermReferenceRepository : BaseRepository<Orgkeytermreference>
-    {
-        private readonly OrgKeytermRepository OrgKeytermRepository;
-
-        public OrgKeytermReferenceRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            OrgKeytermRepository orgKeytermRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class OrgKeytermReferenceRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        OrgKeytermRepository orgKeytermRepository
+        ) : BaseRepository<Orgkeytermreference>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            OrgKeytermRepository = orgKeytermRepository;
-        }
+    {
+        private readonly OrgKeytermRepository OrgKeytermRepository = orgKeytermRepository;
 
         public IQueryable<Orgkeytermreference> UsersOrgKeytermReferences(
             IQueryable<Orgkeytermreference> entities

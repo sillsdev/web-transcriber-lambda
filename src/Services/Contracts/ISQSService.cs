@@ -1,13 +1,11 @@
-﻿using SIL.Transcriber.Models;
-
-namespace SIL.Transcriber.Services
+﻿namespace SIL.Transcriber.Services.Contracts
 {
     public interface ISQSService
     {
         public Task<int> MessageCount(string queue);
         public Task<int> BBMessageCount();
         public string SendBBResourceMessage(string filesetId,
-                                            string book, 
+                                            string book,
                                             int chapter,
                                           int? psgId,
                                           int sectionId,
@@ -21,7 +19,7 @@ namespace SIL.Transcriber.Services
                                           int? artifactCategoryId,
                                           int orgWorkflowStepId,
                                           string token);
-        public  string SendBBGeneralMessage(string filesetId,
+        public string SendBBGeneralMessage(string filesetId,
                                   string? codec,
                                   string book,
                                   int chapter,
@@ -31,7 +29,7 @@ namespace SIL.Transcriber.Services
                                   int artifactTypeId,
                                   int? artifactCategoryId,
                                   string token);
-        public string SendExportMessage(int projectId,string folder, string ptfFile, int start);
+        public string SendExportMessage(int projectId, string folder, string ptfFile, int start);
         public string SendMessage(string url, string body, string? deDup, string? groupId);
     }
 }

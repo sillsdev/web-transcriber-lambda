@@ -8,30 +8,27 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class BibleService : BaseArchiveService<Bible>
-    {
-        public BibleService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Bible> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            BibleRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class BibleService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Bible> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        BibleRepository repository
+        ) : BaseArchiveService<Bible>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        { }
+    {
     }
 }

@@ -1,33 +1,27 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Resources;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Definitions
 {
-    public class ArtifactTypeDefinition : BaseDefinition<Artifacttype>
+    public class ArtifactTypeDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Artifacttype>(resourceGraph, loggerFactory, Request)
     {
-        public ArtifactTypeDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class BibleDefinition : BaseDefinition<Bible>
+    public class BibleDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request,
+        MediafileService mediafileService
+        ) : BaseDefinition<Bible>(resourceGraph, loggerFactory, Request)
     {
-        private readonly MediafileService _mediafileService;
-        public BibleDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request,
-            MediafileService mediafileService
-        ) : base(resourceGraph, loggerFactory, Request)
-        {
-            _mediafileService = mediafileService;
+        private readonly MediafileService _mediafileService = mediafileService;
 
-        }
         public override async Task OnWritingAsync(
                         Bible resource,
                         WriteOperationKind writeOperation,
@@ -40,46 +34,39 @@ namespace SIL.Transcriber.Definitions
         }
     }
 
-    public class CommentDefinition : BaseDefinition<Comment>
+    public class CommentDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Comment>(resourceGraph, loggerFactory, Request)
     {
-        public CommentDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class CopyProjectDefinition : BaseDefinition<CopyProject>
+    public class CopyProjectDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<CopyProject>(resourceGraph, loggerFactory, Request)
     {
-        public CopyProjectDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class DiscussionDefinition : BaseDefinition<Discussion>
+    public class DiscussionDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Discussion>(resourceGraph, loggerFactory, Request)
     {
-        public DiscussionDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class GraphicDefinition : BaseDefinition<Graphic>
+    public class GraphicDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request,
+        MediafileService mediafileService
+
+        ) : BaseDefinition<Graphic>(resourceGraph, loggerFactory, Request)
     {
-        private readonly MediafileService _mediafileService;
-        public GraphicDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request,
-            MediafileService mediafileService
+        private readonly MediafileService _mediafileService = mediafileService;
 
-        ) : base(resourceGraph, loggerFactory, Request)
-        {
-            _mediafileService = mediafileService;
-
-        }
         public override async Task OnWritingAsync(
                         Graphic resource,
                         WriteOperationKind writeOperation,
@@ -91,112 +78,99 @@ namespace SIL.Transcriber.Definitions
         }
 
     }
-    public class GroupDefinition : BaseDefinition<Group>
+    public class GroupDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Group>(resourceGraph, loggerFactory, Request)
     {
-        public GroupDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class GroupMembershipDefinition : BaseDefinition<Groupmembership>
+    public class GroupMembershipDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Groupmembership>(resourceGraph, loggerFactory, Request)
     {
-        public GroupMembershipDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class IntegrationDefinition : BaseDefinition<Integration>
+    public class IntegrationDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Integration>(resourceGraph, loggerFactory, Request)
     {
-        public IntegrationDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class IntellectualPropertyDefinition : BaseDefinition<Intellectualproperty>
+    public class IntellectualPropertyDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Intellectualproperty>(resourceGraph, loggerFactory, Request)
     {
-        public IntellectualPropertyDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class InvitationDefinition : BaseDefinition<Invitation>
+    public class InvitationDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Invitation>(resourceGraph, loggerFactory, Request)
     {
-        public InvitationDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class OrganizationDefinition : BaseDefinition<Organization>
+    public class OrganizationDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Organization>(resourceGraph, loggerFactory, Request)
     {
-        public OrganizationDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class OrganizationBibleDefinition : BaseDefinition<Organizationbible>
+    public class OrganizationBibleDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Organizationbible>(resourceGraph, loggerFactory, Request)
     {
-        public OrganizationBibleDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class OrganizationMembershipDefinition : BaseDefinition<Organizationmembership>
+    public class OrganizationMembershipDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Organizationmembership>(resourceGraph, loggerFactory, Request)
     {
-        public OrganizationMembershipDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class OrgKeytermDefinition : BaseDefinition<Orgkeyterm>
+    public class OrgKeytermDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Orgkeyterm>(resourceGraph, loggerFactory, Request)
     {
-        public OrgKeytermDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class OrgKeytermreferenceDefinition : BaseDefinition<Orgkeytermreference>
+    public class OrgKeytermreferenceDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Orgkeytermreference>(resourceGraph, loggerFactory, Request)
     {
-        public OrgKeytermreferenceDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class OrgKeytermTargetDefinition : BaseDefinition<Orgkeytermtarget>
+    public class OrgKeytermTargetDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Orgkeytermtarget>(resourceGraph, loggerFactory, Request)
     {
-        public OrgKeytermTargetDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class OrgworkflowstepDefinition : BaseDefinition<Orgworkflowstep>
+    public class OrgworkflowstepDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Orgworkflowstep>(resourceGraph, loggerFactory, Request)
     {
-        public OrgworkflowstepDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class PassageDefinition : BaseDefinition<Passage>
+    public class PassageDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Passage>(resourceGraph, loggerFactory, Request)
     {
-        public PassageDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
         /*  I couldn't get this to be called...so I just added plan-id to the passage model
          *
         public override QueryStringParameterHandlers<Passage> OnRegisterQueryableHandlersForQueryStringParameters()
@@ -213,91 +187,78 @@ namespace SIL.Transcriber.Definitions
         */
     }
 
-    public class PassageStateChangeDefinition : BaseDefinition<Passagestatechange>
+    public class PassageStateChangeDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Passagestatechange>(resourceGraph, loggerFactory, Request)
     {
-        public PassageStateChangeDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class PlanDefinition : BaseDefinition<Plan>
+    public class PlanDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Plan>(resourceGraph, loggerFactory, Request)
     {
-        public PlanDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class ProjectDefinition : BaseDefinition<Project>
+    public class ProjectDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Project>(resourceGraph, loggerFactory, Request)
     {
-        public ProjectDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class ProjectIntegrationDefinition : BaseDefinition<Projectintegration>
+    public class ProjectIntegrationDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Projectintegration>(resourceGraph, loggerFactory, Request)
     {
-        public ProjectIntegrationDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class ResourceDefinition : BaseDefinition<Resource>
+    public class ResourceDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Resource>(resourceGraph, loggerFactory, Request)
     {
-        public ResourceDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class SectionPassageDefinition : BaseDefinition<Sectionpassage>
+    public class SectionPassageDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Sectionpassage>(resourceGraph, loggerFactory, Request)
     {
-        public SectionPassageDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class SectionResourceDefinition : BaseDefinition<Sectionresource>
+    public class SectionResourceDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Sectionresource>(resourceGraph, loggerFactory, Request)
     {
-        public SectionResourceDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 
-    public class SectionResourceUserDefinition : BaseDefinition<Sectionresourceuser>
+    public class SectionResourceUserDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Sectionresourceuser>(resourceGraph, loggerFactory, Request)
     {
-        public SectionResourceUserDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class SharedresourceDefinition : BaseDefinition<Sharedresource>
+    public class SharedresourceDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request,
+        MediafileService mediafileService
+        ) : BaseDefinition<Sharedresource>(resourceGraph, loggerFactory, Request)
     {
-        private readonly MediafileService _mediafileService;
+        private readonly MediafileService _mediafileService = mediafileService;
 
-        public SharedresourceDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request,
-            MediafileService mediafileService
-        ) : base(resourceGraph, loggerFactory, Request)
-        {
-            _mediafileService = mediafileService;
-
-        }
         public override async Task OnWritingAsync(
                         Sharedresource resource,
                         WriteOperationKind writeOperation,
@@ -308,38 +269,33 @@ namespace SIL.Transcriber.Definitions
             await base.OnWritingAsync(resource, writeOperation, cancellationToken);
         }
     }
-    public class SharedresourcereferenceDefinition : BaseDefinition<Sharedresourcereference>
+    public class SharedresourcereferenceDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Sharedresourcereference>(resourceGraph, loggerFactory, Request)
     {
-        public SharedresourcereferenceDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
-    public class VWBiblebrainBibleDefinition : JsonApiResourceDefinition<Vwbiblebrainbible, int>
+    public class VWBiblebrainBibleDefinition(
+        IResourceGraph resourceGraph
+        ) : JsonApiResourceDefinition<Vwbiblebrainbible, int>(resourceGraph)
     {
-        public VWBiblebrainBibleDefinition(
-            IResourceGraph resourceGraph
-        ) : base(resourceGraph) { }
     }
-    public class VWBiblebrainLanguageDefinition : JsonApiResourceDefinition<Vwbiblebrainlanguage, int>
+    public class VWBiblebrainLanguageDefinition(
+        IResourceGraph resourceGraph
+        ) : JsonApiResourceDefinition<Vwbiblebrainlanguage, int>(resourceGraph)
     {
-        public VWBiblebrainLanguageDefinition(
-            IResourceGraph resourceGraph
-        ) : base(resourceGraph) { }
     }
-    public class VWChecksumDefinition : JsonApiResourceDefinition<VWChecksum, int>
+    public class VWChecksumDefinition(
+        IResourceGraph resourceGraph
+        ) : JsonApiResourceDefinition<VWChecksum, int>(resourceGraph)
     {
-        public VWChecksumDefinition(
-            IResourceGraph resourceGraph
-        ) : base(resourceGraph) { }
     }
-    public class WorkflowstepDefinition : BaseDefinition<Workflowstep>
+    public class WorkflowstepDefinition(
+        IResourceGraph resourceGraph,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest Request
+        ) : BaseDefinition<Workflowstep>(resourceGraph, loggerFactory, Request)
     {
-        public WorkflowstepDefinition(
-            IResourceGraph resourceGraph,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest Request
-        ) : base(resourceGraph, loggerFactory, Request) { }
     }
 }

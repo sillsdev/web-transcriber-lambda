@@ -10,28 +10,23 @@ using System.Net.Mime;
 namespace SIL.Transcriber.Controllers
 {
 
-    public class MediafilesController : BaseController<Mediafile>
-    {
-        private readonly MediafileService _service;
-
-        public MediafilesController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<Mediafile, int> resourceService,
-            ICurrentUserContext currentUserContext,
-            UserService userService
-        ) : base(
-                loggerFactory,
-                options,
-                resourceGraph,
-                resourceService,
-                currentUserContext,
-                userService
+    public class MediafilesController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<Mediafile, int> resourceService,
+        ICurrentUserContext currentUserContext,
+        UserService userService
+        ) : BaseController<Mediafile>(
+            loggerFactory,
+            options,
+            resourceGraph,
+            resourceService,
+            currentUserContext,
+            userService
             )
-        {
-            _service = (MediafileService)resourceService;
-        }
+    {
+        private readonly MediafileService _service = (MediafileService)resourceService;
 
         //POST will return your new mediafile with a PUT signed url in Audiourl.
         //POST/file expects mediafile and file to be in MultiPartForm. It will upload the file and return new mediafile with nothing in audiourl.
@@ -81,7 +76,7 @@ namespace SIL.Transcriber.Controllers
 
             if (response.Status == HttpStatusCode.OK && response.FileStream != null)
             {
-                Response.Headers.Add(
+                Response.Headers.Append(
                     "Content-Disposition",
                     new ContentDisposition
                     {
@@ -150,7 +145,7 @@ namespace SIL.Transcriber.Controllers
         public async Task<IActionResult> NoiseRemovalAsync([FromRoute] int id)
         {
             Mediafile? mf = await _service.NoiseRemovalAsync(id);
-            return mf?.TextQuality != null ? Ok(mf) : NotFound();
+            return mf != null ? Ok(mf) : NotFound();
         }
 
         [HttpGet("{id}/noiseremoval/{taskId}")]
@@ -160,5 +155,39 @@ namespace SIL.Transcriber.Controllers
             //probably need to have a status or class returned...
             return Ok(mf);
         }
+
+        [HttpPost("{id}/voiceconversion")]
+        public async Task<IActionResult> VoiceConversionAsync([FromRoute] int id, [FromBody] FileUrlRequest request)
+        {
+            if (string.IsNullOrEmpty(request.FileUrl))
+            {
+                return BadRequest("File URL is missing.");
+            }
+            Mediafile? mf = await _service.VoiceConversion(id,request.FileUrl );
+            return mf != null ? Ok(mf) : NotFound();
+        }
+
+        [HttpGet("{id}/voiceconversion/{taskId}")]
+        public async Task<IActionResult> VoiceConversionStatusAsync([FromRoute] int id, [FromRoute] string taskId)
+        {
+            Mediafile? mf = await _service.VoiceConversionStatus(id, taskId);
+            return Ok(mf);
+        }
+        [HttpPost("{id}/transcription/{iso}/{romanize}")]
+        public async Task<IActionResult> TranscriptionAsync([FromRoute] int id, [FromRoute] string iso, [FromRoute] string romanize)
+        {
+            if (!bool.TryParse(romanize, out bool roman))
+                throw new ArgumentException("Invalid romanize");
+            Mediafile? mf = await _service.Transcription(id, iso,  roman);
+            return mf != null ? Ok(mf) : NotFound();
+        }
+
+        [HttpGet("{id}/transcription/{taskId}")]
+        public async Task<IActionResult> TranscriptionStatusAsync([FromRoute] int id, [FromRoute] string taskId)
+        {
+            Mediafile? mf = await _service.TranscriptionStatus(id, taskId);
+            return Ok(mf);
+        }
+
     }
 }

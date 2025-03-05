@@ -3,7 +3,6 @@ using JsonApiDotNetCore.Middleware;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
@@ -12,55 +11,50 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
-    public class GraphicService : BaseArchiveService<Graphic>
-    {
-        private readonly IS3Service S3service;
-        readonly private HttpContext? HttpContext;
-        public GraphicService(
-            IHttpContextAccessor httpContextAccessor,
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Graphic> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            GraphicRepository repository,
-            IS3Service s3service
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class GraphicService(
+        IHttpContextAccessor httpContextAccessor,
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Graphic> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        GraphicRepository repository,
+        IS3Service s3service
+        ) : BaseArchiveService<Graphic>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        { 
-            HttpContext = httpContextAccessor.HttpContext; 
-            S3service = s3service; 
-        }
+    {
+        private readonly IS3Service S3service = s3service;
+        readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
+
         private async Task<string> SaveImages(JObject info)
         {
-            string[] sizes = { "512", "1024" };
+            string[] sizes = ["512", "1024"];
             foreach (string size in sizes)
             {
                 JToken? graphic = info [size];
                 if (graphic != null)
                 {
                     string s = graphic["content"]?.ToString() ?? "";
-                    string base64Data = s[(s.IndexOf(",") + 1)..].Trim();
+                    string base64Data = s[(s.IndexOf(',') + 1)..].Trim();
                     try
                     {
                         using MemoryStream ms = new(Convert.FromBase64String(base64Data));
                         S3Response fileinfo = await S3service.UploadFileAsync(ms, true, graphic["name"]?.ToString() ?? "", "graphics");
-                        graphic ["content"] = fileinfo.FileURL;
+                        graphic["content"] = fileinfo.FileURL;
                         await S3service.MakePublic(fileinfo.Message, "graphics");
-                        info [size] = graphic;
+                        info[size] = graphic;
                     }
                     catch
                     {
@@ -80,7 +74,7 @@ namespace SIL.Transcriber.Services
                 Graphic? newEntity = Repo.Get()
                 .Include(g => g.Organization)
                 .Where(g => g.OrganizationId == entity.Organization.Id &&
-                            g.ResourceId == entity.ResourceId && 
+                            g.ResourceId == entity.ResourceId &&
                             g.ResourceType == entity.ResourceType)
                 .FirstOrDefault();
 

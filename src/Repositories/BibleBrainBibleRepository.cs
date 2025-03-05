@@ -6,30 +6,26 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class BibleBrainBibleRepository : BaseRepository<Biblebrainbible>
-    { 
-        public BibleBrainBibleRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class BibleBrainBibleRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository
+        ) : BaseRepository<Biblebrainbible>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {  }
-
+    {
         public IQueryable<Biblebrainbible> UsersBibles(
             IQueryable<Biblebrainbible> entities
         )
@@ -39,7 +35,9 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Biblebrainbible> ProjectBibles(
             IQueryable<Biblebrainbible> entities,
+#pragma warning disable IDE0060 // Remove unused parameter
             string projectid
+#pragma warning restore IDE0060 // Remove unused parameter
         )
         {
             return entities;

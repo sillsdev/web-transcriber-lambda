@@ -8,20 +8,16 @@ using SIL.Transcriber.Data;
 
 namespace SIL.Logging.Repositories
 {
-    public class ParatextTokenHistoryRepository : LoggingDbContextRepository<Paratexttokenhistory>
+    public class ParatextTokenHistoryRepository(
+    ITargetedFields targetedFields, LoggingDbContextResolver contextResolver,
+        IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor
+            ) : LoggingDbContextRepository<Paratexttokenhistory>(targetedFields, contextResolver, resourceGraph, resourceFactory,
+            constraintProviders, loggerFactory, resourceDefinitionAccessor)
     {
-        protected readonly LoggingDbContext logDbContext;
-        public ParatextTokenHistoryRepository(
-        ITargetedFields targetedFields, LoggingDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
-                constraintProviders, loggerFactory, resourceDefinitionAccessor)
-        {
-            logDbContext = (LoggingDbContext)contextResolver.GetContext();
-        }
+        protected readonly LoggingDbContext logDbContext = (LoggingDbContext)contextResolver.GetContext();
 
         public Paratexttokenhistory Create(Paratexttokenhistory entity)
         {

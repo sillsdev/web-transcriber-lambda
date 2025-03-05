@@ -22,10 +22,10 @@ namespace SIL.Transcriber.Repositories
         public IAsyncEnumerator<TEntity> GetAsyncEnumerator(CancellationToken cancellationToken = default) => new AsyncEnumerator(this.AsEnumerable().GetEnumerator());
         IQueryProvider IQueryable.Provider => new AsyncQueryProvider(this);
 
-        private class AsyncEnumerator : IAsyncEnumerator<TEntity>
+        private class AsyncEnumerator(IEnumerator<TEntity> inner) : IAsyncEnumerator<TEntity>
         {
-            private readonly IEnumerator<TEntity> inner;
-            public AsyncEnumerator(IEnumerator<TEntity> inner) => this.inner = inner;
+            private readonly IEnumerator<TEntity> inner = inner;
+
             public void Dispose() => inner.Dispose();
             public TEntity Current => inner.Current;
             public ValueTask<bool> MoveNextAsync() => new ValueTask<bool>(inner.MoveNext());

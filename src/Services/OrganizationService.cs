@@ -10,47 +10,39 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
-    public class OrganizationService : BaseArchiveService<Organization>
-    {
-        public GroupMembershipService GroupMembershipService { get; }
-        readonly private HttpContext? HttpContext;
-        protected readonly AppDbContext dbContext;
-
-        public OrganizationService(
-            IHttpContextAccessor httpContextAccessor,
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Organization> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            OrganizationRepository repository,
-            GroupMembershipService groupMembershipService,
-            AppDbContextResolver contextResolver
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class OrganizationService(
+        IHttpContextAccessor httpContextAccessor,
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Organization> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        OrganizationRepository repository,
+        GroupMembershipService groupMembershipService,
+        AppDbContextResolver contextResolver
+        ) : BaseArchiveService<Organization>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        {
-            HttpContext = httpContextAccessor.HttpContext;
-            GroupMembershipService = groupMembershipService;
-            dbContext = (AppDbContext)contextResolver.GetContext();
-        }
+    {
+        public GroupMembershipService GroupMembershipService { get; } = groupMembershipService;
+        readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
+        protected readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
 
         public bool AnyPublished(int id)
         {
             return ((OrganizationRepository)Repo).AnyPublished(id);
-        }   
+        }
         public void JoinOrg(Organization entity, User user, RoleName orgRole, RoleName groupRole)
         {
             Group? allGroup = dbContext.Groups

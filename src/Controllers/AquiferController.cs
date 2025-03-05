@@ -4,23 +4,19 @@ using SIL.Transcriber.Services;
 namespace SIL.Transcriber.Controllers;
 
 [Route("api/[controller]")]
-public class AquiferController : Controller
+public class AquiferController(AquiferService service /*, ILoggerFactory loggerFactory */) : Controller
 {
-    private readonly AquiferService _aquiferService;
-    private readonly ILogger Logger;
-    public AquiferController(AquiferService service, ILoggerFactory loggerFactory)
-    {
-        _aquiferService = service;
-        Logger = loggerFactory.CreateLogger<BiblebrainController>();
-    }
+    private readonly AquiferService _aquiferService = service;
+    //private readonly ILogger Logger = loggerFactory.CreateLogger<BiblebrainController>();
+
     [HttpGet("languages")]
     public async Task<string> GetLanguages()
     {
         return await _aquiferService.GetLanguages();
     }
     [HttpGet("aquifer-search")]
-    public async Task<string> Search([FromQuery] string bookCode, 
-                                     [FromQuery] string languageCode, 
+    public async Task<string> Search([FromQuery] string bookCode,
+                                     [FromQuery] string languageCode,
                                      [FromQuery] string limit,
                                      [FromQuery] string offset,
                                      [FromQuery] string? startChapter,
@@ -43,6 +39,6 @@ public class AquiferController : Controller
         Console.WriteLine(content);
         //return content?.ToString()??"Null";
         return await _aquiferService.Post(content);
-    }   
+    }
 
 }

@@ -20,23 +20,19 @@ public class AquiferPost
     public int? PassageId { get; set; }
     public int? SectionId { get; set; }
     public int? OrgWorkflowStep { get; set; }
-    public AquiferItem []? Items { get; set; }
+    public AquiferItem[]? Items { get; set; }
 }
-public class AquiferService: BaseResourceService
+public class AquiferService(
+       IHttpContextAccessor httpContextAccessor,
+       AppDbContextResolver contextResolver,
+       IS3Service s3Service) : BaseResourceService(contextResolver, s3Service)
 {
     private const string Domain = "https://api.aquifer.bible/";
     private const string Folder = "aquifer/";
     private readonly string Key = GetVarOrThrow("SIL_TR_AQUIFER");
-    readonly private HttpContext? HttpContext;
+    readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
 
-    public AquiferService(
-           IHttpContextAccessor httpContextAccessor,
-           AppDbContextResolver contextResolver,
-           IS3Service s3Service) : base(contextResolver, s3Service)
-    {
-        HttpContext = httpContextAccessor.HttpContext;
-    }
-    private async Task<string> DoApiCall(string path, params (string Name, string Value) [] myparams)
+    private async Task<string> DoApiCall(string path, params (string Name, string Value)[] myparams)
     {
         Uri uri = new Uri($"{Domain}{path}").AddParameter(myparams);
 
@@ -76,20 +72,20 @@ public class AquiferService: BaseResourceService
                                     string? endVerse,
                                     string? query)
     {
-        List<(string Name, string Value)> p = new()
-        {
+        List<(string Name, string Value)> p =
+        [
             ("bookCode", bookCode),
             ("languageCode", languageCode),
             ("limit", limit),
             ("offset", offset)
-        };
+        ];
         AddParam(p, "startChapter", startChapter);
         AddParam(p, "startVerse", startVerse);
         AddParam(p, "endChapter", endChapter);
         AddParam(p, "endVerse", endVerse);
         AddParam(p, "query", query);
 
-        return await DoApiCall("resources/search", p.ToArray());
+        return await DoApiCall("resources/search", [.. p]);
     }
     public async Task<string> GetContent(string contentid, string? type)
     {
@@ -99,8 +95,8 @@ public class AquiferService: BaseResourceService
 
     public async Task<string> Post(AquiferPost post)
     {
-        List<int> mediaids = new();
-        List<int> srids = new();
+        List<int> mediaids = [];
+        List<int> srids = [];
         //List<AquiferItem>? items = JsonSerializer.Deserialize<List<AquiferItem>>(content);
         string info = "done";
         Passage? passage = DbContext.PassagesData.Where(p => p.Id == post.PassageId).FirstOrDefault();
@@ -127,7 +123,7 @@ public class AquiferService: BaseResourceService
                     string contentType = url != "" ? "audio/mp3" : "audio/webm";
                     if (url == "")
                         url = stuff?.content.webm.url ?? "";
-                    
+
                     if (url.EndsWith(".zip"))
                     {
                         string zipName = Path.GetFileNameWithoutExtension(url);
@@ -164,7 +160,7 @@ public class AquiferService: BaseResourceService
                 case "Image":
                 {
                     string url = stuff?.content.url ?? "";
-                    string contentType = $"image/{Path.GetExtension(url).Substring(1)}";
+                    string contentType = $"image/{Path.GetExtension(url)[1..]}";
                     string fileName = await UrlToS3(url, Folder);
                     Mediafile m = CreateMedia(fileName, contentType, desc, passage?.Id, section?.PlanId ?? 0, artifacttype?.Id ?? 0, (string)(stuff?.language.code ?? ""), fileName, Folder);
                     mediaids.Add(m.Id);
@@ -183,17 +179,17 @@ public class AquiferService: BaseResourceService
                         srids.Add(sr.Id);
                     }
                 }
-                    break;
+                break;
                 default:
                     Console.WriteLine(stuff?.grouping.mediaType);
                     break;
             }
         };
         HttpContext?.SetFP(fp);
-        OrbitId[] ret = {
-            new OrbitId("mediafile", mediaids),
-            new OrbitId("sectionresource", srids)};
-        
+        OrbitId[] ret = [
+            new ("mediafile", mediaids),
+            new ("sectionresource", srids)];
+
         return JsonConvert.SerializeObject(ret);
     }
 }

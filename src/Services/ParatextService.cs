@@ -32,7 +32,7 @@ namespace SIL.Transcriber.Services
 
         private readonly MediafileService MediafileService;
         private readonly PassageService PassageService;
-        private readonly SectionService SectionService;
+        //private readonly SectionService SectionService;
         private readonly ProjectService ProjectService;
         public CurrentUserRepository CurrentUserRepository { get; }
         //private ParatextTokenHistoryRepository TokenHistoryRepo { get; }
@@ -48,13 +48,13 @@ namespace SIL.Transcriber.Services
             IHttpContextAccessor httpContextAccessor,
             ICurrentUserContext currentUserContext,
             PassageService passageService,
-            SectionService sectionService,
+            //SectionService sectionService,
             MediafileService mediafileService,
             ProjectService projectService,
             CurrentUserRepository currentUserRepository,
             ProjectIntegrationRepository piRepo,
             ILoggerFactory loggerFactory //,
-            //ParatextTokenHistoryRepository tokenHistoryRepository
+                                         //ParatextTokenHistoryRepository tokenHistoryRepository
         )
         {
             dbContext = (AppDbContext)contextResolver.GetContext();
@@ -62,7 +62,7 @@ namespace SIL.Transcriber.Services
             HttpContext = httpContextAccessor.HttpContext;
             PassageService = passageService;
             MediafileService = mediafileService;
-            SectionService = sectionService;
+            //SectionService = sectionService;
             ProjectService = projectService;
             CurrentUserContext = currentUserContext;
             CurrentUserRepository = currentUserRepository;
@@ -104,7 +104,7 @@ namespace SIL.Transcriber.Services
                 ParatextToken savedToken = tokens.First();
                 if (
                     tokenFromAuth0.ParatextTokens.IssuedAt > savedToken.IssuedAt
-                    //&& newPTToken.ParatextTokens.RefreshToken != null
+                //&& newPTToken.ParatextTokens.RefreshToken != null
                 )
                 {
                     savedToken.AccessToken = tokenFromAuth0.ParatextTokens.AccessToken;
@@ -149,32 +149,32 @@ namespace SIL.Transcriber.Services
                 "orgs"
             );
             JArray orgArray = JArray.Parse(response);
-            List<ParatextOrg> orgs = new();
-            foreach (JObject o in orgArray)
+            List<ParatextOrg> orgs = [];
+            foreach (JToken o in orgArray)
             {
-                List<string> domains = new();
+                List<string> domains = [];
                 JToken? dsrc = o["domains"];
                 if (dsrc != null)
-                    foreach (string? d in dsrc)
+                    foreach (string? d in dsrc.Select(v => (string?)v))
                         if (d != null)
                             domains.Add(d);
                 orgs.Add(
                     new ParatextOrg
                     {
-                        Id = (string?)o ["id"] ?? "",
-                        Name = (string?)o ["name"] ?? "",
-                        NameLocal = (string?)o ["nameLocal"] ?? "",
-                        Url = (string?)o ["url"],
-                        Abbr = (string?)o ["abbr"],
-                        Parent = (string?)o ["parent"],
-                        Location = (string?)o ["location"],
-                        Area = (string?)o ["area"],
-                        Public = (bool)(o ["public"] ?? false),
-                        Active = (bool)(o ["active"] ?? false),
-                        InDbl = (bool)(o ["in_dbl"] ?? false),
-                        AuthorizedForParatext = (bool)(o ["authorizedForParatext"] ?? false),
-                        ShareBasicProgressInfo = (bool)(o ["shareBasicProgressInfo"] ?? false),
-                        CountryISO = (string?)o ["country_iso"],
+                        Id = (string?)o["id"] ?? "",
+                        Name = (string?)o["name"] ?? "",
+                        NameLocal = (string?)o["nameLocal"] ?? "",
+                        Url = (string?)o["url"],
+                        Abbr = (string?)o["abbr"],
+                        Parent = (string?)o["parent"],
+                        Location = (string?)o["location"],
+                        Area = (string?)o["area"],
+                        Public = (bool)(o["public"] ?? false),
+                        Active = (bool)(o["active"] ?? false),
+                        InDbl = (bool)(o["in_dbl"] ?? false),
+                        AuthorizedForParatext = (bool)(o["authorizedForParatext"] ?? false),
+                        ShareBasicProgressInfo = (bool)(o["shareBasicProgressInfo"] ?? false),
+                        CountryISO = (string?)o["country_iso"],
                         Domains = domains,
                     }
                 );
@@ -200,7 +200,7 @@ namespace SIL.Transcriber.Services
             if (reposElem == null)
                 return null;
 
-            List<ParatextProject> projects = new();
+            List<ParatextProject> projects = [];
             foreach (XElement repoElem in reposElem.Elements("repo"))
             {
                 string? projId = (string?)repoElem.Element("projid");
@@ -235,7 +235,15 @@ namespace SIL.Transcriber.Services
 
             //get more info for those projects that are registered
             response = await CallApiAsync(_registryClient, userSecret, HttpMethod.Get, "projects");
-            JArray projectArray = JArray.Parse(response);
+            JArray projectArray;
+            try
+            {
+                projectArray = JArray.Parse(response);
+            }
+            catch (Exception)
+            {
+                projectArray = [];
+            }
             //Logger.LogInformation($"TTY D: {DateTime.Now} {projectArray}" );
 
             foreach (JToken projectObj in projectArray)
@@ -312,7 +320,7 @@ namespace SIL.Transcriber.Services
                     );
                     JObject memberObj = JObject.Parse(response);
 
-                    return Attempt.Success((string?)memberObj ["role"]);
+                    return Attempt.Success((string?)memberObj["role"]);
                 }
                 return Attempt.Failure((string?)null, "Claim not found");
             }
@@ -345,7 +353,7 @@ namespace SIL.Transcriber.Services
                     JArray memberObj = JArray.Parse(response);
                     if (
                         memberObj.Count > 0
-                        && memberObj [0] ["username"]?.ToString() == GetParatextUsername(userSecret)
+                        && memberObj[0]["username"]?.ToString() == GetParatextUsername(userSecret)
                     )
                     {
                         invite.Email = CurrentUserContext.Email;
@@ -421,7 +429,7 @@ namespace SIL.Transcriber.Services
         )
         {
             _ = VerifyUserSecret(userSecret);
-            Logger.LogInformation($"text/{projectId}/{bookId}/{chapter}");
+            Logger.LogInformation("text/{projectId}/{bookId}/{chapter}", projectId, bookId, chapter);
             return CallApiAsync(
                 _dataAccessClient,
                 userSecret,
@@ -527,7 +535,7 @@ namespace SIL.Transcriber.Services
             //log it
             //requestObj["client_secret"] = "XXX";
             //TokenHistoryRepo.Create(new(userSecret.ParatextTokens.UserId, (string?)responseObj ["access_token"], (string?)responseObj ["refresh_token"] ?? "", requestObj.ToString(), response.ReasonPhrase + responseObj));
-            if (responseObj?.Count > 0 && (responseObj ["error_description"]?.ToString()?.Contains("refresh token") ?? false))
+            if (responseObj?.Count > 0 && (responseObj["error_description"]?.ToString()?.Contains("refresh token") ?? false))
                 throw new SecurityException("401 RefreshTokenInvalid.  Expected on Dev and QA.  Login again with Paratext connection.");
 
             _ = response.EnsureSuccessStatusCode();
@@ -615,16 +623,11 @@ namespace SIL.Transcriber.Services
             return chapter;
         }
 
-        private class BookChapter : IEquatable<BookChapter>
+        private class BookChapter(string? book, int? chapter) : IEquatable<BookChapter>
         {
-            public string Book { get; }
-            public int Chapter { get; }
+            public string Book { get; } = book ?? "";
+            public int Chapter { get; } = chapter ?? 0;
 
-            public BookChapter(string? book, int? chapter)
-            {
-                Book = book ?? "";
-                Chapter = chapter ?? 0;
-            }
             public override bool Equals(object? obj)
             {
                 //   http://go.microsoft.com/fwlink/?LinkID=85237  
@@ -672,7 +675,7 @@ namespace SIL.Transcriber.Services
             IEnumerable<BookChapter> book_chapters
         )
         {
-            List<ParatextChapter> chapterList = new();
+            List<ParatextChapter> chapterList = [];
 
             foreach (BookChapter bc in book_chapters)
             {
@@ -683,7 +686,7 @@ namespace SIL.Transcriber.Services
             return chapterList;
         }
 
-        private static IEnumerable<BookChapter> BookChapters(IEnumerable<Passage> passages, IEnumerable<Mediafile>? mediafiles=null)
+        private static IEnumerable<BookChapter> BookChapters(IEnumerable<Passage> passages)
         {
             return passages.Select(p => new BookChapter(p.Book, p.StartChapter)).Union(passages.Select(p => new BookChapter(p.Book, p.EndChapter))).Distinct();
         }
@@ -698,7 +701,7 @@ namespace SIL.Transcriber.Services
         }
         public async Task<string?> PassageTextAsync(int passageId, int typeId)
         {
-            IEnumerable<Passage> passages = PassageService.Get(passageId).ToList();
+            IEnumerable<Passage> passages = [.. PassageService.Get(passageId)];
             Passage? passage = passages.FirstOrDefault() ?? throw new Exception("Passage not found or user does not have access to passage.");
             Artifacttype? type = dbContext.Artifacttypes.Find(typeId);
 
@@ -712,7 +715,7 @@ namespace SIL.Transcriber.Services
             if (err.Length > 0)
                 throw new Exception(err);
 
-            IEnumerable<BookChapter> book_chapters = BookChapters(passages,null);
+            IEnumerable<BookChapter> book_chapters = BookChapters(passages);
             List<ParatextChapter> chapterList = await GetPassageChaptersAsync(
                 userSecret,
                 paratextId,
@@ -797,17 +800,16 @@ namespace SIL.Transcriber.Services
                     );
             }
             ;
-            return err.Length > 0 
-                ? "ReferenceError:" + err 
+            return err.Length > 0
+                ? "ReferenceError:" + err
                 : err;
         }
         public static List<Mediafile> GetTranscriptionMedia(int psgId, IEnumerable<Mediafile> mediafiles)
         {
-            return mediafiles
+            return [.. mediafiles
                     .Where(m => m.PassageId == psgId)
-                    .OrderBy(m => m.DateCreated) //this is not sufficient! TODO!
-                    .ToList();
-        }   
+                    .OrderBy(m => m.DateCreated)];
+        }
         public static string GetTranscription(List<Mediafile> mediafiles)
         {
             string transcription = "";
@@ -816,17 +818,17 @@ namespace SIL.Transcriber.Services
             string pattern = @"\([0-9]{1,2}:[0-9]{2}(:[0-9]{2})?\)";
             return Regex.Replace(transcription, pattern, "");
         }
-        private async Task<List<ParatextChapter>> SyncPassages(UserSecret userSecret, 
+        private async Task<List<ParatextChapter>> SyncPassages(UserSecret userSecret,
             List<Passage> passages, IEnumerable<Mediafile> mediafiles, int artifactTypeId)
         {
             User? currentUser = CurrentUserRepository.GetCurrentUser();
             Artifacttype? type = dbContext.Artifacttypes.Find(artifactTypeId);
             Plan? plan = mediafiles.First()?.Passage?.Section?.Plan;
             Project? project = plan?.Project;
-            
+
             bool addNumbers = project?.AddSectionNumbers()??false;
-            SectionMap[] sectionMap = addNumbers ? project?.GetSectionMap()??Array.Empty<SectionMap>() : Array.Empty<SectionMap>(); //"[[0.01,\\"M1\\"],[1,\\"M1 S1\\"],[2,\\"M1 S2\\"],[3,\\"M1 S3\\"]]"   
-             
+            SectionMap[] sectionMap = addNumbers ? project?.GetSectionMap()??[] : []; //"[[0.01,\\"M1\\"],[1,\\"M1 S1\\"],[2,\\"M1 S2\\"],[3,\\"M1 S3\\"]]"   
+
             string paratextId = ParatextHelpers.ParatextProject(
                 plan?.ProjectId,
                 type?.Typename ?? "",
@@ -836,7 +838,7 @@ namespace SIL.Transcriber.Services
             if (err.Length > 0)
                 throw new Exception(err);
 
-            IEnumerable<BookChapter> book_chapters = BookChapters(passages, mediafiles);
+            IEnumerable<BookChapter> book_chapters = BookChapters(passages);
 
 
 
@@ -876,7 +878,7 @@ namespace SIL.Transcriber.Services
                         HttpContext?.SetFP("paratext");
                         foreach (
                             Passage passage in passages.Where(
-                                p => p.Book == chapter.Book && 
+                                p => p.Book == chapter.Book &&
                                 (p.StartChapter == chapter.Chapter || p.EndChapter == chapter.Chapter)
                             )
                         )
@@ -888,18 +890,20 @@ namespace SIL.Transcriber.Services
                                 string transcription = GetTranscription(psgMedia);
                                 if (passage.StartChapter != passage.EndChapter)
                                 {
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                                     Regex rg = new (@"(\\c\s*[0-9]*)");
+#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                                     MatchCollection internalverses = rg.Matches(transcription);
                                     if (internalverses.Count > 0)
                                     {
                                         if (internalverses.Count > 1)
                                         {//why? ignore all but the last one
                                             Match ignore = internalverses[^2];
-                                            transcription = transcription [ignore.Value.Length..];
+                                            transcription = transcription[ignore.Value.Length..];
                                             internalverses = rg.Matches(transcription);
                                         }
                                         Match match = internalverses[0];
-                                        transcription = passage.StartChapter == chapter.Chapter ? transcription [0..match.Index] : transcription[(match.Index + match.Value.Length)..];
+                                        transcription = passage.StartChapter == chapter.Chapter ? transcription[0..match.Index] : transcription[(match.Index + match.Value.Length)..];
                                         updateMedia = passage.EndChapter == chapter.Chapter;
                                     }
                                     else if (passage.DestinationChapter() == chapter.Chapter)
@@ -917,7 +921,7 @@ namespace SIL.Transcriber.Services
                                     chapter.NewUSX,
                                     passage,
                                     transcription,
-                                    addNumbers, 
+                                    addNumbers,
                                     sectionMap
                                 );
                                 //log it
@@ -1058,7 +1062,7 @@ namespace SIL.Transcriber.Services
                 planId,
                 artifactTypeId
             );
-            List<Passage> passages = new();
+            List<Passage> passages = [];
             foreach (Mediafile m in mediafiles)
             {
                 if (passages.FindIndex(p => p.Id == m.PassageId) < 0 && m.Passage != null)
@@ -1075,9 +1079,9 @@ namespace SIL.Transcriber.Services
                         passages.Add(bc);
                 }
             }
-            return passages.Any() 
-                ? await SyncPassages(userSecret, passages, mediafiles, artifactTypeId) 
-                : new List<ParatextChapter>();
+            return passages.Count != 0
+                ? await SyncPassages(userSecret, passages, mediafiles, artifactTypeId)
+                : [];
         }
         public async Task<List<ParatextChapter>> SyncPassageAsync(
             UserSecret userSecret,
@@ -1089,15 +1093,14 @@ namespace SIL.Transcriber.Services
                 passageId,
                 artifactTypeId
             );
-            if (!mediafiles.Any()) return new List<ParatextChapter>();
+            if (!mediafiles.Any())
+                return [];
 
-#pragma warning disable CS8604 // Possible null reference argument.
-            List<Passage> passages = new()
-            {
+            List<Passage> passages =
+            [
                 mediafiles.First().Passage
-            };
+            ];
             return await SyncPassages(userSecret, passages, mediafiles, artifactTypeId);
-#pragma warning restore CS8604 // Possible null reference argument.
         }
 
         public async Task<List<ParatextChapter>> SyncProjectAsync(
@@ -1107,7 +1110,7 @@ namespace SIL.Transcriber.Services
         )
         {
             Project? project = await ProjectService.GetWithPlansAsync(projectId);
-            List<ParatextChapter> chapters = new();
+            List<ParatextChapter> chapters = [];
             if (project != null && project.Plans != null)
                 foreach (Plan p in project.Plans)
                 {

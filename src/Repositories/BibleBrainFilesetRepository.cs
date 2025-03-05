@@ -7,30 +7,26 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class BibleBrainFilesetRepository : BaseRepository<Biblebrainfileset>
-    { 
-        public BibleBrainFilesetRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class BibleBrainFilesetRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository
+        ) : BaseRepository<Biblebrainfileset>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {  }
-
+    {
         public IQueryable<Biblebrainfileset> UsersBibles(
             IQueryable<Biblebrainfileset> entities
         )
@@ -40,7 +36,9 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Biblebrainfileset> ProjectBibles(
             IQueryable<Biblebrainfileset> entities,
+#pragma warning disable IDE0060 // Remove unused parameter
             string projectid
+#pragma warning restore IDE0060 // Remove unused parameter
         )
         {
             return entities;
@@ -68,12 +66,13 @@ namespace SIL.Transcriber.Repositories
             if (dbContext.BibleBrainFilesets.Any(f => f.FilesetId == fs.fileset_id))
             {
                 return dbContext.BibleBrainFilesets.First(f => f.FilesetId == fs.fileset_id);
-            }   
-            Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Biblebrainfileset> newfs = 
-                dbContext.BibleBrainFilesets.Add(new Biblebrainfileset { 
-                    FilesetId = fs.fileset_id, 
-                    MediaType = fs.type, 
-                    Licensor = fs.licensor 
+            }
+            Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Biblebrainfileset> newfs =
+                dbContext.BibleBrainFilesets.Add(new Biblebrainfileset
+                {
+                    FilesetId = fs.fileset_id,
+                    MediaType = fs.type,
+                    Licensor = fs.licensor
                 });
             dbContext.SaveChanges();
             return newfs.Entity;

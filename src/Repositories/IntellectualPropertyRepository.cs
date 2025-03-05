@@ -7,34 +7,29 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class IntellectualPropertyRepository : BaseRepository<Intellectualproperty>
-    {
-        private readonly OrganizationRepository OrganizationRepository;
-
-        public IntellectualPropertyRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            OrganizationRepository organizationRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class IntellectualPropertyRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        OrganizationRepository organizationRepository
+        ) : BaseRepository<Intellectualproperty>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            OrganizationRepository = organizationRepository;
-        }
+    {
+        private readonly OrganizationRepository OrganizationRepository = organizationRepository;
+
         public IQueryable<Intellectualproperty> UsersIntellectualProperty(IQueryable<Intellectualproperty> entities)
         {
             if (CurrentUser == null)

@@ -6,31 +6,26 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 namespace SIL.Transcriber.Repositories;
 
-public class SharedResourceRepository : BaseRepository<Sharedresource>
-{
-    public SharedResourceRepository(
-        ITargetedFields targetedFields,
-        AppDbContextResolver contextResolver,
-        IResourceGraph resourceGraph,
-        IResourceFactory resourceFactory,
-        IEnumerable<IQueryConstraintProvider> constraintProviders,
-        ILoggerFactory loggerFactory,
-        IResourceDefinitionAccessor resourceDefinitionAccessor,
-        CurrentUserRepository currentUserRepository
-    )
-        : base(
-            targetedFields,
-            contextResolver,
-            resourceGraph,
-            resourceFactory,
-            constraintProviders,
-            loggerFactory,
-            resourceDefinitionAccessor,
-            currentUserRepository
+public class SharedResourceRepository(
+    ITargetedFields targetedFields,
+    AppDbContextResolver contextResolver,
+    IResourceGraph resourceGraph,
+    IResourceFactory resourceFactory,
+    IEnumerable<IQueryConstraintProvider> constraintProviders,
+    ILoggerFactory loggerFactory,
+    IResourceDefinitionAccessor resourceDefinitionAccessor,
+    CurrentUserRepository currentUserRepository
+    ) : BaseRepository<Sharedresource>(
+        targetedFields,
+        contextResolver,
+        resourceGraph,
+        resourceFactory,
+        constraintProviders,
+        loggerFactory,
+        resourceDefinitionAccessor,
+        currentUserRepository
         )
-    {
-    }
-
+{
     public IQueryable<Sharedresource> UsersSharedResources(IQueryable<Sharedresource> entities)
     {   //send them all
         return CurrentUser == null ? entities.Where(e => e.Id == -1) : entities;

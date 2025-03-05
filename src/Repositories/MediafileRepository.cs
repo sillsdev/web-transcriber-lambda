@@ -12,42 +12,34 @@ using static SIL.Transcriber.Utility.HttpContextHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class MediafileRepository : BaseRepository<Mediafile>
-    {
-        readonly private PlanRepository PlanRepository;
-        readonly private ProjectRepository ProjectRepository;
-        readonly private IS3Service S3service;
-        readonly private HttpContext? HttpContext;
-        public MediafileRepository(
-            IHttpContextAccessor httpContextAccessor,
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            PlanRepository planRepository,
-            ProjectRepository projectRepository,
-            IS3Service service
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class MediafileRepository(
+        IHttpContextAccessor httpContextAccessor,
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        PlanRepository planRepository,
+        ProjectRepository projectRepository,
+        IS3Service service
+        ) : BaseRepository<Mediafile>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            PlanRepository = planRepository;
-            ProjectRepository = projectRepository;
-            S3service = service;
-            HttpContext = httpContextAccessor.HttpContext;
-        }
+    {
+        readonly private PlanRepository PlanRepository = planRepository;
+        readonly private ProjectRepository ProjectRepository = projectRepository;
+        readonly private IS3Service S3service = service;
+        readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
 
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, int project)
         {
@@ -80,7 +72,7 @@ namespace SIL.Transcriber.Repositories
             Artifacttype? newAT = dbContext.Artifacttypes.Where(at => at.Typename == "wholebacktranslation").FirstOrDefault();
             if (newAT == null)
                 return null;
-            IEnumerable<Mediafile>? entities = FromCurrentUser().Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), m => m.ArtifactTypeId, a => a.Id, (m, a) => m).Where(m => m.SourceSegments == null).ToList();
+            IEnumerable<Mediafile>? entities = [.. FromCurrentUser().Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), m => m.ArtifactTypeId, a => a.Id, (m, a) => m).Where(m => m.SourceSegments == null)];
             foreach (Mediafile m in entities)
             {
                 m.ArtifactTypeId = newAT.Id;
@@ -152,7 +144,7 @@ namespace SIL.Transcriber.Repositories
 
             if (artifactTypeId == 0)
             {
-                List<Mediafile> ret = new ();
+                List<Mediafile> ret = [];
                 if (media.Any() && media.Last().ReadyToSync)
                     ret.Add(media.Last());
                 return ret;
@@ -309,10 +301,6 @@ namespace SIL.Transcriber.Repositories
             sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
             return sr;
         }
-        private static bool PublishAsSharedResource(string publishTo)
-        {
-            return publishTo.Contains("Internalization");
-        }
         public Sharedresource? CreateSharedResource(Mediafile m, Passage p)
         {
             string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
@@ -376,6 +364,12 @@ namespace SIL.Transcriber.Repositories
                 return null;
             }
             Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
+            if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
+            {
+                Sharedresource? sr = GetSharedResource(passage);
+                if (sr == null)
+                    _ = CreateSharedResource(m, passage);
+            }
             if (PublishToAkuo(publishTo))
             {
                 Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
@@ -402,13 +396,7 @@ namespace SIL.Transcriber.Repositories
                         dbContext.SaveChanges();
                 }
             }
-            if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
-            {
-                Sharedresource? sr = GetSharedResource(passage);
-                if (sr == null)
-                    _ = CreateSharedResource(m, passage);
-            }
-            if (!m.ReadyToShare || m.PublishTo != publishTo)
+            else if (!m.ReadyToShare || m.PublishTo != publishTo)
             {
                 m.ReadyToShare = true;
                 m.PublishTo = publishTo;

@@ -9,16 +9,10 @@ namespace SIL.Transcriber.Controllers
 {
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [Route("api/[controller]")]
-    public class ParatextController : ControllerBase
+    public class ParatextController(IParatextService paratextService, ILoggerFactory loggerFactory) : ControllerBase
     {
-        private readonly IParatextService _paratextService;
-        protected ILogger<ParatextController> Logger { get; set; }
-
-        public ParatextController(IParatextService paratextService, ILoggerFactory loggerFactory)
-        {
-            _paratextService = paratextService;
-            this.Logger = loggerFactory.CreateLogger<ParatextController>();
-        }
+        private readonly IParatextService _paratextService = paratextService;
+        protected ILogger<ParatextController> Logger { get; set; } = loggerFactory.CreateLogger<ParatextController>();
 
         [HttpGet("orgs")]
         public async Task<ActionResult<IEnumerable<ParatextOrg>>> GetOrgsAsync()
@@ -127,14 +121,14 @@ namespace SIL.Transcriber.Controllers
             return Ok(username);
         }
         [HttpGet("canpublish")]
-        public async Task< ActionResult<bool>> CanPublish()
+        public async Task<ActionResult<bool>> CanPublish()
         {
             UserSecret userSecret;
             try
             {
                 userSecret = _paratextService.ParatextLogin();
             }
-            catch 
+            catch
             {
                 return Ok(false);
             }

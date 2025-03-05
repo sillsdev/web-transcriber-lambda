@@ -1,5 +1,4 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
-using Microsoft.IdentityModel.Tokens;
 using SIL.Transcriber.Utility.Extensions;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -23,7 +22,7 @@ namespace SIL.Logging.Models
             if (access != null)
             {
                 JwtSecurityToken jwt = new (access);
-                IssuedAt = jwt.Payload.Iat != null ? EpochTime.DateTime((long)jwt.Payload.Iat) : DateTime.MinValue;
+                IssuedAt = jwt.IssuedAt;
                 ValidTo = jwt.ValidTo;
                 Console.WriteLine(IssuedAt.ToString(), ValidTo.ToString());
             }

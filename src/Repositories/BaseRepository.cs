@@ -10,30 +10,27 @@ using System.Text.Json;
 
 namespace SIL.Transcriber.Repositories
 {
-    public abstract class BaseRepository<TEntity> : BaseRepository<TEntity, int>
+    public abstract class BaseRepository<TEntity>(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository
+        ) : BaseRepository<TEntity, int>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
+            )
         where TEntity : BaseModel
     {
-        public BaseRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
-            )
-        { }
     }
 
     public abstract class BaseRepository<TEntity, TId> : AppDbContextRepository<TEntity>
@@ -82,10 +79,13 @@ namespace SIL.Transcriber.Repositories
             ResourceDefinitionAccessor = resourceDefinitionAccessor;
             ResourceGraph = resourceGraph;
         }
-
-        public bool PublishToAkuo(string publishTo)
+        public bool PublishAsSharedResource(string publishTo)
         {
-            return publishTo.Contains("Public") || publishTo.Contains("Beta");
+            return publishTo.Contains("Internalization");
+        }
+        public bool PublishToAkuo(string? publishTo)
+        {
+            return publishTo != null && (publishTo.Contains("Public") || publishTo.Contains("Beta") || publishTo.Contains("OBTHelps"));
         }
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {

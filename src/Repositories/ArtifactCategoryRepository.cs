@@ -7,33 +7,28 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class ArtifactCategoryRepository : BaseRepository<Artifactcategory>
-    {
-        private readonly OrganizationRepository OrganizationRepository;
-
-        public ArtifactCategoryRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            OrganizationRepository organizationRepository
-        ) : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class ArtifactCategoryRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        OrganizationRepository organizationRepository
+        ) : BaseRepository<Artifactcategory>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            OrganizationRepository = organizationRepository;
-        }
+    {
+        private readonly OrganizationRepository OrganizationRepository = organizationRepository;
 
         public IQueryable<Artifactcategory> UsersArtifactCategorys(
             IQueryable<Artifactcategory> entities

@@ -7,34 +7,28 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrgKeytermTargetRepository : BaseRepository<Orgkeytermtarget>
-    {
-        private readonly OrganizationRepository OrganizationRepository;
-
-        public OrgKeytermTargetRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            OrganizationRepository organizationRepository
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+    public class OrgKeytermTargetRepository(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        OrganizationRepository organizationRepository
+        ) : BaseRepository<Orgkeytermtarget>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            OrganizationRepository = organizationRepository;
-        }
+    {
+        private readonly OrganizationRepository OrganizationRepository = organizationRepository;
 
         public IQueryable<Orgkeytermtarget> UsersOrgKeytermTargets(
             IQueryable<Orgkeytermtarget> entities

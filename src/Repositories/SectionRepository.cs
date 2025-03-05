@@ -2,46 +2,40 @@
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using static SIL.Transcriber.Utility.HttpContextHelpers;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class SectionRepository : BaseRepository<Section>
-    {
-        readonly private PlanRepository PlanRepository;
-        readonly private MediafileRepository MediafileRepository;
-        readonly private HttpContext? HttpContext;
-        public SectionRepository(
-            IHttpContextAccessor httpContextAccessor,
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            CurrentUserRepository currentUserRepository,
-            PlanRepository planRepository,
-            MediafileRepository mediafileRepository
+    public class SectionRepository(
+        IHttpContextAccessor httpContextAccessor,
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        CurrentUserRepository currentUserRepository,
+        PlanRepository planRepository,
+        MediafileRepository mediafileRepository
 
-        )
-            : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor,
-                currentUserRepository
+        ) : BaseRepository<Section>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor,
+            currentUserRepository
             )
-        {
-            PlanRepository = planRepository;
-            MediafileRepository = mediafileRepository;
-            HttpContext = httpContextAccessor.HttpContext;
-        }
+    {
+        readonly private PlanRepository PlanRepository = planRepository;
+        readonly private MediafileRepository MediafileRepository = mediafileRepository;
+        readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
 
         #region ScopeToUser
         //get my sections in these projects
@@ -108,7 +102,7 @@ namespace SIL.Transcriber.Repositories
             int chapter
         )
         {
-            IList<SectionSummary> ss = new List<SectionSummary>();
+            IList<SectionSummary> ss = [];
             var passagewithsection = dbContext.Passages
                 .Join(
                     dbContext.Sections.Where(section => section.PlanId == PlanId),
@@ -136,27 +130,29 @@ namespace SIL.Transcriber.Repositories
         }
         #endregion
 
-        private async Task PublishSection(Section section, bool publish)
+        private async Task PublishSection(Section section)
         {
-            string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
-            HttpContext?.SetFP("publish");
-            await PublishPassages(section.Id, section.PublishTo, publish);
+            if (section.PublishTo?.Contains("Propagate") ?? false)
+            {
+                HttpContext?.SetFP("publish");
+                await PublishPassages(section.Id, section.PublishTo ?? "{}");
+            }
         }
-        private async Task PublishPassages(int sectionid, string publishTo, bool publish)
+        private async Task PublishPassages(int sectionid, string publishTo)
         {
-            List<Passage> passages = dbContext.Passages.Where(p => p.SectionId == sectionid).ToList();
+            bool publish = PublishToAkuo(publishTo) || PublishAsSharedResource(publishTo);
+            List<Passage> passages = [.. dbContext.Passages.Where(p => p.SectionId == sectionid)];
             foreach (Passage? passage in passages)
             {
                 IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
                         .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
                         .OrderByDescending(m => m.VersionNumber);
-#pragma warning disable CS8604 // Possible null reference argument.
                 List < Mediafile > medialist = publish && mediafiles.Any()
-                ? new List<Mediafile>
-                {
+                ?
+                [
                     mediafiles.FirstOrDefault()
-                }
-                : mediafiles.ToList();
+                ]
+                : [.. mediafiles];
                 //if we are publishing, turn on shared notes.  If not publishing, leave them as they are
                 if (publish && passage.SharedResourceId != null)
                 {
@@ -171,31 +167,33 @@ namespace SIL.Transcriber.Repositories
                             medialist.Add(notemediafile);
                     }
                 }
-#pragma warning restore CS8604 // Possible null reference argument.
-                foreach(Mediafile mediafile in medialist)
+                foreach (Mediafile mediafile in medialist)
                 {
                     if (publish)
                         await MediafileRepository.Publish(mediafile.Id, publishTo, false);
-                    else if (mediafile.ReadyToShare)
+                    else if (mediafile.ReadyToShare && (publishTo != "{}"))
                     {
+                        JObject pt = JObject.Parse(publishTo);
+                        pt.Add("PublishPassage", false);
                         mediafile.ReadyToShare = false;
-                        mediafile.PublishTo = "{}";
-                        mediafile.PublishedAs = "";
+                        mediafile.PublishTo = pt.ToString();
                         dbContext.Mediafiles.Update(mediafile);
                     }
                 };
-                dbContext.SaveChanges();
+                _ = dbContext.SaveChanges();
             }
         }
 
         public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
         {
-            if (resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
+            //if we meant to send it it will have destinationsetbyuser:true in it
+            if ((resourceFromRequest.PublishTo ?? "{}") != "{}" && resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
             {
-                await PublishSection(resourceFromRequest, resourceFromRequest.Published);
+                await PublishSection(resourceFromRequest);
             }
-            if (resourceFromRequest.TitleMediafileId != null && PublishToAkuo(resourceFromRequest.PublishTo)) //always do titles and movements
-                await MediafileRepository.Publish((int)resourceFromRequest.TitleMediafileId, "{'Public': 'true'}", true);
+            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
+            if (titleMedia != null && PublishToAkuo(resourceFromRequest.PublishTo)) //always do titles and movements
+                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
     }

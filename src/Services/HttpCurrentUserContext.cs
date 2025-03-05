@@ -5,26 +5,19 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services
 {
-    public class HttpCurrentUserContext : ICurrentUserContext
+    public class HttpCurrentUserContext(
+        ILoggerFactory loggerFactory,
+        IHttpContextAccessor httpContextAccessor,
+        IAuthService authService
+        ) : ICurrentUserContext
     {
-        public HttpContext? HttpContext { get; set; }
-        public IAuthService AuthService { get; set; }
+        public HttpContext? HttpContext { get; set; } = httpContextAccessor.HttpContext;
+        public IAuthService AuthService { get; set; } = authService;
 
         private string? auth0Id;
 
         private User? auth0User;
-        protected ILogger<ICurrentUserContext> Logger { get; set; }
-
-        public HttpCurrentUserContext(
-            ILoggerFactory loggerFactory,
-            IHttpContextAccessor httpContextAccessor,
-            IAuthService authService
-        )
-        {
-            HttpContext = httpContextAccessor.HttpContext;
-            AuthService = authService;
-            Logger = loggerFactory.CreateLogger<ICurrentUserContext>();
-        }
+        protected ILogger<ICurrentUserContext> Logger { get; set; } = loggerFactory.CreateLogger<ICurrentUserContext>();
 
         private User Auth0User {
             get {

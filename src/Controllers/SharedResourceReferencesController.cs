@@ -5,22 +5,20 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Controllers;
 
-public class SharedresourceReferencesController : BaseController<Sharedresourcereference>
-{
-    public SharedresourceReferencesController(
-    ILoggerFactory loggerFactory,
-    IJsonApiOptions options,
-    IResourceGraph resourceGraph,
-    IResourceService<Sharedresourcereference, int> resourceService,
-    ICurrentUserContext currentUserContext,
-    UserService userService
-) : base(
-        loggerFactory,
-        options,
-        resourceGraph,
-        resourceService,
-        currentUserContext,
-        userService
+public class SharedresourceReferencesController(
+ILoggerFactory loggerFactory,
+IJsonApiOptions options,
+IResourceGraph resourceGraph,
+IResourceService<Sharedresourcereference, int> resourceService,
+ICurrentUserContext currentUserContext,
+UserService userService
+) : BaseController<Sharedresourcereference>(
+    loggerFactory,
+    options,
+    resourceGraph,
+    resourceService,
+    currentUserContext,
+    userService
     )
-    { }
+{
 }

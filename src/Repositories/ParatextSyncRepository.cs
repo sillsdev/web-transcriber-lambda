@@ -6,17 +6,14 @@ using SIL.Transcriber.Data;
 
 namespace SIL.Logging.Repositories
 {
-    public class ParatextSyncRepository : LoggingDbContextRepository<Paratextsync>
+    public class ParatextSyncRepository(
+        ITargetedFields targetedFields, LoggingDbContextResolver contextResolver,
+        IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor
+            ) : LoggingDbContextRepository<Paratextsync>(targetedFields, contextResolver, resourceGraph, resourceFactory,
+            constraintProviders, loggerFactory, resourceDefinitionAccessor)
     {
-        public ParatextSyncRepository(
-            ITargetedFields targetedFields, LoggingDbContextResolver contextResolver,
-            IResourceGraph resourceGraph, IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
-                constraintProviders, loggerFactory, resourceDefinitionAccessor)
-        {
-        }
     }
 }

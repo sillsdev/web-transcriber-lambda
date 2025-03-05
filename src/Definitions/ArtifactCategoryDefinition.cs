@@ -5,22 +5,15 @@ using SIL.Transcriber.Services;
 
 namespace SIL.Transcriber.Definitions;
 
-public class ArtifactCategoryDefinition : BaseDefinition<Artifactcategory>
+public class ArtifactCategoryDefinition(
+    IResourceGraph resourceGraph,
+    ILoggerFactory loggerFactory,
+    IJsonApiRequest Request,
+        MediafileService mediafileService
+    ) : BaseDefinition<Artifactcategory>(resourceGraph, loggerFactory, Request)
 {
-    private readonly MediafileService MediafileService;
+    private readonly MediafileService MediafileService = mediafileService;
 
-    public ArtifactCategoryDefinition(
-        IResourceGraph resourceGraph,
-        ILoggerFactory loggerFactory,
-        IJsonApiRequest Request,
-            MediafileService mediafileService
-    ) : base(resourceGraph, loggerFactory, Request)
-    {
-        MediafileService = mediafileService;
-
-        //Do not use a service here...the dbContext in the service isn't correct when called from definition
-        //at least in onWritingAsync
-    }
     public override async Task OnWritingAsync(
     Artifactcategory resource,
     WriteOperationKind writeOperation,

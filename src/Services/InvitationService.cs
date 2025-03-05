@@ -6,52 +6,43 @@ using JsonApiDotNetCore.Resources;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Utility;
 using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Services
 {
-    public class InvitationService : BaseService<Invitation>
-    {
-        readonly private OrganizationRepository OrganizationRepository;
-        readonly private OrganizationService OrganizationService;
-        readonly private GroupMembershipService GroupMembershipService;
-        readonly private UserRepository UserRepository;
-        public CurrentUserRepository CurrentUserRepository { get; }
-
-        public InvitationService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Invitation> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            GroupMembershipService groupMembershipService,
-            CurrentUserRepository currentUserRepository,
-            OrganizationService organizationService,
-            OrganizationRepository organizationRepository,
-            UserRepository userRepository,
-            InvitationRepository repository
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor,
-                repository
+    public class InvitationService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Invitation> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        GroupMembershipService groupMembershipService,
+        CurrentUserRepository currentUserRepository,
+        OrganizationService organizationService,
+        OrganizationRepository organizationRepository,
+        UserRepository userRepository,
+        InvitationRepository repository
+        ) : BaseService<Invitation>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor,
+            repository
             )
-        {
-            CurrentUserRepository = currentUserRepository;
-            OrganizationService = organizationService;
-            OrganizationRepository = organizationRepository;
-            UserRepository = userRepository;
-            GroupMembershipService = groupMembershipService;
-        }
+    {
+        readonly private OrganizationRepository OrganizationRepository = organizationRepository;
+        readonly private OrganizationService OrganizationService = organizationService;
+        readonly private GroupMembershipService GroupMembershipService = groupMembershipService;
+        readonly private UserRepository UserRepository = userRepository;
+        public CurrentUserRepository CurrentUserRepository { get; } = currentUserRepository;
 
         private static string BuildEmailBody(dynamic strings, Invitation entity)
         {
@@ -104,7 +95,7 @@ namespace SIL.Transcriber.Services
 
                 string subject =
                     strings["Subject"] ?? "missing subject: Audio Project Manager Invitation";
-                await TranscriberAPI.Utility.Email.SendEmailAsync(
+                await Email.SendEmailAsync(
                     entity.Email,
                     subject,
                     BuildEmailBody(strings, dbentity)
@@ -134,8 +125,7 @@ namespace SIL.Transcriber.Services
 
             //verify current user is logged in with invitation email
             if (
-                (entity.Email ?? oldentity.Email ?? "").ToLower()
-                != (currentUser?.Email ?? "").ToLower()
+                !(entity.Email ?? oldentity.Email ?? "").Equals(currentUser?.Email ?? "", StringComparison.CurrentCultureIgnoreCase)
             )
             {
                 throw new System.Exception(

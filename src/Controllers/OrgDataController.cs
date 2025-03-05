@@ -9,23 +9,21 @@ namespace SIL.Transcriber.Controllers
     //[HttpReadOnly]
     [Route("api/[controller]")]
 
-    public class OrgdatasController : BaseController<Orgdata>
-    {
-        public OrgdatasController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<Orgdata, int> resourceService,
-            ICurrentUserContext currentUserContext,
-            UserService userService
-        ) : base(
-                loggerFactory,
-                options,
-                resourceGraph,
-                resourceService,
-                currentUserContext,
-                userService
+    public class OrgdatasController(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<Orgdata, int> resourceService,
+        ICurrentUserContext currentUserContext,
+        UserService userService
+        ) : BaseController<Orgdata>(
+            loggerFactory,
+            options,
+            resourceGraph,
+            resourceService,
+            currentUserContext,
+            userService
             )
-        { }
+    {
     }
 }

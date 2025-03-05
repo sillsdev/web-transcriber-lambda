@@ -8,19 +8,15 @@ using SIL.Transcriber.Models;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class DashboardRepository : AppDbContextRepository<Dashboard>
+    public class DashboardRepository(ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver, IResourceGraph resourceGraph, IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders, ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor
+            ) : AppDbContextRepository<Dashboard>(targetedFields, contextResolver, resourceGraph, resourceFactory,
+            constraintProviders, loggerFactory, resourceDefinitionAccessor)
     {
-        protected readonly AppDbContext dbContext;
+        protected readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
 
-        public DashboardRepository(ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver, IResourceGraph resourceGraph, IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders, ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor
-            ) : base(targetedFields, contextResolver, resourceGraph, resourceFactory,
-                constraintProviders, loggerFactory, resourceDefinitionAccessor)
-        {
-            this.dbContext = (AppDbContext)contextResolver.GetContext();
-        }
         private static int GetMonthCount(IEnumerable<BaseModel> entities, bool updated = false)
         {
             DateTime checkDate = DateTime.Now.AddDays(-30).ToUniversalTime();
@@ -39,12 +35,12 @@ namespace SIL.Transcriber.Repositories
         }
         private IEnumerable<Plan> TrainingPlans()
         {
-            List<Plan> plans = dbContext.Plans.Where(p => p.Tags != null).ToList();
+            List<Plan> plans = [.. dbContext.Plans.Where(p => p.Tags != null)];
             return plans.Where(p=> JObject.Parse(p.Tags ?? "{}") ["training"]?.Value<bool?>() ?? false);
         }
         private IEnumerable<Plan> NonTestingPlans()
         {
-            List<Plan> plans =  dbContext.Plans.Where(p => !p.Archived).ToList();
+            List<Plan> plans =  [.. dbContext.Plans.Where(p => !p.Archived)];
             return plans.Where(p => !(JObject.Parse(p.Tags??"{}")["testing"]?.Value<bool?>() ?? false));
         }
         private IEnumerable<Passage> Passages()
@@ -65,7 +61,7 @@ namespace SIL.Transcriber.Repositories
         }
         public new IQueryable<Dashboard> GetAll()
         {
-            List<Dashboard> entities = new();
+            List<Dashboard> entities = [];
             IEnumerable<BaseModel> projects = Projects().ToList();
             IEnumerable<BaseModel> training = TrainingPlans();
             IEnumerable<BaseModel> plans = NonTestingPlans().ToList();

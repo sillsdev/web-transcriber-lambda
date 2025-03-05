@@ -10,24 +10,22 @@ using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Controllers
 {
-    public class BaseController<T> : BaseController<T, int> where T : class, IIdentifiable<int>
+    public class BaseController<T>(
+        ILoggerFactory loggerFactory,
+        IJsonApiOptions options,
+        IResourceGraph resourceGraph,
+        IResourceService<T, int> resourceService,
+        ICurrentUserContext currentUserContext,
+        UserService userService
+        ) : BaseController<T, int>(
+            loggerFactory,
+            options,
+            resourceGraph,
+            resourceService,
+            currentUserContext,
+            userService
+            ) where T : class, IIdentifiable<int>
     {
-        public BaseController(
-            ILoggerFactory loggerFactory,
-            IJsonApiOptions options,
-            IResourceGraph resourceGraph,
-            IResourceService<T, int> resourceService,
-            ICurrentUserContext currentUserContext,
-            UserService userService
-        ) : base(
-                loggerFactory,
-                options,
-                resourceGraph,
-                resourceService,
-                currentUserContext,
-                userService
-            )
-        { }
     }
 
     public class BaseController<T, TId> : JsonApiController<T, TId>

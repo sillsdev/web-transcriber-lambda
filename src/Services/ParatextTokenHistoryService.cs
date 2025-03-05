@@ -8,28 +8,25 @@ using SIL.Logging.Models;
 
 namespace SIL.Transcriber.Services
 {
-    public class ParatextTokenHistoryService : JsonApiResourceService<Paratexttokenhistory, int>
-    {
-        public ParatextTokenHistoryService(
-            IResourceRepositoryAccessor repositoryAccessor,
-            IQueryLayerComposer queryLayerComposer,
-            IPaginationContext paginationContext,
-            IJsonApiOptions options,
-            ILoggerFactory loggerFactory,
-            IJsonApiRequest request,
-            IResourceChangeTracker<Paratexttokenhistory> resourceChangeTracker,
-            IResourceDefinitionAccessor resourceDefinitionAccessor
-        )
-            : base(
-                repositoryAccessor,
-                queryLayerComposer,
-                paginationContext,
-                options,
-                loggerFactory,
-                request,
-                resourceChangeTracker,
-                resourceDefinitionAccessor
+    public class ParatextTokenHistoryService(
+        IResourceRepositoryAccessor repositoryAccessor,
+        IQueryLayerComposer queryLayerComposer,
+        IPaginationContext paginationContext,
+        IJsonApiOptions options,
+        ILoggerFactory loggerFactory,
+        IJsonApiRequest request,
+        IResourceChangeTracker<Paratexttokenhistory> resourceChangeTracker,
+        IResourceDefinitionAccessor resourceDefinitionAccessor
+        ) : JsonApiResourceService<Paratexttokenhistory, int>(
+            repositoryAccessor,
+            queryLayerComposer,
+            paginationContext,
+            options,
+            loggerFactory,
+            request,
+            resourceChangeTracker,
+            resourceDefinitionAccessor
             )
-        { }
+    {
     }
 }

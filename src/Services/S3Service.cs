@@ -128,27 +128,18 @@ namespace SIL.Transcriber.Services
         public override void Write(byte[] buffer, int offset, int count) { throw new NotImplementedException(); }
     }
 
-    public class S3Service : IS3Service
+    public class S3Service(IAmazonS3 client, ILoggerFactory loggerFactory) : IS3Service
     {
-        private readonly string USERFILES_BUCKET;
-        private readonly string PUBLISHREQ_BUCKET;
-        private readonly string PUBLISHED_BUCKET;
-        private readonly IAmazonS3 _client;
-        protected ILogger<S3Service> Logger { get; set; }
-
-        public S3Service(IAmazonS3 client, ILoggerFactory loggerFactory)
-        {
-            _client = client;
-            USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
-            PUBLISHREQ_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHREQ_BUCKET");
-            PUBLISHED_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHED_BUCKET");
-            this.Logger = loggerFactory.CreateLogger<S3Service>();
-        }
+        private readonly string USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
+        private readonly string PUBLISHREQ_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHREQ_BUCKET");
+        private readonly string PUBLISHED_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHED_BUCKET");
+        private readonly IAmazonS3 _client = client;
+        protected ILogger<S3Service> Logger { get; set; } = loggerFactory.CreateLogger<S3Service>();
 
         private static string ProperFolder(string folder)
         {
             //what else should be checked here?
-            if (folder.Length > 0 && folder.LastIndexOf("/") != folder.Length - 1)
+            if (folder.Length > 0 && folder.LastIndexOf('/') != folder.Length - 1)
                 folder += "/";
             return folder;
         }
@@ -168,12 +159,14 @@ namespace SIL.Transcriber.Services
                 ContentType = contentType,
             };
         }
+        /*
         private long GetFileSize(string key)
         {
             // Get the object size to enable Seek from end operations
             GetObjectMetadataResponse data = GetFileData(key);
             return data.ContentLength;
         }
+        */
         private GetObjectMetadataResponse GetFileData(string key)
         {
             GetObjectMetadataResponse data = _client.GetObjectMetadataAsync(USERFILES_BUCKET, key).Result;

@@ -7,18 +7,13 @@ namespace SIL.Transcriber.Controllers
     /* This has to be a BaseController of some sort to force JsonApiDotNetCore to serialize our objects so they are in right format in the zip file */
 
     [Route("api/offlineData")]
-    public class OfflinedataController : ControllerBase
+    public class OfflinedataController(
+        ILoggerFactory loggerFactory,
+        IOfflineDataService service
+        ) : ControllerBase()
     {
-        private readonly IOfflineDataService _service;
-        protected ILogger<OfflinedataController> Logger { get; set; }
-        public OfflinedataController(
-            ILoggerFactory loggerFactory,
-            IOfflineDataService service
-        ) : base()
-        {
-            _service = service;
-            Logger = loggerFactory.CreateLogger<OfflinedataController>();
-        }
+        private readonly IOfflineDataService _service = service;
+        protected ILogger<OfflinedataController> Logger { get; set; } = loggerFactory.CreateLogger<OfflinedataController>();
 
         [HttpGet("project/export/{id}/{start}")]
         public ActionResult<Fileresponse> Export([FromRoute] int id, int start)

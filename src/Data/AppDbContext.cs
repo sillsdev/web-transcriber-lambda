@@ -14,14 +14,19 @@ using static SIL.Transcriber.Data.DbContextExtentions;
 
 namespace SIL.Transcriber.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext(
+        DbContextOptions<AppDbContext> options,
+        ICurrentUserContext currentUserContext,
+        IHttpContextAccessor httpContextAccessor,
+        ILoggerFactory loggerFactory
+        ) : DbContext(options)
     {
         private int _currentUser = -1;
-        public ICurrentUserContext CurrentUserContext { get; }
-        public ILogger Logger;
-        public HttpContext? HttpContext { get; }
-        public DbContextOptions Options { get; }
-        public IHttpContextAccessor HttpContextAccessor { get; }
+        public ICurrentUserContext CurrentUserContext { get; } = currentUserContext;
+        public ILogger Logger = new Logger<AppDbContext>(loggerFactory);
+        public HttpContext? HttpContext { get; } = httpContextAccessor.HttpContext;
+        public DbContextOptions Options { get; } = options;
+        public IHttpContextAccessor HttpContextAccessor { get; } = httpContextAccessor;
 
         #region DBSet
         public DbSet<Activitystate> Activitystates => Set<Activitystate>();
@@ -51,7 +56,7 @@ namespace SIL.Transcriber.Data
             Set<Organizationmembership>();
         public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
         public DbSet<Orgkeyterm> Orgkeyterms => Set<Orgkeyterm>();
-        public DbSet<Orgkeytermreference> Orgkeytermreferences => Set<Orgkeytermreference>(); 
+        public DbSet<Orgkeytermreference> Orgkeytermreferences => Set<Orgkeytermreference>();
         public DbSet<Orgkeytermtarget> Orgkeytermtargets => Set<Orgkeytermtarget>();
         public DbSet<Orgworkflowstep> Orgworkflowsteps => Set<Orgworkflowstep>();
         public DbSet<ParatextToken> Paratexttokens => Set<ParatextToken>();
@@ -81,21 +86,8 @@ namespace SIL.Transcriber.Data
         public DbSet<VWChecksum> VWChecksums => Set<VWChecksum>();
         public DbSet<VWProject> VWProjects => Set<VWProject>();
         public DbSet<Workflowstep> Workflowsteps => Set<Workflowstep>();
-        #endregion
 
-        public AppDbContext(
-            DbContextOptions<AppDbContext> options,
-            ICurrentUserContext currentUserContext,
-            IHttpContextAccessor httpContextAccessor,
-            ILoggerFactory loggerFactory
-        ) : base(options)
-        {
-            CurrentUserContext = currentUserContext;
-            Logger = new Logger<AppDbContext>(loggerFactory);
-            HttpContext = httpContextAccessor.HttpContext;
-            HttpContextAccessor = httpContextAccessor;
-            Options = options;
-        }
+        #endregion
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -440,7 +432,7 @@ namespace SIL.Transcriber.Data
                 );
             foreach (EntityEntry entry in entries)
             {
-                entry.CurrentValues ["LastModifiedOrigin"] = "electron";
+                entry.CurrentValues["LastModifiedOrigin"] = "electron";
                 if (entry.Entity is ITrackDate trackDate)
                 {
                     trackDate.DateCreated = trackDate.DateCreated?.SetKindUtc();
@@ -464,15 +456,15 @@ namespace SIL.Transcriber.Data
                     switch (entry.State)
                     {
                         case EntityState.Added:
-                            entry.CurrentValues ["Archived"] = false;
+                            entry.CurrentValues["Archived"] = false;
                             break;
                         case EntityState.Deleted:
-                            if ((bool)(entry.CurrentValues ["Archived"] ?? false) == true)
+                            if ((bool)(entry.CurrentValues["Archived"] ?? false) == true)
                                 entry.State = EntityState.Detached;
                             else
                             {
                                 entry.State = EntityState.Modified;
-                                entry.CurrentValues ["Archived"] = true;
+                                entry.CurrentValues["Archived"] = true;
                             }
                             break;
                     }
@@ -485,7 +477,7 @@ namespace SIL.Transcriber.Data
             if (_currentUser < 0)
             {
                 string auth0Id = CurrentUserContext.Auth0Id ?? "nouser";
-                                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "olddata").Equals(auth0Id) && !u.Archived);
+                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "olddata").Equals(auth0Id) && !u.Archived);
                 _currentUser = userFromResult == null ? -1 : userFromResult.Id;
             }
             return _currentUser;
@@ -530,7 +522,7 @@ namespace SIL.Transcriber.Data
                 .Include(d => d.Group)
                 .Include(d => d.User);
         public IQueryable<Intellectualproperty> IntellectualPropertyData => IntellectualPropertys.Include(x => x.Organization).Include(x => x.ReleaseMediafile);
-        public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization).Include(x => x.Mediafile); 
+        public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization).Include(x => x.Mediafile);
         public IQueryable<Groupmembership> GroupmembershipsData =>
             Groupmemberships.Include(x => x.Group).Include(x => x.User).Include(x => x.Role);
         public IQueryable<Group> GroupsData => Groups.Include(x => x.Owner);
@@ -561,7 +553,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Orgkeytermreference> OrgKeytermReferencesData =>
     Orgkeytermreferences.Include(x => x.Orgkeyterm).Include(x => x.Project).Include(x => x.Section);
         public IQueryable<Orgkeytermtarget> OrgKeytermTargetsData =>
-    Orgkeytermtargets.Include(x => x.Organization).Include(x => x.Mediafile); 
+    Orgkeytermtargets.Include(x => x.Organization).Include(x => x.Mediafile);
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
             Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
@@ -597,14 +589,9 @@ namespace SIL.Transcriber.Data
 
     }
 
-    public class AppDbContextResolver : IDbContextResolver
+    public class AppDbContextResolver(AppDbContext context) : IDbContextResolver
     {
-        private readonly AppDbContext _context;
-
-        public AppDbContextResolver(AppDbContext context)
-        {
-            _context = context;
-        }
+        private readonly AppDbContext _context = context;
 
         public DbContext GetContext()
         {
@@ -617,26 +604,24 @@ namespace SIL.Transcriber.Data
         }
     }
 
-    public class AppDbContextRepository<TResource> : EntityFrameworkCoreRepository<TResource, int>
+    public class AppDbContextRepository<TResource>(
+        ITargetedFields targetedFields,
+        AppDbContextResolver contextResolver,
+        IResourceGraph resourceGraph,
+        IResourceFactory resourceFactory,
+        IEnumerable<IQueryConstraintProvider> constraintProviders,
+        ILoggerFactory loggerFactory,
+        IResourceDefinitionAccessor resourceDefinitionAccessor
+        ) : EntityFrameworkCoreRepository<TResource, int>(
+            targetedFields,
+            contextResolver,
+            resourceGraph,
+            resourceFactory,
+            constraintProviders,
+            loggerFactory,
+            resourceDefinitionAccessor
+            )
         where TResource : class, IIdentifiable<int>
     {
-        public AppDbContextRepository(
-            ITargetedFields targetedFields,
-            AppDbContextResolver contextResolver,
-            IResourceGraph resourceGraph,
-            IResourceFactory resourceFactory,
-            IEnumerable<IQueryConstraintProvider> constraintProviders,
-            ILoggerFactory loggerFactory,
-            IResourceDefinitionAccessor resourceDefinitionAccessor
-        ) : base(
-                targetedFields,
-                contextResolver,
-                resourceGraph,
-                resourceFactory,
-                constraintProviders,
-                loggerFactory,
-                resourceDefinitionAccessor
-            )
-        { }
     }
 }
