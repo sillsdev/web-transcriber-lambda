@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
-using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Serializers;
 using SIL.Transcriber.Services.Contracts;
 using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions;
@@ -66,6 +66,8 @@ namespace SIL.Transcriber.Services
             {Tables.ArtifactTypes,'C'},
             {Tables.Groups,'C'},
             {Tables.OrganizationMemberships,'C'},
+            {Tables.OrganizationSchemes,'C'},
+            {Tables.OrganizationSchemeSteps,'D'},
             {Tables.OrgKeyTerms,'C'},
             {Tables.OrgWorkflowSteps,'C'},
             {Tables.GroupMemberships,'D'},
@@ -888,7 +890,7 @@ namespace SIL.Transcriber.Services
         }
         public Fileresponse ExportProjectPTF(int projectId, int start)
         {
-            const int LAST_ADD = 20;
+            const int LAST_ADD = 22;
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
@@ -1318,6 +1320,33 @@ namespace SIL.Transcriber.Services
                             Tables.SharedResourceReferences,
                             dbContext.SharedresourcereferencesData
                                 .Join(sharedresources, r => r.SharedResourceId, k => k.Id, (r, k) => r)
+                                .ToList()
+                        )
+                    )
+                        break;
+                    //organizationschemes
+                    IQueryable<Organizationscheme> schemes =dbContext.Organizationschemes
+                                .Where(s => s.OrganizationId == project.OrganizationId && !s.Archived);
+                    if (
+                       !CheckAdd(
+                           20,
+                           dtBail,
+                           ref startNext,
+                           zipArchive,
+                           Tables.OrganizationSchemes,
+                           schemes.ToList()
+                       )
+                   )
+                        break;
+                    if (!CheckAdd(
+                            21,
+                            dtBail,
+                            ref startNext,
+                            zipArchive,
+                            Tables.OrganizationSchemeSteps,
+                            dbContext.Organizationschemesteps
+                                .Join(schemes, ss => ss.OrganizationschemeId, s => s.Id, (ss, s) => ss)
+                                .Where(ss => !ss.Archived)
                                 .ToList()
                         )
                     )
@@ -2681,7 +2710,9 @@ namespace SIL.Transcriber.Services
             Dictionary<int, Section> map = [];
             foreach (Section s in lst)
             {
-                EntityEntry<Section>? t = dbContext.Sections.Add(
+                if (!map.ContainsKey(s.Id))
+                {
+                    EntityEntry<Section>? t = dbContext.Sections.Add(
                     new Section
                     {
                         Name = s.Name,
@@ -2691,12 +2722,13 @@ namespace SIL.Transcriber.Services
                         TranscriberId = sameOrg ? CheckValidId(s.Transcriber?.Id) : currentuser.Id,
                         State = s.State,
                     });
-                map.Add(s.Id, t.Entity);
+                    map.Add(s.Id, t.Entity);
+                }
             }
             dbContext.SaveChanges();
             Dictionary<int, int> result = [];
             foreach (KeyValuePair<int, Section> kvp in map)
-                result.Add(kvp.Key, kvp.Value.Id);
+                result.TryAdd(kvp.Key, kvp.Value.Id);
             return result;
         }
         private Dictionary<int, int> CopyPassages(IList<Passage> lst,
@@ -2705,7 +2737,10 @@ namespace SIL.Transcriber.Services
             Dictionary<int, Passage> map = [];
             foreach (Passage p in lst)
             {
-                EntityEntry<Passage>? t = dbContext.Passages.Add(
+
+                if (!map.ContainsKey(p.Id))
+                {
+                    EntityEntry<Passage>? t = dbContext.Passages.Add(
                     new Passage
                     {
                         Sequencenum = p.Sequencenum,
@@ -2716,7 +2751,8 @@ namespace SIL.Transcriber.Services
                         SectionId = SectionMap.GetValueOrDefault(p.SectionId),
                         StepComplete =  MapStepComplete(p.StepComplete, OrgworkflowstepMap),
                     });
-                map.Add(p.Id, t.Entity);
+                    map.Add(p.Id, t.Entity);
+                }
             }
             dbContext.SaveChanges();
             Dictionary<int, int> result = [];
@@ -2732,7 +2768,9 @@ namespace SIL.Transcriber.Services
                 Artifactcategory? myc = dbContext.Artifactcategorys.FirstOrDefault(m => (m.OrganizationId == null || m.OrganizationId == orgId) && m.Categoryname == c.Categoryname && !m.Archived);
                 if (myc == null)
                 {
-                    EntityEntry<Artifactcategory>? t = dbContext.Artifactcategorys.Add(
+                    if (!map.ContainsKey(c.Id))
+                    {
+                        EntityEntry<Artifactcategory>? t = dbContext.Artifactcategorys.Add(
                         new Artifactcategory
                         {
                             OrganizationId= orgId,
@@ -2740,7 +2778,8 @@ namespace SIL.Transcriber.Services
                             Discussion = c.Discussion,
                             Resource = c.Resource,
                         });
-                    map.Add(c.Id, t.Entity);
+                        map.Add(c.Id, t.Entity);
+                    }
                 }
                 else
                 {
@@ -2777,17 +2816,20 @@ namespace SIL.Transcriber.Services
                     map.Add(s.Id, ex);
                 else
                 {
-                    EntityEntry<Orgworkflowstep>? t = dbContext.Orgworkflowsteps.Add(
-                    new Orgworkflowstep
+                    if (!map.ContainsKey(s.Id))
                     {
-                        OrganizationId= orgId,
-                        Process = s.Process,
-                        Name = s.Name,
-                        Sequencenum= s.Sequencenum,
-                        Tool = s.Tool,
-                        Permissions = s.Permissions,  //will this need to be adapted???  TODO
-                    });
-                    map.Add(s.Id, t.Entity);
+                        EntityEntry<Orgworkflowstep>? t = dbContext.Orgworkflowsteps.Add(
+                            new Orgworkflowstep
+                            {
+                                OrganizationId= orgId,
+                                Process = s.Process,
+                                Name = s.Name,
+                                Sequencenum= s.Sequencenum,
+                                Tool = s.Tool,
+                                Permissions = s.Permissions,  //will this need to be adapted???  TODO
+                            });
+                        map.Add(s.Id, t.Entity);
+                    }
                 }
             }
             dbContext.SaveChanges();
@@ -2806,17 +2848,20 @@ namespace SIL.Transcriber.Services
                     map.Add(s.Id, ex);
                 else
                 {
-                    EntityEntry<Orgworkflowstep>? t = dbContext.Orgworkflowsteps.Add(
-                    new Orgworkflowstep
+                    if (!map.ContainsKey(s.Id))
                     {
-                        OrganizationId= orgId,
-                        Process = s.Process,
-                        Name = s.Name,
-                        Sequencenum= s.Sequencenum,
-                        Tool = s.Tool,
-                        Permissions = s.Permissions,  //will this need to be adapted???  TODO
-                    });
-                    map.Add(s.Id, t.Entity);
+                        EntityEntry<Orgworkflowstep>? t = dbContext.Orgworkflowsteps.Add(
+                        new Orgworkflowstep
+                        {
+                            OrganizationId= orgId,
+                            Process = s.Process,
+                            Name = s.Name,
+                            Sequencenum= s.Sequencenum,
+                            Tool = s.Tool,
+                            Permissions = s.Permissions,  //will this need to be adapted???  TODO
+                        });
+                        map.Add(s.Id, t.Entity);
+                    }
                 }
             }
             dbContext.SaveChanges();
@@ -2830,7 +2875,9 @@ namespace SIL.Transcriber.Services
             Dictionary<int, Orgkeytermtarget> map = [];
             foreach (Orgkeytermtarget s in lst)
             {
-                EntityEntry<Orgkeytermtarget>? t = dbContext.Orgkeytermtargets.Add(
+                if (!map.ContainsKey(s.Id))
+                {
+                    EntityEntry<Orgkeytermtarget>? t = dbContext.Orgkeytermtargets.Add(
                     new Orgkeytermtarget
                     {
                         OrganizationId= orgId,
@@ -2839,9 +2886,8 @@ namespace SIL.Transcriber.Services
                         Target = s.Target,
                         MediafileId = mediafileMap.GetValueOrDefault(s.MediafileId?? 0)
                     });
-                ;
-                ;
-                map.Add(s.Id, t.Entity);
+                    map.Add(s.Id, t.Entity);
+                }
             }
             dbContext.SaveChanges();
             Dictionary<int, int> result = [];
@@ -2884,7 +2930,9 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
-                    EntityEntry<Sectionresource>? t =  dbContext.Sectionresources.Add(
+                    if (!map.ContainsKey(sr.Id))
+                    {
+                        EntityEntry<Sectionresource>? t =  dbContext.Sectionresources.Add(
                        new Sectionresource
                        {
                            SequenceNum = sr.SequenceNum,
@@ -2895,7 +2943,8 @@ namespace SIL.Transcriber.Services
                            PassageId = sr.PassageId == null ? null : passageMap.GetValueOrDefault(sr.PassageId??0),
                            ProjectId = projectId
                        });
-                    map.Add(sr.Id, t.Entity);
+                        map.Add(sr.Id, t.Entity);
+                    }
                 }
             }
             dbContext.SaveChanges();
@@ -2944,49 +2993,52 @@ namespace SIL.Transcriber.Services
             for (int ix = start; ix < lst.Count && (dtBail == null || DateTime.Now < dtBail); ix++)
             {
                 Mediafile m = lst[ix];
-                int? psgId = m.PassageId == null ? null : passageMap.GetValueOrDefault(m.PassageId ?? 0);
-                if (m.PassageId != null && psgId == 0)
-                    psgId = null; //psgId = m.ArtifactTypeId == null ? throw new Exception("Passage not found " + m.PassageId) : null;
-                Mediafile copym = new()
+                if (!map.ContainsKey(m.Id))
                 {
-                    PassageId = psgId,
-                    VersionNumber = Convert.ToBoolean(m.VersionNumber) ? m.VersionNumber : 1,
-                    ArtifactTypeId = CheckValidId(m.ArtifactTypeId) == null ? null : artifacttypeMap?.GetValueOrDefault(m.ArtifactTypeId??0) ?? m.ArtifactTypeId,
-                    EafUrl = m.EafUrl,
-                    Duration = m.Duration,
-                    ContentType = m.ContentType,
-                    //AudioQuality = m.AudioQuality,
-                    //TextQuality = m.TextQuality,
-                    Transcription = m.Transcription,
-                    PlanId = plan.Id,
-                    OriginalFile = m.S3File ?? m.OriginalFile,
-                    Filesize = m.Filesize,
-                    Position = m.Position,
-                    Segments = m.Segments,
-                    Languagebcp47 = m.Languagebcp47,
-                    Link = Convert.ToBoolean(m.Link),
-                    PerformedBy = m.PerformedBy,
-                    ReadyToShare = false,
-                    ArtifactCategoryId = CheckValidId(m.ArtifactCategoryId) == null ? null : sameOrg ? ValidArtifactCategory(m.ArtifactCategoryId) : artifactcategoryMap?.GetValueOrDefault(m.ArtifactCategoryId??0),
-                    ResourcePassageId = CheckValidId(m.ResourcePassageId) == null ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0) == 0 ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0),
-                    RecordedbyUser = sameOrg ? m.RecordedbyUser : CurrentUser(),
-                    OfflineId = "",
-                    SourceMediaId = map.GetValueOrDefault(m.SourceMediaId??0)?.Id,
-                    SourceSegments = m.SourceSegments,
-                    SourceMediaOfflineId = "",
-                    Transcriptionstate = m.Transcriptionstate,
-                    Topic = m.Topic,
-                };
-                copym.S3File = mediaService.GetNewFileNameAsync(copym, suffix).Result;
-                EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(copym);
-                map.Add(m.Id, t.Entity);
-                //we have to save after every one because we may have a link to previous mediafiles here
-                dbContext.SaveChanges();
-                if (newProjId != null)
-                {
-                    SaveId(Tables.Mediafiles, m.Id, t.Entity.Id, newProjId ?? 0);
+                    int? psgId = m.PassageId == null ? null : passageMap.GetValueOrDefault(m.PassageId ?? 0);
+                    if (m.PassageId != null && psgId == 0)
+                        psgId = null; //psgId = m.ArtifactTypeId == null ? throw new Exception("Passage not found " + m.PassageId) : null;
+                    Mediafile copym = new()
+                    {
+                        PassageId = psgId,
+                        VersionNumber = Convert.ToBoolean(m.VersionNumber) ? m.VersionNumber : 1,
+                        ArtifactTypeId = CheckValidId(m.ArtifactTypeId) == null ? null : artifacttypeMap?.GetValueOrDefault(m.ArtifactTypeId??0) ?? m.ArtifactTypeId,
+                        EafUrl = m.EafUrl,
+                        Duration = m.Duration,
+                        ContentType = m.ContentType,
+                        //AudioQuality = m.AudioQuality,
+                        //TextQuality = m.TextQuality,
+                        Transcription = m.Transcription,
+                        PlanId = plan.Id,
+                        OriginalFile = m.S3File ?? m.OriginalFile,
+                        Filesize = m.Filesize,
+                        Position = m.Position,
+                        Segments = m.Segments,
+                        Languagebcp47 = m.Languagebcp47,
+                        Link = Convert.ToBoolean(m.Link),
+                        PerformedBy = m.PerformedBy,
+                        ReadyToShare = false,
+                        ArtifactCategoryId = CheckValidId(m.ArtifactCategoryId) == null ? null : sameOrg ? ValidArtifactCategory(m.ArtifactCategoryId) : artifactcategoryMap?.GetValueOrDefault(m.ArtifactCategoryId??0),
+                        ResourcePassageId = CheckValidId(m.ResourcePassageId) == null ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0) == 0 ? null : passageMap.GetValueOrDefault(m.ResourcePassageId??0),
+                        RecordedbyUser = sameOrg ? m.RecordedbyUser : CurrentUser(),
+                        OfflineId = "",
+                        SourceMediaId = map.GetValueOrDefault(m.SourceMediaId??0)?.Id,
+                        SourceSegments = m.SourceSegments,
+                        SourceMediaOfflineId = "",
+                        Transcriptionstate = m.Transcriptionstate,
+                        Topic = m.Topic,
+                    };
+                    copym.S3File = mediaService.GetNewFileNameAsync(copym, suffix).Result;
+                    EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(copym);
+                    map.Add(m.Id, t.Entity);
+                    //we have to save after every one because we may have a link to previous mediafiles here
                     dbContext.SaveChanges();
-                    await CopyMediafile(m, t.Entity);
+                    if (newProjId != null)
+                    {
+                        SaveId(Tables.Mediafiles, m.Id, t.Entity.Id, newProjId ?? 0);
+                        dbContext.SaveChanges();
+                        await CopyMediafile(m, t.Entity);
+                    }
                 }
             }
             return map;
@@ -3010,22 +3062,25 @@ namespace SIL.Transcriber.Services
             Dictionary<int, Discussion> map = [];
             foreach (Discussion d in lst)
             {
-                EntityEntry<Discussion>? t = dbContext.Discussions.Add(
-                    new Discussion
-                    {
-                        ArtifactCategoryId = CheckValidId(d.ArtifactCategoryId) == null ? null : sameOrg ? d.ArtifactCategoryId : acMap?.GetValueOrDefault(d.ArtifactCategoryId??0),
-                        MediafileId = CheckValidId(d.MediafileId) == null ? null : mediafileMap.GetValueOrDefault(d.MediafileId??0),
-                        OrgWorkflowStepId = orgwfMap == null ? d.OrgWorkflowStepId : orgwfMap.GetValueOrDefault(d.OrgWorkflowStepId),
-                        GroupId = sameOrg ? CheckValidId(d.GroupId) : null,
-                        Resolved = d.Resolved,
-                        Segments = d.Segments,
-                        Subject = d.Subject,
-                        UserId = d.User?.Id,
-                        DateCreated = d.DateCreated,
-                        DateUpdated = DateTime.UtcNow,
-                    }
-                );
-                map.Add(d.Id, t.Entity);
+                if (!map.ContainsKey(d.Id))
+                {
+                    EntityEntry<Discussion>? t = dbContext.Discussions.Add(
+                        new Discussion
+                        {
+                            ArtifactCategoryId = CheckValidId(d.ArtifactCategoryId) == null ? null : sameOrg ? d.ArtifactCategoryId : acMap?.GetValueOrDefault(d.ArtifactCategoryId??0),
+                            MediafileId = CheckValidId(d.MediafileId) == null ? null : mediafileMap.GetValueOrDefault(d.MediafileId??0),
+                            OrgWorkflowStepId = orgwfMap == null ? d.OrgWorkflowStepId : orgwfMap.GetValueOrDefault(d.OrgWorkflowStepId),
+                            GroupId = sameOrg ? CheckValidId(d.GroupId) : null,
+                            Resolved = d.Resolved,
+                            Segments = d.Segments,
+                            Subject = d.Subject,
+                            UserId = d.User?.Id,
+                            DateCreated = d.DateCreated,
+                            DateUpdated = DateTime.UtcNow,
+                        }
+                    );
+                    map.Add(d.Id, t.Entity);
+                }
             }
             dbContext.SaveChanges();
             Dictionary<int, int> result = [];
@@ -3120,7 +3175,7 @@ namespace SIL.Transcriber.Services
             IQueryable<CopyProject> cps = dbContext.Copyprojects.Where(c => c.Newprojid == newProjId && c.Sourcetable == table);
             foreach (CopyProject cp in cps)
             {
-                map.Add(cp.Oldid, cp.Newid);
+                map.TryAdd(cp.Oldid, cp.Newid);
             }
             return map;
         }

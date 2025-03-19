@@ -136,6 +136,20 @@ namespace SIL.Transcriber.Definitions
         ) : BaseDefinition<Organizationmembership>(resourceGraph, loggerFactory, Request)
     {
     }
+    public class OrganizationSchemeDefinition(
+    IResourceGraph resourceGraph,
+    ILoggerFactory loggerFactory,
+    IJsonApiRequest Request
+    ) : BaseDefinition<Organizationscheme>(resourceGraph, loggerFactory, Request)
+    {
+    }
+    public class OrganizationSchemeStepDefinition(
+    IResourceGraph resourceGraph,
+    ILoggerFactory loggerFactory,
+    IJsonApiRequest Request
+    ) : BaseDefinition<Organizationschemestep>(resourceGraph, loggerFactory, Request)
+    {
+    }
     public class OrgKeytermDefinition(
         IResourceGraph resourceGraph,
         ILoggerFactory loggerFactory,

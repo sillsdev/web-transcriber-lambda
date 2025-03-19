@@ -8,18 +8,17 @@ using SIL.Transcriber.Repositories;
 
 namespace SIL.Transcriber.Services
 {
-    public class DiscussionService(
+    public class OrganizationSchemeService(
         IResourceRepositoryAccessor repositoryAccessor,
         IQueryLayerComposer queryLayerComposer,
         IPaginationContext paginationContext,
         IJsonApiOptions options,
         ILoggerFactory loggerFactory,
         IJsonApiRequest request,
-        IResourceChangeTracker<Discussion> resourceChangeTracker,
+        IResourceChangeTracker<Organizationscheme> resourceChangeTracker,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
-        CurrentUserRepository currentUserRepository,
-        DiscussionRepository repository
-        ) : BaseArchiveService<Discussion>(
+        OrganizationSchemeRepository repository
+        ) : BaseArchiveService<Organizationscheme>(
             repositoryAccessor,
             queryLayerComposer,
             paginationContext,
@@ -31,16 +30,5 @@ namespace SIL.Transcriber.Services
             repository
             )
     {
-        private readonly CurrentUserRepository CurrentUserRepository = currentUserRepository;
-
-        public override async Task<Discussion?> CreateAsync(
-                                    Discussion resource,
-                                    CancellationToken cancellationToken
-                                )
-        {
-
-            resource.CreatorUserId = CurrentUserRepository.GetCurrentUser()?.Id;
-            return await base.CreateAsync(resource, cancellationToken);
-        }
     }
 }

@@ -52,7 +52,7 @@ namespace SIL.Transcriber.Services
             string instructions =
                 strings["Instructions"]
                 ?? "missing Instructions: Please click the following link to accept the invitation.";
-            string SILorg = strings["SILOrg"] ?? "missing SILOrg: SIL International";
+            string SILorg = strings["SILOrg"] ?? "missing SILOrg: SIL Global";
             string questions = strings["Questions"] ?? "missing Questions: Questions? Contact ";
             string join = strings["Join"] ?? "missing Join: Join ";
 
