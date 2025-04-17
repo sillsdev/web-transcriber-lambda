@@ -46,7 +46,7 @@ public static class FileName
 
         string sanitizedName = Regex.Replace(
                 filename,
-                @"['()*?/<\[\]\\,""| \r\n:#]+",
+                @"['()*?&/<\[\]\\,""| \r\n:#]+",
                 "_"
             );
         string invalidReStr = string.Format(@"[{0}, ]+", invalidChars);

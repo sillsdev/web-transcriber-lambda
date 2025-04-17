@@ -10,7 +10,7 @@ namespace SIL.Transcriber.Models
         public int? DiscussionId { get; set; }
         [HasOne(PublicName = "discussion")]
         public Discussion? Discussion { get; set; }
-        [Attr(PublicName = "mediafile-id")] 
+        [Attr(PublicName = "mediafile-id")]
         public int? MediafileId { get; set; }
         [HasOne(PublicName = "mediafile")]
         public Mediafile? Mediafile { get; set; }
@@ -25,6 +25,10 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "visible")]
         [Column(TypeName = "jsonb")]
         public string? Visible { get; set; }
+        public int? CreatorUserId { get; set; }
+
+        [HasOne(PublicName = "creator-user")]
+        public User? CreatorUser { get; set; }
         public bool Archived { get; set; }
     }
 }

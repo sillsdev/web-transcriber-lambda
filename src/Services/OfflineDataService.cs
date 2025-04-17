@@ -857,7 +857,7 @@ namespace SIL.Transcriber.Services
         {
             return myMedia
                         .Where(x => (x.PassageId != null || x.ArtifactTypeId != null) &&
-                            x.ResourcePassageId == null && !x.Archived).Distinct();
+                            x.ResourcePassageId == null && !x.Archived && x.ContentType != "text/markdown").Distinct();
 
         }
         private IQueryable<Discussion> PlanDiscussions(IQueryable<Mediafile> myMedia)

@@ -1,5 +1,4 @@
 ﻿using JsonApiDotNetCore.Resources.Annotations;
-using System.Text.Json.Serialization;
 
 namespace SIL.Transcriber.Models
 {

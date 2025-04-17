@@ -19,14 +19,14 @@ public partial class Organizationschemestep : BaseModel, IArchive
 
 
     [HasOne(PublicName = "user")]
-    public virtual User? User { get; set; }
+    public User? User { get; set; }
 
-    public int UserId { get; set; }
+    public int? UserId { get; set; }
 
 
     [HasOne(PublicName = "group")]
-    public virtual Group Group { get; set; } = null!;
-    public int GroupId { get; set; }
+    public Group? Group { get; set; } = null!;
+    public int? GroupId { get; set; }
 
     public bool Archived { get; set; }
 }

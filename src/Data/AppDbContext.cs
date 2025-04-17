@@ -572,6 +572,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Organizationschemestep> OrganizationschemestepsData =>
             Organizationschemesteps
                 .Include(x => x.OrganizationScheme)
+                .Include(x => x.OrgWorkflowStep)
                 .Include(x => x.User)
                 .Include(x => x.Group);
         public IQueryable<Organization> OrganizationsData => Organizations.Include(x => x.Owner);

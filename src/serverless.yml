@@ -57,7 +57,7 @@ functions:
   api:
     handler: TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync
     name: transcriber_api_${self:custom.myStage}${self:custom.isDebug}
-    timeout: 30
+    timeout: 29
     events:
        - http:
             path: /api/{proxy+}

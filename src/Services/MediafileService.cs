@@ -116,7 +116,7 @@ namespace SIL.Transcriber.Services
 
         public string DirectoryName(Mediafile entity)
         {
-            return entity.S3Folder ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
+            return entity.S3Folder?.TrimEnd('/') ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
         }
 
         public string? GetAudioUrl(Mediafile mf)
