@@ -5,10 +5,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
-using System.Threading.Channels;
 
 namespace SIL.Transcriber.Controllers
 {
@@ -61,7 +59,7 @@ namespace SIL.Transcriber.Controllers
         }
         [HttpGet("project/{project}/{table}/{start}/since/{since}")]
         public ActionResult GetTableDatachanges(
-                [FromRoute] 
+                [FromRoute]
                 int project,
                 string table,
                 int start,
@@ -85,7 +83,7 @@ namespace SIL.Transcriber.Controllers
             ProjDate? x = JsonConvert.DeserializeObject<ProjDate>(projList);
             if (x != null && x.id > 0)
             {
-                ProjDate?[] pd = { x };
+                ProjDate?[] pd = [x];
                 return Ok(service.GetProjectChanges(origin, pd, version, start));
             }
             throw new Exception("Project not given.");

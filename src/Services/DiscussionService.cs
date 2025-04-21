@@ -39,7 +39,8 @@ namespace SIL.Transcriber.Services
                                 )
         {
 
-            resource.CreatorUserId = CurrentUserRepository.GetCurrentUser()?.Id;
+            if (resource.CreatorUserId == null)
+                resource.CreatorUserId = CurrentUserRepository.GetCurrentUser()?.Id;
             return await base.CreateAsync(resource, cancellationToken);
         }
     }

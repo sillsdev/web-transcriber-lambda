@@ -532,6 +532,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Comment> CommentsData => Comments
             .Include(c => c.Mediafile)
             .Include(c => c.Discussion)
+            .Include(d => d.CreatorUser)
             .Include(c => c.LastModifiedByUser);
         public IQueryable<Discussion> DiscussionsData =>
             Discussions
@@ -539,7 +540,9 @@ namespace SIL.Transcriber.Data
                 .Include(d => d.Mediafile)
                 .Include(d => d.OrgWorkflowStep)
                 .Include(d => d.Group)
+                .Include(d => d.CreatorUser)
                 .Include(d => d.User);
+
         public IQueryable<Intellectualproperty> IntellectualPropertyData => IntellectualPropertys.Include(x => x.Organization).Include(x => x.ReleaseMediafile);
         public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization).Include(x => x.Mediafile);
         public IQueryable<Groupmembership> GroupmembershipsData =>

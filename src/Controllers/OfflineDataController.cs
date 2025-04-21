@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
+using SIL.Transcriber.Services.Contracts;
 
 namespace SIL.Transcriber.Controllers
 {
