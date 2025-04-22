@@ -42,11 +42,12 @@ namespace SIL.Transcriber.Repositories
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
                 //if I'm an admin in the org, give me all oms in that org
                 //otherwise give me just the oms I'm a member of
-                IEnumerable<int> orgadmins = orgIds.Where(
-                    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
-                );
+                //nope that means I don't get my team members
+                //IEnumerable<int> orgadmins = orgIds.Where(
+                //    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
+                //);
                 entities = entities.Where(
-                    om => (orgadmins.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id)
+                    om => (orgIds.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id)
                 );
             }
             return entities;
