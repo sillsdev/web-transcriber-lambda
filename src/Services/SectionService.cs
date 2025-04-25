@@ -47,5 +47,9 @@ namespace SIL.Transcriber.Services
         {
             return MyRepository.SectionSummary(PlanId, book, chapter).Result;
         }
+        public IEnumerable<Section> AssignSections(int scheme, string idlist)
+        {
+            return MyRepository.AssignSections(scheme, idlist);
+        }
     }
 }
