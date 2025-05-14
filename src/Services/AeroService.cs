@@ -11,10 +11,12 @@ public class AeroService(
        IHttpContextAccessor httpContextAccessor,
        AppDbContextResolver contextResolver,
        ILoggerFactory loggerFactory,
-       IS3Service s3Service) : BaseResourceService(contextResolver, s3Service)
+       IS3Service s3service) : BaseResourceService(contextResolver, s3service)
 {
     readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
     readonly private string Domain = GetVarOrThrow("SIL_TR_AERO_DOMAIN");
+    readonly private string Bucket = GetVarOrThrow("SIL_TR_AERO_BUCKET");
+    readonly private IS3Service s3Service = s3service;
     private ILogger Logger { get; set; } = loggerFactory.CreateLogger("AeroService");
 
     private async Task<string> GetToken()
@@ -143,9 +145,13 @@ public class AeroService(
         MemoryStream fileStream = new (fileBytes);
         return await NoiseRemoval(fileStream, filename);
     }
-    public async Task<string?> NoiseRemoval(string fileUrl)
+    public async Task<string?> NoiseRemoval(string fileName)
     {
-        return await NoiseRemoval(await GetStream(fileUrl), GetFileName(fileUrl));
+        MultipartFormDataContent multipartContent =  [];
+        AddSaveS3(multipartContent, true);
+        await S3service.BucketOwner(fileName, "input_files", Bucket);
+        string p = $"s3_file_path=s3://{Bucket}/input_files/{fileName}";
+        return await GetResult($"{Domain}/noise_removal?{p}", multipartContent, "task_id");
     }
 
     private async Task<HttpContent?> GetStatus(string service, string? TaskId)
@@ -174,7 +180,7 @@ public class AeroService(
 
         if (stream != null)
         {
-            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder, true);
+            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
             return s3resp.Message;
         }
         return null;
@@ -198,9 +204,15 @@ public class AeroService(
         AddSaveS3(multipartContent, false);
         return await GetResult($"{Domain}/voice_conversion", multipartContent, "task_id");
     }
-    public async Task<string?> VoiceConversion(string sourceUrl, string targetUrl)
+    public async Task<string?> VoiceConversion(string fileName, string targetUrl)
     {
-        return await VoiceConversion(await GetStream(sourceUrl), GetFileName(sourceUrl), await GetStream(targetUrl), GetFileName(targetUrl));
+        MultipartFormDataContent multipartContent =  [];
+        AddSaveS3(multipartContent, true);
+        await S3service.BucketOwner(fileName, "input_files", Bucket);
+        string p = $"s3_file_path=s3://{Bucket}/input_files/{fileName}";
+        AddFileToRequest(await GetStream(targetUrl), GetFileName(targetUrl), "target_file", multipartContent);
+        AddSaveS3(multipartContent, false);
+        return await GetResult($"{Domain}/voice_conversion", multipartContent, "task_id");
     }
     public async Task<HttpContent?> VoiceConversionStatus(string? taskId)
     {
@@ -213,7 +225,7 @@ public class AeroService(
 
         if (stream != null)
         {
-            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder, true);
+            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
             return s3resp.Message;
         }
         return null;
@@ -270,6 +282,21 @@ public class AeroService(
     /// <returns></returns>
     public async Task<string[]?> Transcription(string fileUrl, string lang_iso, bool romanize, float[]? timing = null)
     {
+        /*
+        await S3service.BucketOwner(fileName, "input_files", Bucket);
+        string p = $"s3_file_path=s3://{Bucket}/input_files/{fileName}";
+        string api = $"{Domain}/batch_transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
+        for (int ix = 0; ix < timing?.Length; ix++)
+        {
+            api += $"&timestamps={timing[ix]}";
+        }
+
+        MultipartFormDataContent content =  AddFileToRequest(stream, filename, "files");
+        return await GetTaskIds(api, content);
+
+
+        return await GetResult($"{Domain}/noise_removal?{p}", multipartContent, "task_id");
+        */
         return await Transcription(await GetStream(fileUrl), GetFileName(fileUrl), lang_iso, romanize, timing);
     }
 
