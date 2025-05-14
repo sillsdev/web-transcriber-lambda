@@ -10,7 +10,7 @@ using JsonApiDotNetCore.Serialization.Response;
 using System.Collections.Immutable;
 using System.Text.Json;
 
-namespace SIL.Transcriber.Serialization
+namespace SIL.Transcriber.Serializers
 {
     public static class SerializerHelpers
     {

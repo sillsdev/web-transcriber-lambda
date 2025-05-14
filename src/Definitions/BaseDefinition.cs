@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Queries.Expressions;
 using JsonApiDotNetCore.Resources;
 using Microsoft.Extensions.Primitives;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Serializers;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using System.Collections.Immutable;

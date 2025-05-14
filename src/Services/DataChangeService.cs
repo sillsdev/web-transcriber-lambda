@@ -25,7 +25,6 @@ namespace SIL.Transcriber.Services
         IJsonApiRequest request,
         IResourceChangeTracker<Datachanges> resourceChangeTracker,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
-        ICurrentUserContext currentUserContext,
         DatachangesRepository repository,
         ArtifactCategoryService artifactCategoryService,
         ArtifactTypeService artifactTypeService,
@@ -40,6 +39,8 @@ namespace SIL.Transcriber.Services
         MediafileService mediafileService,
         OrganizationBibleService orgBibleService,
         OrganizationMembershipService omService,
+        OrganizationSchemeService schemeService,
+        OrganizationSchemeStepService schemestepService,
         OrganizationService organizationService,
         OrgWorkflowStepService orgWorkflowStepService,
         OrgKeytermService orgKeytermService,
@@ -72,7 +73,6 @@ namespace SIL.Transcriber.Services
             repository
             )
     {
-        public ICurrentUserContext CurrentUserContext { get; } = currentUserContext;
         private readonly ArtifactCategoryService ArtifactCategoryService = artifactCategoryService;
         private readonly ArtifactTypeService ArtifactTypeService = artifactTypeService;
         private readonly BibleService BibleService = bibleService;
@@ -87,6 +87,8 @@ namespace SIL.Transcriber.Services
         private readonly PassagetypeService PassagetypeService = passagetypeService;
         private readonly OrganizationBibleService OrgBibleService = orgBibleService;
         private readonly OrganizationMembershipService OrgMemService = omService;
+        private readonly OrganizationSchemeService SchemeService = schemeService;
+        private readonly OrganizationSchemeStepService SchemeStepService = schemestepService;
         private readonly OrganizationService OrganizationService = organizationService;
         private readonly OrgKeytermService OrgKeytermService = orgKeytermService;
         private readonly OrgKeytermReferenceService OrgKeytermReferenceService = orgKeytermReferenceService;
@@ -311,6 +313,14 @@ namespace SIL.Transcriber.Services
                     startId = BuildList(OrgMemService.GetChanges(dbContext.Organizationmemberships, currentUser, origin, dtSince, project, startId), Tables.OrganizationMemberships, changes);
                     BuildList(OrgMemService.GetDeletedSince(dbContext.Organizationmemberships, currentUser, origin, dtSince, project, 0), Tables.OrganizationMemberships, deleted, false);
                     break;
+                case "organizationscheme":
+                    startId = BuildList(SchemeService.GetChanges(dbContext.Organizationschemes, currentUser, origin, dtSince, project, startId), Tables.OrganizationSchemes, changes);
+                    BuildList(SchemeService.GetDeletedSince(dbContext.Organizationschemes, currentUser, origin, dtSince, project, 0), Tables.OrganizationSchemes, deleted, false);
+                    break;
+                case "organizationschemestep":
+                    startId = BuildList(SchemeStepService.GetChanges(dbContext.Organizationschemesteps, currentUser, origin, dtSince, project, startId), Tables.OrganizationSchemeSteps, changes);
+                    BuildList(SchemeStepService.GetDeletedSince(dbContext.Organizationschemesteps, currentUser, origin, dtSince, project, 0), Tables.OrganizationSchemeSteps, deleted, false);
+                    break;
                 case "passage":
                     startId = BuildList(PassageService.GetChanges(dbContext.Passages, currentUser, origin, dtSince, project, startId), Tables.Passages, changes);
                     BuildList(PassageService.GetDeletedSince(dbContext.Passages, currentUser, origin, dtSince, project, 0), Tables.Passages, deleted, false);
@@ -431,6 +441,8 @@ namespace SIL.Transcriber.Services
                 tables = [.. tables, .. new string[] { "graphic" }];
             if (dbVersion > 7)
                 tables = [.. tables, .. new string[] { "bible", "organizationbible" }];
+            if (dbVersion > 9)
+                tables = [.. tables, .. new string[] { "organizationscheme", "organizationschemestep" }];
             //Logger.LogCritical("GetChanges {start} {dtSince} {project}", start, dtSince, project);
             //give myself 20 seconds to get as much as I can...
             DateTime dtBail = DateTime.Now.AddSeconds(20);

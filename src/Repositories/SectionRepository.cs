@@ -196,5 +196,18 @@ namespace SIL.Transcriber.Repositories
                 await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
+
+        public IEnumerable<Section> AssignSections(int scheme, string idlist)
+        {
+            string[] ids = idlist.Split('|');
+            Section[] sections = [.. dbContext.Sections.Where(s => ids.Contains(s.Id.ToString()))];
+            foreach (Section section in sections)
+            {
+                section.OrganizationSchemeId = scheme;
+            }
+            dbContext.Sections.UpdateRange(sections);
+            dbContext.SaveChanges();
+            return sections;
+        }
     }
 }

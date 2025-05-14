@@ -44,6 +44,10 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "artifact-category")]
         public Artifactcategory? ArtifactCategory { get; set; }
+        public int? CreatorUserId { get; set; }
+
+        [HasOne(PublicName = "creator-user")]
+        public User? CreatorUser { get; set; }
 
         [Attr(PublicName = "offline-id")]
         public string? OfflineId { get; set; }

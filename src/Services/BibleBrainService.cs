@@ -22,6 +22,8 @@ public class BiblebrainPost
     public bool Sections { get; set; } = false;
     public bool Passages { get; set; } = false;
     public string Scope { get; set; } = "";
+    public string Book { get; set; } = "";
+    public int Chapter { get; set; }
 }
 
 public class BibleBrainService(
@@ -176,7 +178,9 @@ public class BibleBrainService(
         string token = HttpContext != null ? await HttpContextHelpers.GetJWT(HttpContext) : "notoken";
         if (passage == null) //already threw above
             return 0;
-        string book = passage.Book ?? "";
+        string book = passage.Book ?? post.Book ?? "";
+        List<int> allChapters;
+
         //not handling movements
         IQueryable<Passage> passages = post.Scope switch
         {
@@ -190,15 +194,23 @@ public class BibleBrainService(
                                                     .OrderBy(p => p.StartChapter).ThenBy(p => p.StartVerse),
             _ => DbContext.PassagesData.Where(p => p.Id == 0),
         };
+        List<Passage> psgs = [.. passages];
+        if ((passage.Book ?? "") != "" && passage.StartChapter != null)
+        {
+
+            IEnumerable<int> schapters = psgs.Select(p => p.StartChapter??0).Distinct();
+            IEnumerable<int> echapters = psgs.Select(p => p.EndChapter??0).Distinct();
+            allChapters = schapters.Concat(echapters).Distinct().Where(c => c != 0).ToList();
+        }
+        else
+        {
+            allChapters = [post.Chapter];
+        }
         int count = 0;
         List<int> sectionids = [];
-        List<Passage> psgs = [.. passages];
         string desc = bible?.BibleName??post.Bibleid;
         string lang = bible?.Iso??"eng";
 
-        IEnumerable<int> schapters = psgs.Select(p => p.StartChapter??0).Distinct();
-        IEnumerable<int> echapters = psgs.Select(p => p.EndChapter??0).Distinct();
-        List<int> allChapters = schapters.Concat(echapters).Distinct().Where(c => c != 0).ToList();
         foreach (int chapter in allChapters)
         {
             count++;

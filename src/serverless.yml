@@ -48,6 +48,7 @@ provider:
     SIL_TR_AQUIFER:  ${file(./serverless.env.yml):xxx.SIL_TR_AQUIFER}
     SIL_TR_AERO_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AERO_DOMAIN}
     SIL_TR_AERO_PASSWORD: ${file(./serverless.env.yml):xxx.SIL_TR_AERO_PASSWORD}
+    SIL_TR_AERO_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AERO_BUCKET}
 
 
 package:
@@ -57,7 +58,7 @@ functions:
   api:
     handler: TranscriberApi::SIL.Transcriber.LambdaEntryPoint::FunctionHandlerAsync
     name: transcriber_api_${self:custom.myStage}${self:custom.isDebug}
-    timeout: 30
+    timeout: 29
     events:
        - http:
             path: /api/{proxy+}

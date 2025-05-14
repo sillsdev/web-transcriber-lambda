@@ -116,7 +116,7 @@ namespace SIL.Transcriber.Services
 
         public string DirectoryName(Mediafile entity)
         {
-            return entity.S3Folder ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
+            return entity.S3Folder?.TrimEnd('/') ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
         }
 
         public string? GetAudioUrl(Mediafile mf)
@@ -491,6 +491,7 @@ namespace SIL.Transcriber.Services
             Mediafile? mf = GetFileSignedUrl(id);
             if (mf?.AudioUrl == null)
                 return null;
+            //TODO move this to a public place?
             string taskid = await Aeroservice.NoiseRemoval(mf.AudioUrl) ??throw new Exception("Noise Removal failed to start");
             await SaveTask(mf, "NR", taskid);
             return mf;

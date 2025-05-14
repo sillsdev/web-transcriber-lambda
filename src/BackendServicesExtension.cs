@@ -96,6 +96,8 @@ namespace SIL.Transcriber
             services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<OrganizationBibleService>();
             services.AddScoped<OrganizationMembershipService>();
+            services.AddScoped<OrganizationSchemeService>();
+            services.AddScoped<OrganizationSchemeStepService>();
             services.AddScoped<OrganizationService>();
             services.AddScoped<OrgDataService>();
             services.AddScoped<OrgKeytermService>();
@@ -150,6 +152,8 @@ namespace SIL.Transcriber
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationBibleRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
+            services.AddScoped<OrganizationSchemeRepository>();
+            services.AddScoped<OrganizationSchemeStepRepository>();
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<OrgDataRepository>();
             services.AddScoped<OrgKeytermRepository>();
@@ -237,7 +241,7 @@ namespace SIL.Transcriber
         {
             services.AddSwaggerGen(options => {
                 options.SwaggerDoc(
-                    "v4.1",
+                    "4.1",
                     new OpenApiInfo
                     {
                         Version = "v4.1",
