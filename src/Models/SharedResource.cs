@@ -45,7 +45,7 @@ public partial class Sharedresource : BaseModel, IArchive
     [Attr(PublicName = "note")]
     public bool Note { get; set; }
 
-    [Attr(PublicName = "link-url")]
+    [Attr(PublicName = "linkurl")]
     public string? LinkUrl { get; set; }
 
     public bool Archived { get; set; }
