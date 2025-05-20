@@ -15,7 +15,8 @@ namespace SIL.Transcriber.Repositories
     public class MediafileRepository(
         IHttpContextAccessor httpContextAccessor,
         ITargetedFields targetedFields,
-        AppDbContextResolver contextResolver,
+        AppDbContextResolver _contextResolver,
+        IDbContextFactory<AppDbContext> _contextFactory,
         IResourceGraph resourceGraph,
         IResourceFactory resourceFactory,
         IEnumerable<IQueryConstraintProvider> constraintProviders,
@@ -27,7 +28,7 @@ namespace SIL.Transcriber.Repositories
         IS3Service service
         ) : BaseRepository<Mediafile>(
             targetedFields,
-            contextResolver,
+            _contextResolver,
             resourceGraph,
             resourceFactory,
             constraintProviders,
@@ -40,7 +41,7 @@ namespace SIL.Transcriber.Repositories
         readonly private ProjectRepository ProjectRepository = projectRepository;
         readonly private IS3Service S3service = service;
         readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
-
+        readonly private IDbContextFactory<AppDbContext> contextFactory = _contextFactory;
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, int project)
         {
             //this gets just the passages I have access to in these projects
@@ -301,7 +302,7 @@ namespace SIL.Transcriber.Repositories
             sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id);
             return sr;
         }
-        public Sharedresource? CreateSharedResource(Mediafile m, Passage p)
+        public Sharedresource? CreateSharedResource(Mediafile m, Passage p, AppDbContext context)
         {
             string fp = HttpContext != null ? HttpContext.GetFP() ?? "" : "";
             HttpContext?.SetFP("publish");
@@ -318,8 +319,8 @@ namespace SIL.Transcriber.Repositories
                 ArtifactCategoryId = ac?.Id,
                 Note = p.PassagetypeId != null,
             };
-            dbContext.Sharedresources.Add(sr);
-            dbContext.SaveChanges();
+            context.Sharedresources.Add(sr);
+            context.SaveChanges();
             Sharedresourcereference srr = new ()
             {
                 SharedResourceId = sr.Id,
@@ -334,12 +335,12 @@ namespace SIL.Transcriber.Repositories
                     for (int ix = p.StartVerse ?? 0; ix <= (p.EndVerse ?? -1); ix++)
                         verses += ix.ToString() + ",";
                     srr.Verses = verses[..^1];
-                    dbContext.Sharedresourcereferences.Add(srr);
+                    context.Sharedresourcereferences.Add(srr);
                 }
                 else
                 {
                     srr.Verses = p.StartVerse?.ToString() ?? "";
-                    dbContext.Sharedresourcereferences.Add(srr);
+                    context.Sharedresourcereferences.Add(srr);
                     Sharedresourcereference srr2 = new ()
                     {
                         SharedResourceId = sr.Id,
@@ -349,62 +350,87 @@ namespace SIL.Transcriber.Repositories
                     for (int ix = 1; ix <= (p.EndVerse ?? -1); ix++)
                         verses += ix.ToString() + ",";
                     srr2.Verses = verses[..^1];
-                    dbContext.Sharedresourcereferences.Add(srr2);
+                    context.Sharedresourcereferences.Add(srr2);
                 }
             }
-            dbContext.SaveChanges();
+            context.SaveChanges();
             HttpContext?.SetFP(fp);
             return sr;
         }
         public async Task<Mediafile?> Publish(int id, string publishTo, bool doSave)
         {
-            Mediafile? m = Get(id);
-            if (m == null)
+            try
             {
-                return null;
-            }
-            Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
-            if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
-            {
-                Sharedresource? sr = GetSharedResource(passage);
-                if (sr == null)
-                    _ = CreateSharedResource(m, passage);
-            }
-            if (PublishToAkuo(publishTo))
-            {
-                Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
-                Bible? bible = PlanRepository.Bible(plan) ?? throw new Exception("no bible");
-                string title =  PublishTitle(m,passage, false);
-                string outputKey = PublishFilename(title, bible.BibleId);
-                string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
-                Tags tags = new()
+                using AppDbContext context = contextFactory.CreateDbContext();
+                //Mediafile? m = Get(id);
+
+                Mediafile? m = context.Mediafiles.Include(x => x.Passage)
+                .Include(x => x.Plan)
+                .Include(x => x.ArtifactCategory)
+                .Include(x => x.ArtifactType)
+                .Include(x => x.ResourcePassage)
+                .Include(x => x.SourceMedia)
+                .Include(x => x.RecordedbyUser).SingleOrDefault(p => p.Id == id);
+
+                if (m == null)
                 {
-                    title = title,
-                    artist = m.PerformedBy??"",
-                    album = bible.BibleName,
-                    cover= PublishGraphic(m),
-                };
-                S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
-                //Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
-                if (response.Status == HttpStatusCode.OK)
+                    return null;
+                }
+                Passage? passage = context.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
+                if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
                 {
-                    m.PublishedAs = outputKey;
+                    Sharedresource? sr = GetSharedResource(passage);
+                    if (sr == null)
+                        _ = CreateSharedResource(m, passage, context);
+                }
+                if (PublishToAkuo(publishTo))
+                {
+                    Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+                    Bible? bible = PlanRepository.Bible(plan) ?? throw new Exception("no bible");
+                    string title =  PublishTitle(m,passage, false);
+                    string outputKey = PublishFilename(title, bible.BibleId);
+                    string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
+                    Tags tags = new()
+                    {
+                        title = title,
+                        artist = m.PerformedBy??"",
+                        album = bible.BibleName,
+                        cover= PublishGraphic(m),
+                    };
+                    S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
+                    //Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
+                    if (response.Status == HttpStatusCode.OK)
+                    {
+                        m.PublishedAs = outputKey;
+                        m.ReadyToShare = true;
+                        m.PublishTo = publishTo;
+                        try
+                        {
+                            context.Update(m);
+                            //if (doSave)
+                            context.SaveChanges();
+                        }
+                        catch (Exception err)
+                        {
+                            Console.WriteLine(err);
+                        }
+                    }
+                }
+                else if (!m.ReadyToShare || m.PublishTo != publishTo)
+                {
                     m.ReadyToShare = true;
                     m.PublishTo = publishTo;
-                    dbContext.Mediafiles.Update(m);
+                    context.Mediafiles.Update(m);
                     if (doSave)
-                        dbContext.SaveChanges();
+                        context.SaveChanges();
                 }
+                return m;
             }
-            else if (!m.ReadyToShare || m.PublishTo != publishTo)
+            catch (Exception err)
             {
-                m.ReadyToShare = true;
-                m.PublishTo = publishTo;
-                dbContext.Mediafiles.Update(m);
-                if (doSave)
-                    dbContext.SaveChanges();
+                Console.WriteLine(err);
+                return null;
             }
-            return m;
         }
     }
 }

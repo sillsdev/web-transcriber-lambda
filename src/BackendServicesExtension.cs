@@ -28,6 +28,9 @@ namespace SIL.Transcriber
 
             services.AddScoped<AppDbContextResolver>();
             services.AddScoped<LoggingDbContextResolver>();
+            services.AddDbContextFactory<AppDbContext>(options => {
+                options.UseNpgsql(GetConnectionString());
+            });
 
             // Add the Entity Framework Core DbContext like you normally would.
             services.AddDbContext<AppDbContext>(options => {
