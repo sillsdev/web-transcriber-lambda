@@ -71,13 +71,14 @@ namespace SIL.Transcriber.Repositories
             return rgxmultiplespaces.Replace(rgxnewlines.Replace(withIncludes, ""), " ");
         }
 
-        public bool CheckAddGraphics(
-        int check,
-        IQueryable<Graphic> list,
-        DateTime dtBail,
-        ref int start,
-        ref string data
-        )
+
+        public bool CheckAddData<TResource>(
+            int check,
+            IQueryable<TResource> input,
+            DateTime dtBail,
+            ref int start,
+            ref string data
+        ) where TResource : BaseModel
         {
             //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
             if (DateTime.Now > dtBail)
@@ -87,15 +88,14 @@ namespace SIL.Transcriber.Repositories
             int lastId = -1;
             if (starttable == check)
             {
-                List<Graphic>? lst = startId > 0 ? [.. list.Where(m => m.Id >= startId)] : [.. list];
+                List<TResource>? lst = startId > 0 ? [.. input.Where(m => m.Id >= startId)] : [.. input];
                 string thisData = ToJson(lst);
-
                 while (thisData.Length > (1000000 * 4))
                 {
                     int cnt = lst.Count;
-                    Graphic mid = lst[cnt/2];
+                    TResource mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = [.. list.Where(m => m.Id >= startId && m.Id < lastId)];
+                    lst = [.. input.Where(m => m.Id >= startId && m.Id < lastId)];
                     thisData = ToJson(lst);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
@@ -104,7 +104,6 @@ namespace SIL.Transcriber.Repositories
                 start = StartIndex.SetStart(starttable, ref lastId);
                 return lastId == 0;
             }
-
             return true;
         }
         private IQueryable<Orgdata> GetData(
@@ -153,7 +152,7 @@ namespace SIL.Transcriber.Repositories
                         ref data)
                 )
                     break;
-                if (!CheckAdd(5, ToJson(dbContext.Passagetypes),dtBail,ref iStartNext,ref data))
+                if (!CheckAdd(5, ToJson(dbContext.Passagetypes), dtBail, ref iStartNext, ref data))
                     break;
                 IQueryable<Organization> orgs = organizationRepository.GetMine().Where(g => !g.Archived); //this limits to current user
 
@@ -296,7 +295,7 @@ namespace SIL.Transcriber.Repositories
                     IQueryable<Intellectualproperty>? ip = dbContext.IntellectualPropertyData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived);
-                    if (!CheckAdd(19, ToJson(ip),dtBail,ref iStartNext, ref data ))
+                    if (!CheckAdd(19, ToJson(ip), dtBail, ref iStartNext, ref data))
                         break;
                     //IP Release Media
                     linkedmedia.AddRange(ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m));
@@ -305,17 +304,17 @@ namespace SIL.Transcriber.Repositories
                         IQueryable<Orgkeyterm>? orgkeyterms = dbContext.OrgKeytermsData
                                     .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                     .Where(x => !x.Archived);
-                        if (!CheckAdd(20, ToJson(orgkeyterms), dtBail, ref iStartNext, ref data))
+                        if (!CheckAddData(20, orgkeyterms, dtBail, ref iStartNext, ref data))
                             break;
                         IQueryable<Orgkeytermtarget> orgkttargets = dbContext.OrgKeytermTargetsData
                                         .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                         .Where(x => !x.Archived);
-                        if (!CheckAdd(21, ToJson(orgkttargets), dtBail, ref iStartNext, ref data))
+                        if (!CheckAddData(21, orgkttargets, dtBail, ref iStartNext, ref data))
                             break;
                         //do I need the sections from orgkeytermreferences?
-                        if (!CheckAdd(22, ToJson(dbContext.OrgKeytermReferencesData
+                        if (!CheckAddData(22, dbContext.OrgKeytermReferencesData
                                         .Join(orgkeyterms, c => c.OrgkeytermId, o => o.Id, (c, o) => c)
-                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                                        .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
                             break;
 
                         if (sharedres != null)
@@ -336,9 +335,9 @@ namespace SIL.Transcriber.Repositories
 
                         }
                         else
-                            iStartNext+=3;
-                        if (!CheckAdd(26, ToJson(dbContext.SharedresourcereferencesData
-                                        .Where(x => !x.Archived)), dtBail, ref iStartNext, ref data))
+                            iStartNext += 3;
+                        if (!CheckAddData(26, dbContext.SharedresourcereferencesData
+                                        .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
                             break;
                         if (version > 6)
                         {
@@ -358,7 +357,7 @@ namespace SIL.Transcriber.Repositories
                                                     .Join(bibles, m => m.Id, o => o.BibleMediafileId, (m, o) => m));
                             IQueryable<Graphic> graphics = dbContext.GraphicsData.Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
                                         .Where(x => !x.Archived);
-                            if (!CheckAddGraphics(29, graphics, dtBail, ref iStartNext, ref data))
+                            if (!CheckAddData(29, graphics, dtBail, ref iStartNext, ref data))
                                 break;
                             linkedmedia.AddRange(graphics.Join(dbContext.MediafilesData, g => g.MediafileId, m => m.Id, (g, m) => m));
                         }
@@ -367,7 +366,7 @@ namespace SIL.Transcriber.Repositories
 
                     }
                     else
-                        iStartNext = 30; 
+                        iStartNext = 30;
                     if (!CheckAdd(30, ToJson(linkedmedia), dtBail, ref iStartNext, ref data))
                         break;
                 }
