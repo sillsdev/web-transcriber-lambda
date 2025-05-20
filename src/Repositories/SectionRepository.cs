@@ -192,7 +192,7 @@ namespace SIL.Transcriber.Repositories
                 await PublishSection(resourceFromRequest);
             }
             int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
-            if (titleMedia != null && PublishToAkuo(resourceFromRequest.PublishTo)) //always do titles and movements
+            if (titleMedia != null) //always do titles and movements
                 await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
