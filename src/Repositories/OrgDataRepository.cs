@@ -336,6 +336,9 @@ namespace SIL.Transcriber.Repositories
                         }
                         else
                             iStartNext += 3;
+                        if (!CheckAddData(26, dbContext.SharedresourcereferencesData
+                                        .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
+                            iStartNext += 3;
 
                         if (!CheckAddData(26, dbContext.SharedresourcereferencesData
                                         .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
