@@ -222,6 +222,10 @@ namespace SIL.Transcriber.Repositories
             {
                 await PublishSection(resourceFromRequest);
             }
+
+            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
+            if (titleMedia != null) //always do titles and movements
+                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
         }
         public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
         {

@@ -338,10 +338,6 @@ namespace SIL.Transcriber.Repositories
                             iStartNext += 3;
                         if (!CheckAddData(26, dbContext.SharedresourcereferencesData
                                         .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
-                            iStartNext += 3;
-
-                        if (!CheckAddData(26, dbContext.SharedresourcereferencesData
-                                        .Where(x => !x.Archived), dtBail, ref iStartNext, ref data))
                             break;
                         if (version > 6)
                         {
@@ -386,7 +382,6 @@ namespace SIL.Transcriber.Repositories
                     else
                         iStartNext = NUMTABLES;
                     if (!CheckAdd(NUMTABLES, ToJson(linkedmedia), dtBail, ref iStartNext, ref data))
-
                         break;
                 }
                 iStartNext = -1; //Done!
