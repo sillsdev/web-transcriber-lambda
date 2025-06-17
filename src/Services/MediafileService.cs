@@ -536,7 +536,7 @@ namespace SIL.Transcriber.Services
             if (testBatch)
             {
                 string[] filesurls = [mf.AudioUrl,mf.AudioUrl];
-                string[] tasks = await Aeroservice.Transcription(filesurls, iso, romanize) ?? throw new Exception("Transcription failed to start");
+                string[] tasks = await Aeroservice.TranscriptionNew(filesurls, iso, romanize) ?? throw new Exception("Transcription failed to start");
                 await SaveTasks([mf, mf], "TR", tasks);
             }
             else
@@ -546,7 +546,7 @@ namespace SIL.Transcriber.Services
                 float[]? times = null;
                 if (timing != null)
                     times = timing.Select(t => t.start).ToArray();
-                string[]? tasks = await Aeroservice.Transcription(mf.AudioUrl, iso, romanize, times) ?? throw new Exception("Transcription failed to start");
+                string[]? tasks = await Aeroservice.TranscriptionNew([mf.AudioUrl], iso, romanize, times) ?? throw new Exception("Transcription failed to start");
                 if (tasks == null || tasks.Length == 0)
                     return mf;
                 bool fakeIt = false;

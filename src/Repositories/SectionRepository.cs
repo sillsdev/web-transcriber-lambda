@@ -20,7 +20,8 @@ namespace SIL.Transcriber.Repositories
         IResourceDefinitionAccessor resourceDefinitionAccessor,
         CurrentUserRepository currentUserRepository,
         PlanRepository planRepository,
-        MediafileRepository mediafileRepository
+        MediafileRepository mediafileRepository,
+        ArtifactCategoryRepository artifactCategoryRepository
 
         ) : BaseRepository<Section>(
             targetedFields,
@@ -35,6 +36,7 @@ namespace SIL.Transcriber.Repositories
     {
         readonly private PlanRepository PlanRepository = planRepository;
         readonly private MediafileRepository MediafileRepository = mediafileRepository;
+        readonly private ArtifactCategoryRepository ArtifactCategoryRepository = artifactCategoryRepository;
         readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
 
         #region ScopeToUser
@@ -130,13 +132,27 @@ namespace SIL.Transcriber.Repositories
         }
         #endregion
 
-        private async Task PublishSection(Section section)
+        private async Task<bool> PublishSection(Section section)
         {
+
+            if (PublishToAkuo(section.PublishTo))
+            {
+                //find the book and altbook and make sure the titles are published -- may not have had the bible set before
+                //maybe they're in another plan...but not handling that for now
+                int planId = section.Plan?.Id ?? section.PlanId;
+                List<Section> books = dbContext.Sections.Where(s => s.PlanId == planId && s.Sequencenum < 0 ).ToList();
+                foreach (Section booksection in books)
+                {
+                    await PublishTitle(booksection, booksection);
+                }
+            }
             if (section.PublishTo?.Contains("Propagate") ?? false)
             {
                 HttpContext?.SetFP("publish");
                 await PublishPassages(section.Id, section.PublishTo ?? "{}");
+                return true;
             }
+            return false;
         }
         private async Task PublishPassages(int sectionid, string publishTo)
         {
@@ -144,6 +160,7 @@ namespace SIL.Transcriber.Repositories
             List<Passage> passages = [.. dbContext.Passages.Where(p => p.SectionId == sectionid)];
             foreach (Passage? passage in passages)
             {
+                //do not do linked notes...only if this note is the source.  This query will include notes that are the source
                 IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
                         .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
                         .OrderByDescending(m => m.VersionNumber);
@@ -153,18 +170,14 @@ namespace SIL.Transcriber.Repositories
                     mediafiles.FirstOrDefault()
                 ]
                 : [.. mediafiles];
-                //if we are publishing, turn on shared notes.  If not publishing, leave them as they are
-                if (publish && passage.SharedResourceId != null)
+                if (publish)
                 {
-                    Sharedresource? note = dbContext.Sharedresources.Where(n => n.Id == passage.SharedResourceId).FirstOrDefault();
-                    if (note != null)
+                    //turn the others off
+                    IQueryable<Mediafile> on = mediafiles.Where(m => m.ReadyToShare == true);
+                    foreach (Mediafile m in on)
                     {
-                        int? notepsgid = note.PassageId;
-                        Mediafile? notemediafile = dbContext.Mediafiles
-                            .Where(m => m.PassageId == notepsgid && m.ArtifactTypeId == null && !m.Archived)
-                            .OrderByDescending(m => m.VersionNumber).FirstOrDefault();
-                        if (notemediafile != null)
-                            medialist.Add(notemediafile);
+                        m.ReadyToShare = false;
+                        dbContext.Mediafiles.Update(m);
                     }
                 }
                 foreach (Mediafile mediafile in medialist)
@@ -183,17 +196,37 @@ namespace SIL.Transcriber.Repositories
                 _ = dbContext.SaveChanges();
             }
         }
-
-        public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
+        private async Task PublishTitle(Section resourceFromRequest, Section resourceFromDatabase)
         {
-            //if we meant to send it it will have destinationsetbyuser:true in it
-            if ((resourceFromRequest.PublishTo ?? "{}") != "{}" && resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
+            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromRequest.TitleMediafile?.Id ?? resourceFromDatabase.TitleMediafileId ?? resourceFromDatabase.TitleMediafile?.Id;
+            if (titleMedia != null) //always do titles and movements
+                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
+        }
+        public override async Task CreateAsync(Section resourceFromRequest, Section resourceForDatabase, CancellationToken cancellationToken)
+        {
+            await CheckPublish(resourceFromRequest, resourceForDatabase);
+            await base.CreateAsync(resourceFromRequest, resourceForDatabase, cancellationToken);
+        }
+        public async Task CheckPublish(Section resourceFromRequest, Section resourceFromDatabase)
+        {
+            try
+            {
+                await PublishTitle(resourceFromRequest, resourceFromDatabase);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message != "no bible")
+                    throw;
+            }
+            if ((resourceFromRequest.PublishTo ?? "{}") != "{}")//&& resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
             {
                 await PublishSection(resourceFromRequest);
             }
-            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
-            if (titleMedia != null) //always do titles and movements
-                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
+        }
+        public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
+        {
+            //if we meant to send it it will have destinationsetbyuser:true in it
+            await CheckPublish(resourceFromRequest, resourceFromDatabase);
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
 

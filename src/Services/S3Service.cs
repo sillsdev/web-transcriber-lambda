@@ -139,9 +139,9 @@ namespace SIL.Transcriber.Services
         private static string ProperFolder(string folder)
         {
             //what else should be checked here?
-            if (folder.Length > 0 && folder.LastIndexOf('/') != folder.Length - 1)
+            if (folder?.Length > 0 && folder.LastIndexOf('/') != folder.Length - 1)
                 folder += "/";
-            return folder;
+            return folder ?? "";
         }
 
         private static S3Response S3Response(
@@ -294,7 +294,8 @@ namespace SIL.Transcriber.Services
                     Key = ProperFolder(folder) + fileName,
                     CannedACL = S3CannedACL.BucketOwnerFullControl,
                 };
-                PutACLResponse response = await _client.PutACLAsync(request);
+                using AmazonS3Client s3Client = new (GetVarOrThrow("SIL_TR_AWS_KEY"), GetVarOrThrow("SIL_TR_AWS_SECRET"));
+                PutACLResponse response = await s3Client.PutACLAsync(request);
                 return S3Response("", response.HttpStatusCode);
             }
             catch (AmazonS3Exception e)
@@ -306,9 +307,9 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        private string SignedUrl(string key, HttpVerb action, string mimetype, string bucket = "")
+        private string SignedUrl(string key, HttpVerb action, string mimetype, string bucket = "", string accesskey = "", string secret = "")
         {
-            AmazonS3Client s3Client = new();
+            AmazonS3Client s3Client = accesskey != "" ? new (accesskey, secret) : new();
 
             GetPreSignedUrlRequest request =
                 new()
@@ -350,11 +351,11 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public S3Response SignedUrlForPut(string fileName, string folder, string contentType, string bucket = "")
+        public S3Response SignedUrlForPut(string fileName, string folder, string contentType, string bucket = "", string accesskey = "", string secret = "")
         {
             try
             {
-                string url = SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT, contentType, bucket);
+                string url = SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT, contentType, bucket, accesskey, secret);
                 return S3Response(url, HttpStatusCode.OK);
             }
             catch (AmazonS3Exception e)
@@ -371,13 +372,54 @@ namespace SIL.Transcriber.Services
             return $"https://{(bucket == "" ? USERFILES_BUCKET : bucket)}.s3.amazonaws.com/{ProperFolder(folder)}{fileName}";
 
         }
+        public async Task<HttpStatusCode> CopyS3FileAsync(string sourceFileUrl, string destinationBucket, string destinationKey)
+        {
+            // Parse source bucket and key from the URL
+            Uri uri = new Uri(sourceFileUrl);
+            string sourceBucket, sourceKey;
+            if (uri.Scheme != "s3")
+            {
+                sourceBucket = uri.Host.Split('.')[0];
+                sourceKey = uri.LocalPath.TrimStart('/');
+            }
+            else
+            {
+                // For https://s3.amazonaws.com/bucket/key or similar
+                string[] segments = uri.AbsolutePath.TrimStart('/').Split('/', 2);
+                sourceBucket = segments[0];
+                sourceKey = segments[1];
+            }
+
+            using AmazonS3Client s3Client = new (GetVarOrThrow("SIL_TR_AWS_KEY"), GetVarOrThrow("SIL_TR_AWS_SECRET"));
+
+            CopyObjectRequest copyRequest = new()
+            {
+                SourceBucket = sourceBucket,
+                SourceKey = sourceKey,
+                DestinationBucket = destinationBucket,
+                DestinationKey = destinationKey,
+                CannedACL =  S3CannedACL.BucketOwnerFullControl
+
+            };
+            try
+            {
+                CopyObjectResponse response = await s3Client.CopyObjectAsync(copyRequest);
+                return response.HttpStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error copying S3 file: {message}", ex.Message);
+                throw;
+            }
+        }
+
         public async Task<S3Response> UploadFileAsync(
-            Stream stream,
-            bool overwriteifExists,
-            string fileName,
-            string folder = "",
-            string bucket = ""
-        )
+                Stream stream,
+                bool overwriteifExists,
+                string fileName,
+                string folder = "",
+                string bucket = ""
+            )
         {
             try
             {

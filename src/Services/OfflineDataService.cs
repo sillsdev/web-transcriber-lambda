@@ -80,11 +80,13 @@ namespace SIL.Transcriber.Services
             {Tables.Mediafiles,'H'},
             {Tables.OrgKeyTermReferences,'H'},
             {Tables.PassageStateChanges,'H'},
+            {Tables.Bibles, 'I' }, //because it has mediafiles in it
             {Tables.OrgKeyTermTargets,'I'},
             {Tables.SectionResources,'I'},
             {Tables.Discussions,'I'},
             {Tables.IntellectualPropertys,'I'},
             {Tables.SharedResources, 'I' },
+            {Tables.OrganizationBibles, 'I' },
             {Tables.Comments,'J'},
             {Tables.SectionResourceUsers,'J'},
             {Tables.SharedResourceReferences, 'J' }
@@ -872,7 +874,8 @@ namespace SIL.Transcriber.Services
             IQueryable<Sectionresource> sectionresources,
             IQueryable<Intellectualproperty> ip,
             IQueryable<Plan> plans,
-            IQueryable<Note> supportingNotes)
+            IQueryable<Note> supportingNotes,
+            IQueryable<Bible> bibles)
         {
             IQueryable<Mediafile> okttmedia = orgkeytermtargets.Join(dbContext.MediafilesData, o => o.MediafileId, m => m.Id, (o, m) => m);
             IQueryable<Mediafile> ipmedia = ip.Join(dbContext.MediafilesData, ip => ip.ReleaseMediafileId, m=> m.Id, (ip, m) => m).Where(x => !x.Archived);
@@ -880,17 +883,25 @@ namespace SIL.Transcriber.Services
             IEnumerable<Mediafile> categorymediafiles =  CategoryMedia(categories);
             IQueryable<Mediafile> sharedNoteMedia = supportingNotes.Join(
                                           dbContext.MediafilesData, n => n.MediafileId, m => m.Id, (n, m) => m);
+            IQueryable<Mediafile> bibleMedia = bibles.Join(
+                                          dbContext.MediafilesData, b => b.BibleMediafileId, m => m.Id, (b, m) => m);
+            IQueryable<Mediafile> bibleisoMedia = bibles.Join(
+                                          dbContext.MediafilesData, b => b.IsoMediafileId, m => m.Id, (b, m) => m);
+
             List<Mediafile> myMedia = PlanMedia(plans).ToList()
                                 .Concat([.. okttmedia])
                                 .Concat([.. ipmedia])
                                 .Concat(sourcemediafiles.ToList())
                                 .Concat(categorymediafiles.ToList())
-                                .Concat([.. sharedNoteMedia]).Distinct().ToList();
+                                .Concat([.. sharedNoteMedia])
+                                .Concat([.. bibleMedia])
+                                .Concat([.. bibleisoMedia])
+                                .Distinct().ToList();
             return myMedia;
         }
         public Fileresponse ExportProjectPTF(int projectId, int start)
         {
-            const int LAST_ADD = 22;
+            const int LAST_ADD = 25;
             const string ext = ".ptf";
             int startNext = start;
             //give myself 15 seconds to get as much as I can...
@@ -1065,8 +1076,10 @@ namespace SIL.Transcriber.Services
                         .Join(dbContext.SectionsData, p => p.Id, s => s.PlanId, (p, s) => s)
                         .Where(x => !x.Archived);
                     IQueryable<Sectionresource> sectionresources = SectionResources(sections);
+                    IQueryable<Bible>  orgBibles = dbContext.Organizationbibles.Where(om => om.OrganizationId == project.OrganizationId && !om.Archived)
+                        .Join(dbContext.BiblesData.Where(b=>!b.Archived), ob => ob.BibleId, b => b.Id, (ob, b) => b);
                     List<Mediafile> mediafiles = ProjectMedia(orgkeytermtargets, categories,
-                        sectionresources, ip,plans, supportingNotes);
+                        sectionresources, ip,plans, supportingNotes, orgBibles);
                     List<int>  planIds = mediafiles.Select(m => m.PlanId).Distinct().ToList();
                     IQueryable<Plan> supportingPlans = dbContext.PlansData.Where(p => planIds.Contains(p.Id)) ;
                     List<int> projIds = [.. supportingPlans.Where(p => p.ProjectId != project.Id).Select(p => p.ProjectId)];
@@ -1351,7 +1364,36 @@ namespace SIL.Transcriber.Services
                         )
                     )
                         break;
-
+                    if (!CheckAdd(
+                            22,
+                            dtBail,
+                            ref startNext,
+                            zipArchive,
+                            Tables.Graphics,
+                             dbContext.GraphicsData.Where(om => om.OrganizationId == project.OrganizationId && !om.Archived).ToList()
+                        )
+                    )
+                        break;
+                    if (!CheckAdd(
+                            23,
+                            dtBail,
+                            ref startNext,
+                            zipArchive,
+                            Tables.OrganizationBibles,
+                             dbContext.OrganizationbiblesData.Where(om => om.OrganizationId == project.OrganizationId && !om.Archived).ToList()
+                        )
+                    )
+                        break;
+                    if (!CheckAdd(
+                            24,
+                            dtBail,
+                            ref startNext,
+                            zipArchive,
+                            Tables.Bibles,
+                             orgBibles.ToList()
+                        )
+)
+                        break;
                     //Now I need the media list of just those files to download...
                     //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
                     //IQueryable<Mediafile> vernmediafiles =
@@ -3251,8 +3293,9 @@ namespace SIL.Transcriber.Services
                 IQueryable<Note> supportingNotes = dbContext.Notes
                         .Join(sharednotes, n => n.ResourceId, sn => sn.SharedResourceId, (n, sn) => n);
                 IQueryable<Intellectualproperty>? ip = OrgIPs(dbContext.Organizations.Where(o => o.Id == sourceproject.OrganizationId));
+                IQueryable<Bible>  orgBibles = dbContext.BiblesData.Where(b => b.Id == -1); //don't copy bibles data
                 IOrderedEnumerable<Mediafile> myMedia = ProjectMedia(oktt, categories, sectionresources,
-                                                    ip, sourceplans, supportingNotes                                                             ).OrderBy(m => m.Id);
+                                                    ip, sourceplans, supportingNotes, orgBibles).OrderBy(m => m.Id);
 
                 int ix = start;
                 string status = "";

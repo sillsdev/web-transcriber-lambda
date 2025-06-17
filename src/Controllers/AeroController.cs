@@ -191,7 +191,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
         Logger.LogInformation("Received URL: {S} {L}", request.FileUrl, request.Iso);
 
-        string[]? tasks = await _service.Transcription(request.FileUrl, request.Iso, request.Romanize);
+        string[]? tasks = await _service.Transcription([request.FileUrl], request.Iso, request.Romanize);
         return Ok(tasks?.FirstOrDefault());
     }
     /// <summary>

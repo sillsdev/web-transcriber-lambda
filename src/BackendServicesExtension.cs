@@ -204,7 +204,7 @@ namespace SIL.Transcriber
                     options.SaveToken = true;
                     options.Events = new JwtBearerEvents
                     {
-                        OnTokenValidated = context => {
+                        OnTokenValidated = static context => {
                             //string TYPE_NAME_IDENTIFIER = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
                             string TYPE_NAME_EMAILVERIFIED = "https://sil.org/email_verified";
                             // Add the access_token as a claim, as we may actually need it
