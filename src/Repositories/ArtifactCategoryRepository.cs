@@ -30,6 +30,15 @@ namespace SIL.Transcriber.Repositories
     {
         private readonly OrganizationRepository OrganizationRepository = organizationRepository;
 
+
+        public Bible? GetBible(Artifactcategory resource)
+        {
+
+            int orgId = resource.OrganizationId ?? resource.Organization?.Id ?? 0;
+            return dbContext.Bibles.Join(dbContext.Organizationbibles.Where(o => o.OrganizationId == orgId && !o.Archived), b => b.Id, o => o.BibleId, (b, o) => b).Where(b => !b.Archived).FirstOrDefault();
+
+        }
+
         public IQueryable<Artifactcategory> UsersArtifactCategorys(
             IQueryable<Artifactcategory> entities
         )

@@ -1,10 +1,8 @@
 ﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
-using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -17,7 +15,8 @@ namespace SIL.Transcriber.Repositories
         ILoggerFactory loggerFactory,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
         CurrentUserRepository currentUserRepository,
-        OrganizationRepository organizationRepository
+        OrganizationRepository organizationRepository,
+        MediafileRepository mediafileRepository
         ) : BaseRepository<Bible>(
             targetedFields,
             contextResolver,
@@ -30,6 +29,25 @@ namespace SIL.Transcriber.Repositories
             )
     {
         private readonly OrganizationRepository OrganizationRepository = organizationRepository;
+        readonly private MediafileRepository MediafileRepository = mediafileRepository;
+
+        private async Task PublishTitles(Bible bible)
+        {
+            if (bible.IsoMediafile != null)
+                await MediafileRepository.Publish((int)bible.IsoMediafile.Id, "{\"Public\": \"true\"}", true, bible);
+            if (bible.BibleMediafile != null)
+                await MediafileRepository.Publish((int)bible.BibleMediafile.Id, "{\"Public\": \"true\"}", true, bible);
+        }
+        public override async Task CreateAsync(Bible resourceFromRequest, Bible resourceFromDatabase, CancellationToken cancellationToken)
+        {
+            await PublishTitles(resourceFromRequest);
+            await base.CreateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
+        }
+        public override async Task UpdateAsync(Bible resourceFromRequest, Bible resourceFromDatabase, CancellationToken cancellationToken)
+        {
+            await PublishTitles(resourceFromRequest);
+            await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
+        }
 
         public IQueryable<Bible> UsersBibles(
             IQueryable<Bible> entities

@@ -76,7 +76,7 @@ namespace SIL.Transcriber.Definitions
             }
             else if (resource.ReadyToShare)
             { //&& AppDbContext.Mediafiles.Any(s => s.Id == resource.Id && !s.ReadyToShare))
-                Mediafile? newInfo = await PublishMediafile(writeOperation, MediafileService, resource.PublishTo ?? PublishTitle, resource.Id);
+                Mediafile? newInfo = await MediafileService.Publish(resource.Id, resource.PublishTo ?? PublishTitle); //PublishMediafile(writeOperation, MediafileService, resource.PublishTo ?? PublishTitle, resource.Id);
                 if (newInfo != null)
                 {
                     resource.PublishedAs = newInfo.PublishedAs;

@@ -87,6 +87,7 @@ namespace SIL.Transcriber.Repositories
         {
             return publishTo != null && (publishTo.Contains("Public") || publishTo.Contains("Beta") || publishTo.Contains("OBTHelps"));
         }
+
         public Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction BeginTransaction()
         {
             return dbContext.Database.BeginTransaction();

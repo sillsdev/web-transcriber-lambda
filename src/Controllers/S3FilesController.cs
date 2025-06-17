@@ -88,9 +88,8 @@ namespace SIL.Transcriber.Controllers
             [FromRoute] string fileName,
             [FromRoute] string contentType)
         {
-            string Bucket = GetVarOrThrow("SIL_TR_AERO_BUCKET");
             contentType = "audio/" + contentType;
-            return Ok(_service.SignedUrlForPut(fileName, "input_files", contentType, Bucket).Message);
+            return Ok(_service.SignedUrlForPut(fileName, "input_files", contentType, GetVarOrThrow("SIL_TR_AERO_BUCKET"), GetVarOrThrow("SIL_TR_AWS_KEY"), GetVarOrThrow("SIL_TR_AWS_SECRET")).Message);
 
         }
         //don't think this is used
