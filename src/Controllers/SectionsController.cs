@@ -1,5 +1,6 @@
 using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Services;
+using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 
@@ -21,5 +22,19 @@ namespace SIL.Transcriber.Controllers
             userService
             )
     {
+        private readonly SectionService service = (SectionService)resourceService;
+
+        [HttpPatch("assign/{scheme}/{idlist}")]
+        public IActionResult AssignSections([FromRoute] int scheme, [FromRoute] string idlist)
+        {
+            try
+            {
+                return Ok(service.AssignSections(scheme, idlist));
+            }
+            catch
+            {
+                return NotFound();
+            }
+        }
     }
 }

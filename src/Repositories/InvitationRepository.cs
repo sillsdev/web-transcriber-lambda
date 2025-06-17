@@ -40,15 +40,20 @@ namespace SIL.Transcriber.Repositories
             {
                 //if I'm an admin in the org, give me all invitations in that org
                 //otherwise give me invitations just to me
-                IEnumerable<int> orgadmins = orgIds.Where(
-                    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
-                );
+                //no-that was confusing...
+                //IEnumerable<int> orgadmins = orgIds.Where(
+                //    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
+                //);
                 string currentEmail = CurrentUser.Email?.ToLower() ?? "";
 
+#pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
+                //DO NOT use StringComparison, because this is a query being sent to database and it throws
                 entities = entities.Where(i =>
-                        orgadmins.Contains(i.OrganizationId)
+                        orgIds.Contains(i.OrganizationId)
                         || currentEmail == (i.Email ?? "").ToLower()
+
                 );
+#pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
             }
             return entities;
         }

@@ -17,8 +17,10 @@ public static class Tables
     public const string Invitations = "invitations";
     public const string Mediafiles = "mediafiles";
     public const string Organizations = "organizations";
-    public const string OrganizationBibles = "organizationbibles"; 
+    public const string OrganizationBibles = "organizationbibles";
     public const string OrganizationMemberships = "organizationmemberships";
+    public const string OrganizationSchemes = "organizationschemes";
+    public const string OrganizationSchemeSteps = "organizationschemesteps";
     public const string OrgKeyTermReferences =  "orgkeytermreferences";
     public const string OrgKeyTerms = "orgkeyterms";
     public const string OrgKeyTermTargets = "orgkeytermtargets";

@@ -116,7 +116,7 @@ namespace SIL.Transcriber.Services
 
         public string DirectoryName(Mediafile entity)
         {
-            return entity.S3Folder ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
+            return entity.S3Folder?.TrimEnd('/') ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
         }
 
         public string? GetAudioUrl(Mediafile mf)
@@ -491,6 +491,7 @@ namespace SIL.Transcriber.Services
             Mediafile? mf = GetFileSignedUrl(id);
             if (mf?.AudioUrl == null)
                 return null;
+            //TODO move this to a public place?
             string taskid = await Aeroservice.NoiseRemoval(mf.AudioUrl) ??throw new Exception("Noise Removal failed to start");
             await SaveTask(mf, "NR", taskid);
             return mf;
@@ -535,7 +536,7 @@ namespace SIL.Transcriber.Services
             if (testBatch)
             {
                 string[] filesurls = [mf.AudioUrl,mf.AudioUrl];
-                string[] tasks = await Aeroservice.Transcription(filesurls, iso, romanize) ?? throw new Exception("Transcription failed to start");
+                string[] tasks = await Aeroservice.TranscriptionNew(filesurls, iso, romanize) ?? throw new Exception("Transcription failed to start");
                 await SaveTasks([mf, mf], "TR", tasks);
             }
             else
@@ -545,7 +546,7 @@ namespace SIL.Transcriber.Services
                 float[]? times = null;
                 if (timing != null)
                     times = timing.Select(t => t.start).ToArray();
-                string[]? tasks = await Aeroservice.Transcription(mf.AudioUrl, iso, romanize, times) ?? throw new Exception("Transcription failed to start");
+                string[]? tasks = await Aeroservice.TranscriptionNew([mf.AudioUrl], iso, romanize, times) ?? throw new Exception("Transcription failed to start");
                 if (tasks == null || tasks.Length == 0)
                     return mf;
                 bool fakeIt = false;

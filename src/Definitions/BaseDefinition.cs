@@ -4,8 +4,7 @@ using JsonApiDotNetCore.Queries.Expressions;
 using JsonApiDotNetCore.Resources;
 using Microsoft.Extensions.Primitives;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Serialization;
-using SIL.Transcriber.Services;
+using SIL.Transcriber.Serializers;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using System.Collections.Immutable;
 
@@ -53,14 +52,6 @@ namespace SIL.Transcriber.Definitions
                 ? null
                 : base.OnApplyFilter(existingFilter);
         }
-        public async Task<Mediafile?> PublishMediafile(WriteOperationKind writeOperation, MediafileService service, string publishTo, int? id)
-        {
-            return writeOperation != WriteOperationKind.DeleteResource &&
-                writeOperation != WriteOperationKind.RemoveFromRelationship &&
-                writeOperation != WriteOperationKind.AddToRelationship &&
-                id != null
-                ? await service.Publish((int)id, publishTo)
-                : null;
-        }
+
     }
 }

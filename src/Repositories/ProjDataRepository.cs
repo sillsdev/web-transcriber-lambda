@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Serializers;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Utility;
 using System.Text.RegularExpressions;

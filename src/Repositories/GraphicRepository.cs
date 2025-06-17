@@ -17,7 +17,8 @@ namespace SIL.Transcriber.Repositories
         ILoggerFactory loggerFactory,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
         CurrentUserRepository currentUserRepository,
-        OrganizationRepository organizationRepository
+        OrganizationRepository organizationRepository,
+        MediafileRepository mediafileRepository
         ) : BaseRepository<Graphic>(
             targetedFields,
             contextResolver,
@@ -30,7 +31,14 @@ namespace SIL.Transcriber.Repositories
             )
     {
         private readonly OrganizationRepository OrganizationRepository = organizationRepository;
-
+        readonly private MediafileRepository MediafileRepository = mediafileRepository;
+        public override async Task UpdateAsync(Graphic resourceFromRequest, Graphic resourceFromDatabase, CancellationToken cancellationToken)
+        {
+            int? media = resourceFromRequest.MediafileId ?? resourceFromDatabase.MediafileId;
+            if (media != null)
+                await MediafileRepository.Publish((int)media, "{\"Public\": \"true\"}", true);
+            await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
+        }
         public IQueryable<Graphic> UsersGraphics(
             IQueryable<Graphic> entities
         )

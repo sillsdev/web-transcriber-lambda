@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.AspNetCore.WebUtilities;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
@@ -11,10 +12,12 @@ public class AeroService(
        IHttpContextAccessor httpContextAccessor,
        AppDbContextResolver contextResolver,
        ILoggerFactory loggerFactory,
-       IS3Service s3Service) : BaseResourceService(contextResolver, s3Service)
+       IS3Service s3service) : BaseResourceService(contextResolver, s3service)
 {
     readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
     readonly private string Domain = GetVarOrThrow("SIL_TR_AERO_DOMAIN");
+    readonly private string Bucket = GetVarOrThrow("SIL_TR_AERO_BUCKET");
+    readonly private IS3Service s3Service = s3service;
     private ILogger Logger { get; set; } = loggerFactory.CreateLogger("AeroService");
 
     private async Task<string> GetToken()
@@ -41,6 +44,7 @@ public class AeroService(
     {
         content.Add(new StringContent(upload.ToString()), "s3_upload"); // Sends 's3_upload=True' in the request
     }
+    private static void AddSaveS3(string parameters, bool upload) => parameters += $"&s3_upload={upload.ToString().ToLower()}"; // Sends 's3_upload=True' in the request
     private static ByteArrayContent GetFileContent(Stream stream)
     {
         byte[] data = ConvertStreamToByteArray(stream);
@@ -105,47 +109,54 @@ public class AeroService(
             }
         }
     }
-    private async Task<string[]?> GetTaskIds(string api, MultipartFormDataContent content)
+    private async Task<string[]?> GetTaskIds(string api, MultipartFormDataContent? content)
     {
-        string? tmp = await GetResult(api, content, "task_ids");
+        string? tmp = await GetResult(api, content?.Any()??false ? content : null, "task_ids");
         string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']','"', ' ');
         return result?.Split(',');
     }
 
 
-    private async Task<string?> GetResult(string api, MultipartFormDataContent multipartContent, string result)
+    private async Task<string?> GetResult(string api, MultipartFormDataContent? multipartContent, string result)
     {
         Logger.LogCritical("GetResult");
-        PrintContent(multipartContent, Logger);
+        //PrintContent(multipartContent, Logger);
         using HttpClient httpClient = await Httpclient();
         Logger.LogCritical("{api}", api);
-        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent);
+        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent?.Any()??false ? multipartContent : null); // multipartContent);
         Logger.LogCritical("{s} {r}", response.StatusCode, response.ReasonPhrase);
         response.EnsureSuccessStatusCode();
         dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
         return x?[result].ToString();
     }
-    public async Task<string?> NoiseRemoval(Stream stream, string filename)
-    {
-        MultipartFormDataContent multipartContent = AddFileToRequest(stream, filename, "file");
-        AddSaveS3(multipartContent, true);
-        return await GetResult($"{Domain}/noise_removal", multipartContent, "task_id");
-    }
+
+    /*
     public async Task<string?> NoiseRemoval(IFormFile file)
     {
         // Prepare the multipart content
         using Stream fileStream = file.OpenReadStream();
         return await NoiseRemoval(fileStream, file.FileName);
-    }
+    } */
+
+    //if small enough to fit in the request
     public async Task<string?> NoiseRemoval(string base64data, string filename)
     {
         byte[] fileBytes = Convert.FromBase64String(base64data);
         MemoryStream fileStream = new (fileBytes);
-        return await NoiseRemoval(fileStream, filename);
+        MultipartFormDataContent multipartContent = AddFileToRequest(fileStream, filename, "file");
+        AddSaveS3(multipartContent, true);
+        return await GetResult($"{Domain}/noise_removal", multipartContent, "task_id");
+
+        //return await NoiseRemoval(fileStream, filename);
     }
-    public async Task<string?> NoiseRemoval(string fileUrl)
+
+    //not small enough to fit in the request - send an s3 file that has been put in aero input_files
+    public async Task<string?> NoiseRemoval(string fileName)
     {
-        return await NoiseRemoval(await GetStream(fileUrl), GetFileName(fileUrl));
+        await S3service.BucketOwner(fileName, "input_files", Bucket);
+        string p = $"s3_file_path=s3://{Bucket}/input_files/{fileName}";
+        AddSaveS3(p, true);
+        return await GetResult($"{Domain}/noise_removal?{p}", null, "task_id");
     }
 
     private async Task<HttpContent?> GetStatus(string service, string? TaskId)
@@ -174,7 +185,7 @@ public class AeroService(
 
         if (stream != null)
         {
-            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder, true);
+            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
             return s3resp.Message;
         }
         return null;
@@ -198,9 +209,17 @@ public class AeroService(
         AddSaveS3(multipartContent, false);
         return await GetResult($"{Domain}/voice_conversion", multipartContent, "task_id");
     }
-    public async Task<string?> VoiceConversion(string sourceUrl, string targetUrl)
+
+    public async Task<string?> VoiceConversion(string fileName, string targetUrl)
     {
-        return await VoiceConversion(await GetStream(sourceUrl), GetFileName(sourceUrl), await GetStream(targetUrl), GetFileName(targetUrl));
+        await S3service.BucketOwner(fileName, "input_files", Bucket);
+        string tgt = $"tgt{fileName}";
+        await S3service.CopyS3FileAsync(targetUrl, Bucket, $"input_files/{tgt}");
+        await S3service.BucketOwner(tgt, "input_files", Bucket);
+        string p = $"s3_source_file_path=s3://{Bucket}/input_files/{fileName}";
+        string t = $"&s3_target_file_path=s3://{Bucket}/input_files/{tgt}";
+        AddSaveS3(t, false);
+        return await GetResult($"{Domain}/voice_conversion?{p}{t}", null, "task_id");
     }
     public async Task<HttpContent?> VoiceConversionStatus(string? taskId)
     {
@@ -213,7 +232,7 @@ public class AeroService(
 
         if (stream != null)
         {
-            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder, true);
+            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
             return s3resp.Message;
         }
         return null;
@@ -260,17 +279,50 @@ public class AeroService(
         string[]? tasks = await GetTaskIds(api, multipartContent);
         return tasks;
     }
+    private async Task<string> BuildTranscriptionApi(string[] fileUrls, string lang_iso, bool romanize, float[]? timing = null)
+    {
+        string api = $"{Domain}/batch_transcription";
+        int count = 1;
+        string fn = DateTime.Now.Ticks.ToString();
+        List<string> urlList = new ();
+        foreach (string fileUrl in fileUrls)
+        {
+            Uri uri = new (fileUrl);
+            string ext = Path.GetExtension(uri.LocalPath);
+            string tgt = $"{count}{fn}.{ext}";
+            await S3service.CopyS3FileAsync(fileUrl, Bucket, $"input_files/{tgt}");
+            await S3service.BucketOwner(tgt, "input_files", Bucket);
+            urlList.Add($"s3://{Bucket}/input_files/{tgt}");
+            count++;
+        }
+        KeyValuePair<string, string?>[] queryString = [new("s3_upload", "true"), new("sister_lang_iso", lang_iso), new("romanize", romanize.ToString()), new("s3_file_paths",string.Join("," ,urlList))];
+        api = QueryHelpers.AddQueryString(api, queryString);
+        for (int ix = 0; ix < timing?.Length; ix++)
+        {
+            api += $"&timestamps={timing[ix]}";
+        }
+        return api;
+    }
+    /*
+    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize)
+    {
+        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize);
+        string[]? tasks = await GetTaskIds(api, []);
+        return tasks;
+    } */
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="fileUrl">The file containing the audio to transcribe.</param>
+    /// <param name="fileUrls">The files containing the audio to transcribe.</param>
     /// <param name="lang_iso">The ISO code of the language to transcribe the audio into</param>
     /// <param name="romanize">Whether to romanize the transcription</param>
     /// <param name="timing">verse timing</param>
     /// <returns></returns>
-    public async Task<string[]?> Transcription(string fileUrl, string lang_iso, bool romanize, float[]? timing = null)
+    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize, float[]? timing = null)
     {
-        return await Transcription(await GetStream(fileUrl), GetFileName(fileUrl), lang_iso, romanize, timing);
+        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize, timing);
+        string[]? tasks = await GetTaskIds(api, []);
+        return tasks;
     }
 
     public async Task<TranscriptionResponse?> TranscriptionStatus(string? taskId)

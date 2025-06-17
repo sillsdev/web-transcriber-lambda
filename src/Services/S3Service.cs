@@ -131,17 +131,17 @@ namespace SIL.Transcriber.Services
     public class S3Service(IAmazonS3 client, ILoggerFactory loggerFactory) : IS3Service
     {
         private readonly string USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
-        private readonly string PUBLISHREQ_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHREQ_BUCKET");
-        private readonly string PUBLISHED_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHED_BUCKET");
+        public readonly string PUBLISHREQ_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHREQ_BUCKET");
+        public readonly string PUBLISHED_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHED_BUCKET");
         private readonly IAmazonS3 _client = client;
         protected ILogger<S3Service> Logger { get; set; } = loggerFactory.CreateLogger<S3Service>();
 
         private static string ProperFolder(string folder)
         {
             //what else should be checked here?
-            if (folder.Length > 0 && folder.LastIndexOf('/') != folder.Length - 1)
+            if (folder?.Length > 0 && folder.LastIndexOf('/') != folder.Length - 1)
                 folder += "/";
-            return folder;
+            return folder ?? "";
         }
 
         private static S3Response S3Response(
@@ -173,11 +173,11 @@ namespace SIL.Transcriber.Services
             return data;
         }
         public async Task<bool> FileExistsAsync(string fileName, string folder = "",
-            bool userfile = true)
+            string bucket = "")
         {
             fileName = ProperFolder(folder) + fileName;
             ListObjectsResponse response = await _client.ListObjectsAsync(
-                userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
+                bucket == "" ? USERFILES_BUCKET : bucket,
                 fileName
             );
             //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
@@ -229,7 +229,7 @@ namespace SIL.Transcriber.Services
                 string json = $"{{\"id\":{id},\"inputBucket\":\"{USERFILES_BUCKET}\",\"inputKey\":\"{inputKey}\",\"outputBucket\":\"{PUBLISHED_BUCKET}\",\"outputKey\":\"{outputKey}\", \"tags\":{tags}}}";
                 string requestKey = id + ".key";
                 using Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-                return await UploadFileAsync(stream, true, requestKey, "", false);
+                return await UploadFileAsync(stream, true, requestKey, "", PUBLISHREQ_BUCKET);
             }
             catch (Exception e)
             {
@@ -262,13 +262,13 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public async Task<S3Response> MakePublic(string fileName, string folder = "", bool userfile = true)
+        public async Task<S3Response> MakePublic(string fileName, string folder = "", string bucket = "")
         {
             try
             {
                 PutACLRequest request = new()
                 {
-                    BucketName = userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
+                    BucketName = bucket == "" ? USERFILES_BUCKET : bucket,
                     Key = ProperFolder(folder) + fileName,
                     CannedACL = S3CannedACL.PublicRead,
                 };
@@ -284,20 +284,44 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        private string SignedUrl(string key, HttpVerb action, string mimetype)
+        public async Task<S3Response> BucketOwner(string fileName, string folder = "", string bucket = "")
         {
-            AmazonS3Client s3Client = new();
+            try
+            {
+                PutACLRequest request = new()
+                {
+                    BucketName = bucket == "" ? USERFILES_BUCKET : bucket,
+                    Key = ProperFolder(folder) + fileName,
+                    CannedACL = S3CannedACL.BucketOwnerFullControl,
+                };
+                using AmazonS3Client s3Client = new (GetVarOrThrow("SIL_TR_AWS_KEY"), GetVarOrThrow("SIL_TR_AWS_SECRET"));
+                PutACLResponse response = await s3Client.PutACLAsync(request);
+                return S3Response("", response.HttpStatusCode);
+            }
+            catch (AmazonS3Exception e)
+            {
+                return S3Response(e.Message, e.StatusCode);
+            }
+            catch (Exception e)
+            {
+                return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
+        private string SignedUrl(string key, HttpVerb action, string mimetype, string bucket = "", string accesskey = "", string secret = "")
+        {
+            AmazonS3Client s3Client = accesskey != "" ? new (accesskey, secret) : new();
 
             GetPreSignedUrlRequest request =
                 new()
                 {
-                    BucketName = USERFILES_BUCKET,
+                    BucketName = bucket == "" ? USERFILES_BUCKET : bucket,
                     Key = key,
                     Verb = action,
                     Expires = DateTime.Now.AddMinutes(25),
                 };
             if (mimetype.Length > 0)
                 request.ContentType = mimetype;
+
             try
             {
                 return s3Client.GetPreSignedURL(request);
@@ -327,11 +351,11 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public S3Response SignedUrlForPut(string fileName, string folder, string contentType)
+        public S3Response SignedUrlForPut(string fileName, string folder, string contentType, string bucket = "", string accesskey = "", string secret = "")
         {
             try
             {
-                string url = SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT, contentType);
+                string url = SignedUrl(ProperFolder(folder) + fileName, HttpVerb.PUT, contentType, bucket, accesskey, secret);
                 return S3Response(url, HttpStatusCode.OK);
             }
             catch (AmazonS3Exception e)
@@ -343,28 +367,70 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
-        public string GetPublicUrl(string fileName, string folder = "", bool userfile = true)
+        public string GetPublicUrl(string fileName, string folder = "", string bucket = "")
         {
-            return $"https://{(userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET)}.s3.amazonaws.com/{ProperFolder(folder)}{fileName}";
+            return $"https://{(bucket == "" ? USERFILES_BUCKET : bucket)}.s3.amazonaws.com/{ProperFolder(folder)}{fileName}";
+
         }
+        public async Task<HttpStatusCode> CopyS3FileAsync(string sourceFileUrl, string destinationBucket, string destinationKey)
+        {
+            // Parse source bucket and key from the URL
+            Uri uri = new Uri(sourceFileUrl);
+            string sourceBucket, sourceKey;
+            if (uri.Scheme != "s3")
+            {
+                sourceBucket = uri.Host.Split('.')[0];
+                sourceKey = uri.LocalPath.TrimStart('/');
+            }
+            else
+            {
+                // For https://s3.amazonaws.com/bucket/key or similar
+                string[] segments = uri.AbsolutePath.TrimStart('/').Split('/', 2);
+                sourceBucket = segments[0];
+                sourceKey = segments[1];
+            }
+
+            using AmazonS3Client s3Client = new (GetVarOrThrow("SIL_TR_AWS_KEY"), GetVarOrThrow("SIL_TR_AWS_SECRET"));
+
+            CopyObjectRequest copyRequest = new()
+            {
+                SourceBucket = sourceBucket,
+                SourceKey = sourceKey,
+                DestinationBucket = destinationBucket,
+                DestinationKey = destinationKey,
+                CannedACL =  S3CannedACL.BucketOwnerFullControl
+
+            };
+            try
+            {
+                CopyObjectResponse response = await s3Client.CopyObjectAsync(copyRequest);
+                return response.HttpStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error copying S3 file: {message}", ex.Message);
+                throw;
+            }
+        }
+
         public async Task<S3Response> UploadFileAsync(
-            Stream stream,
-            bool overwriteifExists,
-            string fileName,
-            string folder = "",
-            bool userfile = true
-        )
+                Stream stream,
+                bool overwriteifExists,
+                string fileName,
+                string folder = "",
+                string bucket = ""
+            )
         {
             try
             {
-                if (overwriteifExists && await FileExistsAsync(fileName, folder, userfile))
+                if (overwriteifExists && await FileExistsAsync(fileName, folder, bucket))
                 {
-                    _ = await RemoveFile(fileName, folder, userfile);
+                    _ = await RemoveFile(fileName, folder, bucket);
                 }
                 TransferUtility fileTransferUtility = new(_client);
                 await fileTransferUtility.UploadAsync(
                     stream,
-                    userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
+                    bucket == "" ? USERFILES_BUCKET : bucket,
                     ProperFolder(folder) + fileName
                 );
 
@@ -372,7 +438,7 @@ namespace SIL.Transcriber.Services
                 {
                     Message = fileName,
                     Status = HttpStatusCode.OK,
-                    FileURL = GetPublicUrl(fileName, folder, userfile)
+                    FileURL = GetPublicUrl(fileName, folder, bucket)
                 };
             }
             catch (AmazonS3Exception e)
@@ -386,7 +452,7 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        public async Task<S3Response> RemoveFile(string fileName, string folder = "", bool userfile = true)
+        public async Task<S3Response> RemoveFile(string fileName, string folder = "", string bucket = "")
         {
             //var client = new AmazonS3Client(accessKey, accessSecret, Amazon.RegionEndpoint.EUCentral1);
             try
@@ -396,7 +462,7 @@ namespace SIL.Transcriber.Services
                 DeleteObjectRequest request =
                     new()
                     {
-                        BucketName = userfile ? USERFILES_BUCKET : PUBLISHREQ_BUCKET,
+                        BucketName = bucket == "" ? USERFILES_BUCKET : bucket,
                         Key = ProperFolder(folder) + fileName,
                     };
 

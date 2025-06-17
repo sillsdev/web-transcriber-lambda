@@ -14,7 +14,8 @@ namespace SIL.Transcriber.Repositories
         IEnumerable<IQueryConstraintProvider> constraintProviders,
         ILoggerFactory loggerFactory,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
-        CurrentUserRepository currentUserRepository
+        CurrentUserRepository currentUserRepository,
+        SectionRepository sectionRepository
         ) : BaseRepository<Sectionpassage>(
             targetedFields,
             contextResolver,
@@ -26,13 +27,20 @@ namespace SIL.Transcriber.Repositories
             currentUserRepository
             )
     {
+        readonly private SectionRepository SectionRepository = sectionRepository;
+
         public Sectionpassage? GetByUUID(Guid uuid)
         {
             return dbContext.Sectionpassages.Where(e => e.Uuid == uuid).FirstOrDefault();
         }
 
-        public List<Section> BulkUpdateSections(List<Section> sections)
+        public async Task<List<Section>> BulkUpdateSections(List<Section> sections)
         {
+            foreach (Section s in sections)
+            {
+                Section fromDb = dbContext.Sections.Find(s.Id) ?? new Section();
+                await SectionRepository.CheckPublish(s, fromDb);
+            }
             dbContext.UpdateRange(sections);
             _ = dbContext.SaveChanges();
             return sections;

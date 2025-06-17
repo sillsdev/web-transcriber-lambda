@@ -1,6 +1,6 @@
 ﻿using SIL.Transcriber.Models;
 
-namespace SIL.Transcriber.Services
+namespace SIL.Transcriber.Services.Contracts
 {
     public interface IOfflineDataService
     {

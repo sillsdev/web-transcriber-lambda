@@ -7,7 +7,7 @@ using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class OrganizationMembershipRepository(
+    public class OrganizationSchemeRepository(
         ITargetedFields targetedFields,
         AppDbContextResolver contextResolver,
         IResourceGraph resourceGraph,
@@ -17,7 +17,7 @@ namespace SIL.Transcriber.Repositories
         IResourceDefinitionAccessor resourceDefinitionAccessor,
         CurrentUserRepository currentUserRepository,
         OrganizationRepository organizationRepository
-        ) : BaseRepository<Organizationmembership>(
+        ) : BaseRepository<Organizationscheme>(
             targetedFields,
             contextResolver,
             resourceGraph,
@@ -30,8 +30,8 @@ namespace SIL.Transcriber.Repositories
     {
         readonly private OrganizationRepository OrganizationRepository = organizationRepository;
 
-        public IQueryable<Organizationmembership> UsersOrganizationMemberships(
-            IQueryable<Organizationmembership> entities
+        public IQueryable<Organizationscheme> UsersOrganizationSchemes(
+            IQueryable<Organizationscheme> entities
         )
         {
             if (CurrentUser == null)
@@ -40,21 +40,15 @@ namespace SIL.Transcriber.Repositories
             if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
             {
                 IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                //if I'm an admin in the org, give me all oms in that org
-                //otherwise give me just the oms I'm a member of
-                //nope that means I don't get my team members
-                //IEnumerable<int> orgadmins = orgIds.Where(
-                //    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
-                //);
                 entities = entities.Where(
-                    om => (orgIds.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id)
+                    os => (orgIds.Contains(os.OrganizationId))
                 );
             }
             return entities;
         }
 
-        public IQueryable<Organizationmembership> ProjectOrganizationMemberships(
-            IQueryable<Organizationmembership> entities,
+        public IQueryable<Organizationscheme> ProjectOrganizationSchemes(
+            IQueryable<Organizationscheme> entities,
             string projectid
         )
         {
@@ -66,19 +60,19 @@ namespace SIL.Transcriber.Repositories
         }
 
         #region overrides
-        public override IQueryable<Organizationmembership> FromCurrentUser(
-            IQueryable<Organizationmembership>? entities = null
+        public override IQueryable<Organizationscheme> FromCurrentUser(
+            IQueryable<Organizationscheme>? entities = null
         )
         {
-            return UsersOrganizationMemberships(entities ?? GetAll());
+            return UsersOrganizationSchemes(entities ?? GetAll());
         }
 
-        public override IQueryable<Organizationmembership> FromProjectList(
-            IQueryable<Organizationmembership>? entities,
+        public override IQueryable<Organizationscheme> FromProjectList(
+            IQueryable<Organizationscheme>? entities,
             string idList
         )
         {
-            return ProjectOrganizationMemberships(entities ?? GetAll(), idList);
+            return ProjectOrganizationSchemes(entities ?? GetAll(), idList);
         }
         #endregion
     }

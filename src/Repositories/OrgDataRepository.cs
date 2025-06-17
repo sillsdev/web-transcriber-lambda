@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Serialization;
+using SIL.Transcriber.Serializers;
 using SIL.Transcriber.Utility;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
@@ -48,7 +48,7 @@ namespace SIL.Transcriber.Repositories
         protected readonly IJsonApiOptions _options = options;
         protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor = resourceDefinitionAccessor;
         protected readonly IMetaBuilder _metaBuilder = metaBuilder;
-
+        const int NUMTABLES = 32;
         private string ToJson<TResource>(IEnumerable<TResource> resources)
              where TResource : class, IIdentifiable
         {
@@ -362,12 +362,26 @@ namespace SIL.Transcriber.Repositories
                             linkedmedia.AddRange(graphics.Join(dbContext.MediafilesData, g => g.MediafileId, m => m.Id, (g, m) => m));
                         }
                         else
-                            iStartNext = 30;
-
+                            iStartNext = NUMTABLES;
+                        if (version > 9)
+                        {
+                            IQueryable<Organizationscheme> schemes = dbContext.OrganizationschemesData
+                                                                    .Join(orgs, c => c.OrganizationId, o => o.Id, (c, o) => c)
+                                                                    .Where(x => !x.Archived);
+                            if (!CheckAdd(30, ToJson(schemes), dtBail, ref iStartNext, ref data))
+                                break;
+                            IQueryable<Organizationschemestep> steps = dbContext.OrganizationschemestepsData
+                                                                    .Join(schemes, c => c.OrganizationschemeId, o => o.Id, (c, o) => c)
+                                                                    .Where(x => !x.Archived);
+                            if (!CheckAdd(31, ToJson(steps), dtBail, ref iStartNext, ref data))
+                                break;
+                        }
+                        else
+                            iStartNext = NUMTABLES;
                     }
                     else
-                        iStartNext = 30;
-                    if (!CheckAdd(30, ToJson(linkedmedia), dtBail, ref iStartNext, ref data))
+                        iStartNext = NUMTABLES;
+                    if (!CheckAdd(NUMTABLES, ToJson(linkedmedia), dtBail, ref iStartNext, ref data))
                         break;
                 }
                 iStartNext = -1; //Done!

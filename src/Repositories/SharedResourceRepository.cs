@@ -14,7 +14,8 @@ public class SharedResourceRepository(
     IEnumerable<IQueryConstraintProvider> constraintProviders,
     ILoggerFactory loggerFactory,
     IResourceDefinitionAccessor resourceDefinitionAccessor,
-    CurrentUserRepository currentUserRepository
+    CurrentUserRepository currentUserRepository,
+        MediafileRepository mediafileRepository
     ) : BaseRepository<Sharedresource>(
         targetedFields,
         contextResolver,
@@ -26,6 +27,14 @@ public class SharedResourceRepository(
         currentUserRepository
         )
 {
+    readonly private MediafileRepository MediafileRepository = mediafileRepository;
+    public override async Task UpdateAsync(Sharedresource resourceFromRequest, Sharedresource resourceFromDatabase, CancellationToken cancellationToken)
+    {
+        int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
+        if (titleMedia != null) //always do titles 
+            await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
+        await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
+    }
     public IQueryable<Sharedresource> UsersSharedResources(IQueryable<Sharedresource> entities)
     {   //send them all
         return CurrentUser == null ? entities.Where(e => e.Id == -1) : entities;

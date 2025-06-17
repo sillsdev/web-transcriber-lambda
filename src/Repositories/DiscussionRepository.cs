@@ -71,8 +71,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Plan>? plans = null
         )
         {
-            if (plans == null)
-                plans = PlanRepository.UsersPlans(dbContext.Plans);
+            plans ??= PlanRepository.UsersPlans(dbContext.Plans);
             return PlansDiscussions(entities, plans);
         }
 

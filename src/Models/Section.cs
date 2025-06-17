@@ -71,7 +71,9 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "editor")]
         public virtual User? Editor { get; set; }
 
-
+        [HasOne(PublicName = "organization-scheme")]
+        public virtual Organizationscheme? OrganizationScheme { get; set; }
+        public int? OrganizationSchemeId { get; set; }
         public int? GroupId { get; set; }
         [EagerLoad]
         [HasOne(PublicName = "group")]

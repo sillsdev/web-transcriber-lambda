@@ -29,6 +29,7 @@ namespace SIL.Transcriber
             services.AddScoped<AppDbContextResolver>();
             services.AddScoped<LoggingDbContextResolver>();
 
+
             // Add the Entity Framework Core DbContext like you normally would.
             services.AddDbContext<AppDbContext>(options => {
                 options.UseNpgsql(GetConnectionString());
@@ -96,6 +97,8 @@ namespace SIL.Transcriber
             services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<OrganizationBibleService>();
             services.AddScoped<OrganizationMembershipService>();
+            services.AddScoped<OrganizationSchemeService>();
+            services.AddScoped<OrganizationSchemeStepService>();
             services.AddScoped<OrganizationService>();
             services.AddScoped<OrgDataService>();
             services.AddScoped<OrgKeytermService>();
@@ -150,6 +153,8 @@ namespace SIL.Transcriber
             services.AddScoped<MediafileRepository>();
             services.AddScoped<OrganizationBibleRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
+            services.AddScoped<OrganizationSchemeRepository>();
+            services.AddScoped<OrganizationSchemeStepRepository>();
             services.AddScoped<OrganizationRepository>();
             services.AddScoped<OrgDataRepository>();
             services.AddScoped<OrgKeytermRepository>();
@@ -197,7 +202,7 @@ namespace SIL.Transcriber
                     options.SaveToken = true;
                     options.Events = new JwtBearerEvents
                     {
-                        OnTokenValidated = context => {
+                        OnTokenValidated = static context => {
                             //string TYPE_NAME_IDENTIFIER = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
                             string TYPE_NAME_EMAILVERIFIED = "https://sil.org/email_verified";
                             // Add the access_token as a claim, as we may actually need it
@@ -240,7 +245,7 @@ namespace SIL.Transcriber
                     "v1",
                     new OpenApiInfo
                     {
-                        Version = "v3.3",
+                        Version = "v4.2",
                         Title = "Transcriber API",
                         Contact = new OpenApiContact
                         {

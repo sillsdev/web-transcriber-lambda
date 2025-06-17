@@ -54,6 +54,10 @@ namespace SIL.Transcriber.Data
             Set<Organizationbible>();
         public DbSet<Organizationmembership> Organizationmemberships =>
             Set<Organizationmembership>();
+        public DbSet<Organizationscheme> Organizationschemes =>
+            Set<Organizationscheme>();
+        public DbSet<Organizationschemestep> Organizationschemesteps =>
+            Set<Organizationschemestep>();
         public DbSet<Orgdata> Orgdatas => Set<Orgdata>();
         public DbSet<Orgkeyterm> Orgkeyterms => Set<Orgkeyterm>();
         public DbSet<Orgkeytermreference> Orgkeytermreferences => Set<Orgkeytermreference>();
@@ -234,6 +238,16 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
+                .Entity<Organizationscheme>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Organizationschemestep>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
                 .Entity<Orgkeyterm>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
@@ -394,9 +408,14 @@ namespace SIL.Transcriber.Data
             _ = orgEntity.HasOne(o => o.Owner).WithMany().HasForeignKey(o => o.OwnerId);
             //_ = orgEntity.HasOne(o => o.NoteProject).WithMany().HasForeignKey(x => x.NoteProjectId);   
 
-            _ = modelBuilder.Entity<Project>().Property(p => p.IsPublic).HasDefaultValue(false);
-            _ = modelBuilder.Entity<Project>().HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);
-            _ = modelBuilder.Entity<Project>().HasOne(p => p.Organization).WithMany().HasForeignKey(p => p.OrganizationId);
+            EntityTypeBuilder<Project> proj = modelBuilder.Entity<Project>();
+            _ = proj.Property(p => p.IsPublic).HasDefaultValue(false);
+            _ = proj.HasMany(p => p.Plans).WithOne(pl => pl.Project).HasForeignKey(pl => pl.ProjectId);
+            _ = proj.HasOne(p => p.Organization).WithMany().HasForeignKey(p => p.OrganizationId);
+            _ = proj.HasOne(p => p.EditsheetGroup).WithMany().HasForeignKey(p => p.EditsheetGroupId);
+            _ = proj.HasOne(p => p.EditsheetUser).WithMany().HasForeignKey(p => p.EditsheetUserId);
+            _ = proj.HasOne(p => p.PublishGroup).WithMany().HasForeignKey(p => p.PublishGroupId);
+            _ = proj.HasOne(p => p.PublishUser).WithMany().HasForeignKey(p => p.PublishUserId);
 
             _ = modelBuilder.Entity<Artifactcategory>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
             _ = modelBuilder.Entity<Sharedresource>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
@@ -417,7 +436,7 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(om => om.UserId);
             modelBuilder.Entity<Bible>().HasOne(o => o.IsoMediafile).WithMany().HasForeignKey(x => x.IsoMediafileId);
             modelBuilder.Entity<Bible>().HasOne(o => o.BibleMediafile).WithMany().HasForeignKey(x => x.BibleMediafileId);
-
+            modelBuilder.Entity<Section>().HasOne(o => o.OrganizationScheme).WithMany().HasForeignKey(x => x.OrganizationSchemeId);
         }
 
         public async Task<int> SaveChangesNoTimestampAsync(
@@ -513,6 +532,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Comment> CommentsData => Comments
             .Include(c => c.Mediafile)
             .Include(c => c.Discussion)
+            .Include(d => d.CreatorUser)
             .Include(c => c.LastModifiedByUser);
         public IQueryable<Discussion> DiscussionsData =>
             Discussions
@@ -520,7 +540,9 @@ namespace SIL.Transcriber.Data
                 .Include(d => d.Mediafile)
                 .Include(d => d.OrgWorkflowStep)
                 .Include(d => d.Group)
+                .Include(d => d.CreatorUser)
                 .Include(d => d.User);
+
         public IQueryable<Intellectualproperty> IntellectualPropertyData => IntellectualPropertys.Include(x => x.Organization).Include(x => x.ReleaseMediafile);
         public IQueryable<Graphic> GraphicsData => Graphics.Include(x => x.Organization).Include(x => x.Mediafile);
         public IQueryable<Groupmembership> GroupmembershipsData =>
@@ -547,6 +569,15 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.Organization)
                 .Include(x => x.Role)
                 .Include(x => x.User);
+        public IQueryable<Organizationscheme> OrganizationschemesData =>
+                    Organizationschemes
+                        .Include(x => x.Organization);
+        public IQueryable<Organizationschemestep> OrganizationschemestepsData =>
+            Organizationschemesteps
+                .Include(x => x.OrganizationScheme)
+                .Include(x => x.OrgWorkflowStep)
+                .Include(x => x.User)
+                .Include(x => x.Group);
         public IQueryable<Organization> OrganizationsData => Organizations.Include(x => x.Owner);
         public IQueryable<Orgkeyterm> OrgKeytermsData =>
             Orgkeyterms.Include(x => x.Organization);
@@ -570,7 +601,11 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.Group)
                 .Include(x => x.Organization)
                 .Include(x => x.Projecttype)
-                .Include(x => x.Owner);
+                .Include(x => x.Owner)
+                .Include(x => x.EditsheetGroup)
+                .Include(x => x.EditsheetUser)
+                .Include(x => x.PublishGroup)
+                .Include(x => x.PublishGroup);
         public IQueryable<Sectionresource> SectionresourcesData =>
             Sectionresources
                 .Include(x => x.Mediafile)
@@ -581,7 +616,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Sectionresourceuser> SectionresourceusersData =>
             Sectionresourceusers.Include(x => x.SectionResource).Include(x => x.User);
         public IQueryable<Section> SectionsData =>
-            Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber).Include(x => x.TitleMediafile);
+            Sections.Include(x => x.Plan).Include(x => x.Editor).Include(x => x.Transcriber).Include(x => x.TitleMediafile).Include(x => x.OrganizationScheme);
         public IQueryable<Sharedresource> SharedresourcesData =>
            Sharedresources.Include(x => x.Passage).Include(x => x.ArtifactCategory).Include(x => x.TitleMediafile);
         public IQueryable<Sharedresourcereference> SharedresourcereferencesData =>

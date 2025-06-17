@@ -2,8 +2,8 @@
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
-using static SIL.Transcriber.Utility.ResourceHelpers;
 using System.Text.Json;
+using static SIL.Transcriber.Utility.ResourceHelpers;
 
 namespace SIL.Transcriber.Models
 {
@@ -21,16 +21,17 @@ namespace SIL.Transcriber.Models
 
         public Passage UpdateFrom(JToken item)
         {
-            Book = item ["book"]?.ToString() ?? "";
-            Reference = item ["reference"]?.ToString() ?? "";
-            Title = item ["title"]?.ToString() ?? "";
-            Sequencenum = decimal.TryParse(item ["sequencenum"]?.ToString() ?? "", out decimal trydec)
+            Book = item["book"]?.ToString() ?? "";
+            Reference = item["reference"]?.ToString() ?? "";
+            Title = item["title"]?.ToString() ?? "";
+            Sequencenum = decimal.TryParse(item["sequencenum"]?.ToString() ?? "", out decimal trydec)
                 ? trydec
                 : 0;
-            SharedResourceId = int.TryParse(item ["sharedresourceId"]?.ToString() ?? "", out int tryint)
-                ? tryint
-                : null;
-            PassagetypeId = int.TryParse(item ["passagetypeId"]?.ToString() ?? "", out tryint)
+            //shared resource ids wont be updated from bulk saves
+            //SharedResourceId = int.TryParse(item["sharedResourceId"]?.ToString() ?? "", out int tryint)
+            //    ? tryint
+            //    : null;
+            PassagetypeId = int.TryParse(item["passagetypeId"]?.ToString() ?? "", out int tryint)
                 ? tryint
                 : null;
             return this;
@@ -67,7 +68,7 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "section-id")]
         [ForeignKey("Section")]
         public int SectionId { get; set; }
-        
+
         [HasOne(PublicName = "section")]
         public virtual Section? Section { get; set; }
 
@@ -95,7 +96,7 @@ namespace SIL.Transcriber.Models
         public int? EndChapter { get; set; }
 
         [Attr(PublicName = "end-verse")]
-        [DatabaseGenerated(DatabaseGeneratedOption.Computed)] 
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public int? EndVerse { get; set; }
 
         [Attr(PublicName = "passagetype-id")]
@@ -123,7 +124,7 @@ namespace SIL.Transcriber.Models
                 return StartChapter != null && StartVerse != null && EndVerse != null;
             }
         }
-       
+
         private static string VerseRange(int? s, int? e)
         {
             int start = s??1;
@@ -133,19 +134,20 @@ namespace SIL.Transcriber.Models
         public string Verses(int chapter)
         {
             return (StartChapter != EndChapter
-                    ? StartChapter == chapter 
-                            ? VerseRange(StartVerse, startChapterLastVerse) 
+                    ? StartChapter == chapter
+                            ? VerseRange(StartVerse, startChapterLastVerse)
                             : VerseRange(1, EndVerse)
-                    : VerseRange(StartVerse,EndVerse))
+                    : VerseRange(StartVerse, EndVerse))
                     ?? "";
         }
         public int ChapterStartVerse(int chapter)
         {
-            return (chapter == StartChapter) ? (StartVerse??1) : 1;
+            return (chapter == StartChapter) ? (StartVerse ?? 1) : 1;
         }
         public int ChapterEndVerse(int chapter)
         {
-            if (chapter == EndChapter || Book is null) return EndVerse??1000;
+            if (chapter == EndChapter || Book is null)
+                return EndVerse ?? 1000;
             if (!destinationChapterSet)
             {
                 DestinationChapter();
@@ -165,7 +167,7 @@ namespace SIL.Transcriber.Models
                 {
                     string verses = LoadResource("eng-vrs.json");
                     Dictionary<string, int []>? versemap = JsonSerializer.Deserialize<Dictionary<string, int[]>>(verses);
-                    startChapterLastVerse = versemap?[Book]?[(StartChapter??1)-1] ?? 1000;
+                    startChapterLastVerse = versemap?[Book]?[(StartChapter ?? 1) - 1] ?? 1000;
                     destinationChapter = (EndVerse > startChapterLastVerse - StartVerse + 1 ? EndChapter : StartChapter) ?? 0;
                 }
                 destinationChapterSet = true;

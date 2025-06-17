@@ -3,6 +3,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.Net;
 using System.Net.Mime;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 //Transcriber doesn't currently use this controller
 
@@ -64,7 +65,15 @@ namespace SIL.Transcriber.Controllers
         {
             return await GetS3File(folder, fileName);
         }
-
+        [HttpDelete("AI/{fileName}")]
+        public async Task<IActionResult> RemoveAIFile(
+            [FromRoute] string folder,
+            [FromRoute] string fileName)
+        {
+            string Bucket = GetVarOrThrow("SIL_TR_AERO_BUCKET");
+            S3Response response = await _service.RemoveFile(fileName, folder, Bucket);
+            return Ok(response);
+        }
 
         [HttpDelete("{folder}/{fileName}")]
         public async Task<IActionResult> RemoveFile(
@@ -74,6 +83,16 @@ namespace SIL.Transcriber.Controllers
             S3Response response = await _service.RemoveFile(fileName, folder);
             return Ok(response);
         }
+        [HttpGet("put/AI/{fileName}/{contentType}")]
+        public IActionResult PutURL(
+            [FromRoute] string fileName,
+            [FromRoute] string contentType)
+        {
+            contentType = "audio/" + contentType;
+            return Ok(_service.SignedUrlForPut(fileName, "input_files", contentType, GetVarOrThrow("SIL_TR_AERO_BUCKET"), GetVarOrThrow("SIL_TR_AWS_KEY"), GetVarOrThrow("SIL_TR_AWS_SECRET")).Message);
+
+        }
+        //don't think this is used
         [HttpGet("put/{folder}/{fileName}/{contentType}")]
         public IActionResult PutURL(
             [FromRoute] string folder,
@@ -82,6 +101,7 @@ namespace SIL.Transcriber.Controllers
         {
             contentType = "audio/" + contentType;
             return Ok(_service.SignedUrlForPut(fileName, folder, contentType).Message);
+
         }
         [HttpGet("get/{folder}/{fileName}/{contentType}")]
         public IActionResult GetURL(
