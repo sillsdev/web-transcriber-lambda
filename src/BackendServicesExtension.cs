@@ -28,9 +28,7 @@ namespace SIL.Transcriber
 
             services.AddScoped<AppDbContextResolver>();
             services.AddScoped<LoggingDbContextResolver>();
-            services.AddDbContextFactory<AppDbContext>(options => {
-                options.UseNpgsql(GetConnectionString());
-            });
+
 
             // Add the Entity Framework Core DbContext like you normally would.
             services.AddDbContext<AppDbContext>(options => {
@@ -247,7 +245,7 @@ namespace SIL.Transcriber
                     "4.1",
                     new OpenApiInfo
                     {
-                        Version = "v3.3",
+                        Version = "v4.2",
                         Title = "Transcriber API",
                         Contact = new OpenApiContact
                         {
