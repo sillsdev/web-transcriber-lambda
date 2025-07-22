@@ -150,6 +150,9 @@ namespace SIL.Transcriber.Repositories
             {
                 HttpContext?.SetFP("publish");
                 await PublishPassages(section.Id, section.PublishTo ?? "{}");
+                JObject obj = JObject.Parse(section.PublishTo ?? "{}");
+                obj.Remove("Propagate");
+                section.PublishTo = obj.ToString();
                 return true;
             }
             return false;
@@ -164,22 +167,13 @@ namespace SIL.Transcriber.Repositories
                 IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
                         .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
                         .OrderByDescending(m => m.VersionNumber);
-                List < Mediafile > medialist = publish && mediafiles.Any()
+                List <Mediafile> medialist = publish && mediafiles.Any()
                 ?
                 [
                     mediafiles.FirstOrDefault()
                 ]
                 : [.. mediafiles];
-                if (publish)
-                {
-                    //turn the others off
-                    IQueryable<Mediafile> on = mediafiles.Where(m => m.ReadyToShare == true);
-                    foreach (Mediafile m in on)
-                    {
-                        m.ReadyToShare = false;
-                        dbContext.Mediafiles.Update(m);
-                    }
-                }
+
                 foreach (Mediafile mediafile in medialist)
                 {
                     if (publish)
@@ -192,7 +186,8 @@ namespace SIL.Transcriber.Repositories
                         mediafile.PublishTo = pt.ToString();
                         dbContext.Mediafiles.Update(mediafile);
                     }
-                };
+                }
+                ;
                 _ = dbContext.SaveChanges();
             }
         }
@@ -222,7 +217,7 @@ namespace SIL.Transcriber.Repositories
             {
                 await PublishSection(resourceFromRequest);
             }
-
+            //merged from prod...do I need this still?????
             int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
             if (titleMedia != null) //always do titles and movements
                 await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);

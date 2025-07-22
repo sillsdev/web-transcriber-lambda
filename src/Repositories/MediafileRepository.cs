@@ -211,6 +211,8 @@ namespace SIL.Transcriber.Repositories
             //copy the values we set manually in the service CreateAsync
             resourceForDatabase.S3File = resourceFromRequest.S3File;
             resourceForDatabase.AudioUrl = resourceFromRequest.AudioUrl;
+            resourceForDatabase.ContentType = resourceFromRequest.ContentType;
+            resourceForDatabase.EafUrl = resourceFromRequest.EafUrl;
             await base.CreateAsync(resourceFromRequest, resourceForDatabase, cancellationToken);
         }
         public override async Task UpdateAsync(
@@ -225,13 +227,10 @@ namespace SIL.Transcriber.Repositories
                 //if the duration is 0, then we need to update it
                 resourceFromRequest.Duration = resourceFromDatabase.Duration;
             }
-            if (PublishToAkuo(resourceFromRequest.PublishTo) && resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
+            if (resourceFromRequest.ReadyToShare && resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
             {
-                Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (resourceFromRequest.PassageId ?? 0));
-                Sharedresource? sr = passage != null ? GetSharedResource(passage) : null;
-                await PublishToAkuo(resourceFromRequest, passage, null, sr);
+                await Publish(resourceFromRequest.Id, resourceFromRequest.PublishTo ?? "{}", false);
             }
-
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
         private static string PadSeqNum(decimal? seq)
@@ -297,7 +296,7 @@ namespace SIL.Transcriber.Repositories
             }
             return $"{bibleId}/{fileName}";
         }
-        private string PublishGraphic(Mediafile m)
+        private string PublishGraphic(Mediafile m, Passage? passage)
         {
             Graphic? graphic = null;
             if (m.PassageId != null)
@@ -305,7 +304,7 @@ namespace SIL.Transcriber.Repositories
                 graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == m.PassageId && g.ResourceType == "passage" && !g.Archived);
                 if (graphic == null)
                 {
-                    int sectionId = m.Passage?.SectionId ?? 0;
+                    int sectionId = passage?.SectionId ?? 0;
                     graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == sectionId && g.ResourceType == "section" && !g.Archived);
                 }
             }
@@ -328,8 +327,6 @@ namespace SIL.Transcriber.Repositories
 
         public Sharedresource? CreateSharedResource(Mediafile m, Passage p)
         {
-            string fp = HttpContext?.GetFP() ?? "";
-            HttpContext?.SetFP("publish");
             Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
             Artifactcategory? ac = null;
             if (p.Passagetype == null && plan.Project.Projecttype.Name == "Scripture")
@@ -378,7 +375,6 @@ namespace SIL.Transcriber.Repositories
                 }
             }
             dbContext.SaveChanges();
-            HttpContext?.SetFP(fp);
             return sr;
         }
         private async Task<bool> PublishToAkuo(Mediafile m, Passage? passage, Bible? bible, Sharedresource? sr)
@@ -401,19 +397,26 @@ namespace SIL.Transcriber.Repositories
                 }
             }
 
-
-            Tags tags = new()
+            if (m.PublishedAs == null)
             {
-                title = title,
-                artist = m.PerformedBy??"",
-                album = bible.BibleName,
-                cover= PublishGraphic(m),
-            };
-            S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
-            //Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
-            if (response.Status == HttpStatusCode.OK)
+                Tags tags = new()
+                {
+                    title = title,
+                    artist = m.PerformedBy??"",
+                    album = bible.BibleName,
+                    cover= PublishGraphic(m, passage),
+                };
+                S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
+                //Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
+                if (response.Status == HttpStatusCode.OK)
+                {
+                    m.PublishedAs = outputKey;
+                    m.ReadyToShare = true;
+                    return true;
+                }
+            }
+            else
             {
-                m.PublishedAs = outputKey;
                 m.ReadyToShare = true;
                 return true;
             }
@@ -429,53 +432,28 @@ namespace SIL.Transcriber.Repositories
                 {
                     return null;
                 }
+                //string fp = HttpContext?.GetFP() ?? "";
+                HttpContext?.SetFP("publish");
                 Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
                 Sharedresource? sr = passage != null ? GetSharedResource(passage) : null;
 
+                //turn any old versions off
+                if (passage != null)
+                {
+                    IQueryable<Mediafile> old = dbContext.MediafilesData.Where(m => m.PassageId == passage.Id && m.ReadyToShare == true && m.Id != id);
+                    foreach (Mediafile o in old)
+                    {
+                        o.ReadyToShare = false;
+                        o.PublishTo = "{}";
+                        o.PublishedAs = null;
+                        dbContext.Mediafiles.Update(o);
+                    }
+                }
                 if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
                 {
                     sr ??= CreateSharedResource(m, passage);
                 }
                 if (PublishToAkuo(publishTo))
-                {
-                    Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
-                    bible ??= PlanRepository.Bible(plan) ?? throw new Exception("no bible");
-                    string title =  PublishTitlename(m,passage, false);
-                    string outputKey = PublishFilename(title, bible.BibleId);
-                    string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
-                    Tags tags = new()
-                    {
-                        title = title,
-                        artist = m.PerformedBy??"",
-                        album = bible.BibleName,
-                        cover= PublishGraphic(m),
-                    };
-                    S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
-                    //Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
-                    if (response.Status == HttpStatusCode.OK)
-                    {
-                        m.PublishedAs = outputKey;
-                        m.ReadyToShare = true;
-                        m.PublishTo = publishTo;
-                        try
-                        {
-                            dbContext.Update(m);
-                            //if (doSave)
-                            dbContext.SaveChanges();
-                        }
-                        catch (Exception err)
-                        {
-                            Console.WriteLine(err);
-                        }
-                    }
-                }
-                else if (!m.ReadyToShare || m.PublishTo != publishTo)
-                {
-                    m.ReadyToShare = true;
-
-                    return null;
-                }
-                if (PublishToAkuo(publishTo) && m.PublishedAs == null)
                 {
                     if (await PublishToAkuo(m, passage, bible, sr))
                     {
@@ -484,6 +462,13 @@ namespace SIL.Transcriber.Repositories
                         if (doSave)
                             dbContext.SaveChanges();
                     }
+                }
+                else if (!m.ReadyToShare || m.PublishTo != publishTo)
+                {
+                    m.ReadyToShare = true;
+                    dbContext.Mediafiles.Update(m);
+                    if (doSave)
+                        dbContext.SaveChanges();
                 }
                 return m;
             }

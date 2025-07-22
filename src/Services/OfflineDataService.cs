@@ -2747,7 +2747,7 @@ namespace SIL.Transcriber.Services
             return t.Entity;
         }
         #region Copy
-        private Dictionary<int, int> CopySections(IList<Section> lst, bool sameOrg, int planId, User currentuser)
+        private Dictionary<int, int> CopySections(IList<Section> lst, int planId, Dictionary<int, int> MediafileMap)
         {
             Dictionary<int, Section> map = [];
             foreach (Section s in lst)
@@ -2760,9 +2760,11 @@ namespace SIL.Transcriber.Services
                         Name = s.Name,
                         PlanId = planId,
                         Sequencenum = s.Sequencenum,
-                        EditorId = sameOrg ?  CheckValidId(s.Editor?.Id) : currentuser.Id,
-                        TranscriberId = sameOrg ? CheckValidId(s.Transcriber?.Id) : currentuser.Id,
+                        //EditorId = sameOrg ?  CheckValidId(s.Editor?.Id) : currentuser.Id,
+                        //TranscriberId = sameOrg ? CheckValidId(s.Transcriber?.Id) : currentuser.Id,
                         State = s.State,
+                        Level = s.Level,
+                        TitleMediafileId = MediafileMap.GetValueOrDefault(s.TitleMediafileId??0),
                     });
                     map.Add(s.Id, t.Entity);
                 }
@@ -3341,7 +3343,7 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.Sections:
-                            SectionMap = CopySections([.. sourcesections], sameOrg, plan.Id, currentuser);
+                            SectionMap = CopySections([.. sourcesections], plan.Id, GetMediafileMap(newProjId));
                             SaveMap(SectionMap, name, newProjId);
                             ix++;
                             break;
@@ -3557,7 +3559,7 @@ namespace SIL.Transcriber.Services
                             List<Section> slst = [];
                             foreach (ResourceObject ro in lst)
                                 slst.Add(ResourceObjectToResource(ro, new Section()));
-                            SectionMap = CopySections(slst, sameOrg, plan.Id, currentuser);
+                            SectionMap = CopySections(slst, plan.Id, MediafileMap);
                             break;
 
                         case Tables.Passages:

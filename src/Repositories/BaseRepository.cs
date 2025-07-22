@@ -3,13 +3,38 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Queries.Expressions;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.JsonConverters;
+using JsonApiDotNetCore.Serialization.Response;
+using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Serializers;
+using SIL.Transcriber.Utility;
 using SIL.Transcriber.Utility.Extensions.JSONAPI;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
 {
+    public class ResourceInfo
+    {
+        public IResourceGraph ResourceGraph { get; set; }
+        public IJsonApiOptions Options { get; set; }
+        public IResourceDefinitionAccessor ResourceDefinitionAccessor { get; set; }
+        public IMetaBuilder MetaBuilder { get; set; }
+
+        public ResourceInfo(
+            IResourceGraph resourceGraph,
+            IJsonApiOptions options,
+            IResourceDefinitionAccessor resourceDefinitionAccessor,
+            IMetaBuilder metaBuilder
+        )
+        {
+            ResourceGraph = resourceGraph;
+            Options = options;
+            ResourceDefinitionAccessor = resourceDefinitionAccessor;
+            MetaBuilder = metaBuilder;
+        }
+    }
     public abstract class BaseRepository<TEntity>(
         ITargetedFields targetedFields,
         AppDbContextResolver contextResolver,
@@ -33,7 +58,7 @@ namespace SIL.Transcriber.Repositories
     {
     }
 
-    public abstract class BaseRepository<TEntity, TId> : AppDbContextRepository<TEntity>
+    public abstract partial class BaseRepository<TEntity, TId> : AppDbContextRepository<TEntity>
         where TEntity : BaseModel, IIdentifiable<TId>
     {
         protected readonly IResourceDefinitionAccessor ResourceDefinitionAccessor;
@@ -125,6 +150,64 @@ namespace SIL.Transcriber.Repositories
                     return false;
                 data += (data.Length > 0 ? "," : InitData()) + thisData;
                 start++;
+            }
+            return true;
+        }
+        protected static string ToJson<TResource>(IEnumerable<TResource> resources, ResourceInfo resourceInfo)
+             where TResource : class, IIdentifiable
+        {
+            string? withIncludes =
+            SerializerHelpers.ResourceListToJson(
+                resources,
+                resourceInfo.ResourceGraph,
+                resourceInfo.Options,
+                resourceInfo.ResourceDefinitionAccessor,
+                resourceInfo.MetaBuilder
+            );
+            if (withIncludes.Contains("included"))
+            {
+                dynamic tmp = JObject.Parse(withIncludes);
+                tmp.Remove("included");
+                withIncludes = tmp.ToString();
+            }
+            //will this take it out of transcriptions also?? Seems to be ok!!
+            Regex rgxnewlines = new("\r\n|\n");
+            Regex rgxmultiplespaces = new("\t|\\s+");
+            withIncludes = rgxnewlines.Replace(withIncludes, "");
+            return rgxmultiplespaces.Replace(withIncludes, " ");
+        }
+        protected bool CheckAddData<TResource>(
+               int check,
+               IQueryable<TResource> input,
+               DateTime dtBail,
+               ref int start,
+               ref string data,
+               ResourceInfo resourceInfo
+            ) where TResource : BaseModel
+        {
+            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
+            if (DateTime.Now > dtBail)
+                return false;
+            int startId = -1;
+            int starttable = StartIndex.GetStart(start, ref startId);
+            int lastId = -1;
+            if (starttable == check)
+            {
+                List<TResource>? lst = startId > 0 ? [.. input.Where(m => m.Id >= startId)] : [.. input];
+                string thisData = ToJson(lst, resourceInfo);
+                while (thisData.Length > (1000000 * 4))
+                {
+                    int cnt = lst.Count;
+                    TResource mid = lst[cnt/2];
+                    lastId = mid.Id;
+                    lst = [.. input.Where(m => m.Id >= startId && m.Id < lastId)];
+                    thisData = ToJson(lst, resourceInfo);
+                }
+                if (data.Length + thisData.Length > (1000000 * 4))
+                    return false;
+                data += (data.Length > 0 ? "," : InitData()) + thisData;
+                start = StartIndex.SetStart(starttable, ref lastId);
+                return lastId == 0;
             }
             return true;
         }
@@ -221,6 +304,5 @@ namespace SIL.Transcriber.Repositories
             return FromCurrentUser(base.ApplyQueryLayer(layer));
         }
         #endregion
-
     }
 }

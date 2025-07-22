@@ -129,7 +129,7 @@ public class AquiferService(
                         string zipName = Path.GetFileNameWithoutExtension(url);
                         using Stream responseStream = await Client.GetStreamAsync(new Uri(url));
                         using ZipArchive archive = new(responseStream);
-                        foreach (ZipArchiveEntry entry in archive.Entries)
+                        foreach (ZipArchiveEntry entry in archive.Entries.OrderBy(e => e.Name))
                         {
                             string entryName = Path.GetFileName(entry.FullName);
                             using Stream entryStream = entry.Open();
