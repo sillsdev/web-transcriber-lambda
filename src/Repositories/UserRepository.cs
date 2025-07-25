@@ -51,21 +51,15 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<User> UsersUsers(IQueryable<User> entities)
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                IEnumerable<int> orgIds = CurrentUser.OrganizationIds;
-                //always give me all users in that org
-                entities = OrgMemUsers(
-                    entities,
-                    dbContext.Organizationmemberships.Where(
-                        om => orgIds.Contains(om.OrganizationId)
-                    )
-                );
-            }
-            return entities;
+            //always give me all users in that org
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : OrgMemUsers(
+                entities,
+                dbContext.Organizationmemberships.Where(
+                    om => CurrentUser.OrganizationIds.Contains(om.OrganizationId)
+                )
+            );
         }
 
         public IQueryable<User> ProjectUsers(IQueryable<User> entities, string projectid)

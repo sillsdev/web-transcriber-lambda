@@ -3,7 +3,6 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -32,10 +31,9 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Intellectualproperty> UsersIntellectualProperty(IQueryable<Intellectualproperty> entities)
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            return entities.Where(om => orgIds.Contains(om.OrganizationId));
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(om => CurrentUser.OrganizationIds.Contains(om.OrganizationId));
         }
         public override IQueryable<Intellectualproperty> FromCurrentUser(
             IQueryable<Intellectualproperty>? entities = null

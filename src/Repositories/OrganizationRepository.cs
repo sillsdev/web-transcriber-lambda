@@ -4,7 +4,6 @@ using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -42,15 +41,10 @@ namespace SIL.Transcriber.Repositories
         }
         public IQueryable<Organization> UsersOrganizations(IQueryable<Organization> entities)
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(o => CurrentUser.OrganizationIds.Contains(o.Id) || o.Name == "BibleMedia");
 
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                return entities.Where(o =>  orgIds.Contains(o.Id) || o.Name=="BibleMedia");
-            }
-            return entities;
         }
 
         public IQueryable<Organization> ProjectOrganizations(

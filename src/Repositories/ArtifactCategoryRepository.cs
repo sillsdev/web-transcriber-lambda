@@ -3,7 +3,6 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -43,17 +42,11 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Artifactcategory> entities
         )
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty() ?? new List<int>();
-                entities = entities.Where(
-                    om => (om.OrganizationId == null || orgIds.Contains((int)om.OrganizationId))
-                );
-            }
-            return entities;
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(
+                om => (om.OrganizationId == null || CurrentUser.OrganizationIds.Contains((int)om.OrganizationId))
+            );
         }
 
         public IQueryable<Artifactcategory> ProjectArtifactCategorys(
