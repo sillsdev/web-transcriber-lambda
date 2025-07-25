@@ -3,7 +3,6 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -35,26 +34,24 @@ namespace SIL.Transcriber.Repositories
             if (CurrentUser == null)
                 return entities.Where(e => e.Id == -1);
 
-            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                //if I'm an admin in the org, give me all invitations in that org
-                //otherwise give me invitations just to me
-                //no-that was confusing...
-                //IEnumerable<int> orgadmins = orgIds.Where(
-                //    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
-                //);
-                string currentEmail = CurrentUser.Email?.ToLower() ?? "";
+            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.ToList();
+
+            //if I'm an admin in the org, give me all invitations in that org
+            //otherwise give me invitations just to me
+            //no-that was confusing...
+            //IEnumerable<int> orgadmins = orgIds.Where(
+            //    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
+            //);
+            string currentEmail = CurrentUser.Email?.ToLower() ?? "";
 
 #pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
-                //DO NOT use StringComparison, because this is a query being sent to database and it throws
-                entities = entities.Where(i =>
-                        orgIds.Contains(i.OrganizationId)
-                        || currentEmail == (i.Email ?? "").ToLower()
+            //DO NOT use StringComparison, because this is a query being sent to database and it throws
+            entities = entities.Where(i =>
+                    orgIds.Contains(i.OrganizationId)
+                    || currentEmail == (i.Email ?? "").ToLower()
 
-                );
+            );
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
-            }
             return entities;
         }
 

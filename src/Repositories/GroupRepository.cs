@@ -4,7 +4,6 @@ using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -34,18 +33,11 @@ namespace SIL.Transcriber.Repositories
         }
         public IQueryable<Group> UsersGroups(IQueryable<Group> entities)
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-
-                return entities.Where(
-                    g =>   (orgIds.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id) || g.Name == "All users of BibleMedia")
-                );
-            }
-            return entities;
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(
+                g => (CurrentUser.OrganizationIds.Contains(g.OwnerId) || CurrentUser.GroupIds.Contains(g.Id) || g.Name == "All users of BibleMedia")
+            );
         }
 
         public IQueryable<Group> ProjectGroups(IQueryable<Group> entities, string projectid)
@@ -54,7 +46,7 @@ namespace SIL.Transcriber.Repositories
                 p => p.Id.ToString() == projectid
             );
             int orgId = projects.FirstOrDefault()?.OrganizationId ?? 0;
-            
+
             return entities.Where(g => g.OwnerId == orgId);
         }
 

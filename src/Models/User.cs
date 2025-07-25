@@ -102,13 +102,6 @@ namespace SIL.Transcriber.Models
 
         public bool HasOrgRole(RoleName role, int orgId)
         {
-            Organizationmembership? omSuper = OrganizationMemberships
-                ?.Where(r => r.RoleName == RoleName.SuperAdmin)
-                .FirstOrDefault();
-
-            if (omSuper != null)
-                return true; //they have all the roles
-
             return this.OrganizationMemberships?
                     .Where(r => r.OrganizationId == orgId && r.RoleName == role && !r.Archived)
                     .FirstOrDefault() != null;
@@ -116,18 +109,10 @@ namespace SIL.Transcriber.Models
 
         public bool HasGroupRole(RoleName role, int groupid)
         {
-            Organizationmembership? omSuper = this.OrganizationMemberships
-                ?.Where(r => r.RoleName == RoleName.SuperAdmin)
-                .FirstOrDefault();
-
-            if (omSuper != null)
-                return true; //they have all the roles
-
             return GroupMemberships
                     .Where(r => r.GroupId == groupid && r.RoleName == role && !r.Archived)
                     .FirstOrDefault() != null;
         }
-
         [NotMapped]
         public IEnumerable<int> OrganizationIds =>
             OrganizationMemberships?.Where(om => !om.Archived).Select(o => o.OrganizationId)
@@ -136,6 +121,7 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         public IEnumerable<int> GroupIds =>
             GroupMemberships?.Where(gm => !gm.Archived).Select(g => g.GroupId) ?? [];
+
 
         public static explicit operator User(ResourceObject v)
         {

@@ -4,7 +4,6 @@ using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -43,15 +42,9 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Graphic> entities
         )
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                entities = entities.Where(g => !g.Archived && orgIds.Contains(g.OrganizationId));
-            }
-            return entities.Where(e => !e.Archived);
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(g => !g.Archived && CurrentUser.OrganizationIds.Contains(g.OrganizationId));
         }
 
         public IQueryable<Graphic> ProjectGraphics(

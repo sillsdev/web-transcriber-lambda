@@ -3,7 +3,6 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -34,17 +33,12 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Organizationscheme> entities
         )
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(
+                os => CurrentUser.OrganizationIds.Contains(os.OrganizationId)
+            );
 
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                entities = entities.Where(
-                    os => (orgIds.Contains(os.OrganizationId))
-                );
-            }
-            return entities;
         }
 
         public IQueryable<Organizationscheme> ProjectOrganizationSchemes(
