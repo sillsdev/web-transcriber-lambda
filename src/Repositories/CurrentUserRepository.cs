@@ -3,6 +3,7 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Repositories;
 using JsonApiDotNetCore.Resources;
 using Microsoft.EntityFrameworkCore;
+using SIL.Paratext.Models;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
@@ -79,6 +80,31 @@ namespace SIL.Transcriber.Repositories
                                 dbContext.Update(gm);
                                 changed = true;
                             }
+                        }
+                        IEnumerable<ParatextToken> pts = [.. dbContext.Paratexttokens.Join(dupUsers, pt => pt.UserId, u => u.Id, (pt, u) => pt)];
+                        foreach (ParatextToken pt in pts.Where(x => x.UserId != curUser.Id))
+                        {
+                            if (!pts.Any(x => x.UserId == curUser.Id))
+                            {
+                                pt.UserId = curUser.Id;
+                                dbContext.Update(pt);
+                                changed = true;
+                            }
+                        }
+                        if (!(curUser.SharedContentCreator ?? false) && dupUsers.Any(u => u.SharedContentCreator ?? false))
+                        {
+                            curUser.SharedContentCreator = true;
+                            changed = true;
+                        }
+                        if (!(curUser.SharedContentAdmin ?? false) && dupUsers.Any(u => u.SharedContentAdmin ?? false))
+                        {
+                            curUser.SharedContentAdmin = true;
+                            changed = true;
+                        }
+                        if (!(curUser.CanPublish ?? false) && dupUsers.Any(u => u.CanPublish ?? false))
+                        {
+                            curUser.CanPublish = true;
+                            changed = true;
                         }
                         if (changed)
                         {
