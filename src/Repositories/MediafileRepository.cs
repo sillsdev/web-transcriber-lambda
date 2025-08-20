@@ -466,6 +466,7 @@ namespace SIL.Transcriber.Repositories
                 else if (!m.ReadyToShare || m.PublishTo != publishTo)
                 {
                     m.ReadyToShare = true;
+                    m.PublishTo = publishTo;
                     dbContext.Mediafiles.Update(m);
                     if (doSave)
                         dbContext.SaveChanges();

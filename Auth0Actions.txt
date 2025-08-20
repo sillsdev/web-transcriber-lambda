@@ -1,0 +1,76 @@
+/**
+* Add email verified to access token
+* Handler that will be called during the execution of a PostLogin flow.
+*
+* @param {Event} event - Details about the user and the context in which they are logging in.
+* @param {PostLoginAPI} api - Interface whose methods can be used to change the behavior of the login.
+*/
+exports.onExecutePostLogin = async (event, api) => {
+  // This rule adds the authenticated user's email address to the access token.
+  if (event.client.metadata.isTranscriberApp !== 'true') {
+    return;
+  }
+
+  const namespace = 'https://sil.org/';
+
+  api.accessToken.setCustomClaim(namespace + 'email_verified', event.user.email_verified);
+};
+
+/**
+* Add usermetadata to idtoken
+* Handler that will be called during the execution of a PostLogin flow.
+*
+* @param {Event} event - Details about the user and the context in which they are logging in.
+* @param {PostLoginAPI} api - Interface whose methods can be used to change the behavior of the login.
+*/
+exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/';
+  if (event.user.user_metadata) {
+    if (event.user.user_metadata.given_name) {
+       api.idToken.setCustomClaim(namespace + 'givenname', event.user.user_metadata.given_name);
+    }
+    if (event.user.user_metadata.family_name) {
+       api.idToken.setCustomClaim(namespace + 'surname', event.user.user_metadata.family_name);
+    }
+  }
+};
+
+
+/**
+* Add xForge app metadata
+* Handler that will be called during the execution of a PostLogin flow.
+*
+* @param {Event} event - Details about the user and the context in which they are logging in.
+* @param {PostLoginAPI} api - Interface whose methods can be used to change the behavior of the login.
+*/
+const bson = require('bson');
+exports.onExecutePostLogin = async (event, api) => {
+  if (event.client.metadata.isXForgeApp !== 'true') {
+    return;
+  }
+
+  const xfUserIdClaim = 'http://xforge.org/userid';
+  const xfRoleClaim = 'http://xforge.org/role';
+
+  const host = event.transaction?.redirect_uri ? new URL(event.transaction.redirect_uri).hostname : null;
+  const sfHosts = ['localhost', 'qa.scriptureforge.org', 'scriptureforge.org'];
+  if (host != null && !sfHosts.includes(host)) {
+    const whiteLabelSettings = { host };
+    api.user.setAppMetadata('white_label_settings', whiteLabelSettings );
+  } else {
+    api.user.setAppMetadata('white_label_settings', null);
+  }
+
+  if (event.user.app_metadata.xf_user_id && event.user.app_metadata.xf_role) {
+    api.accessToken.setCustomClaim(xfUserIdClaim, event.user.app_metadata.xf_user_id);
+    api.accessToken.setCustomClaim(xfRoleClaim, event.user.app_metadata.xf_role);
+  } else {
+    const ObjectId = bson.ObjectId;
+    const xfUserId = new ObjectId().toHexString();
+    const xfRole = 'user';
+    api.accessToken.setCustomClaim(xfUserIdClaim, xfUserId);
+    api.accessToken.setCustomClaim(xfRoleClaim, xfRole);
+    api.user.setAppMetadata('xf_user_id', xfUserId);
+    api.user.setAppMetadata('xf_role', xfRole);
+  }
+};
