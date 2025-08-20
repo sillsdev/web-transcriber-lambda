@@ -3,7 +3,6 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -34,23 +33,11 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Organizationmembership> entities
         )
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-                //if I'm an admin in the org, give me all oms in that org
-                //otherwise give me just the oms I'm a member of
-                //nope that means I don't get my team members
-                //IEnumerable<int> orgadmins = orgIds.Where(
-                //    o => CurrentUser.HasOrgRole(RoleName.Admin, o)
-                //);
-                entities = entities.Where(
-                    om => (orgIds.Contains(om.OrganizationId) || om.UserId == CurrentUser.Id)
-                );
-            }
-            return entities;
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(
+                om => (CurrentUser.OrganizationIds.Contains(om.OrganizationId))
+            );
         }
 
         public IQueryable<Organizationmembership> ProjectOrganizationMemberships(

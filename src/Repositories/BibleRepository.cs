@@ -50,26 +50,14 @@ namespace SIL.Transcriber.Repositories
         }
 
         public IQueryable<Bible> UsersBibles(
-            IQueryable<Bible> entities
-        )
+            IQueryable<Bible> entities)
         {
-            /*
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                //entities = entities.Join(dbContext.Organizations.Where(o => !o.Archived && orgIds.Contains(o.Id)), b => b.Id, o => o.BibleId, (b, o) => b);
-            }
-            */
             return entities;
         }
 
         public IQueryable<Bible> ProjectBibles(
             IQueryable<Bible> entities,
-            string projectid
-        )
+            string projectid)
         {
             IQueryable<Organization> orgs = OrganizationRepository.ProjectOrganizations(
                 dbContext.Organizations,

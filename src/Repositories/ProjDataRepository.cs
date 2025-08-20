@@ -4,13 +4,9 @@ using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.Response;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Serializers;
 using SIL.Transcriber.Services;
-using SIL.Transcriber.Utility;
-using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -42,106 +38,7 @@ namespace SIL.Transcriber.Repositories
         protected readonly SectionService SectionService = sectionService;
         protected readonly SectionRepository SectionRepository = sectionRepository;
         protected readonly MediafileService MediaService = mediaService;
-        protected readonly IJsonApiOptions _options = options;
-        protected readonly IResourceDefinitionAccessor _resourceDefinitionAccessor = resourceDefinitionAccessor;
-        protected readonly IMetaBuilder _metaBuilder = metaBuilder;
-        protected readonly IResourceGraph _resourceGraph = resourceGraph;
-
-        protected bool CheckAddMedia(
-            int check,
-            IQueryable<Mediafile> media,
-            DateTime dtBail,
-            ref int start,
-            ref string data
-        )
-        {
-            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
-            if (DateTime.Now > dtBail)
-                return false;
-            int startId = -1;
-            int starttable = StartIndex.GetStart(start, ref startId);
-            int lastId = -1;
-            if (starttable == check)
-            {
-                List<Mediafile>? lst = startId > 0 ? [.. media.Where(m => m.Id >= startId)] : [.. media];
-                string thisData = ToJson(lst);
-
-                while (thisData.Length > (1000000 * 4))
-                {
-                    int cnt = lst.Count;
-                    Mediafile mid = lst[cnt/2];
-                    lastId = mid.Id;
-                    lst = [.. media.Where(m => m.Id >= startId && m.Id < lastId)];
-                    thisData = ToJson(lst);
-                }
-                if (data.Length + thisData.Length > (1000000 * 4))
-                    return false;
-                data += (data.Length > 0 ? "," : InitData()) + thisData;
-                start = StartIndex.SetStart(starttable, ref lastId);
-                return lastId == 0;
-            }
-
-            return true;
-        }
-        protected bool CheckAddPSC(
-            int check,
-            IQueryable<Passagestatechange> media,
-            DateTime dtBail,
-            ref int start,
-            ref string data
-        )
-        {
-            //Logger.LogInformation($"{check} : {DateTime.Now} {dtBail}");
-            if (DateTime.Now > dtBail)
-                return false;
-            int startId = -1;
-            int starttable = StartIndex.GetStart(start, ref startId);
-            int lastId = -1;
-            if (starttable == check)
-            {
-                List<Passagestatechange>? lst = startId > 0 ? [.. media.Where(m => m.Id >= startId)] : [.. media];
-                string thisData = ToJson(lst);
-                while (thisData.Length > (1000000 * 4))
-                {
-                    int cnt = lst.Count;
-                    Passagestatechange mid = lst[cnt/2];
-                    lastId = mid.Id;
-                    lst = [.. media.Where(m => m.Id >= startId && m.Id < lastId)];
-                    thisData = ToJson(lst);
-                }
-                if (data.Length + thisData.Length > (1000000 * 4))
-                    return false;
-                data += (data.Length > 0 ? "," : InitData()) + thisData;
-                start = StartIndex.SetStart(starttable, ref lastId);
-                return lastId == 0;
-            }
-            return true;
-        }
-
-        private string ToJson<TResource>(IEnumerable<TResource> resources)
-            where TResource : class, IIdentifiable
-        {
-            string? withIncludes =
-            SerializerHelpers.ResourceListToJson<TResource>(
-                resources,
-                _resourceGraph,
-                _options,
-                _resourceDefinitionAccessor,
-                _metaBuilder
-            );
-            if (withIncludes.Contains("included"))
-            {
-                dynamic tmp = JObject.Parse(withIncludes);
-                tmp.Remove("included");
-                withIncludes = tmp.ToString();
-            }
-            Regex rgxnewlines = NewLineRegex();
-            Regex rgxmultiplespaces = TabOrSpaceRegex();
-            //will this take it out of transcriptions also?? Seems to be ok!!
-            withIncludes = rgxnewlines.Replace(withIncludes, "");
-            return rgxmultiplespaces.Replace(withIncludes, " ");
-        }
-
+        protected readonly ResourceInfo resourceInfo = new(resourceGraph, options, resourceDefinitionAccessor, metaBuilder);
         private IQueryable<Projdata> GetData(
             IQueryable<Projdata> entities,
             string project,
@@ -184,9 +81,15 @@ namespace SIL.Transcriber.Repositories
                 IQueryable<Section> linkedsections = linkedpassages
                     .Join(dbContext.SectionsData, p => p.SectionId, s => s.Id, (p, s) => s)
                     .Where(x => !x.Archived);
-                if (!CheckAdd(0, ToJson(sections.ToList().Union(linkedsections)), dtBail, ref iStartNext, ref data))
+
+                IEnumerable<Section> sectionsWithLinked = sections.ToList().Union(linkedsections);
+                IQueryable<Section> sects = dbContext.SectionsData.Where(s => sectionsWithLinked.Select(s2 => s2.Id).Contains(s.Id)).OrderBy(s => s.Id);
+                if (!CheckAddData(0, sects, dtBail, ref iStartNext, ref data, resourceInfo))
                     break;
-                if (!CheckAdd(1, ToJson(passages.ToList().Union(linkedpassages)), dtBail, ref iStartNext, ref data))
+                IEnumerable<Passage> passagesWithLinked = passages.ToList().Union(linkedpassages);
+                IQueryable<Passage> psgs = dbContext.PassagesData.Where(p => passagesWithLinked.Select(s2 => s2.Id).Contains(p.Id)).OrderBy(p => p.Id);
+
+                if (!CheckAddData(1, psgs, dtBail, ref iStartNext, ref data, resourceInfo))
                     break;
 
                 List<Mediafile>linkedmediafiles = [];
@@ -195,23 +98,25 @@ namespace SIL.Transcriber.Repositories
                     if (m != null)
                         linkedmediafiles.Add(m);
                 });
-                if (!CheckAdd(2, ToJson(linkedmediafiles), dtBail, ref iStartNext, ref data))
+                IQueryable<Mediafile> media = dbContext.MediafilesData
+                   .Where(m => linkedmediafiles.Select(lm => lm.Id).Contains(m.Id)).OrderBy(m => m.Id);
+                if (!CheckAddData(2, media, dtBail, ref iStartNext, ref data, resourceInfo))
                     break;
 
                 //mediafiles
                 IQueryable<Mediafile>? mediafiles = dbContext.MediafilesData
                     .Join(plans, m => m.PlanId, pl => pl.Id, (m, pl) => m)
                     .Where(x => !x.Archived).OrderBy(m=>m.Id);
-                if (!CheckAddMedia(3, mediafiles, dtBail, ref iStartNext, ref data))
+                if (!CheckAddData(3, mediafiles, dtBail, ref iStartNext, ref data, resourceInfo))
                     break;
 
                 //passagestatechanges
-                if (!CheckAddPSC(4, dbContext.PassagestatechangesData.Join(
+                if (!CheckAddData(4, dbContext.PassagestatechangesData.Join(
                                 passages,
                                 psc => psc.PassageId,
                                 p => p.Id,
                                 (psc, p) => psc
-                            ).OrderBy(m => m.Id), dtBail, ref iStartNext, ref data))
+                            ).OrderBy(m => m.Id), dtBail, ref iStartNext, ref data, resourceInfo))
                     break;
 
 
@@ -220,54 +125,52 @@ namespace SIL.Transcriber.Repositories
                     //discussions
                     IQueryable<Discussion> discussions = dbContext.DiscussionsData
                         .Join(mediafiles, d => d.MediafileId, m => m.Id, (d, m) => d)
-                        .Where(x => !x.Archived);
+                        .Where(x => !x.Archived).OrderBy(d => d.Id);
                     if (
-                        !CheckAdd(5,
-                            ToJson(discussions),
+                        !CheckAddData(5,
+                            discussions,
                             dtBail,
                             ref iStartNext,
-                            ref data
+                            ref data, resourceInfo
                         )
                     )
                         break;
 
                     //comments
                     if (
-                        !CheckAdd(6,
-                            ToJson<Comment>(
+                        !CheckAddData(6,
                                 dbContext.CommentsData
                                     .Join(discussions, c => c.DiscussionId, d => d.Id, (c, d) => c)
-                                    .Where(x => !x.Archived)
-                            ),
+                                    .Where(x => !x.Archived).OrderBy(d => d.Id),
                             dtBail,
                             ref iStartNext,
-                            ref data
+                            ref data, resourceInfo
                         )
                     )
                         break;
 
                     IQueryable<Sectionresource> sectionresources = dbContext.SectionresourcesData
                         .Join(sections, sr => sr.SectionId, s => s.Id, (sr, s) => sr)
-                        .Where(x => !x.Archived);
+                        .Where(x => !x.Archived).OrderBy(x => x.Id);
                     if (
-                        !CheckAdd(7,
-                            ToJson<Sectionresource>(sectionresources),
+                        !CheckAddData(7,
+                            sectionresources,
                             dtBail,
                             ref iStartNext,
-                            ref data
+                            ref data, resourceInfo
                         )
                     )
                         break;
 
                     IQueryable<Sectionresourceuser> srusers = dbContext.SectionresourceusersData
                         .Join(sectionresources, u => u.SectionResourceId, sr => sr.Id, (u, sr) => u)
-                        .Where(x => !x.Archived);
+                        .Where(x => !x.Archived).OrderBy(x => x.Id);
                     if (
-                        !CheckAdd(8,
-                            ToJson<Sectionresourceuser>(srusers),
+                        !CheckAddData(8,
+                            srusers,
                             dtBail,
                             ref iStartNext,
-                            ref data
+                            ref data, resourceInfo
                         )
                     )
                         break;
@@ -316,9 +219,5 @@ namespace SIL.Transcriber.Repositories
             return GetAll();
         }
 
-        [GeneratedRegex("\r\n|\n")]
-        private static partial Regex NewLineRegex();
-        [GeneratedRegex("\t|\\s+")]
-        private static partial Regex TabOrSpaceRegex();
     }
 }

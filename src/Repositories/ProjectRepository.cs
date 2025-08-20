@@ -5,9 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
-using static SIL.Transcriber.Utility.Extensions.StringExtensions;
-using static SIL.Transcriber.Utility.IEnumerableExtensions;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -40,24 +37,11 @@ namespace SIL.Transcriber.Repositories
 
         public IQueryable<Project> UsersProjects(IQueryable<Project> entities)
         {
-            if (CurrentUser == null)
-                return entities.Where(e => e.Id == -1);
-
-            IEnumerable<int> orgIds = CurrentUser.OrganizationIds.OrEmpty();
-            if (!CurrentUser.HasOrgRole(RoleName.SuperAdmin, 0))
-            {
-                //if I'm an admin in the org, give me all projects in all groups in that org
-                //otherwise give me just the projects in the groups I'm a member of
-                IEnumerable<int> orgadmins = orgIds.Where(
-                    o => CurrentUserRepository.IsOrgAdmin(CurrentUser, o)
-                );
-
-                entities = entities.Where(p =>  
-                        orgadmins.Contains(p.OrganizationId)
-                        || CurrentUser.GroupIds.Contains(p.GroupId) || p.Name=="BibleMedia"
-                );
-            }
-            return entities;
+            return CurrentUser == null
+                ? entities.Where(e => e.Id == -1)
+                : entities.Where(p =>
+                     CurrentUser.GroupIds.Contains(p.GroupId) || p.Name == "BibleMedia"
+             );
         }
 
         public override IQueryable<Project> FromCurrentUser(IQueryable<Project>? entities = null)
@@ -76,7 +60,7 @@ namespace SIL.Transcriber.Repositories
         private static string SettingOrDefault(string? json, string settingName)
         {
             dynamic settings = JObject.Parse(json ?? "");
-            return settings [settingName] ?? "";
+            return settings[settingName] ?? "";
         }
 
         public IQueryable<Project> HasIntegrationSetting(

@@ -94,7 +94,7 @@ namespace SIL.Transcriber.Services
             UserSecret? tokenFromAuth0 = CurrentUserContext.ParatextLogin(
                 GetVarOrDefault("SIL_TR_PARATEXT_AUTH0_CONNECTION", "Paratext-Transcriber"),
                 currentUser.Id
-            ) ?? throw new SecurityException("User is not logged in to Paratext-Transcriber");
+            );
             //get existing
             IEnumerable<ParatextToken>? tokens = dbContext.Paratexttokens.Where(
                 t => t.UserId == currentUser.Id
@@ -103,7 +103,7 @@ namespace SIL.Transcriber.Services
             {
                 ParatextToken savedToken = tokens.First();
                 if (
-                    tokenFromAuth0.ParatextTokens.IssuedAt > savedToken.IssuedAt
+                    tokenFromAuth0?.ParatextTokens.IssuedAt > savedToken.IssuedAt
                 //&& newPTToken.ParatextTokens.RefreshToken != null
                 )
                 {
@@ -116,6 +116,7 @@ namespace SIL.Transcriber.Services
                 }
                 else
                 {
+                    tokenFromAuth0 ??= new UserSecret { ParatextTokens = savedToken };
                     tokenFromAuth0.ParatextTokens = savedToken;
                     //TokenHistoryRepo.Create(new(currentUser.Id, savedToken.AccessToken, savedToken.RefreshToken, "From DB"));
                 }
@@ -123,6 +124,9 @@ namespace SIL.Transcriber.Services
             else
             {
                 Logger.LogInformation("no saved token");
+                if (tokenFromAuth0 == null)
+                    throw new SecurityException("User is not logged in to Paratext-Transcriber");
+
                 _ = dbContext.Paratexttokens.Add(tokenFromAuth0.ParatextTokens);
                 dbContext.SaveChanges();
                 //TokenHistoryRepo.Create(new (currentUser.Id, tokenFromAuth0.ParatextTokens.AccessToken, tokenFromAuth0.ParatextTokens.RefreshToken, "From First Login"));

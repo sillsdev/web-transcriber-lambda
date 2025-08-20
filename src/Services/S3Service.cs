@@ -198,6 +198,7 @@ namespace SIL.Transcriber.Services
         }
         public async Task<string> GetFilename(string folder, string filename, bool overwrite = false, string suffix = "")
         {
+            filename = filename.Split('?')[0];
             string ext = Path.GetExtension(filename)??"";
             string newfilename = Path.GetFileNameWithoutExtension(filename) +suffix + ext;
             return !overwrite && await FileExistsAsync(newfilename, folder)
@@ -372,10 +373,11 @@ namespace SIL.Transcriber.Services
             return $"https://{(bucket == "" ? USERFILES_BUCKET : bucket)}.s3.amazonaws.com/{ProperFolder(folder)}{fileName}";
 
         }
-        public async Task<HttpStatusCode> CopyS3FileAsync(string sourceFileUrl, string destinationBucket, string destinationKey)
+
+        public async Task<HttpStatusCode> CopyS3FileAsync(string sourceFileUrl, string destinationBucket, string folder, string file)
         {
             // Parse source bucket and key from the URL
-            Uri uri = new Uri(sourceFileUrl);
+            Uri uri = new (sourceFileUrl);
             string sourceBucket, sourceKey;
             if (uri.Scheme != "s3")
             {
@@ -397,7 +399,7 @@ namespace SIL.Transcriber.Services
                 SourceBucket = sourceBucket,
                 SourceKey = sourceKey,
                 DestinationBucket = destinationBucket,
-                DestinationKey = destinationKey,
+                DestinationKey = $"{folder}/{file}",
                 CannedACL =  S3CannedACL.BucketOwnerFullControl
 
             };
@@ -411,6 +413,10 @@ namespace SIL.Transcriber.Services
                 Logger.LogError("Error copying S3 file: {message}", ex.Message);
                 throw;
             }
+        }
+        public async Task<HttpStatusCode> CopyS3FileAsync(string sourceFileUrl, string folder, string file)
+        {
+            return await CopyS3FileAsync(sourceFileUrl, USERFILES_BUCKET, folder, file);
         }
 
         public async Task<S3Response> UploadFileAsync(

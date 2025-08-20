@@ -18,6 +18,7 @@ public class AeroService(
     readonly private string Domain = GetVarOrThrow("SIL_TR_AERO_DOMAIN");
     readonly private string Bucket = GetVarOrThrow("SIL_TR_AERO_BUCKET");
     readonly private IS3Service s3Service = s3service;
+    private const  string AERO_FOLDER = "input_files";
     private ILogger Logger { get; set; } = loggerFactory.CreateLogger("AeroService");
 
     private async Task<string> GetToken()
@@ -153,8 +154,8 @@ public class AeroService(
     //not small enough to fit in the request - send an s3 file that has been put in aero input_files
     public async Task<string?> NoiseRemoval(string fileName)
     {
-        await S3service.BucketOwner(fileName, "input_files", Bucket);
-        string p = $"s3_file_path=s3://{Bucket}/input_files/{fileName}";
+        await S3service.BucketOwner(fileName, AERO_FOLDER, Bucket);
+        string p = $"s3_file_path=s3://{Bucket}/{AERO_FOLDER}/{fileName}";
         AddSaveS3(p, true);
         return await GetResult($"{Domain}/noise_removal?{p}", null, "task_id");
     }
@@ -212,12 +213,12 @@ public class AeroService(
 
     public async Task<string?> VoiceConversion(string fileName, string targetUrl)
     {
-        await S3service.BucketOwner(fileName, "input_files", Bucket);
+        await S3service.BucketOwner(fileName, AERO_FOLDER, Bucket);
         string tgt = $"tgt{fileName}";
-        await S3service.CopyS3FileAsync(targetUrl, Bucket, $"input_files/{tgt}");
-        await S3service.BucketOwner(tgt, "input_files", Bucket);
-        string p = $"s3_source_file_path=s3://{Bucket}/input_files/{fileName}";
-        string t = $"&s3_target_file_path=s3://{Bucket}/input_files/{tgt}";
+        await S3service.CopyS3FileAsync(targetUrl, Bucket, AERO_FOLDER, tgt);
+        await S3service.BucketOwner(tgt, AERO_FOLDER, Bucket);
+        string p = $"s3_source_file_path=s3://{Bucket}/{AERO_FOLDER}/{fileName}";
+        string t = $"&s3_target_file_path=s3://{Bucket}/{AERO_FOLDER}/{tgt}";
         AddSaveS3(t, false);
         return await GetResult($"{Domain}/voice_conversion?{p}{t}", null, "task_id");
     }
@@ -290,9 +291,9 @@ public class AeroService(
             Uri uri = new (fileUrl);
             string ext = Path.GetExtension(uri.LocalPath);
             string tgt = $"{count}{fn}.{ext}";
-            await S3service.CopyS3FileAsync(fileUrl, Bucket, $"input_files/{tgt}");
-            await S3service.BucketOwner(tgt, "input_files", Bucket);
-            urlList.Add($"s3://{Bucket}/input_files/{tgt}");
+            await S3service.CopyS3FileAsync(fileUrl, Bucket, AERO_FOLDER, tgt);
+            await S3service.BucketOwner(tgt, AERO_FOLDER, Bucket);
+            urlList.Add($"s3://{Bucket}/{AERO_FOLDER}/{tgt}");
             count++;
         }
         KeyValuePair<string, string?>[] queryString = [new("s3_upload", "true"), new("sister_lang_iso", lang_iso), new("romanize", romanize.ToString()), new("s3_file_paths",string.Join("," ,urlList))];

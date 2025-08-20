@@ -44,7 +44,7 @@ namespace SIL.Transcriber.Services
             _ =
                 dbContext.Users.Add(newUser);
             _ = dbContext.SaveChanges();
-            return newUser;
+            return CurrentUserRepository.GetCurrentUser() ?? newUser;
         }
 
         public override async Task<User?> UpdateAsync(
@@ -73,7 +73,7 @@ namespace SIL.Transcriber.Services
         public async Task<User?> UpdateSharedCreator(string email, bool allowed)
         {
             User? cu = CurrentUserRepository.GetCurrentUser();
-            if (cu == null || !(cu.SharedContentAdmin??false))
+            if (cu == null || !(cu.SharedContentAdmin ?? false))
                 throw new Exception("No Update Permission");
             User? user = UserRepository.Get().Where(u => u.Email == email && !u.Archived).FirstOrDefault();
             if (user == null)
