@@ -37,6 +37,7 @@ namespace SIL.Transcriber.Repositories
             currentUserRepository
             )
     {
+        private const string PUBLISHED_EXTENSION = ".mp3";
         readonly private PlanRepository PlanRepository = planRepository;
         readonly private ProjectRepository ProjectRepository = projectRepository;
         readonly private IS3Service S3service = service;
@@ -229,7 +230,7 @@ namespace SIL.Transcriber.Repositories
             }
             if (resourceFromRequest.ReadyToShare && resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
             {
-                await Publish(resourceFromRequest.Id, resourceFromRequest.PublishTo ?? "{}", false);
+                await Publish(resourceFromRequest, resourceFromRequest.PublishTo ?? "{}");
             }
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
@@ -268,11 +269,11 @@ namespace SIL.Transcriber.Repositories
                 sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id && !sr.Archived);
                 title = (sr?.Title ?? "") != ""
                     ? $"{title}NOTE_{FileName.CleanFileName(sr?.Title ?? "")}"
-                    : $"{title}{Path.ChangeExtension(m.OriginalFile, ".mp3")}";
+                    : $"{title}{Path.ChangeExtension(m.OriginalFile, PUBLISHED_EXTENSION)}";
             }
             else if (p?.Passagetype?.Abbrev == "CHNUM")
             {
-                title = $"{title}{FileName.CleanFileName(p.Reference ?? Path.ChangeExtension(m.OriginalFile, ".mp3") ?? p.Id.ToString())}";
+                title = $"{title}{FileName.CleanFileName(p.Reference ?? Path.ChangeExtension(m.OriginalFile, PUBLISHED_EXTENSION) ?? p.Id.ToString())}";
             }
             else
             {
@@ -282,17 +283,17 @@ namespace SIL.Transcriber.Repositories
                     title = $"{title}{FileName.CleanFileName(s.Plan?.Name ?? "")}{PadSeqNum(s.Sequencenum)}{FileName.CleanFileName(s.Name)}";
                 }
                 else if (m.OriginalFile != null)
-                    title = $"{title}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, ".mp3"))}";
+                    title = $"{title}{FileName.CleanFileName(Path.ChangeExtension(m.OriginalFile, PUBLISHED_EXTENSION))}";
             }
-            return FileName.CleanFileName(title.EndsWith(".mp3") ? title[..^4] : title);
+            return FileName.CleanFileName(title.EndsWith(PUBLISHED_EXTENSION) ? title[..^4] : title);
         }
         private static string PublishFilename(string title, string bibleId)
         {
             string fileName = title;
 
-            if (!fileName.EndsWith(".mp3"))
+            if (!fileName.EndsWith(PUBLISHED_EXTENSION))
             {
-                fileName = $"{fileName}.mp3";
+                fileName = $"{fileName}{PUBLISHED_EXTENSION}";
             }
             return $"{bibleId}/{fileName}";
         }
@@ -389,11 +390,11 @@ namespace SIL.Transcriber.Repositories
             {
                 int? titleMedia = sr.TitleMediafile?.Id ?? sr.TitleMediafileId;
                 if (titleMedia != null)
-                    await Publish((int)titleMedia, "{\"Public\": \"true\"}", false);
+                    await Publish((int)titleMedia, "{\"Public\": \"true\"}");
                 if (sr.ArtifactCategory?.TitleMediafileId != null)
                 {
                     Bible? acbible = ArtifactCategoryRepository.GetBible(sr.ArtifactCategory);
-                    await Publish((int)sr.ArtifactCategory.TitleMediafileId, "{\"Public\": \"true\"}", false, acbible);
+                    await Publish((int)sr.ArtifactCategory.TitleMediafileId, "{\"Public\": \"true\"}", acbible);
                 }
             }
 
@@ -422,25 +423,18 @@ namespace SIL.Transcriber.Repositories
             }
             return false;
         }
-        public async Task<Mediafile?> Publish(int id, string publishTo, bool doSave, Bible? bible = null)
+        public async Task<Mediafile?> Publish(Mediafile m, string publishTo, Bible? bible = null)
         {
             try
             {
-                Mediafile? m = Get(id);
-
-                if (m == null)
-                {
-                    return null;
-                }
                 //string fp = HttpContext?.GetFP() ?? "";
-                HttpContext?.SetFP("publish");
                 Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
                 Sharedresource? sr = passage != null ? GetSharedResource(passage) : null;
 
                 //turn any old versions off
                 if (passage != null)
                 {
-                    IQueryable<Mediafile> old = dbContext.MediafilesData.Where(m => m.PassageId == passage.Id && m.ReadyToShare == true && m.Id != id);
+                    IQueryable<Mediafile> old = dbContext.MediafilesData.Where(o => o.PassageId == passage.Id && o.ReadyToShare == true && o.Id != m.Id);
                     foreach (Mediafile o in old)
                     {
                         o.ReadyToShare = false;
@@ -459,8 +453,6 @@ namespace SIL.Transcriber.Repositories
                     {
                         m.PublishTo = publishTo;
                         dbContext.Mediafiles.Update(m);
-                        if (doSave)
-                            dbContext.SaveChanges();
                     }
                 }
                 else if (!m.ReadyToShare || m.PublishTo != publishTo)
@@ -468,9 +460,29 @@ namespace SIL.Transcriber.Repositories
                     m.ReadyToShare = true;
                     m.PublishTo = publishTo;
                     dbContext.Mediafiles.Update(m);
-                    if (doSave)
-                        dbContext.SaveChanges();
                 }
+                return m;
+            }
+            catch (Exception err)
+            {
+                Console.WriteLine(err);
+                return null;
+            }
+        }
+        public async Task<Mediafile?> Publish(int id, string publishTo, Bible? bible = null)
+        {
+            try
+            {
+                Mediafile? m = Get(id);
+
+                if (m == null)
+                {
+                    return null;
+                }
+                //string fp = HttpContext?.GetFP() ?? "";
+                HttpContext?.SetFP("publish");
+                m = await Publish(m, publishTo, bible);
+                dbContext.SaveChanges();
                 return m;
             }
             catch (Exception err)
