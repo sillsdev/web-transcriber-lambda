@@ -88,8 +88,6 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "link")]
         public bool? Link { get; set; }
 
-        [Attr(PublicName = "offline-id")]
-        public string? OfflineId { get; set; }
         [Attr(PublicName = "source-media-offline-id")]
         public string? SourceMediaOfflineId { get; set; }
 

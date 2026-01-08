@@ -42,9 +42,7 @@ namespace SIL.Transcriber.Services
             int startId
         )
         {
-            return base.GetChanges(entities, currentuser, origin, since, project, startId)
-                .Where(t => !t.Archived)
-                .ToList();
+            return [.. base.GetChanges(entities, currentuser, origin, since, project, startId).Where(t => !t.Archived)];
         }
 
         public IEnumerable<TResource> GetDeletedSince(
@@ -67,7 +65,7 @@ namespace SIL.Transcriber.Services
             IReadOnlyCollection<TResource> entities = await base.GetAsync(cancellationToken);
             if (typeof(IArchive).IsAssignableFrom(typeof(TResource)))
             {
-                entities = entities.Where(t => !t.Archived).ToList();
+                entities = [.. entities.Where(t => !t.Archived)];
             }
             return entities;
         }

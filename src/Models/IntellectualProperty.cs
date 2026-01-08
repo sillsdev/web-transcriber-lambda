@@ -25,8 +25,6 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "release-mediafile")]
         public Mediafile? ReleaseMediafile { get; set; }
 
-        [Attr(PublicName = "offline-id")]
-        public string? OfflineId { get; set; }
         [Attr(PublicName = "offline-mediafile-id")]
         public string? OfflineMediafileId { get; set; }
 

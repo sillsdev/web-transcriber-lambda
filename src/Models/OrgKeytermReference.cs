@@ -17,6 +17,4 @@ public class Orgkeytermreference : BaseModel, IArchive
 
     public bool Archived { get; set; }
 
-    [Attr(PublicName = "offline-id")]
-    public string? OfflineId { get; set; }
 }

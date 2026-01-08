@@ -8,7 +8,7 @@ namespace SIL.Transcriber.Models
     public partial class Projecttype : BaseModel
     {
         [Attr(PublicName = "name")]
-        public string? Name { get; set; }
+        public string Name { get; set; } = "";
 
         [Attr(PublicName = "description")]
         public string? Description { get; set; }

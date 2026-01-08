@@ -11,7 +11,8 @@ namespace SIL.Transcriber.Services.Contracts
         Task<Fileresponse> ImportFileAsync(int projectid, string filename, int start);
         Task<Fileresponse> ImportSyncFileAsync(string filename, int file, int start);
         Task<Fileresponse> ImportCopyFileAsync(bool neworg, string filename);
-        Task<Fileresponse> ImportCopyProjectAsync(bool neworg, int projectid, int start, int? newProjId);
-        void RemoveCopyProject(int newProjId);
+        Task<Fileresponse> ImportCopyFileIntoOrgAsync(int org, string filename, int start, string? mapKey);
+        Task<Fileresponse> ImportCopyProjectAsync(bool neworg, int projectid, int start, string? newProjId);
+        void RemoveCopyProject(string newProjId);
     }
 }

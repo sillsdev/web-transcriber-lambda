@@ -89,15 +89,21 @@ namespace SIL.Transcriber.Controllers
         {
             return await _service.ImportCopyFileAsync(neworg, filename);
         }
-        [HttpPut("project/copyp/{neworg}/{projectid}/{start}")]
-        [HttpPut("project/copyp/{neworg}/{projectid}/{start}/{newProjId}")]
-        public async Task<ActionResult<Fileresponse>> ProcessCopyImportProjectAsync(
-    [FromRoute] bool neworg, int projectid, int start, int? newProjId)
+        [HttpPut("project/copyintoorg/{org}/{filename}/{start}")]
+        [HttpPut("project/copyintoorg/{org}/{filename}/{mapKey}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportwithOrgFileAsync(
+            [FromRoute] int org, string filename, string? mapKey, int start)
         {
-            return await _service.ImportCopyProjectAsync(neworg, projectid, start, newProjId);
+            return await _service.ImportCopyFileIntoOrgAsync(org, filename, start, mapKey);
+        }
+        [HttpPut("project/copyp/{neworg}/{projectid}/{mapKey}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportProjectAsync(
+            [FromRoute] bool neworg, int projectid, string mapKey, int start)
+        {
+            return await _service.ImportCopyProjectAsync(neworg, projectid, start, mapKey);
         }
         [HttpPut("project/copyp/{newProjId}")]
-        public Task CopyProjectComplete([FromRoute] int newProjId)
+        public Task CopyProjectComplete([FromRoute] string newProjId)
         {
             _service.RemoveCopyProject(newProjId);
             return Task.CompletedTask;

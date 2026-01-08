@@ -126,7 +126,7 @@ namespace SIL.Transcriber.Models
             else
                 sectionMapstr = sectionMapstr?.ToString();
             List<List<object>>? tmp = sectionMapstr == null ? null : Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<object>>>(sectionMapstr.ToString());
-            tmp?.ForEach((List<object> item) => {
+            tmp?.ForEach(item => {
                 if (!decimal.TryParse(item[0]?.ToString(), out decimal num))
                     num = 0;
                 ret = [.. ret, new SectionMap { Sequencenum = num, Label = item[1]?.ToString() ?? "" }];

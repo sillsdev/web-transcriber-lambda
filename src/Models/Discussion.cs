@@ -49,9 +49,6 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "creator-user")]
         public User? CreatorUser { get; set; }
 
-        [Attr(PublicName = "offline-id")]
-        public string? OfflineId { get; set; }
-
         [Attr(PublicName = "offline-mediafile-id")]
         public string? OfflineMediafileId { get; set; }
         public bool Archived { get; set; }
