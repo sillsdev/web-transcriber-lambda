@@ -42,7 +42,7 @@ namespace SIL.Transcriber.Controllers
             };
             return Ok(response);
         }
-
+        //get a signed PUT url to upload the file to the imports folder on s3
         [HttpGet("project/import/{filename}")]
         public ActionResult<Fileresponse> ImportFileUpload([FromRoute] string filename)
         {
@@ -52,21 +52,21 @@ namespace SIL.Transcriber.Controllers
         }
 
         [HttpPut("project/import/{projectid}/{filename}")]
-        public async Task<ActionResult<Fileresponse>> ProcessImportFileAsync(
+        public async Task<ActionResult<Fileresponse>> ProcessProjectSyncFileAsync(
             [FromRoute] int projectid,
             string filename
         )
         {
-            return await _service.ImportFileAsync(projectid, filename, 0);
+            return await _service.ImportSyncFileAsync(projectid, filename, 0);
         }
         [HttpPut("project/import/{projectid}/{filename}/{start}")]
-        public async Task<ActionResult<Fileresponse>> ProcessImportFileAsyncV2(
+        public async Task<ActionResult<Fileresponse>> ProcessProjectSyncFileAsyncV2(
                                                     [FromRoute] int projectid,
                                                     string filename,
                                                     int start
 )
         {
-            return await _service.ImportFileAsync(projectid, filename, start);
+            return await _service.ImportSyncFileAsync(projectid, filename, start);
         }
 
         [HttpPut("sync/{filename}")]
@@ -83,29 +83,40 @@ namespace SIL.Transcriber.Controllers
             return await _service.ImportSyncFileAsync(filename, fileIndex, start);
         }
 
+        [HttpPut("project/copyfromfile/{org}/{filename}")]
+        [HttpPut("project/copyfromfile/{org}/{filename}/{mapKey}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportwithOrgFileAsync(
+            [FromRoute] int org, string filename, string? mapKey, int? start)
+        {
+            return await _service.ImportCopyFileIntoOrgAsync(org, filename, start ?? 0, mapKey);
+        }
+        //DEPRECATED!!
         [HttpPut("project/copy/{neworg}/{filename}")]
         public async Task<ActionResult<Fileresponse>> ProcessCopyImportFileAsync(
             [FromRoute] bool neworg, string filename)
         {
-            return await _service.ImportCopyFileAsync(neworg, filename);
+            return await _service.ImportCopyFileAsyncDeprecated(neworg, filename);
         }
-        [HttpPut("project/copyintoorg/{org}/{filename}/{start}")]
-        [HttpPut("project/copyintoorg/{org}/{filename}/{mapKey}/{start}")]
-        public async Task<ActionResult<Fileresponse>> ProcessCopyImportwithOrgFileAsync(
-            [FromRoute] int org, string filename, string? mapKey, int start)
-        {
-            return await _service.ImportCopyFileIntoOrgAsync(org, filename, start, mapKey);
-        }
+        //DEPRECATED!!
         [HttpPut("project/copyp/{neworg}/{projectid}/{mapKey}/{start}")]
-        public async Task<ActionResult<Fileresponse>> ProcessCopyImportProjectAsync(
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportProjectDAsync(
             [FromRoute] bool neworg, int projectid, string mapKey, int start)
         {
-            return await _service.ImportCopyProjectAsync(neworg, projectid, start, mapKey);
+            return await _service.ImportCopyProjectAsyncDeprecated(neworg, projectid, start, mapKey);
         }
-        [HttpPut("project/copyp/{newProjId}")]
-        public Task CopyProjectComplete([FromRoute] string newProjId)
+
+        [HttpPut("project/copydata/{org}/{projectid}")]
+        [HttpPut("project/copydata/{org}/{projectid}/{mapKey}/{start}")]
+        public async Task<ActionResult<Fileresponse>> ProcessCopyImportProjectAsync(
+    [FromRoute] int org, int projectid, string? mapKey, int? start)
         {
-            _service.RemoveCopyProject(newProjId);
+            return await _service.ImportCopyProjectAsync(org, projectid, start ?? 0, mapKey ?? "");
+        }
+        //remove the copy project temp data
+        [HttpPut("project/copyp/{mapkey}")]
+        public Task CopyProjectComplete([FromRoute] string mapkey)
+        {
+            _service.RemoveCopyProject(mapkey);
             return Task.CompletedTask;
         }
     }

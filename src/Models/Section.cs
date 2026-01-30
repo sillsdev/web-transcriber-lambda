@@ -93,6 +93,9 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "title-mediafile")]
         public Mediafile? TitleMediafile { get; set; }
+
+        [Attr(PublicName = "offline-title-mediafile-id")]
+        public string? OfflineTitleMediafileId { get; set; }
         public bool Archived { get; set; }
 
 

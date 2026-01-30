@@ -27,6 +27,9 @@ namespace SIL.Transcriber.Models
         public string? Color { get; set; }
         [Attr(PublicName = "specialuse")]
         public string? Specialuse { get; set; }
+
+        [Attr(PublicName = "offline-title-mediafile-id")]
+        public string? OfflineTitleMediafileId { get; set; }
         public bool Archived { get; set; }
 
         public int? OrganizationId { get; set; }

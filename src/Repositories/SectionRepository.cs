@@ -140,7 +140,7 @@ namespace SIL.Transcriber.Repositories
                 //find the book and altbook and make sure the titles are published -- may not have had the bible set before
                 //maybe they're in another plan...but not handling that for now
                 int planId = section.Plan?.Id ?? section.PlanId;
-                List<Section> books = dbContext.Sections.Where(s => s.PlanId == planId && s.Sequencenum < 0 ).ToList();
+                List<Section> books = [.. dbContext.Sections.Where(s => s.PlanId == planId && s.Sequencenum < 0 )];
                 foreach (Section booksection in books)
                 {
                     await PublishTitle(booksection, booksection);
@@ -167,12 +167,14 @@ namespace SIL.Transcriber.Repositories
                 IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
                         .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
                         .OrderByDescending(m => m.VersionNumber);
+#pragma warning disable CS8604 // Possible null reference argument.
                 List <Mediafile> medialist = publish && mediafiles.Any()
                 ?
                 [
                     mediafiles.FirstOrDefault()
                 ]
                 : [.. mediafiles];
+#pragma warning restore CS8604 // Possible null reference argument.
 
                 foreach (Mediafile mediafile in medialist)
                 {

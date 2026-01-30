@@ -114,7 +114,10 @@ namespace SIL.Transcriber.Services
             return MyRepository.WBTUpdate();
         }
 
-
+        public string DirectoryName(int plan)
+        {
+            return PlanRepository.DirectoryName(plan);
+        }
         public string DirectoryName(Mediafile entity)
         {
             return entity.S3Folder?.TrimEnd('/') ?? PlanRepository.DirectoryName(entity.Plan?.Id ?? entity.PlanId);
@@ -361,7 +364,7 @@ namespace SIL.Transcriber.Services
         public List<Mediafile> GetIPMedia(IQueryable<Organization> orgs)
         {
             IEnumerable<Intellectualproperty>? ip = [.. dbContext.IntellectualPropertys.Join(orgs, ip => ip.OrganizationId, o => o.Id, (ip, o) => ip)];
-            return ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m).ToList();
+            return [.. ip.Join(dbContext.Mediafiles, ip => ip.ReleaseMediafileId, m => m.Id, (ip, m) => m)];
         }
 
 
@@ -439,7 +442,7 @@ namespace SIL.Transcriber.Services
                     }
                     newsegments.Add(seg);
                 }
-                List<JToken> oldtasks = newsegments.Where(x => x is JObject j && j.ContainsKey("name") && j["name"]?.Value<string>() == title).ToList();
+                List<JToken> oldtasks = [.. newsegments.Where(x => x is JObject j && j.ContainsKey("name") && j["name"]?.Value<string>() == title)];
                 if (oldtasks.Count > 0)
                 {
                     dynamic oldtask = oldtasks.First();
@@ -573,7 +576,7 @@ namespace SIL.Transcriber.Services
                 List<Timing>? timing = GetVerseTiming(mf);
                 float[]? times = null;
                 if (timing != null)
-                    times = timing.Select(t => t.start).ToArray();
+                    times = [.. timing.Select(t => t.start)];
                 string[]? tasks = await Aeroservice.TranscriptionNew([mf.AudioUrl], iso, romanize, times) ?? throw new Exception("Transcription failed to start");
                 if (tasks == null || tasks.Length == 0)
                     return mf;
