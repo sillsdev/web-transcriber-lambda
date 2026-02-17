@@ -193,14 +193,14 @@ namespace SIL.Transcriber.Repositories
             int lastId = -1;
             if (starttable == check)
             {
-                List<TResource>? lst = startId > 0 ? [.. input.Where(m => m.Id >= startId)] : [.. input];
+                List<TResource>? lst = startId > 0 ? [.. input.Where(m => m.Id >= startId).OrderBy(x => x.Id)] : [.. input.OrderBy(x => x.Id)];
                 string thisData = ToJson(lst, resourceInfo);
                 while (thisData.Length > (1000000 * 4))
                 {
                     int cnt = lst.Count;
                     TResource mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = [.. input.Where(m => m.Id >= startId && m.Id < lastId)];
+                    lst = [.. input.Where(m => m.Id >= startId && m.Id < lastId).OrderBy(x => x.Id)];
                     thisData = ToJson(lst, resourceInfo);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
