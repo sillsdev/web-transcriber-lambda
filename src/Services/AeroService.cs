@@ -88,25 +88,37 @@ public class AeroService(
         return memoryStream.ToArray();
     }
 
-    private static async void PrintContent(MultipartContent multipartContent, ILogger Logger)
+    private static async Task LogMultipartContent(MultipartFormDataContent? multipartContent, ILogger logger)
     {
+        if (multipartContent == null)
+        {
+            logger.LogCritical("NO MPC");
+            return;
+        }
+
         foreach (HttpContent content in multipartContent)
         {
             if (content is StringContent stringContent)
             {
                 string? name = content.Headers.ContentDisposition?.Name;
                 string value = await stringContent.ReadAsStringAsync();
-                Logger.LogDebug("StringContent Name: {name}, Value: {value}", name, value);
+                logger.LogCritical("StringContent Name: {Name}, Value: {Value}", name, value);
             }
-            else if (content is StreamContent streamcontent)
+            else if (content is StreamContent streamContent)
             {
                 string? name = content.Headers.ContentDisposition?.Name;
-                Logger.LogDebug("StreamContent Name: {n}, Length: {l} , Type: {t}", name, content.Headers.ContentLength, content.Headers.ContentType);
+                logger.LogCritical("StreamContent Name: {Name}, Length: {Length}, Type: {Type}",
+                    name, content.Headers.ContentLength, content.Headers.ContentType);
             }
-            else if (content is ByteArrayContent bcontent)
+            else if (content is ByteArrayContent byteArrayContent)
             {
-                string? name = content.Headers.ContentDisposition?.Name??content.Headers.ContentDisposition?.FileName;
-                Logger.LogDebug("ByteArrayContent Name: {n}, Length: {l} , Type: {t}", name, content.Headers.ContentLength, content.Headers.ContentType);
+                string? name = content.Headers.ContentDisposition?.Name ?? content.Headers.ContentDisposition?.FileName;
+                logger.LogCritical("ByteArrayContent Name: {Name}, Length: {Length}, Type: {Type}",
+                    name, content.Headers.ContentLength, content.Headers.ContentType);
+            }
+            else
+            {
+                logger.LogCritical("Unknown Content Type: {Type}", content.GetType().Name);
             }
         }
     }
@@ -121,9 +133,9 @@ public class AeroService(
     private async Task<string?> GetResult(string api, MultipartFormDataContent? multipartContent, string result)
     {
         Logger.LogCritical("GetResult");
-        //PrintContent(multipartContent, Logger);
         using HttpClient httpClient = await Httpclient();
         Logger.LogCritical("{api}", api);
+        await LogMultipartContent(multipartContent, Logger);
         HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent?.Any()??false ? multipartContent : null); // multipartContent);
         Logger.LogCritical("{s} {r}", response.StatusCode, response.ReasonPhrase);
         response.EnsureSuccessStatusCode();
@@ -342,7 +354,114 @@ public class AeroService(
                 };
                 return response;
             }
-        };
+        }
+        ;
+        return null;
+    }
+
+    //if small enough to fit in the request
+    public async Task<string?> AudioInfilling(string base64data, string filename, string? modifiedText = null,
+        string? inputText = null, string? wordTimes = null, string[]? replacementAudioUrls = null, string? replacements = null)
+    {
+        byte[] fileBytes = Convert.FromBase64String(base64data);
+        MemoryStream fileStream = new (fileBytes);
+        MultipartFormDataContent multipartContent = AddFileToRequest(fileStream, filename, "file");
+
+        // Add modified_text parameter if provided
+        if (!string.IsNullOrEmpty(modifiedText))
+            multipartContent.Add(new StringContent(modifiedText), "modified_text");
+
+        // Add optional parameters
+        if (!string.IsNullOrEmpty(inputText))
+            multipartContent.Add(new StringContent(inputText), "input_text");
+
+        if (!string.IsNullOrEmpty(wordTimes))
+            multipartContent.Add(new StringContent(wordTimes), "word_times");
+
+        if (!string.IsNullOrEmpty(replacements))
+            multipartContent.Add(new StringContent(replacements), "replacements");
+
+        // Handle replacement audio files
+        if (replacementAudioUrls != null && replacementAudioUrls.Length > 0)
+        {
+            foreach (string audioUrl in replacementAudioUrls)
+            {
+                Stream audioStream = await GetStream(audioUrl);
+                string audioFilename = GetFileName(audioUrl);
+                AddFileToRequest(audioStream, audioFilename, "replacement_audio_files", multipartContent);
+            }
+        }
+
+        AddSaveS3(multipartContent, true);
+        return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
+    }
+
+    //not small enough to fit in the request - send an s3 file that has been put in aero input_files
+    public async Task<string?> AudioInfilling(string fileName, string? modifiedText = null,
+        string? inputText = null, string? wordTimes = null, string[]? replacementAudioUrls = null, string? replacements = null)
+    {
+        await S3service.BucketOwner(fileName, AERO_FOLDER, Bucket);
+        MultipartFormDataContent multipartContent = [];
+
+        // Add s3_file_path parameter
+        multipartContent.Add(new StringContent($"s3://{Bucket}/{AERO_FOLDER}/{fileName}"), "s3_file_path");
+        
+        // Add modified_text parameter if provided
+        if (!string.IsNullOrEmpty(modifiedText))
+            multipartContent.Add(new StringContent(modifiedText), "modified_text");
+
+        // Add optional parameters
+        if (!string.IsNullOrEmpty(inputText))
+            multipartContent.Add(new StringContent(inputText), "input_text");
+
+        if (!string.IsNullOrEmpty(wordTimes))
+            multipartContent.Add(new StringContent(wordTimes), "word_times");
+
+        if (!string.IsNullOrEmpty(replacements))
+            multipartContent.Add(new StringContent(replacements), "replacements");
+
+        // Handle replacement audio files
+        if (replacementAudioUrls != null && replacementAudioUrls.Length > 0)
+        {
+            foreach (string audioUrl in replacementAudioUrls)
+            {
+                Stream audioStream = await GetStream(audioUrl);
+                string audioFilename = GetFileName(audioUrl);
+                AddFileToRequest(audioStream, audioFilename, "replacement_audio_files", multipartContent);
+            }
+        }
+        /*
+                // Handle replacement audio files from S3
+                if (replacementAudioUrls != null && replacementAudioUrls.Length > 0)
+                {
+                    int count = 1;
+                    foreach (string audioUrl in replacementAudioUrls)
+                    {
+                        string replFilename = $"repl{count}_{Path.GetFileName(fileName)}";
+                        await S3service.CopyS3FileAsync(audioUrl, Bucket, AERO_FOLDER, replFilename);
+                        await S3service.BucketOwner(replFilename, AERO_FOLDER, Bucket);
+                        count++;
+                    }
+                }
+          */
+        AddSaveS3(multipartContent, true);
+        return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
+    }
+
+    public async Task<HttpContent?> AudioInfillingStatus(string? taskId)
+    {
+        return await GetStatus("audio_infilling", taskId);
+    }
+
+    public async Task<string?> AudioInfillingStatus(string? taskId, string outputFile, string outputFolder)
+    {
+        Stream? stream = (await AudioInfillingStatus(taskId))?.ReadAsStream();
+
+        if (stream != null)
+        {
+            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
+            return s3resp.Message;
+        }
         return null;
     }
 }
@@ -376,6 +495,76 @@ public class TranscriptionResponse
     public string Transcription { get; set; } = ""; // The transcription of the audio in the target language.
     public int TranscriptionId { get; set; } // The ID of the transcription log entry.
 }
+public class AudioInfillingRequest
+{
+    /// <summary>
+    /// link to file
+    /// </summary>
+    public string FileUrl { get; set; } = "";
+    /// <summary>
+    /// The modified/target text for the audio (optional if ReplacementAudioFiles or Replacements are provided)
+    /// </summary>
+    public string? ModifiedText { get; set; }
+    /// <summary>
+    /// The original text of the audio (required if ModifiedText is provided)
+    /// </summary>
+    public string? InputText { get; set; }
+    /// <summary>
+    /// JSON list of word timestamps (optional)
+    /// </summary>
+    public string? WordTimes { get; set; }
+    /// <summary>
+    /// List of replacement audio file URLs (optional if InputText and ModifiedText are given)
+    /// </summary>
+    public string[]? ReplacementAudioFiles { get; set; }
+    /// <summary>
+    /// JSON list of AudioInfillingReplacement objects (optional)
+    /// </summary>
+    public string? Replacements { get; set; } //{"start": 1.0, "end": 2.0, "audio_base64": "..."}]
+}
+public class WordTime
+{
+    public string Word { get; set; } = "";
+    public float Start { get; set; }
+    public float End { get; set; }
+}
+public class AudioInfillingReplacement
+{
+    public float Start { get; set; }
+    public float End { get; set; }
+    public string AudioBase64 { get; set; } = "";
+}
+public class AudioInfillingFileUploadModel
+{
+    public string FileName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public string Data { get; set; } = "";
+    /// <summary>
+    /// The modified/target text for the audio (optional if ReplacementAudioFiles or Replacements are provided)
+    /// </summary>
+    public string? ModifiedText { get; set; }
+    /// <summary>
+    /// The original text of the audio (required if ModifiedText is provided)
+    /// </summary>
+    public string? InputText { get; set; }
+    /// <summary>
+    /// JSON list of word timestamps (optional)
+    /// </summary>
+    public string? WordTimes { get; set; }
+    /// <summary>
+    /// List of replacement audio file URLs (optional)
+    /// </summary>
+    public string[]? ReplacementAudioFiles { get; set; }
+    /// <summary>
+    /// JSON list of AudioInfillingReplacement objects (optional)
+    /// </summary>
+    public string? Replacements { get; set; }
+}
+
+
+
+
+
 
 
 
