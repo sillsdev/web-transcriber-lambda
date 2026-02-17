@@ -32,6 +32,7 @@ public partial class Sharedresource : BaseModel, IArchive
     [Attr(PublicName = "keywords")]
     public string? Keywords { get; set; }
 
+    [Attr(PublicName = "artifact-category-id")]
     public int? ArtifactCategoryId { get; set; }
 
     [HasOne(PublicName = "artifact-category")]

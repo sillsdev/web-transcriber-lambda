@@ -430,12 +430,17 @@ namespace SIL.Transcriber.Services
         {
             int startNext;
             string err = "";
+            bool validDataRead = false;
             try
             {
                 Stream ms = OpenFile(fileName + ".sss", out DateTime writeTime);
                 StreamReader reader = new(ms);
                 string data = reader.ReadToEnd();
-                bool recent = writeTime > DateTime.Now.AddMinutes(data.Contains("writing") ? -8 : -2);
+                bool recent = writeTime > DateTime.Now.AddMinutes(data.Contains("writing") ? -8 : -4);
+
+                Logger.LogInformation("CheckProgress: fileName={fn}, lastAdd={la}, writeTime={wt}, recent={r}, dataLength={dl}",
+                    fileName, lastAdd, writeTime, recent, data.Length);
+
                 if (recent)
                 {
                     if (data.IndexOf('|') > 0)
@@ -446,18 +451,29 @@ namespace SIL.Transcriber.Services
                     bool media = data.Contains(" media");
                     if (media)
                         data = data[..data.IndexOf(" media")];
-                    if (!int.TryParse(data, out startNext))
+                    if (int.TryParse(data, out startNext))
+                    {
+                        validDataRead = true;
+                        if (media)
+                            startNext += lastAdd;
+                        Logger.LogInformation("CheckProgress: Parsed startNext={sn} from status file", startNext);
+                    }
+                    else
+                    {
+                        Logger.LogWarning("CheckProgress: Failed to parse data='{d}'", data);
                         startNext = 0;
-                    if (media)
-                        startNext += lastAdd;
+                    }
                 }
                 else
+                {
+                    Logger.LogWarning("CheckProgress: Status file not recent, writeTime={wt}", writeTime);
                     startNext = 0;
+                }
             }
-            catch
+            catch (Exception ex)
             {
                 //it's not there yet...
-                Logger.LogWarning("{sf} status file not available", fileName + ".sss");
+                Logger.LogWarning(ex, "CheckProgress: {sf} status file not available", fileName + ".sss");
                 startNext = lastAdd + 1;
             }
             if (startNext < 0)
@@ -469,8 +485,16 @@ namespace SIL.Transcriber.Services
                 }
                 catch { }
             }
+            else if (!validDataRead || startNext == 0)
+            {
+                // Only enforce lastAdd + 1 when we didn't get valid data or when the file is stale
+                startNext = lastAdd + 1;
+            }
             else
+            {
+                // We have valid data - use it, but ensure we're making progress
                 startNext = Math.Max(startNext, lastAdd + 1);
+            }
 
             string contentType = string.Concat("application/", (Path.GetExtension(fileName))[1..]);
             return new Fileresponse()
@@ -2029,11 +2053,12 @@ namespace SIL.Transcriber.Services
                         myTypeAttribute.SetValue(s, value);
                     }
                 }
-
-            AttrAttribute? offlineIdAttribute = attrs.FirstOrDefault(
+            if (ro.Id != null)
+            {
+                AttrAttribute? offlineIdAttribute = attrs.FirstOrDefault(
                         a => a.PublicName == "offline-id");
-            offlineIdAttribute?.SetValue(s, ro.Id);
-
+                offlineIdAttribute?.SetValue(s, ro.Id);
+            }
             if (ro.Relationships != null)
                 foreach (
                     KeyValuePair<string, RelationshipObject?> row in ro.Relationships.Where(
@@ -2052,14 +2077,17 @@ namespace SIL.Transcriber.Services
                         string oldIdStr = row.Value?.Data.SingleValue?.Id??"";
 
                         bool isNum = int.TryParse(oldIdStr, out int oldid);
-                        int id = 0;
-                        if (!string.IsNullOrEmpty(mapKey) && !string.IsNullOrEmpty(oldIdStr))
-                            id = GetMappedId(myTypeRelationship.Property.PropertyType.Name, mapKey, oldIdStr) ?? 0;
+                        int id = !string.IsNullOrEmpty(mapKey) && !string.IsNullOrEmpty(oldIdStr)
+                            ? GetMappedId(myTypeRelationship.Property.PropertyType.Name, mapKey, oldIdStr) ?? 0
+                            : oldid;
 
                         AttrAttribute? offlineAttribute = attrs.FirstOrDefault(
                             a => a.PublicName == "offline-" + myTypeRelationship.PublicName + "-id");
                         offlineAttribute?.SetValue(s, oldIdStr);
-
+                        AttrAttribute? myIdAttribute = attrs.FirstOrDefault(
+                        a => a.PublicName == myTypeRelationship.PublicName + "-id");
+                        if (myIdAttribute == null && myTypeRelationship.PublicName == "last-modified-by-user")
+                            myIdAttribute = attrs.FirstOrDefault(a => a.PublicName == "last-modified-by");
                         try
                         {
                             object? p = null;
@@ -2076,13 +2104,11 @@ namespace SIL.Transcriber.Services
                             Logger.LogError("unable to find {r} with id {id} oldid {oldid} {e}", myTypeRelationship.PublicName, id, oldIdStr, e);
                             id = 0;
                         }
-                        AttrAttribute? myIdAttribute = attrs.FirstOrDefault(
-                        a => a.PublicName == myTypeRelationship.PublicName + "-id"
-                    );
-                        if (myIdAttribute == null && myTypeRelationship.PublicName == "last-modified-by-user")
-                            myIdAttribute = attrs.FirstOrDefault(a => a.PublicName == "last-modified-by");
-                        if (myIdAttribute != null && id > 0)
-                            myIdAttribute.SetValue(s, id);
+                        if (myIdAttribute != null)
+                            if (id > 0)
+                                myIdAttribute.SetValue(s, id);
+                            else
+                                myIdAttribute.SetValue(s, null);
 
                     }
                 }
@@ -2804,16 +2830,27 @@ namespace SIL.Transcriber.Services
             string lang = "";
             if (addLang && sourceOrg.DefaultParams != null)
             {
-                dynamic? x = Newtonsoft.Json.JsonConvert.DeserializeObject(sourceOrg.DefaultParams);
-                dynamic? lp = x?.langProps;
-                lang = lp?.languageName ?? "";
-                if (!string.IsNullOrEmpty(lang))
-                    lang = " " + lang;
+                try
+                {
+                    JObject? x = JObject.Parse(sourceOrg.DefaultParams);
+                    JToken? lpToken = x?["langProps"];
+                    if (lpToken is JObject lp)
+                    {
+                        lang = lp["languageName"]?.ToString() ?? "";
+                        if (!string.IsNullOrEmpty(lang))
+                            lang = " " + lang;
+                    }
+                }
+                catch
+                {
+                    // If JSON parsing fails or structure is unexpected, just use empty lang
+                }
             }
-            string orgname = sourceOrg.Name+lang+(sameName ? "" : "_c"+tryn++).ToString();
+            string sourceName = (sourceOrg.Name??"team").Replace(">", "").Replace("<", "");
+            string orgname = sourceName+lang+(sameName ? "" : "_c"+tryn++).ToString();
             while (dbContext.Organizations.FirstOrDefault(x => x.Name == orgname && !x.Archived) != null)
             {
-                orgname = sourceOrg.Name + lang + "_c" + tryn++.ToString();
+                orgname = sourceName + lang + "_c" + tryn++.ToString();
             }
             EntityEntry<Organization>? t = dbContext.Organizations.Add(
                 new Organization
@@ -3176,13 +3213,54 @@ namespace SIL.Transcriber.Services
                 result.TryAdd(kvp.Key, kvp.Value.Id);
             return result;
         }
+        private bool AreToolsEquivalent(string? tool1, string? tool2)
+        {
+            if (string.IsNullOrEmpty(tool1) && string.IsNullOrEmpty(tool2))
+                return true;
+            if (string.IsNullOrEmpty(tool1) || string.IsNullOrEmpty(tool2))
+                return false;
+
+            try
+            {
+                JObject json1 = JObject.Parse(tool1);
+                JObject json2 = JObject.Parse(tool2);
+
+                string? toolValue1 = json1["tool"]?.ToString();
+                string? toolValue2 = json2["tool"]?.ToString();
+
+                // Tool values must match
+                if (toolValue1 != toolValue2)
+                    return false;
+
+                // If either has settings, compare them
+                string? settings1 = json1["settings"]?.ToString();
+                string? settings2 = json2["settings"]?.ToString();
+
+                // If both have non-empty settings, they must match
+                bool hasSettings1 = !string.IsNullOrEmpty(settings1);
+                bool hasSettings2 = !string.IsNullOrEmpty(settings2);
+
+                if (hasSettings1 || hasSettings2)
+                {
+                    return settings1 == settings2;
+                }
+
+                return true;
+            }
+            catch
+            {
+                return tool1 == tool2;
+            }
+        }
+
         private IdMap CopyOrgworkflowsteps(IList<Orgworkflowstep> lst, int orgId)
         {
             Dictionary<string, Orgworkflowstep> map = [];
+            List<Orgworkflowstep> destSteps = [.. dbContext.Orgworkflowsteps.Where(o => o.OrganizationId == orgId && !o.Archived)];
             foreach (Orgworkflowstep s in lst)
             {
                 string id =  s.OfflineId ?? "error";
-                Orgworkflowstep? ex = dbContext.Orgworkflowsteps.Where(o => o.OrganizationId == orgId && o.Name == s.Name && !o.Archived).FirstOrDefault();
+                Orgworkflowstep? ex = destSteps.FirstOrDefault(o => AreToolsEquivalent(o.Tool, s.Tool));
                 if (ex != null)
                     map.Add(id, ex);
                 else
@@ -4053,26 +4131,35 @@ namespace SIL.Transcriber.Services
             cats.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
+            dbContext.Artifactcategorys.UpdateRange(cats);
             List<Section> sections = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Sections && c.Newprojid == mapKey)
                                         .Join(dbContext.Sections, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null)];
             sections.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
+            dbContext.Sections.UpdateRange(sections);
             List<Sharedresource> resources = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.SharedResources && c.Newprojid == mapKey)
                                         .Join(dbContext.Sharedresources, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null)];
             resources.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
+            dbContext.Sharedresources.UpdateRange(resources);
+
+            List<Passage> psgs =  [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Passages && c.Newprojid == mapKey)
+                                        .Join(dbContext.Passages, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSharedResourceId != null)];
+            psgs.ForEach(p => p.SharedResourceId = GetMappedId(Tables.SharedResources, mapKey, p.OfflineSharedResourceId));
+            dbContext.Passages.UpdateRange(psgs);
+
+            //I may not need to do this because it's handled in UpdateOfflineIds...
             //internalization resources from general resource...
             List<Mediafile> mediafiles = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Mediafiles && c.Newprojid == mapKey)
                                         .Join(dbContext.Mediafiles, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSourceMediaId != null)];
             mediafiles.ForEach(m => m.SourceMediaId = GetMappedId(Tables.Mediafiles, mapKey, m.OfflineSourceMediaId));
 
-            List<Passage> psg =  [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Passages && c.Newprojid == mapKey)
-                                        .Join(dbContext.Passages, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSharedResourceId != null)];
-            psg.ForEach(p => p.SharedResourceId = GetMappedId(Tables.SharedResources, mapKey, p.OfflineSharedResourceId));
+            dbContext.Mediafiles.UpdateRange(mediafiles);
 
             dbContext.SaveChanges();
+            UpdateOfflineIds();
         }
 
         public async Task<Fileresponse> ProcessImportCopyFileAsync(
@@ -4142,6 +4229,7 @@ namespace SIL.Transcriber.Services
                     if (doc == null || lst == null)
                         continue;
                     Logger.LogInformation("name: {n}", name);
+                    status = $"{entryNum}/{archive.Entries.Count}";
 #pragma warning disable CS8604 // Possible null reference argument.
                     switch (name)
                     {
@@ -4331,7 +4419,7 @@ namespace SIL.Transcriber.Services
                             MediafileMap = map;
                             if (map.Count < mflst.Count)
                             {
-                                status = $"{map.Count}/{mflst.Count} mediafiles copied";
+                                status = $"{map.Count}/{mflst.Count} mediafiles";
                                 complete = false;
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }
@@ -4344,7 +4432,7 @@ namespace SIL.Transcriber.Services
                             IdMap dMap = CopyDiscussions(dlst, mapKey, dtBail);
                             if (dMap.Count < dlst.Count)
                             {
-                                status = $"{dMap.Count}/{dlst.Count} discussions copied";
+                                status = $"{dMap.Count}/{dlst.Count} discussions";
                                 complete = false;
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }
@@ -4357,7 +4445,7 @@ namespace SIL.Transcriber.Services
                             IdMap cMap = CopyComments(clst, mapKey, dtBail);
                             if (cMap.Count < clst.Count)
                             {
-                                status = $"{cMap.Count}/{clst.Count} comments copied";
+                                status = $"{cMap.Count}/{clst.Count} comments";
                                 complete = false;
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }

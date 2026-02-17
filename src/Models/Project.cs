@@ -81,16 +81,26 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "editsheetgroup")]
         public virtual Group? EditsheetGroup { get; set; }
+
+        [Attr(PublicName = "editsheet-group-id")]
         public int? EditsheetGroupId { get; set; }
+
         [HasOne(PublicName = "editsheetuser")]
         public virtual User? EditsheetUser { get; set; }
+
+        [Attr(PublicName = "editsheet-user-id")]
         public int? EditsheetUserId { get; set; }
 
         [HasOne(PublicName = "publishgroup")]
         public virtual Group? PublishGroup { get; set; }
+
+        [Attr(PublicName = "publish-group-id")]
         public int? PublishGroupId { get; set; }
+
         [HasOne(PublicName = "publishuser")]
         public virtual User? PublishUser { get; set; }
+
+        [Attr(PublicName = "publish-user-id")]
         public int? PublishUserId { get; set; }
 
         [JsonIgnore]

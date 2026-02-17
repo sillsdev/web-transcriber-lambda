@@ -13,6 +13,7 @@ public partial class Organizationscheme : BaseModel, IArchive
     [HasOne(PublicName = "organization")]
     public virtual Organization Organization { get; set; } = null!;
 
+    [Attr(PublicName = "organization-id")]
     public int OrganizationId { get; set; }
 
     public bool Archived { get; set; }

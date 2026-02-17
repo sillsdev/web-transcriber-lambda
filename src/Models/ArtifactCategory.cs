@@ -32,6 +32,7 @@ namespace SIL.Transcriber.Models
         public string? OfflineTitleMediafileId { get; set; }
         public bool Archived { get; set; }
 
+        [Attr(PublicName = "organization-id")]
         public int? OrganizationId { get; set; }
         [HasOne(PublicName = "organization")]
         public Organization? Organization { get; set; }

@@ -4,6 +4,7 @@ namespace SIL.Transcriber.Models;
 
 public class Sharedresourcereference : BaseModel, IArchive
 {
+    [Attr(PublicName = "shared-resource-id")]
     public int SharedResourceId { get; set; }
     [HasOne(PublicName = "shared-resource")]
     public Sharedresource? SharedResource { get; set; }
