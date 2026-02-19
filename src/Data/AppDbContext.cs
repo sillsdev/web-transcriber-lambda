@@ -496,7 +496,7 @@ namespace SIL.Transcriber.Data
             if (_currentUser < 0)
             {
                 string auth0Id = CurrentUserContext.Auth0Id ?? "nouser";
-                User? userFromResult = Users.FirstOrDefault(u => (u.ExternalId ?? "olddata").Equals(auth0Id) && !u.Archived);
+                User? userFromResult = Users.OrderBy(u => u.Id).FirstOrDefault(u => (u.ExternalId ?? "olddata").Equals(auth0Id) && !u.Archived);
                 _currentUser = userFromResult == null ? -1 : userFromResult.Id;
             }
             return _currentUser;

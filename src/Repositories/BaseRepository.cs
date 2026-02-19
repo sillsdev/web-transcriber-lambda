@@ -15,25 +15,17 @@ using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Repositories
 {
-    public class ResourceInfo
-    {
-        public IResourceGraph ResourceGraph { get; set; }
-        public IJsonApiOptions Options { get; set; }
-        public IResourceDefinitionAccessor ResourceDefinitionAccessor { get; set; }
-        public IMetaBuilder MetaBuilder { get; set; }
-
-        public ResourceInfo(
-            IResourceGraph resourceGraph,
-            IJsonApiOptions options,
-            IResourceDefinitionAccessor resourceDefinitionAccessor,
-            IMetaBuilder metaBuilder
+    public class ResourceInfo(
+        IResourceGraph resourceGraph,
+        IJsonApiOptions options,
+        IResourceDefinitionAccessor resourceDefinitionAccessor,
+        IMetaBuilder metaBuilder
         )
-        {
-            ResourceGraph = resourceGraph;
-            Options = options;
-            ResourceDefinitionAccessor = resourceDefinitionAccessor;
-            MetaBuilder = metaBuilder;
-        }
+    {
+        public IResourceGraph ResourceGraph { get; set; } = resourceGraph;
+        public IJsonApiOptions Options { get; set; } = options;
+        public IResourceDefinitionAccessor ResourceDefinitionAccessor { get; set; } = resourceDefinitionAccessor;
+        public IMetaBuilder MetaBuilder { get; set; } = metaBuilder;
     }
     public abstract class BaseRepository<TEntity>(
         ITargetedFields targetedFields,
@@ -171,8 +163,8 @@ namespace SIL.Transcriber.Repositories
                 withIncludes = tmp.ToString();
             }
             //will this take it out of transcriptions also?? Seems to be ok!!
-            Regex rgxnewlines = new("\r\n|\n");
-            Regex rgxmultiplespaces = new("\t|\\s+");
+            Regex rgxnewlines = NewLineRegex();
+            Regex rgxmultiplespaces = TabSpaceRegex();
             withIncludes = rgxnewlines.Replace(withIncludes, "");
             return rgxmultiplespaces.Replace(withIncludes, " ");
         }
@@ -193,14 +185,14 @@ namespace SIL.Transcriber.Repositories
             int lastId = -1;
             if (starttable == check)
             {
-                List<TResource>? lst = startId > 0 ? [.. input.Where(m => m.Id >= startId)] : [.. input];
+                List<TResource>? lst = startId > 0 ? [.. input.Where(m => m.Id >= startId).OrderBy(x => x.Id)] : [.. input.OrderBy(x => x.Id)];
                 string thisData = ToJson(lst, resourceInfo);
                 while (thisData.Length > (1000000 * 4))
                 {
                     int cnt = lst.Count;
                     TResource mid = lst[cnt/2];
                     lastId = mid.Id;
-                    lst = [.. input.Where(m => m.Id >= startId && m.Id < lastId)];
+                    lst = [.. input.Where(m => m.Id >= startId && m.Id < lastId).OrderBy(x => x.Id)];
                     thisData = ToJson(lst, resourceInfo);
                 }
                 if (data.Length + thisData.Length > (1000000 * 4))
@@ -249,10 +241,9 @@ namespace SIL.Transcriber.Repositories
 
         protected override IQueryable<TEntity> ApplyQueryLayer(QueryLayer layer)
         {
-            ExpressionInScope[] expressions = ConstraintProviders
+            ExpressionInScope[] expressions = [.. ConstraintProviders
                 .SelectMany(provider => provider.GetConstraints())
-                .Where(expressionInScope => expressionInScope.Scope == null)
-                .ToArray();
+                .Where(expressionInScope => expressionInScope.Scope == null)];
 
             if (layer.Filter?.Has(FilterConstants.ID) ?? false) //internal call after insert...if external, we caught it in GetAsync
                 return base.ApplyQueryLayer(layer);
@@ -303,6 +294,11 @@ namespace SIL.Transcriber.Repositories
             }
             return FromCurrentUser(base.ApplyQueryLayer(layer));
         }
+
+        [GeneratedRegex("\r\n|\n")]
+        private static partial Regex NewLineRegex();
+        [GeneratedRegex("\t|\\s+")]
+        private static partial Regex TabSpaceRegex();
         #endregion
     }
 }
