@@ -35,7 +35,7 @@ namespace SIL.Transcriber.Repositories
         {
             int? media = resourceFromRequest.MediafileId ?? resourceFromDatabase.MediafileId;
             if (media != null)
-                await MediafileRepository.Publish((int)media, "{\"Public\": \"true\"}", true);
+                await MediafileRepository.Publish((int)media, "{\"Public\": \"true\"}");
             await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
         }
         public IQueryable<Graphic> UsersGraphics(

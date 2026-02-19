@@ -177,15 +177,15 @@ namespace SIL.Transcriber.Repositories
                 foreach (Mediafile mediafile in medialist)
                 {
                     if (publish)
-                        await MediafileRepository.Publish(mediafile.Id, publishTo, false);
+                        await MediafileRepository.Publish(mediafile, publishTo);
                     else if (mediafile.ReadyToShare && (publishTo != "{}"))
                     {
                         JObject pt = JObject.Parse(publishTo);
                         pt.Add("PublishPassage", false);
                         mediafile.ReadyToShare = false;
                         mediafile.PublishTo = pt.ToString();
-                        dbContext.Mediafiles.Update(mediafile);
                     }
+                    dbContext.Mediafiles.Update(mediafile);
                 }
                 ;
                 _ = dbContext.SaveChanges();
@@ -195,7 +195,7 @@ namespace SIL.Transcriber.Repositories
         {
             int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromRequest.TitleMediafile?.Id ?? resourceFromDatabase.TitleMediafileId ?? resourceFromDatabase.TitleMediafile?.Id;
             if (titleMedia != null) //always do titles and movements
-                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
+                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}");
         }
         public override async Task CreateAsync(Section resourceFromRequest, Section resourceForDatabase, CancellationToken cancellationToken)
         {
@@ -220,7 +220,7 @@ namespace SIL.Transcriber.Repositories
             //merged from prod...do I need this still?????
             int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
             if (titleMedia != null) //always do titles and movements
-                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}", true);
+                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}");
         }
         public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
         {
