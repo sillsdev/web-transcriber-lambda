@@ -1867,6 +1867,7 @@ namespace SIL.Transcriber.Services
                     .FirstOrDefault();
                 if (mediafile != null)
                 {
+                    c.OfflineMediafileId = null;
                     c.ReleaseMediafileId = mediafile.Id;
                     c.LastModifiedOrigin = "electron";
                     c.DateUpdated = DateTime.UtcNow;
@@ -1956,6 +1957,7 @@ namespace SIL.Transcriber.Services
                 existing.CommentText = importing.CommentText;
                 existing.MediafileId = importing.MediafileId;
                 existing.OfflineMediafileId = importing.OfflineMediafileId;
+                existing.OfflineDiscussionId = importing.OfflineDiscussionId;
                 existing.Visible = importing.Visible;
                 existing.DateUpdated = DateTime.UtcNow;
                 existing.Archived = false;
@@ -2083,7 +2085,8 @@ namespace SIL.Transcriber.Services
 
                         AttrAttribute? offlineAttribute = attrs.FirstOrDefault(
                             a => a.PublicName == "offline-" + myTypeRelationship.PublicName + "-id");
-                        offlineAttribute?.SetValue(s, oldIdStr);
+                        if (offlineAttribute != null && mapKey != "")
+                            offlineAttribute?.SetValue(s, oldIdStr);
                         AttrAttribute? myIdAttribute = attrs.FirstOrDefault(
                         a => a.PublicName == myTypeRelationship.PublicName + "-id");
                         if (myIdAttribute == null && myTypeRelationship.PublicName == "last-modified-by-user")
@@ -3867,7 +3870,8 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.Passages:
-                            List<Passage> passages =[.. sourcesections.Join(dbContext.Passages, s => s.Id, p=> p.SectionId, (s, p) => p).Where(x => !x.Archived).ToList().Select(p =>
+                            IQueryable<Passage> sourcepsg = sourcesections.Join(dbContext.Passages, s => s.Id, p=> p.SectionId, (s, p) => p).Where(x => !x.Archived);
+                            List<Passage> passages =[..sourcepsg.ToList().Select(p =>
                                 new Passage
                                 {
                                     Sequencenum = p.Sequencenum,
@@ -3880,7 +3884,8 @@ namespace SIL.Transcriber.Services
                                     LastComment = "",
                                     PassagetypeId =  p.PassagetypeId,
                                     SharedResourceId = p.SharedResourceId, //from our db so just copy it
-                                    OfflineId = p.StringId
+                                    OfflineId = p.StringId,
+                                    StepComplete=p.StepComplete,
                                 })];
                             SaveMap(CopyPassages(passages, mapKey), name, mapKey);
                             ix++;
