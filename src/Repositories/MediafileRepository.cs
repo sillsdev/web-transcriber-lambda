@@ -398,7 +398,7 @@ namespace SIL.Transcriber.Repositories
                 }
             }
 
-            if (m.PublishedAs == null)
+            if ((m.PublishedAs ?? "") == "")
             {
                 Tags tags = new()
                 {
