@@ -4106,7 +4106,7 @@ namespace SIL.Transcriber.Services
                 return new Fileresponse()
                 {
                     Id = complete ? -1 : ix,
-                    Message = string.Format("{0} {1} {2} {3}", org.Id, org.Name, project.Name, complete ? "" : status),
+                    Message = string.Format("{0} {1} {2} {3}", org.Id, org.Name, project.Name, status),
                     FileURL = mapKey.ToString(),
                     Status = HttpStatusCode.OK,
                     ContentType = "application/ptf",
