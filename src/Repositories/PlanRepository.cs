@@ -122,7 +122,7 @@ namespace SIL.Transcriber.Repositories
         {
             if (plan.Project?.OrganizationId != null)
             {
-                Organizationbible? orgb = dbContext.OrganizationbiblesData
+                Organizationbible? orgb = dbContext.OrganizationbiblesData.Where(b => !b.Archived)
                 .SingleOrDefault(o => o.OrganizationId == plan.Project.OrganizationId);
                 if (orgb != null)
                     return orgb.Bible;
