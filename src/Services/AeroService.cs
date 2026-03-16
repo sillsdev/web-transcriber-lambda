@@ -31,7 +31,13 @@ public class AeroService(
             { new StringContent(GetVarOrThrow("SIL_TR_AERO_PASSWORD")), "password" }
         };
         HttpResponseMessage response = await httpClient.PostAsync($"{Domain}/token", content);
-        dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
+        string responseBody = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            Logger.LogError("Aero authentication failed: {Status} {Reason} - {Body}", response.StatusCode, response.ReasonPhrase, responseBody);
+            throw new HttpRequestException($"Aero authentication failed: {(int)response.StatusCode} {response.ReasonPhrase}: {responseBody}", null, response.StatusCode);
+        }
+        dynamic? x = JsonConvert.DeserializeObject(responseBody);
         return x?["access_token"] ?? "";
     }
     private async Task<HttpClient> Httpclient()
@@ -132,15 +138,18 @@ public class AeroService(
 
     private async Task<string?> GetResult(string api, MultipartFormDataContent? multipartContent, string result)
     {
-        Logger.LogCritical("GetResult");
+        Logger.LogDebug("GetResult {Api}", api);
         using HttpClient httpClient = await Httpclient();
-        Logger.LogCritical("{api}", api);
         await LogMultipartContent(multipartContent, Logger);
-        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent?.Any()??false ? multipartContent : null); // multipartContent);
-        Logger.LogCritical("{s} {r}", response.StatusCode, response.ReasonPhrase);
-        response.EnsureSuccessStatusCode();
-        dynamic? x = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
-        return x?[result].ToString();
+        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent?.Any() ?? false ? multipartContent : null);
+        string responseBody = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            Logger.LogError("Aero API error [{Api}]: {Status} {Reason} - {Body}", api, response.StatusCode, response.ReasonPhrase, responseBody);
+            throw new HttpRequestException($"Aero API returned {(int)response.StatusCode} {response.ReasonPhrase}: {responseBody}", null, response.StatusCode);
+        }
+        dynamic? x = JsonConvert.DeserializeObject(responseBody);
+        return x?[result]?.ToString();
     }
 
     /*
@@ -176,15 +185,27 @@ public class AeroService(
     {
         using HttpClient httpClient = await Httpclient();
         HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{service}_status/{TaskId}");
+        if (!response.IsSuccessStatusCode)
+        {
+            string body = await response.Content.ReadAsStringAsync();
+            Logger.LogError("Aero status check failed [{Service}/{TaskId}]: {Status} {Reason} - {Body}",
+                service, TaskId, response.StatusCode, response.ReasonPhrase, body);
+            throw new HttpRequestException($"Aero status check for '{service}' returned {(int)response.StatusCode} {response.ReasonPhrase}: {body}", null, response.StatusCode);
+        }
         if (response.Headers.TryGetValues("task-state", out IEnumerable<string>? taskStates))
         {
             string? taskState = taskStates.FirstOrDefault();
-            return taskState is "SUCCESS" or "finished"
-                ? response.Content
-                : taskState == "FAILURE" ?
-                    throw new Exception(taskState)
-                : null;
+            if (taskState is "SUCCESS" or "finished")
+                return response.Content;
+            if (taskState == "FAILURE")
+            {
+                string body = await response.Content.ReadAsStringAsync();
+                Logger.LogError("Aero task failed [{Service}/{TaskId}]: {Body}", service, TaskId, body);
+                throw new Exception($"Aero task failed for '{service}' (task: {TaskId}): {body}");
+            }
+            return null;
         }
+        Logger.LogWarning("Aero status response missing task-state header [{Service}/{TaskId}]", service, TaskId);
         return null;
     }
     public async Task<HttpContent?> NoiseRemovalStatus(string? taskId)
@@ -343,19 +364,27 @@ public class AeroService(
         HttpContent? content = await GetStatus("batch_transcription", taskId);
         if (content != null)
         {
-            dynamic? x = JsonConvert.DeserializeObject(await content.ReadAsStringAsync());
-            if (x != null)
+            string json = await content.ReadAsStringAsync();
+            try
             {
-                TranscriptionResponse response = new()
+                dynamic? x = JsonConvert.DeserializeObject(json);
+                if (x != null)
                 {
-                    Phonetic = x.result.phonetic_transcription ?? "",
-                    Transcription =x.result.sister_transcription ?? "",
-                    TranscriptionId = x.result.transcription_id ?? 0
-                };
-                return response;
+                    TranscriptionResponse response = new()
+                    {
+                        Phonetic = x.result.phonetic_transcription ?? "",
+                        Transcription = x.result.sister_transcription ?? "",
+                        TranscriptionId = x.result.transcription_id ?? 0
+                    };
+                    return response;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to parse transcription status response: {Json}", json);
+                throw;
             }
         }
-        ;
         return null;
     }
 
@@ -405,7 +434,7 @@ public class AeroService(
 
         // Add s3_file_path parameter
         multipartContent.Add(new StringContent($"s3://{Bucket}/{AERO_FOLDER}/{fileName}"), "s3_file_path");
-        
+
         // Add modified_text parameter if provided
         if (!string.IsNullOrEmpty(modifiedText))
             multipartContent.Add(new StringContent(modifiedText), "modified_text");
