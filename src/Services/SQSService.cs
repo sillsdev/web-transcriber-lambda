@@ -147,7 +147,8 @@ namespace SIL.Transcriber.Services
                 Folder = folder
             };
             string url = GetVarOrDefault("SIL_TR_EXPORT_QUEUE", "https://sqs.us-east-1.amazonaws.com/620141372223/APMExportQueue-dev.fifo");
-            return SendMessage(url, JsonConvert.SerializeObject(body), $"{projectId}_{start}", projectId.ToString());
+
+            return SendMessage(url, JsonConvert.SerializeObject(body), $"{projectId}_{start}_{DateTime.Now.Millisecond}", projectId.ToString());
         }
         public string SendMessage(string url, string body, string? deDup, string? groupId)
         {

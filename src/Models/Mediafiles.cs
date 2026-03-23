@@ -85,13 +85,17 @@ namespace SIL.Transcriber.Models
         public int? ResourcePassageId { get; set; }
         [HasOne(PublicName = "resource-passage")]
         public Passage? ResourcePassage { get; set; }
+
+        [Attr(PublicName = "offline-resource-passage-id")]
+        public string? OfflineResourcePassageId { get; set; }
+
         [Attr(PublicName = "link")]
         public bool? Link { get; set; }
 
-        [Attr(PublicName = "offline-id")]
-        public string? OfflineId { get; set; }
-        [Attr(PublicName = "source-media-offline-id")]
+        [Attr(PublicName = "source-media-offline-id")] //sync uses this
         public string? SourceMediaOfflineId { get; set; }
+        [Attr(PublicName = "offline-source-media-id")] //standardized name for external fileimport
+        public string? OfflineSourceMediaId { get; set; }
 
         [Attr(PublicName = "source-media-id")]
         public int? SourceMediaId { get; set; }
@@ -101,6 +105,12 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "source-segments")]
         [Column(TypeName = "jsonb")]
         public string? SourceSegments { get; set; }
+
+        //TODO [Attr(PublicName = "comment")]
+        //public string? Comment { get; set; }
+
+        [Attr(PublicName = "offline-passage-id")]
+        public string? OfflinePassageId { get; set; }
 
         public bool ReadyToSync {
             get { return Transcriptionstate == "approved" && !Archived; }

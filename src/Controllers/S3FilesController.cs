@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using System.Net;
@@ -83,6 +84,7 @@ namespace SIL.Transcriber.Controllers
             S3Response response = await _service.RemoveFile(fileName, folder);
             return Ok(response);
         }
+        [AllowAnonymous]
         [HttpGet("put/AI/{fileName}/{contentType}")]
         public IActionResult PutURL(
             [FromRoute] string fileName,

@@ -83,6 +83,9 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "shared-resource")]
         public Sharedresource? SharedResource { get; set; }
 
+        [Attr(PublicName = "offline-shared-resource-id")]
+        public string? OfflineSharedResourceId { get; set; }
+
         [Attr(PublicName = "start-chapter")]
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public int? StartChapter { get; set; }

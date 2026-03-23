@@ -26,6 +26,8 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "role")]
         public Role Role { get; set; } = null!;
+
+        [Attr(PublicName = "role-id")]
         public int RoleId { get; set; }
 
         [NotMapped]

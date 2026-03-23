@@ -21,12 +21,11 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "notes")]
         [Column(TypeName = "jsonb")]
         public string? Notes { get; set; }
+        [Attr(PublicName = "release-mediafile-id")]
         public int? ReleaseMediafileId { get; set; }
         [HasOne(PublicName = "release-mediafile")]
         public Mediafile? ReleaseMediafile { get; set; }
 
-        [Attr(PublicName = "offline-id")]
-        public string? OfflineId { get; set; }
         [Attr(PublicName = "offline-mediafile-id")]
         public string? OfflineMediafileId { get; set; }
 

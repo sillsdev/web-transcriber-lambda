@@ -1097,12 +1097,13 @@ namespace SIL.Transcriber.Services
                 passageId,
                 artifactTypeId
             );
-            if (!mediafiles.Any())
+            Passage? p = mediafiles.FirstOrDefault()?.Passage;
+            if (p == null)
                 return [];
 
             List<Passage> passages =
             [
-                mediafiles.First().Passage
+                p
             ];
             return await SyncPassages(userSecret, passages, mediafiles, artifactTypeId);
         }

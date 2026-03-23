@@ -12,8 +12,5 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "organization")]
         public Organization? Organization { get; set; }
 
-        public int? ParentId { get; set; }
-        [HasOne(PublicName = "parent")]
-        public Orgworkflowstep? Parent { get; set; }
     }
 }

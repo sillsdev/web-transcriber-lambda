@@ -420,11 +420,6 @@ namespace SIL.Transcriber.Data
             _ = modelBuilder.Entity<Artifactcategory>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
             _ = modelBuilder.Entity<Sharedresource>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
 
-            _ = modelBuilder
-                .Entity<Orgworkflowstep>()
-                .HasOne(s => s.Parent)
-                .WithMany()
-                .HasForeignKey(s => s.ParentId);
             EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
             _ = userEntity
                 .HasMany(u => u.GroupMemberships)
@@ -463,10 +458,9 @@ namespace SIL.Transcriber.Data
 
         private void UpdateSoftDeleteStatuses()
         {
-            List<EntityEntry> entries = ChangeTracker
+            List<EntityEntry> entries = [.. ChangeTracker
                 .Entries()
-                .Where(e => e.State is EntityState.Added or EntityState.Deleted)
-                .ToList();
+                .Where(e => e.State is EntityState.Added or EntityState.Deleted)];
             for (int ix = entries.Count - 1; ix >= 0; ix--)
             {
                 EntityEntry entry = entries[ix];
@@ -586,7 +580,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Orgkeytermtarget> OrgKeytermTargetsData =>
     Orgkeytermtargets.Include(x => x.Organization).Include(x => x.Mediafile);
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
-            Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
+            Orgworkflowsteps.Include(x => x.Organization);//.Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
             Passages.Include(x => x.Section).Include(x => x.Passagetype).Include(x => x.SharedResource);
         public IQueryable<Passagestatechange> PassagestatechangesData => Passagestatechanges

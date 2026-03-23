@@ -30,18 +30,26 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "role")]
         public virtual Role? Role { get; set; }
+
+        [Attr(PublicName = "role-id")]
         public int RoleId { get; set; }
 
         [HasOne(PublicName = "group")]
         public virtual Group? Group { get; set; }
+
+        [Attr(PublicName = "group-id")]
         public int? GroupId { get; set; }
 
         [HasOne(PublicName = "group-role")]
         public virtual Role? GroupRole { get; set; }
+
+        [Attr(PublicName = "group-role-id")]
         public int? GroupRoleId { get; set; }
 
         [HasOne(PublicName = "all-users-role")]
         public virtual Role? AllUsersRole { get; set; }
+
+        [Attr(PublicName = "all-users-role-id")]
         public int AllUsersRoleId { get; set; }
     }
 }

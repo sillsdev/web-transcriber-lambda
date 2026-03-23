@@ -16,15 +16,17 @@ namespace SIL.Transcriber.Models
         public Mediafile? Mediafile { get; set; }
         [Attr(PublicName = "comment-text")]
         public string? CommentText { get; set; }
-        [Attr(PublicName = "offline-id")]
-        public string? OfflineId { get; set; }
+
         [Attr(PublicName = "offline-discussion-id")]
         public string? OfflineDiscussionId { get; set; }
         [Attr(PublicName = "offline-mediafile-id")]
         public string? OfflineMediafileId { get; set; }
+
         [Attr(PublicName = "visible")]
         [Column(TypeName = "jsonb")]
         public string? Visible { get; set; }
+
+        [Attr(PublicName = "creator-user-id")]
         public int? CreatorUserId { get; set; }
 
         [HasOne(PublicName = "creator-user")]

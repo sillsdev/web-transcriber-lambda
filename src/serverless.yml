@@ -74,6 +74,30 @@ functions:
               - X-Api-Key
               - X-Amz-Security-Token
               - X-Amz-User-Agent
+       - http:
+            path: /swagger
+            method: ANY
+            cors:
+             origin: '*'
+             headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+       - http:
+            path: /swagger/{proxy+}
+            method: ANY
+            cors:
+             origin: '*'
+             headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
 
 
 
