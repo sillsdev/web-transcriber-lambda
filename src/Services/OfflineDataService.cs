@@ -2581,7 +2581,7 @@ namespace SIL.Transcriber.Services
                 {
                     //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
                     Intellectualproperty? existing = dbContext.IntellectualPropertys
-                                        .Where(x => x.OfflineId == ip.OfflineId && !ip.Archived)
+                                        .Where(x => x.OfflineId == ip.OfflineId && !x.Archived)
                                         .FirstOrDefault();
                     if (existing == null)
                     {
@@ -3388,7 +3388,6 @@ namespace SIL.Transcriber.Services
                     {
                         Graphic? e = dbContext.Graphics.Where(og => og.OrganizationId == g.OrganizationId && og.ResourceType == g.ResourceType && og.ResourceId == g.ResourceId).FirstOrDefault();
                         savedId = e?.Id ?? 0;
-                        Console.WriteLine("Is this ok?");
                     }
                     SaveId(Tables.Graphics, id, savedId, mapKey);
                     oldmap.Add(id, savedId);
@@ -4094,7 +4093,7 @@ namespace SIL.Transcriber.Services
                                 })];
                                 IdMap newids = CopyComments(comments,  dtBail);
                                 SaveMap(newids, name, mapKey);
-                                dmap = cmap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
+                                cmap = cmap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
                             }
                             if (cmap.Count == commentsCount)
                                 ix++;
