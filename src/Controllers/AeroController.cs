@@ -43,7 +43,6 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     [HttpPost("noiseremoval/fromfile")]
     public async Task<IActionResult> PostS3NR([FromBody] FileUrlRequest request)
     {
-        Logger.LogCritical("PostS3NR");
         if (string.IsNullOrEmpty(request.FileUrl))
         {
             return BadRequest("File URL is missing.");
@@ -222,7 +221,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
 
         // Require either ModifiedText or ReplacementAudioFiles/Replacements
-        if (string.IsNullOrEmpty(model.ModifiedText) && 
+        if (string.IsNullOrEmpty(model.ModifiedText) &&
             (model.ReplacementAudioFiles == null || model.ReplacementAudioFiles.Length == 0) &&
             string.IsNullOrEmpty(model.Replacements))
         {
@@ -254,7 +253,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
 
         // Require either ModifiedText or ReplacementAudioFiles/Replacements
-        if (string.IsNullOrEmpty(request.ModifiedText) && 
+        if (string.IsNullOrEmpty(request.ModifiedText) &&
             (request.ReplacementAudioFiles == null || request.ReplacementAudioFiles.Length == 0) &&
             string.IsNullOrEmpty(request.Replacements))
         {

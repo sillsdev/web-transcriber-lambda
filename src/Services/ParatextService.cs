@@ -1097,15 +1097,14 @@ namespace SIL.Transcriber.Services
                 passageId,
                 artifactTypeId
             );
-            if (!mediafiles.Any() || mediafiles.First().Passage == null)
+            Passage? p = mediafiles.FirstOrDefault()?.Passage;
+            if (p == null)
                 return [];
 
-#pragma warning disable CS8604 // Possible null reference argument.
             List<Passage> passages =
             [
-                mediafiles.First().Passage
+                p
             ];
-#pragma warning restore CS8604 // Possible null reference argument.
             return await SyncPassages(userSecret, passages, mediafiles, artifactTypeId);
         }
 

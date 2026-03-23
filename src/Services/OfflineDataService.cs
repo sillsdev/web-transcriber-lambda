@@ -984,8 +984,7 @@ namespace SIL.Transcriber.Services
                                 .Concat([.. bibleMedia])
                                 .Concat([.. bibleisoMedia])
                                 .Distinct().OrderBy(m => m.Id)];
-            Logger.LogCritical("ProjectMedia: plan={plan}, oktt={oktt}, ip={ip}, source={source}, category={category}, sharedNote={sharedNote}",
-                pm.Count, okttmedia.Count(), ipmedia.Count(), sourcemediafiles.Count(), categorymediafiles.Count(), sharedNoteMedia.Count());
+
             return myMedia;
         }
         public Fileresponse ExportProjectPTF(int projectId, int start)
@@ -2049,7 +2048,7 @@ namespace SIL.Transcriber.Services
                     AttrAttribute? myTypeAttribute = attrs.FirstOrDefault(
                         a => a.PublicName == row.Key
                     );
-                    myTypeAttribute ??= attrs.FirstOrDefault(a => a.PublicName == row.Key.CameltoKebab());
+                    myTypeAttribute ??= attrs.FirstOrDefault(a => a.PublicName == row.Key.CamelToKebab());
 
                     if (myTypeAttribute != null && row.Value != null && myTypeAttribute.Property.CanWrite)
                     {
@@ -2079,7 +2078,7 @@ namespace SIL.Transcriber.Services
                         r => r.PublicName == row.Key
                     );
                     myTypeRelationship ??= rels.FirstOrDefault(
-                        r => r.PublicName == row.Key.CameltoKebab()
+                        r => r.PublicName == row.Key.CamelToKebab()
                     );
                     if (myTypeRelationship != null)
                     {
@@ -2416,7 +2415,7 @@ namespace SIL.Transcriber.Services
                 else
                 {
                     //check if it's been uploaded another way (ie. itf and now we're itfs or vice versa)
-                    mediafile = dbContext.Mediafiles.FirstOrDefault(x => x.OfflineId == m.OfflineId && !m.Archived);
+                    mediafile = dbContext.Mediafiles.FirstOrDefault(x => x.OfflineId == m.OfflineId && !x.Archived);
                     if (mediafile == null)
                     {
                         if (!Convert.ToBoolean(m.VersionNumber))
@@ -3385,9 +3384,10 @@ namespace SIL.Transcriber.Services
                             savedId = t.Entity.Id;
                         }
                     }
-                    else
+                    if (savedId == 0)
                     {
-                        savedId = g.ResourceId;
+                        Graphic? e = dbContext.Graphics.Where(og => og.OrganizationId == g.OrganizationId && og.ResourceType == g.ResourceType && og.ResourceId == g.ResourceId).FirstOrDefault();
+                        savedId = e?.Id ?? 0;
                         Console.WriteLine("Is this ok?");
                     }
                     SaveId(Tables.Graphics, id, savedId, mapKey);
@@ -4354,7 +4354,6 @@ namespace SIL.Transcriber.Services
                     IList<ResourceObject>? lst = doc?.Data.ManyValue;
                     if (doc == null || lst == null)
                         continue;
-                    Logger.LogCritical("XXXX name: {n} {d} {b}", name, DateTime.Now, dtBail);
                     status = $"{entryNum}/{archive.Entries.Count}";
 #pragma warning disable CS8604 // Possible null reference argument.
                     switch (name)
