@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using System.Diagnostics;
@@ -60,15 +59,15 @@ namespace SIL.Transcriber.Utility
         {
             value.RemoveText();
             string[] lines = transcription.Split('\n');
-            if (lines.Length == 1 && !lines [0].EndsWith('\n'))
-                lines [0] += '\n';
+            if (lines.Length == 1 && !lines[0].EndsWith('\n'))
+                lines[0] += '\n';
             XText newverse = new (lines[0]);
             value.AddAfterSelf(newverse);
             XNode ?last = value.Parent.IsPara() ? value.Parent : value.NextNode;
 
             for (int ix = 1; ix < lines.Length; ix++)
             {
-                last?.AddAfterSelf(ParatextPara("p", new XText(lines [ix])));
+                last?.AddAfterSelf(ParatextPara("p", new XText(lines[ix])));
                 last = last?.NextNode;
             }
             return;
@@ -107,7 +106,7 @@ namespace SIL.Transcriber.Utility
             if (verse.IsPara())
                 return verse;
             string text = verse.VerseText();
-            if (verse.Parent?.IsPara()??false)
+            if (verse.Parent?.IsPara() ?? false)
             {
                 if (verse.PreviousNode != null)
                 {
@@ -141,7 +140,7 @@ namespace SIL.Transcriber.Utility
                     XNode? next = verse.NextNode;
                     while (next?.IsText() ?? false)
                         next = next?.NextNode;
-                    if (next?.IsVerse()??false)
+                    if (next?.IsVerse() ?? false)
                         MoveToPara((XElement)next);
                 }
                 return verse.Parent;
@@ -208,13 +207,14 @@ namespace SIL.Transcriber.Utility
                         else if (v.StartVerse() > startverse)
                             nextVerse = v;
                     }
-                };
+                }
+            ;
             if (nextVerse != null)
             {
                 nextVerse = MoveToPara(nextVerse);
                 //skip section if there
-                return nextVerse?.PreviousNode != null && nextVerse.PreviousNode.IsSection() 
-                    ? nextVerse.PreviousNode 
+                return nextVerse?.PreviousNode != null && nextVerse.PreviousNode.IsSection()
+                    ? nextVerse.PreviousNode
                     : nextVerse;
             }
             return nextVerse;
@@ -260,14 +260,14 @@ namespace SIL.Transcriber.Utility
                             }
                             else
                             {
-                                if (!existing.ContainsKey(verse.SortableVerses()) && 
-                                    (verse.VerseText() == "" || 
+                                if (!existing.ContainsKey(verse.SortableVerses()) &&
+                                    (verse.VerseText() == "" ||
                                     (verse.StartVerse() >= currentPassage.ChapterStartVerse(chapter) && verse.EndVerse() <= currentPassage.ChapterEndVerse(chapter))))
                                 {
                                     existing.Add(verse.SortableVerses(), verse);
                                 }
                             }
-                        };
+                        }
                 }
             }
             thisVerse = exactVerse;
@@ -315,7 +315,7 @@ namespace SIL.Transcriber.Utility
             }
             return ret;
         }
-        public static string GetParatextData(int chapter, XElement? chapterContent,  Passage currentPassage)
+        public static string GetParatextData(int chapter, XElement? chapterContent, Passage currentPassage)
         {
             string transcription = "";
 
@@ -335,10 +335,11 @@ namespace SIL.Transcriber.Utility
                     }
                     transcription += "\\v" + v.Verses() + " " + txt;
                 }
-            };
+            }
+            ;
             return any ? transcription : "";
         }
-        public static XElement? GenerateParatextData(int chapter, XElement? chapterContent, Passage currentPassage, string transcription, bool addNumbers, SectionMap [] sectionMap)
+        public static XElement? GenerateParatextData(int chapter, XElement? chapterContent, Passage currentPassage, string transcription, bool addNumbers, SectionMap[] sectionMap)
         {
             Debug.WriteLine(transcription);
             IEnumerable<Passage> parsedPassages = ParseTranscription(currentPassage,chapter, transcription);
@@ -350,6 +351,7 @@ namespace SIL.Transcriber.Utility
                 if (thisVerse != null)
                     _ = thisVerse.RemoveVerse();
             }
+            bool firstVerse = true;
             foreach (Passage? p in parsedPassages)
             {
                 //find the verses that contain verses in my range
@@ -363,11 +365,16 @@ namespace SIL.Transcriber.Utility
                         else
                             v.RemoveSection();
                     }
-                };
+                }
+                ;
 
                 if (thisVerse != null)
                 {
-                    thisVerse = MoveToPara(thisVerse);
+                    if (firstVerse)
+                    {
+                        thisVerse = MoveToPara(thisVerse);
+                        firstVerse = false;
+                    }
 #pragma warning disable CS8604 // Possible null reference argument.
                     ReplaceText(thisVerse, (p.LastComment ?? ""));
 #pragma warning restore CS8604 // Possible null reference argument.
@@ -376,7 +383,7 @@ namespace SIL.Transcriber.Utility
                 {
                     IEnumerable<XElement>? verses = chapterContent?.GetElements("verse");
                     XNode? nextVerse = FindNodeAfterVerse(p.ChapterStartVerse(chapter), p.ChapterEndVerse(chapter), verses);
-                    thisVerse = 
+                    thisVerse =
                         nextVerse == null
                         //add it at the end
                         ? AddParatextVerse(chapterContent?.LastNode, p.Verses(chapter), p.LastComment ?? "")
