@@ -1619,6 +1619,15 @@ namespace SIL.Transcriber.Services
                 Status = HttpStatusCode.NotFound
             };
         }
+
+        private static bool IsDirectSyncArchive(ZipArchive archive)
+        {
+            return archive.Entries.Any(e =>
+                e.FullName.Equals("SILTranscriber", StringComparison.OrdinalIgnoreCase)
+                || e.FullName.Equals("Version", StringComparison.OrdinalIgnoreCase)
+                || e.FullName.StartsWith("data/", StringComparison.OrdinalIgnoreCase));
+        }
+
         public async Task<Fileresponse> ImportSyncFileAsync(string sFile, int fileIndex, int start)
         {
             //give myself 20 seconds to get as much as I can...
@@ -1627,6 +1636,14 @@ namespace SIL.Transcriber.Services
             if (response.FileStream == null)
                 return FileNotFound(sFile);
             ZipArchive archive = new(response.FileStream);
+
+            if (IsDirectSyncArchive(archive))
+            {
+                Fileresponse fr = await ProcessSyncFileAsync(archive, 0, sFile, start, dtBail);
+                fr.Startindex = string.Format("0/{0}", fr.Startindex);
+                return fr;
+            }
+
             List<string> report = [];
             List<string> errors = [];
             string startIndex = "0/0";
@@ -1648,7 +1665,7 @@ namespace SIL.Transcriber.Services
                 }
                 if (fr.Status == HttpStatusCode.PartialContent)
                 {
-                    startIndex = string.Format("{0}/{1}", fileIndex, fr.Startindex);
+                    startIndex = string.Format("{0}/{1}", ix, fr.Startindex);
                     break;
                 }
             }
@@ -3780,6 +3797,7 @@ namespace SIL.Transcriber.Services
                                     Categoryname = c.Categoryname,
                                     Discussion = c.Discussion,
                                     Resource = c.Resource,
+                                    Note = c.Note,
                                     OfflineTitleMediafileId = c.TitleMediafileId.ToString(),
                                     OfflineId = c.StringId
                                 })];
@@ -3796,7 +3814,7 @@ namespace SIL.Transcriber.Services
                                 {
                                     RightsHolder = ip.RightsHolder,
                                     Notes = ip.Notes,
-                                    OfflineMediafileId = "",
+                                    OfflineMediafileId = null,
                                     OrganizationId = org.Id,
                                     ReleaseMediafileId = GetMappedId(Tables.Mediafiles, mapKey, ip.ReleaseMediafileId.ToString()),
                                     OfflineId = ip.StringId,
@@ -4085,11 +4103,12 @@ namespace SIL.Transcriber.Services
                                 {
                                     DiscussionId = GetMappedId(Tables.Discussions, mapKey, c.DiscussionId.ToString()) ?? 0,
                                     MediafileId = GetMappedId(Tables.Mediafiles, mapKey, c.MediafileId?.ToString() ?? ""),
-                                    OfflineMediafileId = "",
-                                    OfflineDiscussionId = "",
+                                    OfflineMediafileId = null,
+                                    OfflineDiscussionId = null,
                                     CommentText = c.CommentText,
                                     Visible = c.Visible,
                                     OfflineId = c.StringId,
+                                    CreatorUserId = GetMappedId(Tables.Users, mapKey, (c.CreatorUserId ?? currentuser.Id).ToString())
                                 })];
                                 IdMap newids = CopyComments(comments,  dtBail);
                                 SaveMap(newids, name, mapKey);
