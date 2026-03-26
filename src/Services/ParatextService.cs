@@ -894,9 +894,7 @@ namespace SIL.Transcriber.Services
                                 string transcription = GetTranscription(psgMedia);
                                 if (passage.StartChapter != passage.EndChapter)
                                 {
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                                     Regex rg = new (@"(\\c\s*[0-9]*)");
-#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                                     MatchCollection internalverses = rg.Matches(transcription);
                                     if (internalverses.Count > 0)
                                     {

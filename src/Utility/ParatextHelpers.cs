@@ -80,17 +80,18 @@ namespace SIL.Transcriber.Utility
         {
             return ParatextPara("s", new XText(text));
         }
-        private static XElement AddParatextVerse(XNode? parent, string verses, string text, bool before = false)
+        private static XElement AddParatextVerse(XNode? parent, string verses, string text, bool para, bool before = false)
         {
             XElement verse = new ("verse", new XAttribute("number", verses), new XAttribute("style", "v"), null);
-            XElement first = ParatextPara("p", verse);
+            if (para)
+                verse = ParatextPara("p", verse);
             if (parent == null)
-                return first;
+                return verse;
 
             if (before)
-                parent.AddBeforeSelf(first);
+                parent.AddBeforeSelf(verse);
             else
-                parent.AddAfterSelf(first);
+                parent.AddAfterSelf(verse);
             ReplaceText(verse, text);
             /*XNode last = first;
             for (int ix = 1; ix < lines.Length; ix++)
@@ -98,9 +99,42 @@ namespace SIL.Transcriber.Utility
                 last.AddAfterSelf(ParatextPara("p", new XText(lines[ix])));
                 last = last.NextNode;
             }*/
-            return first;
+            return verse;
         }
+        private static XElement? RemovePara(XElement verse)
+        {
+            if (verse.IsPara())
+            {
+                XElement? firstVerse = verse.Elements().FirstOrDefault(e => e.IsVerse());
+                return firstVerse != null ? RemovePara(firstVerse) : verse;
+            }
 
+            if (verse.Parent?.IsPara() ?? false)
+            {
+                XElement para = verse.Parent;
+                XNode? insertAfter = para.PreviousNode;
+                List<XNode> paraNodes = para.Nodes().ToList();
+
+                foreach (XNode node in paraNodes)
+                {
+                    if (insertAfter == null)
+                    {
+                        para.AddBeforeSelf(node);
+                        insertAfter = node;
+                    }
+                    else
+                    {
+                        insertAfter.AddAfterSelf(node);
+                        insertAfter = insertAfter.NextNode;
+                    }
+                }
+
+                para.Remove();
+            }
+
+            return verse;
+
+        }
         private static XElement? MoveToPara(XElement verse)
         {
             if (verse.IsPara())
@@ -110,7 +144,7 @@ namespace SIL.Transcriber.Utility
             {
                 if (verse.PreviousNode != null)
                 {
-                    XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute?.Value??"", text);
+                    XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute?.Value??"", text, true);
                     XNode? nextVerse = verse.NextNode;
                     XNode? endverse = newVerse;
 
@@ -146,7 +180,7 @@ namespace SIL.Transcriber.Utility
                 return verse.Parent;
             }
             XNode? prev = verse.PreviousNode;
-            _ = AddParatextVerse(prev, verse.FirstAttribute?.Value ?? "", text);
+            _ = AddParatextVerse(prev, verse.FirstAttribute?.Value ?? "", text, true);
             _ = verse.RemoveVerse();  //remove the verse and its text
             return (XElement?)prev?.NextNode; //return the para
         }
@@ -366,15 +400,9 @@ namespace SIL.Transcriber.Utility
                             v.RemoveSection();
                     }
                 }
-                ;
-
                 if (thisVerse != null)
                 {
-                    if (firstVerse)
-                    {
-                        thisVerse = MoveToPara(thisVerse);
-                        firstVerse = false;
-                    }
+                    thisVerse = firstVerse ? MoveToPara(thisVerse) : RemovePara(thisVerse);
 #pragma warning disable CS8604 // Possible null reference argument.
                     ReplaceText(thisVerse, (p.LastComment ?? ""));
 #pragma warning restore CS8604 // Possible null reference argument.
@@ -386,9 +414,9 @@ namespace SIL.Transcriber.Utility
                     thisVerse =
                         nextVerse == null
                         //add it at the end
-                        ? AddParatextVerse(chapterContent?.LastNode, p.Verses(chapter), p.LastComment ?? "")
+                        ? AddParatextVerse(chapterContent?.LastNode, p.Verses(chapter), p.LastComment ?? "", firstVerse)
                         //add before
-                        : AddParatextVerse(nextVerse, p.Verses(chapter), p.LastComment ?? "", true);
+                        : AddParatextVerse(nextVerse, p.Verses(chapter), p.LastComment ?? "", firstVerse, true);
                 }
                 if (currentPassage.Sequencenum == 1 && first)
                 {
@@ -412,6 +440,7 @@ namespace SIL.Transcriber.Utility
                     }
                     first = false;
                 }
+                firstVerse = false;
             }
             return chapterContent;
         }
