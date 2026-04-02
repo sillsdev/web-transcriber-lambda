@@ -20,7 +20,7 @@ using static SIL.Transcriber.Utility.EnvironmentHelpers;
 namespace SIL.Transcriber.Services
 {
     /// <summary>Exchanges data with PT projects in the cloud.</summary>
-    public class ParatextService : IParatextService
+    public partial class ParatextService : IParatextService
     {
         protected ICurrentUserContext CurrentUserContext;
         protected readonly AppDbContext dbContext;
@@ -894,12 +894,12 @@ namespace SIL.Transcriber.Services
                                 string transcription = GetTranscription(psgMedia);
                                 if (passage.StartChapter != passage.EndChapter)
                                 {
-                                    Regex rg = new (@"(\\c\s*[0-9]*)");
+                                    Regex rg = MyRegex(); //@"(\\c\s*[0-9]*)"
                                     MatchCollection internalverses = rg.Matches(transcription);
                                     if (internalverses.Count > 0)
                                     {
                                         if (internalverses.Count > 1)
-                                        {//why? ignore all but the last one
+                                        {   //ignore all but the last one
                                             Match ignore = internalverses[^2];
                                             transcription = transcription[ignore.Value.Length..];
                                             internalverses = rg.Matches(transcription);
@@ -1122,5 +1122,8 @@ namespace SIL.Transcriber.Services
                 }
             return chapters;
         }
+
+        [GeneratedRegex(@"(\\c\s*[0-9]*)")]
+        private static partial Regex MyRegex();
     }
 }
