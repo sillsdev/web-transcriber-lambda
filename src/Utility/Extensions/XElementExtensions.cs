@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Xml.Linq;
 
-namespace TranscriberAPI.Utility.Extensions
+namespace SIL.Transcriber.Utility.Extensions
 {
     public static class XElementExtensions
     {
@@ -67,7 +67,7 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static bool IsPara(this XNode? value)
         {
-            return value != null && value.NodeType == System.Xml.XmlNodeType.Element 
+            return value != null && value.NodeType == System.Xml.XmlNodeType.Element
                 && ((XElement)value).Name == "para";
         }
         public static bool IsSection(this XNode? value)
@@ -76,7 +76,7 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static bool IsVerse(this XNode? value)
         {
-            return value != null && value.NodeType == System.Xml.XmlNodeType.Element 
+            return value != null && value.NodeType == System.Xml.XmlNodeType.Element
                 && ((XElement)value).Name.LocalName == "verse";
         }
         public static bool IsNote(this XNode? value)
@@ -86,7 +86,7 @@ namespace TranscriberAPI.Utility.Extensions
         }
         public static bool HasChildren(this XNode? value)
         {
-            return value != null && value.NodeType == System.Xml.XmlNodeType.Element 
+            return value != null && value.NodeType == System.Xml.XmlNodeType.Element
                 && ((XElement)value).FirstNode != null;
         }
 
@@ -143,41 +143,87 @@ namespace TranscriberAPI.Utility.Extensions
             Debug.Assert(IsSection(value));
             value.Remove();
         }
+        public static XNode? MoveTo(this XNode value, XNode? dest)
+        {
+            XNode? copyNode = value;
+            XNode? newNode = null;
+            while (copyNode != null)
+            {
+                dest?.AddAfterSelf(copyNode);
+                dest = dest?.NextNode;
+                newNode ??= dest;
+                XNode? rem = copyNode;
+                copyNode = copyNode.NextNode;
+                rem.Remove();
+            }
+            return newNode;
+        }
         public static void RemoveText(this XElement? value)
         {
+            XElement? verse = value;
             if (IsPara(value))
-                value = (XElement?)value?.FirstNode;
-            Debug.Assert(IsVerse(value));
-            XNode? next = HasChildren(value) ? value?.FirstNode : value?.NextNode ?? value?.Parent?.NextNode;
-            XNode? rem, remParent;
+                verse = (XElement?)value?.FirstNode;
+            Debug.Assert(IsVerse(verse));
+            if (verse == null)
+                return;
 
+            static XNode? NextNodeDepthFirst(XNode node)
+            {
+                if (node is XElement e && e.FirstNode != null)
+                    return e.FirstNode;
+
+                XNode? current = node;
+                while (current != null)
+                {
+                    if (current.NextNode != null)
+                        return current.NextNode;
+                    current = current.Parent;
+                }
+                return null;
+            }
+
+            XNode? next = verse.NextNode ?? verse.Parent?.NextNode;
             while (next != null)
             {
-                rem = null;
-                if (next.IsVerse() || next.IsSection())
-                    next = null;
-                else if (!IsNote(next) && !HasChildren(next))
+                if (next.IsSection() || next.IsVerse() || (next.IsPara() && (((XElement)next).FirstNode?.IsVerse() ?? false)))
+                    break;
+
+                XNode current = next;
+                next = NextNodeDepthFirst(current);
+
+                if (current.IsNote())
+                    continue;
+
+                if (current.IsPara())
                 {
-                    rem = next;
-                }
-                if (next != null)
-                {
-                    next = HasChildren(next) ? ((XElement)next).FirstNode : next.NextNode ?? next.Parent?.NextNode;
-                }
-                if (rem != null)
-                {
-                    remParent = rem.Parent?.DescendantNodes().Count() == 1 ? rem.Parent : null;
-                    rem.Remove();
-                    remParent?.Remove();
+                    //continuation of my verse inside a paragraph
+                    XElement para = (XElement)current;
+                    XNode? mytext = para.FirstNode;
+                    //move all the text and other nodes after my verse to after the verse
+                    mytext?.NextNode?.MoveTo(value);
+                    if (mytext != null)
+                        current = mytext;
+                    next = NextNodeDepthFirst(current);
                 }
 
+                if (!HasChildren(current))
+                {
+                    XElement? parent = current.Parent;
+                    current.Remove();
+                    while (parent != null && !parent.IsVerse() && !parent.IsSection() && !parent.HasElements && string.IsNullOrWhiteSpace(parent.Value))
+                    {
+                        XElement? removeParent = parent;
+                        parent = removeParent.Parent;
+                        removeParent.Remove();
+                    }
+                }
             }
         }
         public static bool RemoveVerse(this XElement value)
         {
             Debug.Assert(IsVerse(value));
-            XElement? removeParent = (value.Parent?.IsPara()??false) && (value.Parent?.GetElements("verse").Count()??0) == 1 ? value?.Parent : null;
             RemoveText(value);
+            XElement? removeParent = (value.Parent?.IsPara()??false) && (value.Parent?.GetElements("verse").Count()??0) == 1 ? value?.Parent : null;
             if (!value.HasChildren())
             {
                 value?.Remove();
@@ -198,6 +244,38 @@ namespace TranscriberAPI.Utility.Extensions
         public static XElement? GetElement(this XElement root, string name)
         {
             return root.GetElements(name).FirstOrDefault();
+        }
+        public static string TraverseNodes(this XNode? xml, int level)
+        {
+            string myLevel = "";
+            for (XNode? n = xml; n != null; n = n.NextNode)
+            {
+                try
+                {
+                    myLevel += "\n";
+                    for (int ix = level; ix > 1; ix--)
+                        myLevel += "\t";
+                    myLevel += "{Level " + level.ToString() + " Type:" + n.NodeType + " ";
+                    switch (n.NodeType)
+                    {
+                        case System.Xml.XmlNodeType.Element:
+                            myLevel += " Name: " + ((XElement)n).Name + " FirstAttribute: " + ((XElement)n).FirstAttribute;
+                            myLevel += TraverseNodes(((XElement)n).FirstNode, level + 1);
+                            break;
+                        case System.Xml.XmlNodeType.Text:
+                            myLevel += " Value: " + ((XText)n).Value;
+                            break;
+                        default:
+                            break;
+                    }
+                    myLevel += "}";
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+            return myLevel;
         }
     }
 
