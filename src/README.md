@@ -114,6 +114,27 @@ Manage user roles and permissions.
 - **POST** `{Id}/{role}/{userId}`: Assign passages (e.g., `sections/356/Reviewer/2` assigns all passages in section 356 to user 2 as Reviewer)
 - **DELETE** `{Id}/{role}`: Remove all assignments for role (e.g., `sections/356/Reviewer` removes all reviewer assignments)
 
+### SharedResources
+**Shared Resources**:
+
+Media is created in Plan A  Passage A1 Mediafile ASM1  
+Sharedresource SR1 passageId = A1
+
+Plan B links to shared internalization resource  
+creates Mediafile BM1 in Plan B with **ResourcePassageId** = A1  - BM1 passageid may be set to internalization passage
+
+**Shared Notes**:
+
+Media is created in Plan A  Passage A1 Mediafile ASM1
+Sharedresouce SR1 passageId = A1
+
+Plan B links to resource in NOTE Passage B1
+Passage B1 **SharedResourceId** = SR1
+ 
+On import plan b to another database, first passage B1 with offlinesharedresourceid = SR1 takes ownership
+	SR1.passageid = B1
+	any media (like BM1) with resourepassageid = A1 is set to B1
+
 ### Statehistory
 VwPassageStateHistoryEmail view
 - **GET** `since/{datetime}`: Anonymous access to state history

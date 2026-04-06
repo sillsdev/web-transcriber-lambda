@@ -318,7 +318,7 @@ public class AeroService(
         string api = $"{Domain}/batch_transcription";
         int count = 1;
         string fn = DateTime.Now.Ticks.ToString();
-        List<string> urlList = new ();
+        List<string> urlList = [];
         foreach (string fileUrl in fileUrls)
         {
             Uri uri = new (fileUrl);
@@ -389,8 +389,21 @@ public class AeroService(
     }
 
     //if small enough to fit in the request
-    public async Task<string?> AudioInfilling(string base64data, string filename, string? modifiedText = null,
-        string? inputText = null, string? wordTimes = null, string[]? replacementAudioUrls = null, string? replacements = null)
+    public async Task<string?> AudioInfilling(string base64data, string filename, string? replacements = null)
+    {
+        byte[] fileBytes = Convert.FromBase64String(base64data);
+        MemoryStream fileStream = new (fileBytes);
+        MultipartFormDataContent multipartContent = AddFileToRequest(fileStream, filename, "file");
+
+        if (!string.IsNullOrEmpty(replacements))
+            multipartContent.Add(new StringContent(replacements), "replacements");
+
+        AddSaveS3(multipartContent, true);
+        return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
+    }
+
+    /*public async Task<string?> AudioInfilling(string base64data, string filename, string? modifiedText = null,
+    string? inputText = null, string? wordTimes = null, string[]? replacementAudioUrls = null, string? replacements = null)
     {
         byte[] fileBytes = Convert.FromBase64String(base64data);
         MemoryStream fileStream = new (fileBytes);
@@ -424,7 +437,7 @@ public class AeroService(
         AddSaveS3(multipartContent, true);
         return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
     }
-
+    */
     //not small enough to fit in the request - send an s3 file that has been put in aero input_files
     public async Task<string?> AudioInfilling(string fileName, string? modifiedText = null,
         string? inputText = null, string? wordTimes = null, string[]? replacementAudioUrls = null, string? replacements = null)
@@ -588,6 +601,14 @@ public class AudioInfillingFileUploadModel
     /// JSON list of AudioInfillingReplacement objects (optional)
     /// </summary>
     public string? Replacements { get; set; }
+}
+public class AudioInfillingFileUploadModelPhase1
+{
+    public string FileName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public string Data { get; set; } = ""; //base64 audio data of original file
+    public string Replacements { get; set; } = ""; //format {"start": 8.04,"end": 9.00, "audio_format": "audio/mpeg", "audio_base64": "//..."}
+
 }
 
 

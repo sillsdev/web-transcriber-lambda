@@ -277,11 +277,12 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     /// <summary>
     /// send uploaded audio to send on to aero audio infilling
     /// </summary>
-    /// <param name="model">load audio and parameters into body AudioInfillingRequest</param>
+    /// <param name="model">load audio and parameters into body AudioInfillingRequestPhase1
+    /// replacements format [ {"start": 8.04,"end": 9.00, "audio_format": "audio/mpeg", "audio_base64": "//..."}]</param>
     /// <returns>taskId</returns>
     [AllowAnonymous]
     [HttpPost("infilling")]
-    public async Task<IActionResult> PostInfilling([FromBody] AudioInfillingFileUploadModel model)
+    public async Task<IActionResult> PostInfilling([FromBody] AudioInfillingFileUploadModelPhase1 model)
     {
         if (model == null || string.IsNullOrEmpty(model.Data))
         {
@@ -289,23 +290,20 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
 
         // Require either ModifiedText or ReplacementAudioFiles/Replacements
-        if (string.IsNullOrEmpty(model.ModifiedText) &&
-            (model.ReplacementAudioFiles == null || model.ReplacementAudioFiles.Length == 0) &&
-            string.IsNullOrEmpty(model.Replacements))
+        if (string.IsNullOrEmpty(model.Replacements))
         {
-            return BadRequest("Either ModifiedText or ReplacementAudioFiles/Replacements must be provided.");
+            return BadRequest("Replacements must be provided.");
         }
-
+        /*
         // If ModifiedText is provided, InputText is required
         if (!string.IsNullOrEmpty(model.ModifiedText) && string.IsNullOrEmpty(model.InputText))
         {
             return BadRequest("InputText is required when ModifiedText is provided.");
         }
-
+        */
         try
         {
-            string? taskId = await _service.AudioInfilling(model.Data, model.FileName, model.ModifiedText,
-                model.InputText, model.WordTimes, model.ReplacementAudioFiles, model.Replacements);
+            string? taskId = await _service.AudioInfilling(model.Data, model.FileName,  model.Replacements);
             return Ok(taskId);
         }
         catch (Exception ex)
