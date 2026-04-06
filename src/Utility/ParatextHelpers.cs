@@ -33,20 +33,21 @@ namespace SIL.Transcriber.Utility
                     return;
                 verse = paraVerse;
             }
-
             verse.RemoveText();
+            XNode? next = verse.NextNode;
             string[] lines = transcription.Replace("\r", "").Split('\n');
             if (lines.Length == 1 && !lines[0].EndsWith('\n'))
                 lines[0] += '\n';
             XText newverse = new (lines[0]);
             verse.AddAfterSelf(newverse);
-            XNode? last = verse.Parent.IsPara() ? verse.Parent : verse.NextNode;
+            XNode? last = verse.NextNode;
 
             for (int ix = 1; ix < lines.Length; ix++)
             {
                 last?.AddAfterSelf(ParatextPara("p", new XText(lines[ix])));
                 last = last?.NextNode;
             }
+            next?.MoveTo(last);
 
             return;
         }
@@ -111,14 +112,11 @@ namespace SIL.Transcriber.Utility
                 if (verse.PreviousNode != null)
                 {
                     XElement newVerse = AddParatextVerse(verse.Parent, verse.FirstAttribute?.Value??"", text, true);
-                    XElement oldPara = verse.Parent;
-                    List<XNode> moveNodes = [.. oldPara.Nodes().SkipWhile(n => n != verse).Skip(1)];
+                    //XElement oldPara = verse.Parent;
+                    //List<XNode> moveNodes = [.. oldPara.Nodes().SkipWhile(n => n != verse).Skip(1)];
                     XNode? endverse = newVerse.LastNode;
-                    foreach (XNode node in moveNodes)
-                    {
-                        endverse?.AddAfterSelf(node);
-                        endverse = node;
-                    }
+                    //move everything following my verse to the new paragraph
+                    verse.NextNode?.NextNode?.MoveTo(endverse);
                     _ = verse.RemoveVerse();  //remove the verse and its text
                     return newVerse;
                 }
@@ -273,22 +271,26 @@ namespace SIL.Transcriber.Utility
             List<Passage> ret = [];
             // Create a Regex  
             Regex rg = new (pattern);
-
+            transcription = transcription.Trim();
             // Get all matches  
             MatchCollection internalverses = rg.Matches(transcription);
             if (internalverses.Count == 0)
             {
                 currentPassage.LastComment = transcription;
+                currentPassage.Hold = true;
                 ret.Add(currentPassage);
             }
+            bool nextPara = true;
+            bool thisPara = true;
             // Report on each match.
             for (int ix = 0; ix < internalverses.Count; ix++)
             {
                 Match match = internalverses[ix];
                 int start = match.Index + match.Value.Length;
                 string t =  ix < internalverses.Count-1 ? transcription[start..internalverses[ix+1].Index ] : transcription[start..];
-                if (t.EndsWith('\n'))
-                    t = t[..^1];
+                thisPara = nextPara;
+                nextPara = t.EndsWith('\n');
+
                 _ = int.TryParse(match.Groups[2].Value, out int startv);
                 _ = int.TryParse(match.Groups[3].Value, out int endv);
 
@@ -296,12 +298,13 @@ namespace SIL.Transcriber.Utility
                 {
                     Book = currentPassage.Book,
                     Reference = chapter.ToString() + ":" + match.Value.Replace("\\v", ""),
-                    LastComment = t.TrimStart(),
+                    LastComment = t.Trim(),
                     SectionId = currentPassage.SectionId,
                     StartChapter = chapter,
                     EndChapter = chapter,
                     StartVerse = startv,
                     EndVerse = endv > 0 ? endv : startv,
+                    Hold = thisPara
                 };
 
                 ret.Add(p);
@@ -344,24 +347,24 @@ namespace SIL.Transcriber.Utility
                 if (thisVerse != null)
                     _ = thisVerse.RemoveVerse();
             }
-            bool firstVerse = true;
             foreach (Passage? p in parsedPassages)
             {
                 //find the verses that contain verses in my range
                 SortedList<string, XElement> existing = GetExistingVerses(chapter, chapterContent, p, out XElement? thisVerse);
-                foreach (XElement? v in existing.Values)
+                while (existing.Count > 0 && existing.Values.First() != thisVerse)
                 {
-                    if (v != thisVerse)
-                    {
-                        if (v.IsVerse())
-                            _ = v.RemoveVerse();
-                        else
-                            v.RemoveSection();
-                    }
+                    XElement? v = existing.Values.First();
+                    if (v.IsVerse())
+                        _ = v.RemoveVerse();
+                    else
+                        v.RemoveSection();
+
+                    existing = GetExistingVerses(chapter, chapterContent, p, out thisVerse);
                 }
                 if (thisVerse != null)
                 {
-                    thisVerse = firstVerse ? MoveToPara(thisVerse) : RemovePara(thisVerse);
+                    //p.Hold is set in ParseTranscription as a placeholder to indicate if this should be start a paragraph
+                    thisVerse = p.Hold ? MoveToPara(thisVerse) : RemovePara(thisVerse);
 #pragma warning disable CS8604 // Possible null reference argument.
                     ReplaceText(thisVerse, (p.LastComment ?? ""));
 #pragma warning restore CS8604 // Possible null reference argument.
@@ -373,9 +376,9 @@ namespace SIL.Transcriber.Utility
                     thisVerse =
                         nextVerse == null
                         //add it at the end
-                        ? AddParatextVerse(chapterContent?.LastNode, p.Verses(chapter), p.LastComment ?? "", firstVerse)
+                        ? AddParatextVerse(chapterContent?.LastNode, p.Verses(chapter), p.LastComment ?? "", p.Hold)
                         //add before
-                        : AddParatextVerse(nextVerse, p.Verses(chapter), p.LastComment ?? "", firstVerse, true);
+                        : AddParatextVerse(nextVerse, p.Verses(chapter), p.LastComment ?? "", p.Hold, true);
                 }
                 if (currentPassage.Sequencenum == 1 && first)
                 {
@@ -401,7 +404,6 @@ namespace SIL.Transcriber.Utility
                 }
 
                 //LogCurrentStructure(chapterContent, $"after verse {p.Verses(chapter)}");
-                firstVerse = false;
             }
 
             return chapterContent;

@@ -143,6 +143,21 @@ namespace SIL.Transcriber.Utility.Extensions
             Debug.Assert(IsSection(value));
             value.Remove();
         }
+        public static XNode? MoveTo(this XNode value, XNode? dest)
+        {
+            XNode? copyNode = value;
+            XNode? newNode = null;
+            while (copyNode != null)
+            {
+                dest?.AddAfterSelf(copyNode);
+                dest = dest?.NextNode;
+                newNode ??= dest;
+                XNode? rem = copyNode;
+                copyNode = copyNode.NextNode;
+                rem.Remove();
+            }
+            return newNode;
+        }
         public static void RemoveText(this XElement? value)
         {
             XElement? verse = value;
@@ -185,21 +200,10 @@ namespace SIL.Transcriber.Utility.Extensions
                     XElement para = (XElement)current;
                     XNode? mytext = para.FirstNode;
                     //move all the text and other nodes after my verse to after the verse
-                    XNode? copyNode = mytext?.NextNode;
-                    XNode? dest = value;
-                    while (copyNode != null)
-                    {
-                        dest?.AddAfterSelf(copyNode);
-                        dest = dest?.NextNode;
-                        XNode? rem = copyNode;
-                        copyNode = copyNode.NextNode;
-                        rem.Remove();
-                    }
+                    mytext?.NextNode?.MoveTo(value);
                     if (mytext != null)
                         current = mytext;
                     next = NextNodeDepthFirst(current);
-                    //will be done below para.Remove();
-
                 }
 
                 if (!HasChildren(current))
@@ -218,8 +222,8 @@ namespace SIL.Transcriber.Utility.Extensions
         public static bool RemoveVerse(this XElement value)
         {
             Debug.Assert(IsVerse(value));
-            XElement? removeParent = (value.Parent?.IsPara()??false) && (value.Parent?.GetElements("verse").Count()??0) == 1 ? value?.Parent : null;
             RemoveText(value);
+            XElement? removeParent = (value.Parent?.IsPara()??false) && (value.Parent?.GetElements("verse").Count()??0) == 1 ? value?.Parent : null;
             if (!value.HasChildren())
             {
                 value?.Remove();
