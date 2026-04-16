@@ -3,6 +3,7 @@ using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services.Contracts;
 using System.Net;
 using System.Text;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
@@ -368,11 +369,120 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
+        public async Task<MultipartInitiateResponse> InitiateMultipartUploadAsync(string key, string contentType, int parts, string folder, bool aerobucket)
+        {
+            string fullKey = ProperFolder(folder) + key;
+            InitiateMultipartUploadRequest initiateRequest = new()
+            {
+                BucketName = aerobucket ? GetVarOrThrow("SIL_TR_AERO_BUCKET") : USERFILES_BUCKET,
+                Key = fullKey,
+                ContentType = contentType,
+            };
+            InitiateMultipartUploadResponse initiateResponse = await _client.InitiateMultipartUploadAsync(initiateRequest);
+            string uploadId = initiateResponse.UploadId;
+
+            AmazonS3Client s3Client = new();
+            List<string> presignedUrls = [];
+            for (int i = 1; i <= parts; i++)
+            {
+                GetPreSignedUrlRequest request = new()
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = fullKey,
+                    Verb = HttpVerb.PUT,
+                    Expires = DateTime.Now.AddMinutes(25),
+                    UploadId = uploadId,
+                    PartNumber = i,
+                };
+                presignedUrls.Add(s3Client.GetPreSignedURL(request));
+            }
+            return new MultipartInitiateResponse
+            {
+                UploadId = uploadId,
+                Key = fullKey,
+                Filename = key,
+                Folder = folder,
+                Parts = presignedUrls,
+            };
+        }
+        public async Task<Fileresponse> ReplaceMultipartPartAsync(string uploadId, int part, string key, string folder = "")
+        {
+            AmazonS3Client s3Client = new();
+            string fullKey = ProperFolder(folder) + key;
+            GetPreSignedUrlRequest request = new()
+            {
+                BucketName = USERFILES_BUCKET,
+                Key = fullKey,
+                Verb = HttpVerb.PUT,
+                Expires = DateTime.Now.AddMinutes(25),
+                UploadId = uploadId,
+                PartNumber = part,
+            };
+            string url = s3Client.GetPreSignedURL(request);
+
+            return new Fileresponse
+            {
+                Message = key,
+                FileURL = url,
+                Status = HttpStatusCode.OK,
+            };
+        }
+        public async Task<Fileresponse> CompleteMultipartUploadAsync(string key, string uploadId, List<MultipartPartETag> parts)
+        {
+            try
+            {
+                CompleteMultipartUploadRequest request = new()
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = key,
+                    UploadId = uploadId,
+                    PartETags = [.. parts.Select(p => new PartETag(p.PartNumber, p.ETag))],
+                };
+                CompleteMultipartUploadResponse response = await _client.CompleteMultipartUploadAsync(request);
+                return new Fileresponse
+                {
+                    Message = key,
+                    FileURL = response.Location,
+                    Status = response.HttpStatusCode,
+                };
+            }
+            catch (AmazonS3Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = e.StatusCode };
+            }
+            catch (Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = HttpStatusCode.InternalServerError };
+            }
+        }
+        public async Task<Fileresponse> AbortMultipartUploadAsync(string key, string uploadId)
+        {
+            try
+            {
+                AbortMultipartUploadRequest request = new()
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = key,
+                    UploadId = uploadId,
+                };
+                AbortMultipartUploadResponse response = await _client.AbortMultipartUploadAsync(request);
+                return new Fileresponse { Message = key, Status = response.HttpStatusCode };
+            }
+            catch (AmazonS3Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = e.StatusCode };
+            }
+            catch (Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = HttpStatusCode.InternalServerError };
+            }
+        }
         public string GetPublicUrl(string fileName, string folder = "", string bucket = "")
         {
             return $"https://{(bucket == "" ? USERFILES_BUCKET : bucket)}.s3.amazonaws.com/{ProperFolder(folder)}{fileName}";
 
         }
+
 
         public async Task<HttpStatusCode> CopyS3FileAsync(string sourceFileUrl, string destinationBucket, string folder, string file)
         {

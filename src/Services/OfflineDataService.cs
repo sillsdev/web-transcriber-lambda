@@ -45,7 +45,7 @@ namespace SIL.Transcriber.Services
         private const string ImportFolder = "imports";
         private const string ExportFolder = "exports";
         private const int MediafileChunkSize = 50;
-        private const int DataChunkSize = 200;
+        private const int DataChunkSize = 100;
 
 
         protected ILogger<OfflineDataService> Logger { get; set; } = loggerFactory.CreateLogger<OfflineDataService>();
@@ -974,7 +974,7 @@ namespace SIL.Transcriber.Services
                                           dbContext.MediafilesData, b => b.BibleMediafileId, m => m.Id, (b, m) => m);
             IQueryable<Mediafile> bibleisoMedia = bibles.Join(
                                           dbContext.MediafilesData, b => b.IsoMediafileId, m => m.Id, (b, m) => m);
-            List<Mediafile> pm = PlanMedia(plans).ToList();
+            List<Mediafile> pm = [.. PlanMedia(plans)];
             List<Mediafile> myMedia = [.. pm
                                 .Concat([.. okttmedia])
                                 .Concat([.. ipmedia])
@@ -2982,11 +2982,11 @@ namespace SIL.Transcriber.Services
             return t.Entity;
         }
         #region Copy
-        private IdMap CopySections(IList<Section> lst, int planid, DateTime? dtBail)
+        private IdMap CopySections(List<Section> lst, int planid, DateTime? dtBail)
         {
             IdMap result = [];
             Dictionary<string, Section> map = [];
-            for (int ix = 0; ix < lst.Count && (dtBail == null || DateTime.Now < dtBail); ix++)
+            for (int ix = 0; ix < lst.Count; ix++)
             {
                 Section s = lst[ix];
                 string id = s.OfflineId ?? "error";
@@ -2997,6 +2997,8 @@ namespace SIL.Transcriber.Services
                 }
                 else
                     result.TryAdd(id, -1);
+                if (dtBail != null && DateTime.Now > dtBail)
+                    break;
             }
             dbContext.SaveChanges();
 
@@ -3004,7 +3006,7 @@ namespace SIL.Transcriber.Services
                 result.TryAdd(kvp.Key, kvp.Value.Id);
             return result;
         }
-        private IdMap CopyPassages(IList<Passage> lst, string mapKey, DateTime? dtBail)
+        private IdMap CopyPassages(List<Passage> lst, string mapKey, DateTime? dtBail)
         {
             IdMap result = [];
             Dictionary<string, Passage> map = [];
@@ -3246,7 +3248,7 @@ namespace SIL.Transcriber.Services
                 result.TryAdd(kvp.Key, kvp.Value.Id);
             return result;
         }
-        private bool AreToolsEquivalent(string? tool1, string? tool2)
+        private static bool AreToolsEquivalent(string? tool1, string? tool2)
         {
             if (string.IsNullOrEmpty(tool1) && string.IsNullOrEmpty(tool2))
                 return true;
@@ -3420,7 +3422,7 @@ namespace SIL.Transcriber.Services
                 _ = dbContext.IntellectualPropertys.Add(ip);
             }
         }
-        private IdMap CopySectionResources(IList<Sectionresource> lst, int orgId, int projectId, DateTime? dtBail)
+        private IdMap CopySectionResources(List<Sectionresource> lst, int orgId, int projectId, DateTime? dtBail)
         {
             Dictionary<string, Sectionresource> map = [];
             int internalize= dbContext.Orgworkflowsteps.Where(s => s.OrganizationId == orgId && !s.Archived).ToList().Where(s => s.Tool.Contains("{\"tool\": \"resource")).FirstOrDefault()?.Id ?? 0;
@@ -3462,29 +3464,33 @@ namespace SIL.Transcriber.Services
                    });
             }
         }
-        private IdMap CopySharedResources(IList<Sharedresource> lst, IdMap srmap, DateTime? dtBail)
+        private IdMap CopySharedResources(List<Sharedresource> lst, IdMap srmap, DateTime? dtBail)
         {
             IdMap.KeyCollection alreadydone = srmap.Keys;
             Dictionary<string, Sharedresource> map = [];
-            for (int ix = 0; ix < lst.Count && (dtBail == null || DateTime.Now < dtBail); ix++)
+            IdMap result = [];
+
+            for (int ix = 0; ix < lst.Count; ix++)
             {
                 Sharedresource sr = lst[ix];
                 string id = sr.OfflineId ?? "error";
                 if (id == "error")
                     continue;
 
-                if (!alreadydone.Contains(id) && !map.ContainsKey(id) && !dbContext.Sharedresources.Where(r => r.PassageId == sr.PassageId && r.Note == sr.Note).Any())
+                if (sr.PassageId != null && !alreadydone.Contains(id) && !map.ContainsKey(id) && !dbContext.Sharedresources.Where(r => r.PassageId == sr.PassageId && r.Note == sr.Note).Any())
                 {
                     EntityEntry<Sharedresource>? t = dbContext.Sharedresources.Add(sr);
                     map.Add(id, t.Entity);
                 }
                 else
                 {
+                    result.TryAdd(id, -1);
                     Console.WriteLine($"Skipping shared resource with id {id} because it already exists in the map or database");
                 }
+                if (dtBail != null && DateTime.Now > dtBail)
+                    break;
             }
             dbContext.SaveChanges();
-            IdMap result = [];
             foreach (KeyValuePair<string, Sharedresource> kvp in map)
                 result.TryAdd(kvp.Key, kvp.Value.Id);
             return result;
@@ -4349,19 +4355,16 @@ namespace SIL.Transcriber.Services
 
                 IJsonApiOptions options = new JsonApiOptions();
                 bool complete = true;
-                int entryNum = 0;
                 int orgid = existingOrgId > 0 ? existingOrgId : mapKey != "" ? GetSingleId(Tables.Organizations, mapKey) : 0;
                 Project? project = null;
                 Plan? plan = null;
                 string status = "";
-                foreach (ZipArchiveEntry entry in archive.Entries)
+                int entryNum = start;
+                foreach (ZipArchiveEntry entry in archive.Entries
+                    .Where(e => e.FullName.StartsWith("data"))
+                    .Skip(start))
                 {
-                    if (!entry.FullName.StartsWith("data"))
-                        continue;
-                    if (entryNum++ < start)
-                    {
-                        continue;
-                    }
+                    entryNum++;
                     name = Path.GetFileNameWithoutExtension(entry.Name[2..]);
                     //Logger.LogCritical("{n} {cl} {l}", entry.FullName, entry.CompressedLength, entry.Length);
                     string? json = new StreamReader(entry.Open()).ReadToEnd();
@@ -4370,6 +4373,8 @@ namespace SIL.Transcriber.Services
                             options.SerializerReadOptions
                         );
                     IList<ResourceObject>? lst = doc?.Data.ManyValue;
+                    if (lst != null)
+                        lst = [.. lst.DistinctBy(ro => ro.Id ?? "")];
                     if (doc == null || lst == null)
                         continue;
                     status = $"{entryNum}/{archive.Entries.Count}";
@@ -4520,6 +4525,9 @@ namespace SIL.Transcriber.Services
                                 plan = dbContext.Plans.Find(id);
                             }
                             IdMap smap = GetMap(name, mapKey);
+                            int lstCount = lst.Count;
+                            lst = [.. lst.Where(ro => !smap.ContainsKey(ro.Id ?? ""))];
+
                             while (smap.Count < lst.Count && DateTime.Now < dtBail)
                             {
                                 IEnumerable<ResourceObject> tmpchunk = lst.Skip(smap.Count).Take(DataChunkSize);
@@ -4531,7 +4539,7 @@ namespace SIL.Transcriber.Services
                             }
                             if (smap.Count < lst.Count)
                             {
-                                status = $"{name} {smap.Count}/{lst.Count}";
+                                status = $"{name} {smap.Count}/{lstCount}";
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }
                             break;
@@ -4659,21 +4667,18 @@ namespace SIL.Transcriber.Services
                                         if (psg != null)
                                         {
                                             string psgid = ro.Id?.ToString()??"";
-                                            List<Mediafile> media = dbContext.Mediafiles.Where(m => m.OfflinePassageId == psgid).ToList();
+                                            List<Mediafile> media = [.. dbContext.Mediafiles.Where(m => m.OfflinePassageId == psgid)];
                                             media.ForEach(m => m.PassageId = psg.Id);
                                             sr.PassageId = psg.Id;
                                             psg.OfflineSharedResourceId = null;
                                             psg.SharedResourceId = null; //I'm the owner now
-                                            List<Mediafile> internalizemedia = dbContext.Mediafiles.Where(m => m.OfflineResourcePassageId == psgid).ToList();
+                                            List<Mediafile> internalizemedia = [.. dbContext.Mediafiles.Where(m => m.OfflineResourcePassageId == psgid)];
                                             internalizemedia.ForEach(m => m.ResourcePassageId = psg.Id);
                                             dbContext.SaveChanges();
-                                            shrlst.Add(sr);
+
                                         }
                                     }
-                                    else
-                                    {
-                                        shrlst.Add(sr);
-                                    }
+                                    shrlst.Add(sr);
                                 }
                                 IdMap newIds = CopySharedResources(shrlst, shrmap, dtBail);
                                 SaveMap(newIds, name, mapKey);
@@ -4768,7 +4773,7 @@ namespace SIL.Transcriber.Services
 
                 return new Fileresponse()
                 {
-                    Id = complete ? -1 : entryNum,
+                    Id = complete ? orgid : entryNum,
                     Message = complete ? string.Format("{0} {1}", orgName, projName) : status,
                     FileURL = mapKey,
                     Status = complete ? HttpStatusCode.OK : HttpStatusCode.PartialContent,

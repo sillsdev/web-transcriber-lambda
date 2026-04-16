@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Services;
+using SIL.Transcriber.Services.Contracts;
 using System.Net;
 using System.Net.Mime;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
@@ -113,6 +113,48 @@ namespace SIL.Transcriber.Controllers
         {
             contentType = "audio/" + contentType;
             return Ok(_service.SignedUrlForGet(fileName, folder, contentType).Message);
+        }
+        //initiate a multipart upload to s3; returns uploadId, key, and presigned part URLs
+        [HttpPost("multipart/initiate")]
+        public async Task<ActionResult<MultipartInitiateResponse>> ImportFileMultipartUpload(
+            [FromBody] MultipartInitiateRequest request)
+        {
+            MultipartInitiateResponse response = await _service.InitiateMultipartUploadAsync(
+                request.Filename, request.ContentType, request.Parts, request.Folder, request.Aero);
+            return Ok(response);
+        }
+        //complete a multipart upload
+        [HttpPost("multipart/complete")]
+        public async Task<ActionResult<Fileresponse>> CompleteMultipartUpload(
+            [FromBody] MultipartCompleteRequest request)
+        {
+            Fileresponse response = await _service.CompleteMultipartUploadAsync(
+                request.Key, request.UploadId, request.Parts);
+            return Ok(response);
+        }
+        //abort a multipart upload
+        [HttpPost("multipart/abort")]
+        public async Task<ActionResult<Fileresponse>> AbortMultipartUpload(
+            [FromBody] MultipartAbortRequest request)
+        {
+            Fileresponse response = await _service.AbortMultipartUploadAsync(request.Key, request.UploadId);
+            return Ok(response);
+        }
+        //request a new multipart part url
+        [HttpPost("multipart/part")]
+        public async Task<ActionResult<Fileresponse>> ReplaceMultipartPart(
+            [FromBody] MultipartPartRequest request)
+        {
+            Fileresponse response = await _service.ReplaceMultipartPartAsync(request.UploadId, request.PartNumber, request.Filename, request.Folder);
+            return Ok(response);
+        }
+        public class MultipartInitiateRequest
+        {
+            public string Filename { get; set; } = "";
+            public string Folder { get; set; } = "";
+            public string ContentType { get; set; } = "";
+            public int Parts { get; set; }
+            public bool Aero { get; set; } = false;
         }
     }
 }

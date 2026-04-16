@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIL.Transcriber.Services;
+using SIL.Transcriber.Services.Contracts;
 
 namespace SIL.Transcriber.Controllers;
 

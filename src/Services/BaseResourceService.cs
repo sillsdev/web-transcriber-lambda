@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services.Contracts;
 using System.Net;
 
 namespace SIL.Transcriber.Services;
@@ -14,7 +15,7 @@ public class BaseResourceService(
     protected readonly HttpClient Client = new();
 
     protected Mediafile CreateMedia(string originalFile, string contentType, string desc, int? passageId, int planId,
-                                int artifacttypeId, string lang, string s3file, string folder, int? artifactcategoryId = null, int? sourceMediaId=null, string? segments= "{}")
+                                int artifacttypeId, string lang, string s3file, string folder, int? artifactcategoryId = null, int? sourceMediaId = null, string? segments = "{}")
     {
         EntityEntry<Mediafile> m =
                             DbContext.Mediafiles.Add(new Mediafile
@@ -35,7 +36,7 @@ public class BaseResourceService(
                                 ArtifactCategoryId = artifactcategoryId,
                                 SourceMediaId = sourceMediaId,
                                 Segments=segments,
-                            }); 
+                            });
         DbContext.SaveChanges();
         return m.Entity;
     }

@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services.Contracts;
 using System.Net.Http.Headers;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
