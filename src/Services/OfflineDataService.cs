@@ -3291,7 +3291,7 @@ namespace SIL.Transcriber.Services
             {
                 string id =  s.OfflineId ?? "error";
                 Orgworkflowstep? ex = destSteps.FirstOrDefault(o => AreToolsEquivalent(o.Tool, s.Tool));
-                if (ex != null)
+                if (ex != null && !map.ContainsValue(ex))
                     map.Add(id, ex);
                 else
                 {
