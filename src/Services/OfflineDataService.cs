@@ -1780,14 +1780,15 @@ namespace SIL.Transcriber.Services
             return false;
         }
 
-        private async Task CopyMediaFile(Mediafile m, ZipArchive archive)
+        private async Task CopyMediaFile(string originalS3File, Mediafile m, ZipArchive archive)
         {
             ZipArchiveEntry? f = archive.Entries
-                .Where(e => e.Name == m.OriginalFile)
+                .Where(e => e.Name == originalS3File)
                 .FirstOrDefault();
             f ??= archive.Entries
-                .Where(e => e.Name == "media\\" + m.OriginalFile)
+                .Where(e => e.Name == m.OriginalFile)
                 .FirstOrDefault();
+
             if (f != null && m.S3File != null)
             {
                 using Stream s = f.Open();
@@ -2465,15 +2466,9 @@ namespace SIL.Transcriber.Services
                             }
                             passageVersions[(int)m.PassageId] = m.VersionNumber ?? 1;
                         }
+                        string originalS3 = m.S3File??"";
                         m.S3File = await mediaService.GetNewFileNameAsync(m);
-                        m.AudioUrl = _S3Service
-                            .SignedUrlForPut(
-                                m.S3File,
-                                mediaService.DirectoryName(m),
-                                m.ContentType ?? ""
-                            )
-                            .Message;
-                        await CopyMediaFile(m, archive);
+                        await CopyMediaFile(originalS3, m, archive);
                         _ = dbContext.Mediafiles.Add(
                             new Mediafile
                             {
@@ -3286,8 +3281,8 @@ namespace SIL.Transcriber.Services
         private IdMap CopyOrgworkflowsteps(IList<Orgworkflowstep> lst, int orgId)
         {
             Dictionary<string, Orgworkflowstep> map = [];
-            List<Orgworkflowstep> destSteps = [.. dbContext.Orgworkflowsteps.Where(o => o.OrganizationId == orgId && !o.Archived)];
-            foreach (Orgworkflowstep s in lst)
+            List<Orgworkflowstep> destSteps = [.. dbContext.Orgworkflowsteps.Where(o => o.OrganizationId == orgId && !o.Archived).OrderBy(o => o.Sequencenum)];
+            foreach (Orgworkflowstep s in lst.OrderBy(o => o.Sequencenum))
             {
                 string id =  s.OfflineId ?? "error";
                 Orgworkflowstep? ex = destSteps.FirstOrDefault(o => AreToolsEquivalent(o.Tool, s.Tool));
@@ -3560,30 +3555,32 @@ namespace SIL.Transcriber.Services
                             m.OriginalFile = audioUrl[(lastSlashIndex + 1)..];
                         }
                     }
-                    string? originalS3File = m.S3File;
+                    string? originalS3File = m.S3File??"";
                     int oldPlan = m.PlanId;
                     m.PlanId = plan.Id;
                     //if it's not biblebrain or aquifer - make a copy
                     string audiourl = m.AudioUrl??"";
-                    if (!audiourl.Contains("biblebrain") && !audiourl.Contains("aquifer"))
+                    bool centralCopy = audiourl.Contains("biblebrain") || audiourl.Contains("aquifer");
+                    bool copyIt = !centralCopy;
+
+                    //if we have a file we might not have the biblebrain or aquifer file
+                    if (archive != null)
                     {
-                        m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
-                        if (archive is not null)
-                        {
-                            m.AudioUrl = _S3Service
-                                .SignedUrlForPut(
-                                    m.S3File ?? "",
-                                    mediaService.DirectoryName(m),
-                                    m.ContentType ?? ""
-                                )
-                                .Message;
-                            await CopyMediaFile(m, archive);
-                        }
+                        if (centralCopy)
+                            copyIt = !await _S3Service.FileExistsAsync(m.S3File ?? "junk", mediaService.DirectoryName(m));
                         else
+                            m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
+                        if (copyIt)
                         {
-                            await CopyMediafile(originalS3File, oldPlan, m);
+                            await CopyMediaFile(originalS3File, m, archive);
                         }
                     }
+                    else if (copyIt)
+                    {
+                        m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
+                        await CopyMediafile(originalS3File, oldPlan, m);
+                    }
+
                     EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(m);
                     //save as we go in case we have to resume
                     dbContext.SaveChanges();
@@ -3892,7 +3889,7 @@ namespace SIL.Transcriber.Services
                                             Term = s.Term,
                                             TermIndex = s.TermIndex,
                                             Target = s.Target,
-                                            MediafileId = MediafileMap?.GetValueOrDefault(s.MediafileId),
+                                            MediafileId = GetMediafileMap(mapKey).GetValueOrDefault(s.MediafileId),
                                             OfflineId = s.StringId
                                         })];
                                 CopyOrgkeytermtargets(ktt);
@@ -3979,7 +3976,7 @@ namespace SIL.Transcriber.Services
                                     SequenceNum = r.SequenceNum,
                                     Description = r.Description,
                                     SectionId = GetMappedId(Tables.Sections, mapKey, r.SectionId.ToString()) ?? 0,
-                                    MediafileId = MediafileMap?.GetValueOrDefault(r.MediafileId),
+                                    MediafileId = GetMediafileMap(mapKey).GetValueOrDefault(r.MediafileId),
                                     PassageId = GetMappedId(Tables.Passages, mapKey, r.PassageId?.ToString()),
                                     OrgWorkflowStepId = !sameOrg ? GetMappedId(Tables.OrgWorkflowSteps, mapKey, r.OrgWorkflowStepId.ToString()) ?? 0 : r.OrgWorkflowStepId,
                                     OfflineId = r.StringId
@@ -4072,7 +4069,7 @@ namespace SIL.Transcriber.Services
                                 new Discussion
                                 {
                                     ArtifactCategoryId = CheckValidId(d.ArtifactCategoryId) == null ? null : sameOrg ? d.ArtifactCategoryId : GetMappedId(Tables.ArtifactCategorys, mapKey, d.ArtifactCategoryId.ToString() ?? ""),
-                                    MediafileId = CheckValidId(d.MediafileId) == null ? null : MediafileMap?.GetValueOrDefault(d.MediafileId),
+                                    MediafileId = CheckValidId(d.MediafileId) == null ? null : GetMediafileMap(mapKey).GetValueOrDefault(d.MediafileId),
                                     OrgWorkflowStepId = CheckValidId(d.OrgWorkflowStepId) == null ? throw new ArgumentException("Invalid OrgWorkflowStepId") : sameOrg ? d.OrgWorkflowStepId : GetMappedId(Tables.OrgWorkflowSteps, mapKey, d.OrgWorkflowStepId.ToString() ?? "") ?? 0,
                                     GroupId = sameOrg ? CheckValidId(d.GroupId) : null,
                                     Resolved = d.Resolved,
@@ -4482,6 +4479,7 @@ namespace SIL.Transcriber.Services
                             List<Orgworkflowstep> owlst = [];
                             foreach (ResourceObject ro in lst)
                                 owlst.Add(ResourceObjectToResource(ro, new Orgworkflowstep(), mapKey));
+                            owlst = [.. owlst.Where(s => s.OrganizationId == orgid)];
                             SaveMap(CopyOrgworkflowsteps(owlst, orgid), name, mapKey);
                             break;
 
