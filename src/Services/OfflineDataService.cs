@@ -4359,6 +4359,7 @@ namespace SIL.Transcriber.Services
                 int entryNum = start;
                 foreach (ZipArchiveEntry entry in archive.Entries
                     .Where(e => e.FullName.StartsWith("data"))
+                    .OrderBy(e => e.Name)
                     .Skip(start))
                 {
                     entryNum++;
