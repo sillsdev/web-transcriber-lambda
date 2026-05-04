@@ -7,6 +7,7 @@ public static class Tables
     public const string ArtifactTypes = "artifacttypes";
     public const string Bibles = "bibles";
     public const string Comments = "comments";
+    public const string CountryAnalytics = "countryanalytics";
     public const string CurrentVersions= "currentversions";
     public const string Discussions = "discussions";
     public const string Graphics = "graphics";
@@ -41,6 +42,7 @@ public static class Tables
     public const string Sections = "sections";
     public const string SharedResourceReferences = "sharedresourcereferences";
     public const string SharedResources = "sharedresources";
+    public const string UserAnalytics = "useranalytics";
     public const string Users = "users";
     public const string UserVersions = "userversions";
     public const string WorkflowSteps = "workflowsteps";

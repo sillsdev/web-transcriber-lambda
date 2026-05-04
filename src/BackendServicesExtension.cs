@@ -84,6 +84,7 @@ namespace SIL.Transcriber
             services.AddScoped<BibleBrainFilesetService>();
             services.AddScoped<BibleBrainService>();
             services.AddScoped<CommentService>();
+            services.AddScoped<CountryanalyticService>();
             services.AddScoped<CurrentversionService>();
             services.AddScoped<DataChangeService>();
             services.AddScoped<DiscussionService>();
@@ -122,6 +123,7 @@ namespace SIL.Transcriber
             services.AddScoped<SharedResourceService>();
             services.AddScoped<SharedResourceReferenceService>();
             services.AddScoped<UserService>();
+            services.AddScoped<UseranalyticService>();
             services.AddScoped<UserVersionService>();
             services.AddScoped<StatehistoryService>();
             services.AddScoped<VWBibleBrainBibleService>();
@@ -139,6 +141,7 @@ namespace SIL.Transcriber
             services.AddScoped<BibleBrainBibleRepository>();
             services.AddScoped<BibleBrainFilesetRepository>();
             services.AddScoped<CommentRepository>();
+            services.AddScoped<CountryanalyticRepository>();
             services.AddScoped<CurrentUserRepository>();
             services.AddScoped<CurrentversionRepository>();
             services.AddScoped<DashboardRepository>();
@@ -183,6 +186,7 @@ namespace SIL.Transcriber
             services.AddScoped<SharedResourceRepository>();
             services.AddScoped<SharedResourceReferenceRepository>();
             services.AddScoped<UserRepository>();
+            services.AddScoped<UseranalyticRepository>();
             services.AddScoped<UserVersionRepository>();
             services.AddScoped<StatehistoryRepository>();
             services.AddScoped<VWBibleBrainBibleRepository>();

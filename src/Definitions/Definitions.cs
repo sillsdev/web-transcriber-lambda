@@ -43,6 +43,11 @@ namespace SIL.Transcriber.Definitions
     {
     }
 
+    public class CountryanalyticDefinition(
+        IResourceGraph resourceGraph
+        ) : JsonApiResourceDefinition<Countryanalytic, int>(resourceGraph)
+    {
+    }
     public class DiscussionDefinition(
         IResourceGraph resourceGraph,
         ILoggerFactory loggerFactory,
@@ -256,6 +261,11 @@ namespace SIL.Transcriber.Definitions
         ILoggerFactory loggerFactory,
         IJsonApiRequest Request
         ) : BaseDefinition<Sharedresourcereference>(resourceGraph, loggerFactory, Request)
+    {
+    }
+    public class UseranalyticDefinition(
+        IResourceGraph resourceGraph
+        ) : JsonApiResourceDefinition<Useranalytic, int>(resourceGraph)
     {
     }
     public class VWBiblebrainBibleDefinition(
