@@ -58,7 +58,7 @@ namespace SIL.Transcriber.Controllers
             Mediafile? response = _service.GetFromFile(plan, s3File, segments);
             return response == null ? NotFound() : Ok(response);
         }
-        [Authorize]
+        [AllowAnonymous]
         [HttpGet("{id}/folder")]
         public async Task<IActionResult> GetFolderAsync([FromRoute] int id)
         {
@@ -74,6 +74,7 @@ namespace SIL.Transcriber.Controllers
             Mediafile? response = _service.GetFileSignedUrl(id);
             return Ok(response);
         }
+
         [AllowAnonymous]
         [HttpGet("{id}/file")]
         public async Task<IActionResult> GetFileDirect([FromRoute] int id)

@@ -82,6 +82,7 @@ namespace SIL.Transcriber.Data
 
         public DbSet<Sharedresource> Sharedresources => Set<Sharedresource>();
         public DbSet<Sharedresourcereference> Sharedresourcereferences => Set<Sharedresourcereference>();
+        public DbSet<SimpleResponse> ThisIsFake => Set<SimpleResponse>();
         public DbSet<User> Users => Set<User>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
@@ -102,6 +103,7 @@ namespace SIL.Transcriber.Data
 
             DefineRelationships(builder);
             DefineLastModifiedByUser(builder);
+
         }
 
         /* On Plan Patch:

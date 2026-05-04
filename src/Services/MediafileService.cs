@@ -84,7 +84,11 @@ namespace SIL.Transcriber.Services
         public Mediafile? GetFromFile(int plan, string s3File)
         {
             IEnumerable<Mediafile> files = MyRepository.Get(); //bypass user check
-            return files.FirstOrDefault(p => p.S3File == s3File && p.PlanId == plan && !p.Archived);
+            Mediafile? mf = files.FirstOrDefault(p => p.S3File == s3File && p.PlanId == plan && !p.Archived);
+            if (mf != null)
+                mf.AudioUrl = S3service.SignedUrlForGet(mf.S3File ?? "", DirectoryName(mf), mf.ContentType ?? "").Message;
+            return mf;
+
         }
         //This has only been tested with resource files.  Their segments are in a different format than other mediafiles
         public Mediafile? GetFromFile(int plan, string s3File, string segments)

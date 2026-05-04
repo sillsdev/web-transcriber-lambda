@@ -493,5 +493,19 @@ namespace SIL.Transcriber.Repositories
             }
 
         }
+
+        public IEnumerable<SimpleResponse> GetFixDuration()
+        {
+            return dbContext.MediafilesData.Where(m => !m.Archived && (m.ContentType ?? "").StartsWith("audio") &&
+                                                    (m.Duration == null || m.Duration == 0))
+                                           .OrderBy(m => m.Id)
+                                           .Take(50)
+                                           .ToList()
+                                           .Select(m => new SimpleResponse
+                                           {
+                                               Id = m.Id,
+                                               Message = S3service.SignedUrlForGet(m.S3File ?? "", m.S3Folder ?? PlanRepository.DirectoryName(m.PlanId), m.ContentType ?? "").Message
+                                           });
+        }
     }
 }
