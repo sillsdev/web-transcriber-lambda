@@ -453,7 +453,7 @@ namespace SIL.Transcriber.Repositories
                     if (await PublishToAkuo(m, passage, bible, sr))
                     {
                         m.PublishTo = publishTo;
-                        dbContext.Mediafiles.Update(m);
+                        //dbContext.Mediafiles.Update(m);
                     }
                 }
                 else if (!m.ReadyToShare || m.PublishTo != publishTo)
@@ -499,7 +499,7 @@ namespace SIL.Transcriber.Repositories
             return dbContext.MediafilesData.Where(m => !m.Archived && (m.ContentType ?? "").StartsWith("audio") &&
                                                     (m.Duration == null || m.Duration == 0))
                                            .OrderBy(m => m.Id)
-                                           .Take(50)
+                                           .Take(500)
                                            .ToList()
                                            .Select(m => new SimpleResponse
                                            {
