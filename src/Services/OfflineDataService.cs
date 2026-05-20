@@ -1811,12 +1811,14 @@ namespace SIL.Transcriber.Services
             }
         }
 
-        private void UpdateOfflineIds()
+        private bool UpdateOfflineIds(DateTime dtBail)
         {
             /* fix comment ids */
             List<Comment> comments = [.. dbContext.Comments.Where(
                 c => c.OfflineMediafileId != null
             )];
+            if (DateTime.Now > dtBail)
+                return false;
             foreach (Comment c in comments)
             {
                 Mediafile? mediafile = dbContext.Mediafiles
@@ -1828,6 +1830,11 @@ namespace SIL.Transcriber.Services
                     c.MediafileId = mediafile.Id;
                     c.LastModifiedOrigin = "electron";
                     c.DateUpdated = DateTime.UtcNow;
+                }
+                if (DateTime.Now > dtBail)
+                {
+                    dbContext.Comments.UpdateRange(comments);
+                    return false;
                 }
             }
             dbContext.Comments.UpdateRange(comments);
@@ -1866,12 +1873,12 @@ namespace SIL.Transcriber.Services
             dbContext.Discussions.UpdateRange(discussions);
 
             List<Mediafile> mediafiles = [.. dbContext.Mediafiles.Where(
-                c => c.SourceMediaId == null && c.OfflineSourceMediaId != null
+                c => c.SourceMediaId == null && c.OfflineSourceMediaId != null  && !c.Archived
             )];
             foreach (Mediafile m in mediafiles)
             {
                 Mediafile? sourcemedia = dbContext.Mediafiles
-                    .Where(sm => sm.OfflineId == m.OfflineSourceMediaId && !m.Archived)
+                    .Where(sm => sm.OfflineId == m.OfflineSourceMediaId  && !sm.Archived)
                     .FirstOrDefault();
                 if (sourcemedia != null)
                 {
@@ -1917,6 +1924,7 @@ namespace SIL.Transcriber.Services
             }
             dbContext.Orgkeytermtargets.UpdateRange(ktts);
             _ = dbContext.SaveChanges();
+            return true;
         }
 
         private int CompareMediafilesByArtifactTypeVersionDate(Mediafile a, Mediafile b)
@@ -2805,8 +2813,9 @@ namespace SIL.Transcriber.Services
                     start = StartIndex.SetStart(start, ref startId);
                 }
                 int ret = await dbContext.SaveChangesNoTimestampAsync();
+                bool complete = false;
                 if (start == archive.Entries.Count)
-                    UpdateOfflineIds();
+                    complete = UpdateOfflineIds(dtBail);
 
                 _ = report.RemoveAll(s => s.Length == 0);
 
@@ -2814,9 +2823,9 @@ namespace SIL.Transcriber.Services
                 {
                     Message = "[" + string.Join(",", report) + "]",
                     FileURL = sFile,
-                    Status = start == archive.Entries.Count ? HttpStatusCode.OK : HttpStatusCode.PartialContent,
+                    Status = complete ? HttpStatusCode.OK : HttpStatusCode.PartialContent,
                     ContentType = "application/itf",
-                    Startindex = start == archive.Entries.Count ? "-1" : start.ToString(),
+                    Startindex = complete ? "-1" : start.ToString(),
                 };
             }
             catch (Exception ex)
@@ -4248,7 +4257,7 @@ namespace SIL.Transcriber.Services
                 bool complete = (ix == TableOrder.Count);
                 if (complete)
                 {
-                    FixEarlyIds(mapKey);
+                    complete = FixEarlyIds(mapKey, dtBail);
                 }
                 return new Fileresponse()
                 {
@@ -4274,44 +4283,54 @@ namespace SIL.Transcriber.Services
             }
 
         }
-        private void FixEarlyIds(string mapKey)
+        private bool FixEarlyIds(string mapKey, DateTime dtBail)
         {
             //These tables are processed before mediafiles so update their titles now
             //fix the title media for artifact categories
             List<Artifactcategory> cats = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.ArtifactCategorys && c.Newprojid == mapKey)
-                                            .Join(dbContext.Artifactcategorys, cp => cp.Newid, ac => ac.Id, (cp, ac) => ac).Where(ac => ac.OfflineTitleMediafileId != null)];
+                                            .Join(dbContext.Artifactcategorys, cp => cp.Newid, ac => ac.Id, (cp, ac) => ac).Where(ac => ac.OfflineTitleMediafileId != null && ac.TitleMediafileId == null)];
             cats.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
             dbContext.Artifactcategorys.UpdateRange(cats);
+            if (DateTime.Now > dtBail)
+                return false;
             List<Section> sections = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Sections && c.Newprojid == mapKey)
-                                        .Join(dbContext.Sections, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null)];
+                                        .Join(dbContext.Sections, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null && s.TitleMediafileId == null)];
             sections.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
             dbContext.Sections.UpdateRange(sections);
+            if (DateTime.Now > dtBail)
+                return false;
             List<Sharedresource> resources = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.SharedResources && c.Newprojid == mapKey)
-                                        .Join(dbContext.Sharedresources, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null)];
+                                        .Join(dbContext.Sharedresources, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null && s.TitleMediafileId == null)];
             resources.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
             dbContext.Sharedresources.UpdateRange(resources);
+            if (DateTime.Now > dtBail)
+                return false;
+            if (DateTime.Now > dtBail)
+                return false;
 
             List<Passage> psgs =  [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Passages && c.Newprojid == mapKey)
-                                        .Join(dbContext.Passages, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSharedResourceId != null)];
+                                        .Join(dbContext.Passages, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSharedResourceId != null && m.SharedResourceId == null)];
             psgs.ForEach(p => p.SharedResourceId = GetMappedId(Tables.SharedResources, mapKey, p.OfflineSharedResourceId));
             dbContext.Passages.UpdateRange(psgs);
+            if (DateTime.Now > dtBail)
+                return false;
 
             //I may not need to do this because it's handled in UpdateOfflineIds...
             //internalization resources from general resource...
             List<Mediafile> mediafiles = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Mediafiles && c.Newprojid == mapKey)
-                                        .Join(dbContext.Mediafiles, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSourceMediaId != null)];
+                                        .Join(dbContext.Mediafiles, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSourceMediaId != null && m.SourceMediaId == null)];
             mediafiles.ForEach(m => m.SourceMediaId = GetMappedId(Tables.Mediafiles, mapKey, m.OfflineSourceMediaId));
 
             dbContext.Mediafiles.UpdateRange(mediafiles);
 
             dbContext.SaveChanges();
-            UpdateOfflineIds();
+            return DateTime.Now <= dtBail && UpdateOfflineIds(dtBail);
         }
 
         public async Task<Fileresponse> ProcessImportCopyFileAsync(
@@ -4324,7 +4343,7 @@ namespace SIL.Transcriber.Services
             //can't wait for a new project id since we have to process 20 entries before then
             //use
             //give myself 20 seconds to get as much as I can...
-            DateTime? dtBail = DateTime.Now.AddSeconds(20);
+            DateTime dtBail = DateTime.Now.AddSeconds(20);
             User currentuser = CurrentUser() ?? new User();
             string name = "";
             try
@@ -4758,7 +4777,7 @@ namespace SIL.Transcriber.Services
                 string projName = "";
                 if (complete)
                 {
-                    FixEarlyIds(mapKey);
+                    complete = FixEarlyIds(mapKey, dtBail);
                     orgName = dbContext.Organizations.Find(orgid)?.Name ?? orgid.ToString();
                     if (project is null)
                     {

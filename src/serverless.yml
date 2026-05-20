@@ -1,21 +1,9 @@
-custom:
-    myStage: ${opt:stage, self:provider.stage}  #use the --stage CLI option if it exists, or use provider.stage
-    isDebug: ${opt:debug, ""}
-    stagedMessage:
-        dev: "DEV"
-        devx: "DEV"
-        qa: "QA"
-        prod: "PROD"
-    userName: ${file(./serverless.env.yml):xxx.MasterUsername}
-    pwd: ${file(./serverless.env.yml):xxx.MasterUserPassword}
-
 service: transcriberAPI
-configValidationMode: warn
-#frameworkVersion: ^3.19.0
+configValidationMode: error  
 
 provider:
-  name: aws
-  runtime: dotnet8
+  name: aws 
+  runtime: dotnet10
   region: us-east-1
   stage: qa     #cli build params will override this!!
   profile: transcriber  #aws credentials file 
@@ -52,8 +40,12 @@ provider:
     SIL_TR_WEBHOOK_PASSWORD:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_PASSWORD}
     SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}
 
+custom:
+  myStage: ${opt:stage, self:provider.stage}
+  isDebug: ${opt:isDebug, ''}
+
 package:
-  artifact: bin/release/net8.0/deploy-package_${self:custom.myStage}.zip
+  artifact: bin/release/net10.0/deploy-package_${self:custom.myStage}.zip
 
 functions:
   api:

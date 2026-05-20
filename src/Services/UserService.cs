@@ -75,9 +75,7 @@ namespace SIL.Transcriber.Services
             User? cu = CurrentUserRepository.GetCurrentUser();
             if (cu == null || !(cu.SharedContentAdmin ?? false))
                 throw new Exception("No Update Permission");
-            User? user = UserRepository.Get().Where(u => u.Email == email && !u.Archived).FirstOrDefault();
-            if (user == null)
-                throw new Exception("User Does Not Exist");
+            User? user = UserRepository.Get().Where(u => u.Email == email && !u.Archived).FirstOrDefault() ?? throw new Exception("User Does Not Exist");
             user.SharedContentCreator = allowed;
             return await NoCheckUpdateAsync(user);
         }

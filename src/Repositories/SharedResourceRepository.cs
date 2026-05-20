@@ -45,6 +45,7 @@ public class SharedResourceRepository(
         string projectid
     )
     {
+        Logger.LogInformation("ProjectSharedResources called with projectid {projectid}", projectid);
         //TODO get where (clusterid is null) + (clusterid is set and my org is in the cluster)
         return entities;
     }

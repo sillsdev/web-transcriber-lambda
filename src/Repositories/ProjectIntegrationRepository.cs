@@ -42,8 +42,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Project>? projects = null
         )
         {
-            if (projects == null)
-                projects = ProjectRepository.UsersProjects(dbContext.Projects);
+            projects ??= ProjectRepository.UsersProjects(dbContext.Projects);
             return ProjectProjectIntegrations(entities, projects);
         }
 

@@ -85,8 +85,7 @@ namespace SIL.Transcriber.Services
         {
             IEnumerable<Mediafile> files = MyRepository.Get(); //bypass user check
             Mediafile? mf = files.FirstOrDefault(p => p.S3File == s3File && p.PlanId == plan && !p.Archived);
-            if (mf != null)
-                mf.AudioUrl = S3service.SignedUrlForGet(mf.S3File ?? "", DirectoryName(mf), mf.ContentType ?? "").Message;
+            mf?.AudioUrl = S3service.SignedUrlForGet(mf.S3File ?? "", DirectoryName(mf), mf.ContentType ?? "").Message;
             return mf;
 
         }
@@ -552,8 +551,7 @@ namespace SIL.Transcriber.Services
 
             //get a status...if done create a mediafile and return the new id
             string? result = await Aeroservice.NoiseRemovalStatus(taskId, info.s3File, info.folder );
-            if (info.mediafile != null)
-                info.mediafile.AudioQuality = result;
+            info.mediafile?.AudioQuality = result;
             return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
         }
 
@@ -572,8 +570,7 @@ namespace SIL.Transcriber.Services
 
             //get a status...if done create a mediafile and return the new id
             string? result = await Aeroservice.VoiceConversionStatus(taskId, info.s3File, info.folder );
-            if (info.mediafile != null)
-                info.mediafile.AudioQuality = result;
+            info.mediafile?.AudioQuality = result;
             return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
         }
 
