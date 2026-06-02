@@ -580,7 +580,7 @@ namespace SIL.Transcriber.Services
             return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
         }
 
-        public async Task<Mediafile?> Transcription(int id, string iso, bool romanize)
+        public async Task<Mediafile?> Transcription(int id, string iso, bool romanize, string? method)
         {
             Mediafile? mf = GetFileSignedUrl(id);
             if (mf?.AudioUrl == null)
@@ -589,7 +589,7 @@ namespace SIL.Transcriber.Services
             if (testBatch)
             {
                 string[] filesurls = [mf.AudioUrl,mf.AudioUrl];
-                string[] tasks = await Aeroservice.TranscriptionNew(filesurls, iso, romanize) ?? throw new Exception("Transcription failed to start");
+                string[] tasks = await Aeroservice.TranscriptionNew(filesurls, iso, romanize, method) ?? throw new Exception("Transcription failed to start");
                 await SaveTasks([mf, mf], "TR", tasks);
             }
             else
@@ -599,7 +599,7 @@ namespace SIL.Transcriber.Services
                 float[]? times = null;
                 if (timing != null)
                     times = [.. timing.Select(t => t.start)];
-                string[]? tasks = await Aeroservice.TranscriptionNew([mf.AudioUrl], iso, romanize, times) ?? throw new Exception("Transcription failed to start");
+                string[]? tasks = await Aeroservice.TranscriptionNew([mf.AudioUrl], iso, romanize,method, times) ?? throw new Exception("Transcription failed to start");
                 if (tasks == null || tasks.Length == 0)
                     return mf;
                 bool fakeIt = false;
@@ -635,7 +635,7 @@ namespace SIL.Transcriber.Services
             if (result != null)
             {
                 Mediafile mf = MyRepository.Get(id) ?? throw new Exception("Mediafile not found");
-                mf.Transcription = result.Transcription ?? result.Phonetic;
+                mf.Transcription = result.Transcription;
                 return mf;
             }
             return null;

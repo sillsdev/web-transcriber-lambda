@@ -215,9 +215,6 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     }
     #endregion
     #region Transcription
-    /// <summary>
-    /// </summary>
-    /// <returns>taskId</returns>
     [AllowAnonymous]
     [HttpGet("transcription/languages")]
     public async Task<IActionResult> TranscriptionLanguages()
@@ -229,6 +226,56 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         catch (Exception ex)
         {
             return HandleError(ex, nameof(TranscriptionLanguages));
+        }
+    }
+    [AllowAnonymous]
+    [HttpGet("transcription/asrlanguages/{iso}")]
+    public async Task<IActionResult> TranscriptionAsrMethods([FromRoute] string iso)
+    {
+        try
+        {
+            return Ok(await _service.TranscriptionAsrMethods(iso));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(TranscriptionAsrMethods));
+        }
+    }
+    [AllowAnonymous]
+    [HttpGet("transcription/asrsisters")]
+    public async Task<IActionResult> TranscriptionAsrSisters([FromQuery] string userLanguage)
+    {
+        if (string.IsNullOrWhiteSpace(userLanguage))
+            return BadRequest("userLanguage is required");
+        try
+        {
+            return Ok(await _service.TranscriptionAsrSisters(userLanguage));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(TranscriptionAsrSisters));
+        }
+    }
+    /// <summary>
+    /// check to see if transcription task is complete
+    /// </summary>
+    /// <param name="taskId">taskId from voice conversion call</param>
+    /// <returns>null if not done or a File</returns>
+    [AllowAnonymous]
+    [HttpGet("transcription/asrsisters/{taskId}")]
+    public async Task<IActionResult> CheckSisters([FromRoute] string taskId)
+    {
+        try
+        {
+            return Ok(await _service.AsrSistersStatus(taskId));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(CheckSisters));
         }
     }
     /// <summary>
@@ -256,7 +303,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
     }
     /// <summary>
-    /// check to see if voice conversion task is complete
+    /// check to see if transcription task is complete
     /// </summary>
     /// <param name="taskId">taskId from voice conversion call</param>
     /// <returns>null if not done or a File</returns>

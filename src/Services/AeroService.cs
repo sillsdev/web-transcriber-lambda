@@ -131,7 +131,7 @@ public class AeroService(
     }
     private async Task<string[]?> GetTaskIds(string api, MultipartFormDataContent? content)
     {
-        string? tmp = await GetResult(api, content?.Any()??false ? content : null, "task_ids");
+        string? tmp = await GetResult(api, (content?.Count() ?? 0) > 0 ? content : null, "task_ids");
         string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']','"', ' ');
         return result?.Split(',');
     }
@@ -139,10 +139,16 @@ public class AeroService(
 
     private async Task<string?> GetResult(string api, MultipartFormDataContent? multipartContent, string result)
     {
+        return await GetResult(api, (multipartContent?.Count() ?? 0) > 0 ? multipartContent : null as HttpContent, result);
+    }
+
+    private async Task<string?> GetResult(string api, HttpContent? content, string result)
+    {
         Logger.LogDebug("GetResult {Api}", api);
         using HttpClient httpClient = await Httpclient();
-        await LogMultipartContent(multipartContent, Logger);
-        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent?.Any() ?? false ? multipartContent : null);
+        if (content is MultipartFormDataContent mpContent)
+            await LogMultipartContent(mpContent, Logger);
+        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), content);
         string responseBody = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
@@ -150,7 +156,8 @@ public class AeroService(
             throw new HttpRequestException($"Aero API returned {(int)response.StatusCode} {response.ReasonPhrase}: {responseBody}", null, response.StatusCode);
         }
         dynamic? x = JsonConvert.DeserializeObject(responseBody);
-        return x?[result]?.ToString();
+        string? ret = x?[result]?.ToString();
+        return ret;
     }
 
     /*
@@ -182,15 +189,16 @@ public class AeroService(
         return await GetResult($"{Domain}/noise_removal?{p}", null, "task_id");
     }
 
-    private async Task<HttpContent?> GetStatus(string service, string? TaskId)
+    private async Task<HttpContent?> GetStatus(string service, bool gottaAddStatus, string TaskId)
     {
         using HttpClient httpClient = await Httpclient();
-        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{service}_status/{TaskId}");
+        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{service}{(gottaAddStatus ? "_status" : "")}/{TaskId}");
+        string body = await response.Content.ReadAsStringAsync();
+
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content.ReadAsStringAsync();
             Logger.LogError("Aero status check failed [{Service}/{TaskId}]: {Status} {Reason} - {Body}",
-                service, TaskId, response.StatusCode, response.ReasonPhrase, body);
+               service, TaskId, response.StatusCode, response.ReasonPhrase, body);
             throw new HttpRequestException($"Aero status check for '{service}' returned {(int)response.StatusCode} {response.ReasonPhrase}: {body}", null, response.StatusCode);
         }
         if (response.Headers.TryGetValues("task-state", out IEnumerable<string>? taskStates))
@@ -200,20 +208,19 @@ public class AeroService(
                 return response.Content;
             if (taskState == "FAILURE")
             {
-                string body = await response.Content.ReadAsStringAsync();
                 Logger.LogError("Aero task failed [{Service}/{TaskId}]: {Body}", service, TaskId, body);
                 throw new Exception($"Aero task failed for '{service}' (task: {TaskId}): {body}");
             }
             return null;
         }
         Logger.LogWarning("Aero status response missing task-state header [{Service}/{TaskId}]", service, TaskId);
-        return null;
+        return response.Content;
     }
-    public async Task<HttpContent?> NoiseRemovalStatus(string? taskId)
+    public async Task<HttpContent?> NoiseRemovalStatus(string taskId)
     {
-        return await GetStatus("noise_removal", taskId);
+        return await GetStatus("noise_removal", true, taskId);
     }
-    public async Task<string?> NoiseRemovalStatus(string? taskId, string outputFile, string outputFolder)
+    public async Task<string?> NoiseRemovalStatus(string taskId, string outputFile, string outputFolder)
     {
 
         Stream? stream = (await NoiseRemovalStatus(taskId))?.ReadAsStream();
@@ -256,11 +263,11 @@ public class AeroService(
         AddSaveS3(t, false);
         return await GetResult($"{Domain}/voice_conversion?{p}{t}", null, "task_id");
     }
-    public async Task<HttpContent?> VoiceConversionStatus(string? taskId)
+    public async Task<HttpContent?> VoiceConversionStatus(string taskId)
     {
-        return await GetStatus("voice_conversion", taskId);
+        return await GetStatus("voice_conversion", true, taskId);
     }
-    public async Task<string?> VoiceConversionStatus(string? taskId, string outputFile, string outputFolder)
+    public async Task<string?> VoiceConversionStatus(string taskId, string outputFile, string outputFolder)
     {
 
         Stream? stream = (await VoiceConversionStatus(taskId))?.ReadAsStream();
@@ -286,6 +293,53 @@ public class AeroService(
         return filteredArray.ToString();
 
     }
+    public async Task<string[]?> TranscriptionAsrMethods(string iso)
+    {
+        using HttpClient httpClient = new();
+        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/asr/languages?language_iso={iso}");
+        string jsonString = await response.Content.ReadAsStringAsync();
+        // returns {  "languages": [{"iso": "eng", "name": "English"}], "entries": [{"language_iso": "eng", "script": "Latn", "method": "mms"},
+        // {"language_iso": "eng", "script": "Latn", "method": "omnilingual"}, {"language_iso": "eng", "script": "Latn", "method": "whisper"}]}
+        JObject jsonObject = JObject.Parse(jsonString);
+        JArray? entries = jsonObject["entries"] as JArray;
+        List<string> methods = entries?.Select(e => e["method"]?.Value<string>()).OfType<string>().Distinct().ToList() ?? [];
+
+        string[] ranking = new[] { "whisper", "w2v-bert", "omnilingual", "mms" };
+        List<string> ranked = [.. ranking.Where(m => methods.Contains(m))];
+        ranked.AddRange(methods.Where(m => !ranking.Contains(m)));
+
+        return [.. ranked];
+    }
+    public async Task<string?> TranscriptionAsrSisters(string userLanguage)
+    {
+        string api = $"{Domain}/asr/recommend-language";
+        string formData = $"user_language={Uri.EscapeDataString(userLanguage)}";
+        StringContent formContent = new(formData, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
+        return await GetResult(api, formContent, "task_id");
+    }
+    public async Task<string?> AsrSistersStatus(string taskId)
+    {
+        HttpContent? content = await GetStatus("asr/recommend-language", false, taskId);
+        if (content != null)
+        {
+            string json = await content.ReadAsStringAsync();
+            try
+            {
+                dynamic? x = JsonConvert.DeserializeObject(json);
+                if (x != null)
+                {
+                    string ret = JsonConvert.SerializeObject(x.result);
+                    return ret;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to parse transcription status response: {Json}", json);
+                throw;
+            }
+        }
+        return null;
+    }
     private async Task<string[]?> Transcription(
         Stream stream, string filename, string lang_iso, bool romanize, float[]? timing = null)
     {
@@ -300,7 +354,7 @@ public class AeroService(
     }
     public async Task<string[]?> Transcription(string[] fileUrls, string lang_iso, bool romanize)
     {
-        string api = $"{Domain}/batch_transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
+        string api = $"{Domain}/asr/batch?s3_upload=true&language_iso={lang_iso}&romanize={romanize}";
         MultipartFormDataContent multipartContent = [];
         List<ByteArrayContent> files = [];
         int count = 1;
@@ -314,9 +368,18 @@ public class AeroService(
         string[]? tasks = await GetTaskIds(api, multipartContent);
         return tasks;
     }
-    private async Task<string> BuildTranscriptionApi(string[] fileUrls, string lang_iso, bool romanize, float[]? timing = null)
+    private async Task<string> BuildTranscriptionApi(string[] fileUrls, string lang_iso, bool romanize, string? method = null, float[]? timing = null)
     {
-        string api = $"{Domain}/batch_transcription";
+        if (method == null)
+        {
+            string[]? methods = await TranscriptionAsrMethods(lang_iso);
+            if (methods is null || methods.Length == 0)
+            {
+                throw new Exception("Language not available");
+            }
+            method = methods[0];
+        }
+        string api = $"{Domain}/asr/batch";
         int count = 1;
         string fn = DateTime.Now.Ticks.ToString();
         List<string> urlList = [];
@@ -324,13 +387,13 @@ public class AeroService(
         {
             Uri uri = new (fileUrl);
             string ext = Path.GetExtension(uri.LocalPath);
-            string tgt = $"{count}{fn}.{ext}";
+            string tgt = $"{count}{fn}{ext}";
             await S3service.CopyS3FileAsync(fileUrl, Bucket, AERO_FOLDER, tgt);
             await S3service.BucketOwner(tgt, AERO_FOLDER, Bucket);
             urlList.Add($"s3://{Bucket}/{AERO_FOLDER}/{tgt}");
             count++;
         }
-        KeyValuePair<string, string?>[] queryString = [new("s3_upload", "true"), new("sister_lang_iso", lang_iso), new("romanize", romanize.ToString()), new("s3_file_paths",string.Join("," ,urlList))];
+        KeyValuePair<string, string?>[] queryString = [new("s3_upload", "true"),new("method", method), new("language_iso", lang_iso), new("romanize", romanize.ToString()), new("s3_file_paths",string.Join("," ,urlList))];
         api = QueryHelpers.AddQueryString(api, queryString);
         for (int ix = 0; ix < timing?.Length; ix++)
         {
@@ -351,18 +414,19 @@ public class AeroService(
     /// <param name="fileUrls">The files containing the audio to transcribe.</param>
     /// <param name="lang_iso">The ISO code of the language to transcribe the audio into</param>
     /// <param name="romanize">Whether to romanize the transcription</param>
+    /// <param name="method">The transcription method to use</param>
     /// <param name="timing">verse timing</param>
     /// <returns></returns>
-    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize, float[]? timing = null)
+    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize, string? method = null, float[]? timing = null)
     {
-        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize, timing);
+        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize, method, timing);
         string[]? tasks = await GetTaskIds(api, []);
         return tasks;
     }
 
-    public async Task<TranscriptionResponse?> TranscriptionStatus(string? taskId)
+    public async Task<TranscriptionResponse?> TranscriptionStatus(string taskId)
     {
-        HttpContent? content = await GetStatus("batch_transcription", taskId);
+        HttpContent? content = await GetStatus("batch_transcription", true, taskId);
         if (content != null)
         {
             string json = await content.ReadAsStringAsync();
@@ -373,7 +437,6 @@ public class AeroService(
                 {
                     TranscriptionResponse response = new()
                     {
-                        Phonetic = x.result.phonetic_transcription ?? "",
                         Transcription = x.result.sister_transcription ?? "",
                         TranscriptionId = x.result.transcription_id ?? 0
                     };
@@ -491,12 +554,12 @@ public class AeroService(
         return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
     }
 
-    public async Task<HttpContent?> AudioInfillingStatus(string? taskId)
+    public async Task<HttpContent?> AudioInfillingStatus(string taskId)
     {
-        return await GetStatus("audio_infilling", taskId);
+        return await GetStatus("audio_infilling", true, taskId);
     }
 
-    public async Task<string?> AudioInfillingStatus(string? taskId, string outputFile, string outputFolder)
+    public async Task<string?> AudioInfillingStatus(string taskId, string outputFile, string outputFolder)
     {
         Stream? stream = (await AudioInfillingStatus(taskId))?.ReadAsStream();
 
@@ -534,7 +597,6 @@ public class TranscriptionRequest
 }
 public class TranscriptionResponse
 {
-    public string Phonetic { get; set; } = ""; //The phonetic transcription of the audio.
     public string Transcription { get; set; } = ""; // The transcription of the audio in the target language.
     public int TranscriptionId { get; set; } // The ID of the transcription log entry.
 }
@@ -611,6 +673,13 @@ public class AudioInfillingFileUploadModelPhase1
     public string Replacements { get; set; } = ""; //format {"start": 8.04,"end": 9.00, "audio_format": "audio/mpeg", "audio_base64": "//..."}
 
 }
+
+
+
+
+
+
+
 
 
 
