@@ -15,5 +15,9 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "month")]
         public int Month { get; set; }
+
+        [NotMapped]
+        [Attr(PublicName = "country")]
+        public string Country { get; set; } = "Unknown";
     }
 }

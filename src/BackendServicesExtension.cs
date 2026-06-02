@@ -25,6 +25,7 @@ namespace SIL.Transcriber
             // Add services to the container.
             services.AddHttpContextAccessor();
             services.AddSingleton<IAuthService, AuthService>();
+            services.AddScoped<GeoIpService>();
 
             services.AddScoped<AppDbContextResolver>();
             services.AddScoped<LoggingDbContextResolver>();
