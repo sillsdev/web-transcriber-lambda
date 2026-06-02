@@ -234,10 +234,18 @@ namespace SIL.Transcriber.Repositories
         public IEnumerable<Section> AssignSections(int scheme, string idlist)
         {
             string[] ids = idlist.Split('|');
-            Section[] sections = [.. dbContext.Sections.Where(s => ids.Contains(s.Id.ToString()))];
-            foreach (Section section in sections)
+            List<Section> sections = [];
+            foreach (string idstr in ids)
             {
-                section.OrganizationSchemeId = scheme;
+                if (int.TryParse(idstr, out int id))
+                {
+                    Section? section = dbContext.Sections.Find(id);
+                    if (section != null)
+                    {
+                        section.OrganizationSchemeId = scheme;
+                        sections.Add(section);
+                    }
+                }
             }
             dbContext.Sections.UpdateRange(sections);
             dbContext.SaveChanges();
