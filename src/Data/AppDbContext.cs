@@ -37,6 +37,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Biblebrainfileset> BibleBrainFilesets => Set<Biblebrainfileset>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<CopyProject> Copyprojects => Set<CopyProject>();
+        public DbSet<Countryanalytic> Countryanalytics => Set<Countryanalytic>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
         public DbSet<Dashboard> Dashboards => Set<Dashboard>();
         public DbSet<Datachanges> Datachanges => Set<Datachanges>();
@@ -84,6 +85,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Sharedresourcereference> Sharedresourcereferences => Set<Sharedresourcereference>();
         public DbSet<SimpleResponse> ThisIsFake => Set<SimpleResponse>();
         public DbSet<User> Users => Set<User>();
+        public DbSet<Useranalytic> Useranalytics => Set<Useranalytic>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
         public DbSet<Vwbiblebrainbible> VWbiblebrainbibles => Set<Vwbiblebrainbible>();
@@ -103,7 +105,6 @@ namespace SIL.Transcriber.Data
 
             DefineRelationships(builder);
             DefineLastModifiedByUser(builder);
-
         }
 
         /* On Plan Patch:
@@ -300,12 +301,12 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
-                .Entity<Project>()
+                .Entity<Projectintegration>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
-                .Entity<Projectintegration>()
+                .Entity<Project>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -314,11 +315,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = builder
-                .Entity<Resource>()
-                .HasOne(o => o.Cluster)
-                .WithMany()
-                .HasForeignKey(o => o.ClusterId);
             _ = builder
                 .Entity<Resource>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -334,11 +330,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = builder
-                .Entity<Section>()
-                .HasOne(o => o.Group)
-                .WithMany()
-                .HasForeignKey(o => o.GroupId);
             _ = builder
                 .Entity<Sectionpassage>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -359,11 +350,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = builder
-                .Entity<Sharedresource>()
-                .HasOne(o => o.Cluster)
-                .WithMany()
-                .HasForeignKey(o => o.ClusterId);
             _ = builder
                 .Entity<Sharedresourcereference>()
                 .HasOne(o => o.LastModifiedByUser)
