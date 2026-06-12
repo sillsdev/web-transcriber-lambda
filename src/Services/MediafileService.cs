@@ -112,10 +112,10 @@ namespace SIL.Transcriber.Services
             }
             return null;
         }
-        public IEnumerable<Mediafile>? WBTUpdate()
+        public async Task<IEnumerable<Mediafile>?> WBTUpdate()
         {
             HttpContext?.SetFP("api");
-            return MyRepository.WBTUpdate();
+            return await MyRepository.WBTUpdate();
         }
 
         public string DirectoryName(int plan)

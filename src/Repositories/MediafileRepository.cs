@@ -71,18 +71,26 @@ namespace SIL.Transcriber.Repositories
             return entities.Join(plans, m => m.PlanId, p => p.Id, (m, p) => m);
         }
 
-        public IEnumerable<Mediafile>? WBTUpdate()
+        public async Task<IEnumerable<Mediafile>?> WBTUpdate()
         {
             Artifacttype? newAT = dbContext.Artifacttypes.Where(at => at.Typename == "wholebacktranslation").FirstOrDefault();
             if (newAT == null)
                 return null;
-            IEnumerable<Mediafile>? entities = [.. FromCurrentUser().Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), m => m.ArtifactTypeId, a => a.Id, (m, a) => m).Where(m => m.SourceSegments == null)];
-            foreach (Mediafile m in entities)
-            {
-                m.ArtifactTypeId = newAT.Id;
-                dbContext.Update(m);
-            }
-            dbContext.SaveChanges();
+
+            // Bulk update in single SQL statement - avoids N+1 updates
+            // ExecuteUpdateAsync executes immediately (not deferred to SaveChanges)
+            int newATId = newAT.Id;
+            await FromCurrentUser()
+                .Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), 
+                      m => m.ArtifactTypeId, a => a.Id, (m, a) => m)
+                .Where(m => m.SourceSegments == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(m => m.ArtifactTypeId, newATId));
+
+            // Return updated entities for response
+            IEnumerable<Mediafile>? entities = [.. FromCurrentUser()
+                .Join(dbContext.Artifacttypes.Where(a => a.Typename == "wholebacktranslation"), 
+                      m => m.ArtifactTypeId, a => a.Id, (m, a) => m)
+                .Where(m => m.SourceSegments == null)];
             return entities;
         }
         private IQueryable<Mediafile> UsersMediafiles(
@@ -435,14 +443,15 @@ namespace SIL.Transcriber.Repositories
                 //turn any old versions off
                 if (passage != null)
                 {
-                    IQueryable<Mediafile> old = dbContext.MediafilesData.Where(o => o.PassageId == passage.Id && o.ReadyToShare == true && o.Id != m.Id);
-                    foreach (Mediafile o in old)
-                    {
-                        o.ReadyToShare = false;
-                        o.PublishTo = "{}";
-                        o.PublishedAs = null;
-                        dbContext.Mediafiles.Update(o);
-                    }
+                    // Bulk update in single SQL statement - avoids N+1 queries and unnecessary eager loading
+                    // ExecuteUpdateAsync executes immediately (not deferred to SaveChanges)
+                    await dbContext.Mediafiles
+                        .Where(o => o.PassageId == passage.Id && o.ReadyToShare == true && o.Id != m.Id)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(m => m.ReadyToShare, false)
+                            .SetProperty(m => m.PublishTo, "{}")
+                            .SetProperty(m => m.PublishedAs, (string?)null)
+                        );
                 }
                 if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
                 {

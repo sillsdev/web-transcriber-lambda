@@ -118,9 +118,9 @@ namespace SIL.Transcriber.Controllers
 
 
         [HttpGet("wbt")]
-        public IActionResult WBTUpdateAsync()
+        public async Task<IActionResult> WBTUpdateAsync()
         {
-            return Ok(_service.WBTUpdate());
+            return Ok(await _service.WBTUpdate());
         }
         [AllowAnonymous]
         [HttpPatch("{id}/publish")]

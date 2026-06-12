@@ -176,20 +176,37 @@ namespace SIL.Transcriber.Repositories
                 : [.. mediafiles];
 #pragma warning restore CS8604 // Possible null reference argument.
 
-                foreach (Mediafile mediafile in medialist)
+                if (publish)
                 {
-                    if (publish)
-                        await MediafileRepository.Publish(mediafile, publishTo);
-                    else if (mediafile.ReadyToShare && (publishTo != "{}"))
+                    // Publishing path - call Publish for each mediafile (may do additional processing)
+                    foreach (Mediafile mediafile in medialist)
                     {
-                        JObject pt = JObject.Parse(publishTo);
-                        pt.Add("PublishPassage", false);
-                        mediafile.ReadyToShare = false;
-                        mediafile.PublishTo = pt.ToString();
+                        await MediafileRepository.Publish(mediafile, publishTo);
                     }
-                    dbContext.Mediafiles.Update(mediafile);
                 }
-                ;
+                else if (publishTo != "{}")
+                {
+                    // Unpublishing path - bulk update in single SQL statement
+                    // Avoids N+1 updates and entity tracking overhead
+                    JObject pt = JObject.Parse(publishTo);
+                    pt.Add("PublishPassage", false);
+                    string newPublishTo = pt.ToString();
+
+                    List<int> mediafileIds = medialist
+                        .Where(m => m.ReadyToShare)
+                        .Select(m => m.Id)
+                        .ToList();
+
+                    if (mediafileIds.Count > 0)
+                    {
+                        await dbContext.Mediafiles
+                            .Where(m => mediafileIds.Contains(m.Id))
+                            .ExecuteUpdateAsync(s => s
+                                .SetProperty(m => m.ReadyToShare, false)
+                                .SetProperty(m => m.PublishTo, newPublishTo)
+                            );
+                    }
+                }
                 _ = dbContext.SaveChanges();
             }
         }
