@@ -131,7 +131,7 @@ public class AeroService(
     }
     private async Task<string[]?> GetTaskIds(string api, MultipartFormDataContent? content)
     {
-        string? tmp = await GetResult(api, (content?.Count() ?? 0) > 0 ? content : null, "task_ids");
+        string? tmp = await GetResult(api, (content?.Count() ?? 0) > 0 ? content : null, "task_id");
         string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']','"', ' ');
         return result?.Split(',');
     }
@@ -312,10 +312,10 @@ public class AeroService(
     }
     public async Task<string?> TranscriptionAsrSisters(string userLanguage)
     {
-        string api = $"{Domain}/asr/recommend-language";
-        string formData = $"user_language={Uri.EscapeDataString(userLanguage)}";
-        StringContent formContent = new(formData, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
-        return await GetResult(api, formContent, "task_id");
+        string api = $"{Domain}/asr/recommend-language?user_language={Uri.EscapeDataString(userLanguage)}";
+        //string formData = $"user_language={Uri.EscapeDataString(userLanguage)}";
+        //StringContent formContent = new(formData, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
+        return await GetResult(api, null, "task_id");
     }
     public async Task<string?> AsrSistersStatus(string taskId)
     {
@@ -368,7 +368,7 @@ public class AeroService(
         string[]? tasks = await GetTaskIds(api, multipartContent);
         return tasks;
     }
-    private async Task<string> BuildTranscriptionApi(string[] fileUrls, string lang_iso, bool romanize, string? method = null, float[]? timing = null)
+    private async Task<string> BuildTranscriptionApi(string[] fileUrls, string lang_iso, bool romanize, bool phonetic, string? method = null, float[]? timing = null)
     {
         if (method == null)
         {
@@ -379,7 +379,7 @@ public class AeroService(
             }
             method = methods[0];
         }
-        string api = $"{Domain}/asr/batch";
+        string api = phonetic == true ? $"{Domain}/asr/phonetic" : $"{Domain}/asr/batch";
         int count = 1;
         string fn = DateTime.Now.Ticks.ToString();
         List<string> urlList = [];
@@ -393,21 +393,15 @@ public class AeroService(
             urlList.Add($"s3://{Bucket}/{AERO_FOLDER}/{tgt}");
             count++;
         }
-        KeyValuePair<string, string?>[] queryString = [new("s3_upload", "true"),new("method", method), new("language_iso", lang_iso), new("romanize", romanize.ToString()), new("s3_file_paths",string.Join("," ,urlList))];
+        KeyValuePair<string, string?>[] queryString = [new("s3_upload", "true"),new(phonetic ? "guidance_method": "method", method), new("language_iso", lang_iso), new("romanize", romanize.ToString()), new(phonetic ?"s3_file_path" : "s3_file_paths",string.Join("," ,urlList))];
         api = QueryHelpers.AddQueryString(api, queryString);
-        for (int ix = 0; ix < timing?.Length; ix++)
-        {
-            api += $"&timestamps={timing[ix]}";
-        }
+        if (!phonetic)
+            for (int ix = 0; ix < timing?.Length; ix++)
+            {
+                api += $"&timestamps={timing[ix]}";
+            }
         return api;
     }
-    /*
-    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize)
-    {
-        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize);
-        string[]? tasks = await GetTaskIds(api, []);
-        return tasks;
-    } */
     /// <summary>
     /// 
     /// </summary>
@@ -415,33 +409,40 @@ public class AeroService(
     /// <param name="lang_iso">The ISO code of the language to transcribe the audio into</param>
     /// <param name="romanize">Whether to romanize the transcription</param>
     /// <param name="method">The transcription method to use</param>
+    /// <param name="phonetic">Whether to use phonetic transcription</param>
     /// <param name="timing">verse timing</param>
     /// <returns></returns>
-    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize, string? method = null, float[]? timing = null)
+    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize, bool phonetic, string? method = null, float[]? timing = null)
     {
-        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize, method, timing);
+        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize, phonetic, method, timing);
         string[]? tasks = await GetTaskIds(api, []);
         return tasks;
     }
 
-    public async Task<TranscriptionResponse?> TranscriptionStatus(string taskId)
+    public async Task<TranscriptionResponse?> TranscriptionStatus(string taskId, bool phonetic)
     {
-        HttpContent? content = await GetStatus("batch_transcription", true, taskId);
+        HttpContent? content = await GetStatus(phonetic ? "asr/phonetic" : "asr/batch", false, taskId);
         if (content != null)
         {
             string json = await content.ReadAsStringAsync();
             try
             {
                 dynamic? x = JsonConvert.DeserializeObject(json);
-                if (x != null)
+                string? state = x?["state"]?.ToString();
+
+                if (!string.Equals(state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+                    return null;
+
+                dynamic? firstResult = x?["result"]?["results"]?[0];
+                if (firstResult == null)
+                    return null;
+
+                TranscriptionResponse response = new()
                 {
-                    TranscriptionResponse response = new()
-                    {
-                        Transcription = x.result.sister_transcription ?? "",
-                        TranscriptionId = x.result.transcription_id ?? 0
-                    };
-                    return response;
-                }
+                    Transcription = firstResult?["transcription"]?["transcription"]?.ToString() ?? "",
+                    TranscriptionId = firstResult?["log_id"]
+                };
+                return response;
             }
             catch (Exception ex)
             {

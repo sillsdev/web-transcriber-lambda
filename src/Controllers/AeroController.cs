@@ -306,14 +306,33 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     /// check to see if transcription task is complete
     /// </summary>
     /// <param name="taskId">taskId from voice conversion call</param>
+    /// <param name="phonetic">whether to check phonetic transcription</param>
     /// <returns>null if not done or a File</returns>
     [AllowAnonymous]
     [HttpGet("transcription/{taskId}")]
-    public async Task<IActionResult> CheckTranscription([FromRoute] string taskId)
+    public async Task<IActionResult> CheckTranscription([FromRoute] string taskId, [FromQuery] bool phonetic = false)
     {
         try
         {
-            return Ok(await _service.TranscriptionStatus(taskId));
+            return Ok(await _service.TranscriptionStatus(taskId, phonetic));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(CheckTranscription));
+        }
+    }
+    /// <summary>
+    /// check to see if transcription task is complete
+    /// </summary>
+    /// <param name="taskId">taskId from voice conversion call</param>
+    /// <returns>null if not done or a File</returns>
+    [AllowAnonymous]
+    [HttpGet("phonetic/{taskId}")]
+    public async Task<IActionResult> CheckPhoneticTranscription([FromRoute] string taskId)
+    {
+        try
+        {
+            return Ok(await _service.TranscriptionStatus(taskId, true));
         }
         catch (Exception ex)
         {
