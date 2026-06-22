@@ -32,7 +32,7 @@ public class SharedResourceRepository(
     {
         int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
         if (titleMedia != null) //always do titles 
-            await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}");
+            await MediafileRepository.PublishTitle((int)titleMedia, null, resourceFromRequest);
         await base.UpdateAsync(resourceFromRequest, resourceFromDatabase, cancellationToken);
     }
     public IQueryable<Sharedresource> UsersSharedResources(IQueryable<Sharedresource> entities)

@@ -5,7 +5,6 @@ using Amazon.S3.Util;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services.Contracts;
 using System.Net;
-using System.Text;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services
@@ -132,8 +131,7 @@ namespace SIL.Transcriber.Services
     public class S3Service(IAmazonS3 client, ILoggerFactory loggerFactory) : IS3Service
     {
         private readonly string USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
-        public readonly string PUBLISHREQ_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHREQ_BUCKET");
-        public readonly string PUBLISHED_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHED_BUCKET");
+
         private readonly IAmazonS3 _client = client;
         protected ILogger<S3Service> Logger { get; set; } = loggerFactory.CreateLogger<S3Service>();
 
@@ -210,34 +208,7 @@ namespace SIL.Transcriber.Services
                      + ext
                  : newfilename;
         }
-        public async Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey, string tags)
-        {
-            /*
-            {
-                "id": 12345678,
-                "inputBucket": "sil-transcriber-userfiles-dev",
-                "inputKey": "3434_Obtco/3671_Matth/JOS1_2-ver3_l3671_Matth.wav",
-                "outputBucket": "apm-published-dev",
-                "outputKey": "OBTENG/OBTENG_JON1_3_3.mp3",
-                "tags": {
-                    "title": "Chapter 1",
-                    "artist": "SJH",
-                    "album": "This Bible",
-		            "cover": "https://sil-transcriber-userfiles-dev.s3.us-east-1.amazonaws.com/graphics/002_NOTE_General_0.01_0.01_3911_13357_31744_graphic-512.webp"
-                }
-            } */
-            try
-            {
-                string json = $"{{\"id\":{id},\"inputBucket\":\"{USERFILES_BUCKET}\",\"inputKey\":\"{inputKey}\",\"outputBucket\":\"{PUBLISHED_BUCKET}\",\"outputKey\":\"{outputKey}\", \"tags\":{tags}}}";
-                string requestKey = id + ".key";
-                using Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-                return await UploadFileAsync(stream, true, requestKey, "", PUBLISHREQ_BUCKET);
-            }
-            catch (Exception e)
-            {
-                return S3Response(e.Message, HttpStatusCode.InternalServerError);
-            }
-        }
+
         public async Task<S3Response> CreateBucketAsync(string bucketName)
         {
             try

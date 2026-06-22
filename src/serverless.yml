@@ -16,7 +16,7 @@ provider:
     SIL_TR_AERO_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AERO_DOMAIN}
     SIL_TR_AERO_PASSWORD: ${file(./serverless.env.yml):xxx.SIL_TR_AERO_PASSWORD}
     SIL_TR_AQUIFER:  ${file(./serverless.env.yml):xxx.SIL_TR_AQUIFER}
-    SIL_TR_AUTH0_AUDIENCE: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_AUDIENCE}
+    SIL_TR_AUTH0_AUDIENCE: ${file(./serverless.env.yml):xxx.SIL_TR_AUTH0_AUDIENCE}
     SIL_TR_AUTH0_DOMAIN: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_DOMAIN}
     SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_ID}
     SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_AUTH0_TOKEN_ACCESS_CLIENT_SECRET}
@@ -28,14 +28,13 @@ provider:
     SIL_TR_EMAIL_FROM:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EMAIL_FROM}
     SIL_TR_EMAIL_HOST:  ${file(./serverless.env.yml):xxx.SIL_TR_EMAIL_HOST}
     SIL_TR_EXPORT_QUEUE:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_EXPORT_QUEUE}
-    SIL_TR_ORIGINSITES: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_ORIGINSITES}
+    SIL_TR_ORIGINSITES: ${file(./serverless.env.yml):xxx.SIL_TR_ORIGINSITES}
     SIL_TR_PARATEXT_AUTH0_CONNECTION:  ${file(./serverless.env.yml):xxx.SIL_TR_PARATEXT_AUTH0_CONNECTION}
-    SIL_TR_PARATEXT_CLIENT_ID:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_ID}
-    SIL_TR_PARATEXT_CLIENT_SECRET:  ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_CLIENT_SECRET}
+    SIL_TR_PARATEXT_CLIENT_ID:  ${file(./serverless.env.yml):xxx.SIL_TR_PARATEXT_CLIENT_ID}
+    SIL_TR_PARATEXT_CLIENT_SECRET:  ${file(./serverless.env.yml):xxx.SIL_TR_PARATEXT_CLIENT_SECRET}
     SIL_TR_PARATEXT_DATA:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_DATA}
     SIL_TR_PARATEXT_REGISTRY:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PARATEXT_REGISTRY}
-    SIL_TR_PUBLISHED_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PUBLISHED_BUCKET}
-    SIL_TR_PUBLISHREQ_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PUBLISHREQ_BUCKET}
+    SIL_TR_PUBLISH_QUEUE: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_PUBLISH_QUEUE}
     SIL_TR_USERFILES_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_USERFILES_BUCKET}
     SIL_TR_WEBHOOK_PASSWORD:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_PASSWORD}
     SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}

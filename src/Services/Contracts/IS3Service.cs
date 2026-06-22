@@ -21,7 +21,6 @@ namespace SIL.Transcriber.Services.Contracts
         Task<S3Response> MakePublic(string fileName, string folder = "", string bucket = "");
         Task<S3Response> BucketOwner(string fileName, string folder = "", string bucket = "");
         string GetPublicUrl(string fileName, string folder = "", string bucket = "");
-        Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey, string tags);
         Task<MultipartInitiateResponse> InitiateMultipartUploadAsync(string key, string contentType, int parts, string folder, bool aerobucket);
         Task<Fileresponse> CompleteMultipartUploadAsync(string key, string uploadId, List<MultipartPartETag> parts);
         Task<Fileresponse> AbortMultipartUploadAsync(string key, string uploadId);

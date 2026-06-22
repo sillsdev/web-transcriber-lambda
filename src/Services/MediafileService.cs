@@ -264,9 +264,11 @@ namespace SIL.Transcriber.Services
             }
             return await MakePublic(m);
         }
-        public async Task<Mediafile?> PublishM(int id, Mediafile m)
+        //this is not called from within apm.  This is a testing/fixing method.
+        public async Task<Mediafile?> PublishM(int id)
         {
-            return await Publish(id, m.PublishTo ?? "{}");
+            string p = "{\"Public\": \"true\"}";
+            return await Publish(id, p);
         }
         public async Task<Mediafile?> Publish(Mediafile m, string publishTo)
         {

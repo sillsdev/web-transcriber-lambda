@@ -122,13 +122,15 @@ namespace SIL.Transcriber.Controllers
         {
             return Ok(await _service.WBTUpdate());
         }
+        //this is not called from within apm.  This is a testing/fixing method.
         [AllowAnonymous]
         [HttpPatch("{id}/publish")]
-        public async Task<IActionResult> PublishMediafileAsync([FromRoute] int id, [FromBody] Mediafile media)
+        public async Task<IActionResult> PublishMediafileAsync([FromRoute] int id)
         {
             try
             {
-                return Ok(await _service.PublishM(id, media));
+                Mediafile? result = await _service.PublishM(id);
+                return result == null ? NotFound() : Ok(result);
             }
             catch
             {

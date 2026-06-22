@@ -34,9 +34,9 @@ namespace SIL.Transcriber.Repositories
         private async Task PublishTitles(Bible bible)
         {
             if (bible.IsoMediafile != null)
-                await MediafileRepository.Publish((int)bible.IsoMediafile.Id, "{\"Public\": \"true\"}", bible);
+                await MediafileRepository.PublishTitle((int)bible.IsoMediafile.Id, bible);
             if (bible.BibleMediafile != null)
-                await MediafileRepository.Publish((int)bible.BibleMediafile.Id, "{\"Public\": \"true\"}", bible);
+                await MediafileRepository.PublishTitle((int)bible.BibleMediafile.Id, bible);
         }
         public override async Task CreateAsync(Bible resourceFromRequest, Bible resourceFromDatabase, CancellationToken cancellationToken)
         {

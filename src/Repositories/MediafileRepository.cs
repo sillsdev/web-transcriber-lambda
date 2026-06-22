@@ -8,7 +8,7 @@ using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Services.Contracts;
 using SIL.Transcriber.Utility;
-using System.Net;
+using static SIL.Transcriber.Utility.EnvironmentHelpers;
 using static SIL.Transcriber.Utility.HttpContextHelpers;
 
 namespace SIL.Transcriber.Repositories
@@ -26,7 +26,8 @@ namespace SIL.Transcriber.Repositories
         PlanRepository planRepository,
         ProjectRepository projectRepository,
         ArtifactCategoryRepository artifactCategoryRepository,
-        IS3Service service
+        IS3Service service,
+        ISQSService sqsService
         ) : BaseRepository<Mediafile>(
             targetedFields,
             _contextResolver,
@@ -44,6 +45,7 @@ namespace SIL.Transcriber.Repositories
         readonly private IS3Service S3service = service;
         readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
         readonly private ArtifactCategoryRepository ArtifactCategoryRepository = artifactCategoryRepository;
+        readonly private ISQSService SQSservice = sqsService;
 
         public IQueryable<Mediafile> UsersMediafiles(IQueryable<Mediafile> entities, int project)
         {
@@ -81,14 +83,16 @@ namespace SIL.Transcriber.Repositories
             // ExecuteUpdateAsync executes immediately (not deferred to SaveChanges)
             int newATId = newAT.Id;
             await FromCurrentUser()
-                .Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"), 
+                .Join(dbContext.Artifacttypes.Where(a => a.Typename == "backtranslation"),
                       m => m.ArtifactTypeId, a => a.Id, (m, a) => m)
                 .Where(m => m.SourceSegments == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(m => m.ArtifactTypeId, newATId));
+                .ExecuteUpdateAsync(s => s.SetProperty(m => m.ArtifactTypeId, newATId)
+                            .SetProperty(m => m.DateUpdated, DateTime.UtcNow)
+                            .SetProperty(m => m.LastModifiedOrigin, "wbt"));
 
             // Return updated entities for response
             IEnumerable<Mediafile>? entities = [.. FromCurrentUser()
-                .Join(dbContext.Artifacttypes.Where(a => a.Typename == "wholebacktranslation"), 
+                .Join(dbContext.Artifacttypes.Where(a => a.Typename == "wholebacktranslation"),
                       m => m.ArtifactTypeId, a => a.Id, (m, a) => m)
                 .Where(m => m.SourceSegments == null)];
             return entities;
@@ -335,9 +339,9 @@ namespace SIL.Transcriber.Repositories
             return sr;
         }
 
-        public Sharedresource? CreateSharedResource(Mediafile m, Passage p)
+        public Sharedresource? CreateSharedResource(Mediafile m, Passage p, Plan? plan = null)
         {
-            Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+            plan ??= PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
             Artifactcategory? ac = null;
             if (p.Passagetype == null && plan.Project.Projecttype.Name == "Scripture")
                 ac = dbContext.ArtifactcategoriesData.SingleOrDefault(ac => !ac.Archived && ac.OrganizationId == null && ac.Categoryname == "scripture");
@@ -387,112 +391,110 @@ namespace SIL.Transcriber.Repositories
             dbContext.SaveChanges();
             return sr;
         }
-        private async Task<bool> PublishToAkuo(Mediafile m, Passage? passage, Bible? bible, Sharedresource? sr)
+        private void QueuePublish(Mediafile m, string publishTo, Passage? passage, Bible bible, Sharedresource? sr, Plan plan)
         {
-            Plan? plan = PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
-            bible ??= PlanRepository.Bible(plan) ?? throw new Exception("no bible");
-            string title =  PublishTitlename(m,passage, false);
+            string title = PublishTitlename(m, passage, false);
             string outputKey = PublishFilename(title, bible.BibleId);
             string inputKey = $"{PlanRepository.DirectoryName(plan)}/{m.S3File ?? ""}";
+            Tags tags = new()
+            {
+                title = title,
+                artist = m.PerformedBy ?? "",
+                album = bible.BibleName,
+                cover = PublishGraphic(m, passage),
+            };
+            // Build the mediafile message as specified
+            var mediaMsg = new
+            {
+                type = "mediafile",
+                id = m.Id,
+                publishTo,
+                sharedResourceTitle = sr?.Title ?? "",
+                akuo = new
+                {
+                    inputKey,
+                    outputKey,
+                    tags = new
+                    {
+                        tags.title,
+                        tags.artist,
+                        tags.album,
+                        tags.cover,
+                    }
+                },
+                passageId = passage?.Id,
+                planId = plan.Id,
+                languagebcp47 = sr?.Languagebcp47 ?? $"{plan.Project.LanguageName ?? ""}|{plan.Project.Language}",
+                sharedResourceId = sr?.Id,
+                passage = passage == null ? null : new
+                {
+                    passagetypeId = passage.PassagetypeId,
+                    passagetypeAbbrev = passage.Passagetype?.Abbrev,
+                    book = passage.Book,
+                    startChapter = passage.StartChapter,
+                    endChapter = passage.EndChapter,
+                    startVerse = passage.StartVerse,
+                    endVerse = passage.EndVerse
+                },
+                forceFileRefresh=false
+            };
 
-            if (sr != null)
-            {
-                int? titleMedia = sr.TitleMediafile?.Id ?? sr.TitleMediafileId;
-                if (titleMedia != null)
-                    await Publish((int)titleMedia, "{\"Public\": \"true\"}");
-                if (sr.ArtifactCategory?.TitleMediafileId != null)
-                {
-                    Bible? acbible = ArtifactCategoryRepository.GetBible(sr.ArtifactCategory);
-                    await Publish((int)sr.ArtifactCategory.TitleMediafileId, "{\"Public\": \"true\"}", acbible);
-                }
-            }
-
-            if ((m.PublishedAs ?? "") == "")
-            {
-                Tags tags = new()
-                {
-                    title = title,
-                    artist = m.PerformedBy??"",
-                    album = bible.BibleName,
-                    cover= PublishGraphic(m, passage),
-                };
-                S3Response response = await S3service.CreatePublishRequest(m.Id, inputKey, outputKey, JsonConvert.SerializeObject(tags));
-                //Logger.LogCritical("XXX create request {status} {ok} {outputKey}", response.Status, response.Status == HttpStatusCode.OK, outputKey);
-                if (response.Status == HttpStatusCode.OK)
-                {
-                    m.PublishedAs = outputKey;
-                    m.ReadyToShare = true;
-                    return true;
-                }
-            }
-            else
-            {
-                m.ReadyToShare = true;
-                return true;
-            }
-            return false;
+            string body = JsonConvert.SerializeObject(mediaMsg);
+            string url = GetVarOrThrow("SIL_TR_PUBLISH_QUEUE");
+            string sendResult = SQSservice.SendMessage(url, body, "nodup", m.Id.ToString());
+            if (sendResult == "error")
+                throw new Exception("Failed to enqueue publish message");
         }
-        public async Task<Mediafile?> Publish(Mediafile m, string publishTo, Bible? bible = null)
+        public async Task<Mediafile?> Publish(Mediafile m, string publishTo, Bible? bible = null, Plan? plan = null, Sharedresource? sr = null)
         {
+            if (publishTo == "{}")
+                return m;
             try
             {
+                // Performance logging to find bottlenecks
+
                 //string fp = HttpContext?.GetFP() ?? "";
                 Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
-                Sharedresource? sr = passage != null ? GetSharedResource(passage) : null;
+                sr ??= passage != null ? GetSharedResource(passage) : null;
+                plan ??= PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+                bible ??= PlanRepository.Bible(plan) ?? throw new Exception("no bible");
 
-                //turn any old versions off
-                if (passage != null)
-                {
-                    // Bulk update in single SQL statement - avoids N+1 queries and unnecessary eager loading
-                    // ExecuteUpdateAsync executes immediately (not deferred to SaveChanges)
-                    await dbContext.Mediafiles
-                        .Where(o => o.PassageId == passage.Id && o.ReadyToShare == true && o.Id != m.Id)
-                        .ExecuteUpdateAsync(s => s
-                            .SetProperty(m => m.ReadyToShare, false)
-                            .SetProperty(m => m.PublishTo, "{}")
-                            .SetProperty(m => m.PublishedAs, (string?)null)
-                        );
-                }
-                if (PublishAsSharedResource(publishTo) && passage != null && (passage.Passagetype is null || passage?.Passagetype?.Abbrev == "NOTE"))
-                {
-                    sr ??= CreateSharedResource(m, passage);
-                }
-                if (PublishToAkuo(publishTo))
-                {
-                    if (await PublishToAkuo(m, passage, bible, sr))
-                    {
-                        m.PublishTo = publishTo;
-                        //dbContext.Mediafiles.Update(m);
-                    }
-                }
-                else if (!m.ReadyToShare || m.PublishTo != publishTo)
-                {
-                    m.ReadyToShare = true;
-                    m.PublishTo = publishTo;
-                    dbContext.Mediafiles.Update(m);
-                }
+                QueuePublish(m, publishTo, passage, bible, sr, plan);
+
+                // Persist minimal state quickly
+                await dbContext.Mediafiles
+                    .Where(x => x.Id == m.Id)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.ReadyToShare, true)
+                        .SetProperty(x => x.PublishTo, publishTo)
+                        .SetProperty(m => m.DateUpdated, DateTime.UtcNow)
+                        .SetProperty(m => m.LastModifiedOrigin, "publish")
+                    );
+
+                m.ReadyToShare = true;
+                m.PublishTo = publishTo;
+                Logger.LogInformation("Publish {MediafileId}: finished main work - ReadyToShare={Ready} PublishTo={PublishTo}", m.Id, m.ReadyToShare, m.PublishTo);
                 return m;
             }
             catch (Exception err)
             {
-                Console.WriteLine(err);
+                Logger.LogError(err, "Publish {MediafileId}: error", m?.Id ?? 0);
                 return null;
             }
         }
-        public async Task<Mediafile?> Publish(int id, string publishTo, Bible? bible = null)
+        public async Task<Mediafile?> PublishTitle(int id, Bible? bible = null, Sharedresource? sr = null)
+        {
+            return await Publish(id, "{\"Public\": \"true\"}", bible, sr);
+        }
+        public async Task<Mediafile?> Publish(int id, string publishTo, Bible? bible = null, Sharedresource? sr = null)
         {
             try
             {
-                Mediafile? m = Get(id);
-
+                Mediafile? m = dbContext.Mediafiles.Find(id);
                 if (m == null)
-                {
                     return null;
-                }
-                //string fp = HttpContext?.GetFP() ?? "";
                 HttpContext?.SetFP("publish");
-                m = await Publish(m, publishTo, bible);
-                dbContext.SaveChanges();
+                m = await Publish(m, publishTo, bible, null, sr);
                 return m;
             }
             catch (Exception err)
