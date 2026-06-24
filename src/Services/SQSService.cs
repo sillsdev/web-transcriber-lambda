@@ -20,6 +20,7 @@ namespace SIL.Transcriber.Services
         public int? ArtifactCategoryId { get; set; }
         public string Token { get; set; } = "";
     }
+
     public class SQSBibleBrainResourceMessageBody
     {
         public string Type { get; } = "resource";
@@ -70,6 +71,7 @@ namespace SIL.Transcriber.Services
             string queue = GetVarOrThrow("SIL_TR_BIBLEBRAIN_QUEUE");
             return await MessageCount(queue);
         }
+
 
         public string SendBBResourceMessage(string filesetId,
                                             string book,
@@ -147,7 +149,8 @@ namespace SIL.Transcriber.Services
                 Folder = folder
             };
             string url = GetVarOrDefault("SIL_TR_EXPORT_QUEUE", "https://sqs.us-east-1.amazonaws.com/620141372223/APMExportQueue-dev.fifo");
-            return SendMessage(url, JsonConvert.SerializeObject(body), $"{projectId}_{start}", projectId.ToString());
+
+            return SendMessage(url, JsonConvert.SerializeObject(body), $"{projectId}_{start}_{DateTime.Now.Millisecond}", projectId.ToString());
         }
         public string SendMessage(string url, string body, string? deDup, string? groupId)
         {
@@ -158,8 +161,10 @@ namespace SIL.Transcriber.Services
                     QueueUrl = url,
                     MessageBody = body,
                     MessageGroupId = groupId,
-                    MessageDeduplicationId = string.Concat(deDup ?? "", Guid.NewGuid().ToString())
                 };
+                if (url.EndsWith("fifo"))
+                    sendMessageRequest.MessageDeduplicationId = string.Concat(deDup ?? "", Guid.NewGuid().ToString());
+
                 Logger.LogCritical("***** body {m} groupId {g} deDup {d}", sendMessageRequest.MessageBody, sendMessageRequest.MessageGroupId, sendMessageRequest.MessageDeduplicationId);
                 SendMessageResponse sqsSend = _client.SendMessageAsync(sendMessageRequest).Result;
                 return sqsSend.MessageId;

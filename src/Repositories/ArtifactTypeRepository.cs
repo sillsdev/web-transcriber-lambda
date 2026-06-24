@@ -3,7 +3,6 @@ using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -40,9 +39,7 @@ namespace SIL.Transcriber.Repositories
         //at one time we thought the users would be able to add artifacttype, but it's really an 
         //internal thing that we need control of, so ignore the organization
         public IQueryable<Artifacttype> ProjectArtifactTypes(
-            IQueryable<Artifacttype> entities,
-            string projectid
-        )
+            IQueryable<Artifacttype> entities) //string projectid
         {
             return entities;
         }
@@ -53,7 +50,7 @@ namespace SIL.Transcriber.Repositories
             string idList
         )
         {
-            return ProjectArtifactTypes(entities ?? GetAll(), idList);
+            return ProjectArtifactTypes(entities ?? GetAll());//, idList);
         }
 
         public override IQueryable<Artifacttype> FromCurrentUser(

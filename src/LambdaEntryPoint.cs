@@ -4,7 +4,7 @@ namespace SIL.Transcriber
 {
     public class LambdaEntryPoint : APIGatewayProxyFunction
     {
-        protected override void Init(IWebHostBuilder builder)
+        protected override void Init(IHostBuilder builder)
         {
             RegisterResponseContentEncodingForContentType(
                 "audio/mp3",
@@ -28,7 +28,7 @@ namespace SIL.Transcriber
                 ResponseContentEncoding.Base64
             );
 
-            _ = builder.UseStartup<Startup>();
+            _ = builder.ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
         }
     }
 }

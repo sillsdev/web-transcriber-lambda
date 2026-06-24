@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services.Contracts;
 using SIL.Transcriber.Utility;
 using System.IO.Compression;
 using System.Net;
@@ -184,7 +185,8 @@ public class AquiferService(
                     Console.WriteLine(stuff?.grouping.mediaType);
                     break;
             }
-        };
+        }
+        ;
         HttpContext?.SetFP(fp);
         OrbitId[] ret = [
             new ("mediafile", mediaids),

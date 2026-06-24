@@ -3,6 +3,7 @@ using SIL.Transcriber.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SIL.Transcriber.Models;
+
 [Table(Tables.SharedResources)]
 
 public partial class Sharedresource : BaseModel, IArchive
@@ -31,16 +32,20 @@ public partial class Sharedresource : BaseModel, IArchive
     [Attr(PublicName = "keywords")]
     public string? Keywords { get; set; }
 
+    [Attr(PublicName = "artifact-category-id")]
     public int? ArtifactCategoryId { get; set; }
 
     [HasOne(PublicName = "artifact-category")]
     public Artifactcategory? ArtifactCategory { get; set; }
+
     [Attr(PublicName = "title-mediafile-id")]
     [ForeignKey(nameof(TitleMediafile))]
     public int? TitleMediafileId { get; set; }
 
     [HasOne(PublicName = "title-mediafile")]
     public Mediafile? TitleMediafile { get; set; }
+    [Attr(PublicName = "offline-title-mediafile-id")]
+    public string? OfflineTitleMediafileId { get; set; }
 
     [Attr(PublicName = "note")]
     public bool Note { get; set; }

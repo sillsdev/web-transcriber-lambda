@@ -37,6 +37,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Biblebrainfileset> BibleBrainFilesets => Set<Biblebrainfileset>();
         public DbSet<Comment> Comments => Set<Comment>();
         public DbSet<CopyProject> Copyprojects => Set<CopyProject>();
+        public DbSet<Countryanalytic> Countryanalytics => Set<Countryanalytic>();
         public DbSet<Currentversion> Currentversions => Set<Currentversion>();
         public DbSet<Dashboard> Dashboards => Set<Dashboard>();
         public DbSet<Datachanges> Datachanges => Set<Datachanges>();
@@ -82,7 +83,9 @@ namespace SIL.Transcriber.Data
 
         public DbSet<Sharedresource> Sharedresources => Set<Sharedresource>();
         public DbSet<Sharedresourcereference> Sharedresourcereferences => Set<Sharedresourcereference>();
+        public DbSet<SimpleResponse> ThisIsFake => Set<SimpleResponse>();
         public DbSet<User> Users => Set<User>();
+        public DbSet<Useranalytic> Useranalytics => Set<Useranalytic>();
         public DbSet<Userversion> UserVersions => Set<Userversion>();
         public DbSet<Statehistory> Statehistorys => Set<Statehistory>();
         public DbSet<Vwbiblebrainbible> VWbiblebrainbibles => Set<Vwbiblebrainbible>();
@@ -298,12 +301,12 @@ namespace SIL.Transcriber.Data
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
-                .Entity<Project>()
+                .Entity<Projectintegration>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
-                .Entity<Projectintegration>()
+                .Entity<Project>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -312,11 +315,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = builder
-                .Entity<Resource>()
-                .HasOne(o => o.Cluster)
-                .WithMany()
-                .HasForeignKey(o => o.ClusterId);
             _ = builder
                 .Entity<Resource>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -332,11 +330,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = builder
-                .Entity<Section>()
-                .HasOne(o => o.Group)
-                .WithMany()
-                .HasForeignKey(o => o.GroupId);
             _ = builder
                 .Entity<Sectionpassage>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -357,11 +350,6 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
-            _ = builder
-                .Entity<Sharedresource>()
-                .HasOne(o => o.Cluster)
-                .WithMany()
-                .HasForeignKey(o => o.ClusterId);
             _ = builder
                 .Entity<Sharedresourcereference>()
                 .HasOne(o => o.LastModifiedByUser)
@@ -420,11 +408,6 @@ namespace SIL.Transcriber.Data
             _ = modelBuilder.Entity<Artifactcategory>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
             _ = modelBuilder.Entity<Sharedresource>().HasOne(p => p.TitleMediafile).WithMany().HasForeignKey(p => p.TitleMediafileId);
 
-            _ = modelBuilder
-                .Entity<Orgworkflowstep>()
-                .HasOne(s => s.Parent)
-                .WithMany()
-                .HasForeignKey(s => s.ParentId);
             EntityTypeBuilder<User> userEntity = modelBuilder.Entity<User>();
             _ = userEntity
                 .HasMany(u => u.GroupMemberships)
@@ -463,10 +446,9 @@ namespace SIL.Transcriber.Data
 
         private void UpdateSoftDeleteStatuses()
         {
-            List<EntityEntry> entries = ChangeTracker
+            List<EntityEntry> entries = [.. ChangeTracker
                 .Entries()
-                .Where(e => e.State is EntityState.Added or EntityState.Deleted)
-                .ToList();
+                .Where(e => e.State is EntityState.Added or EntityState.Deleted)];
             for (int ix = entries.Count - 1; ix >= 0; ix--)
             {
                 EntityEntry entry = entries[ix];
@@ -586,7 +568,7 @@ namespace SIL.Transcriber.Data
         public IQueryable<Orgkeytermtarget> OrgKeytermTargetsData =>
     Orgkeytermtargets.Include(x => x.Organization).Include(x => x.Mediafile);
         public IQueryable<Orgworkflowstep> OrgworkflowstepsData =>
-            Orgworkflowsteps.Include(x => x.Organization).Include(x => x.Parent);
+            Orgworkflowsteps.Include(x => x.Organization);//.Include(x => x.Parent);
         public IQueryable<Passage> PassagesData =>
             Passages.Include(x => x.Section).Include(x => x.Passagetype).Include(x => x.SharedResource);
         public IQueryable<Passagestatechange> PassagestatechangesData => Passagestatechanges

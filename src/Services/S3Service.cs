@@ -3,8 +3,8 @@ using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
 using SIL.Transcriber.Models;
+using SIL.Transcriber.Services.Contracts;
 using System.Net;
-using System.Text;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
 namespace SIL.Transcriber.Services
@@ -131,8 +131,7 @@ namespace SIL.Transcriber.Services
     public class S3Service(IAmazonS3 client, ILoggerFactory loggerFactory) : IS3Service
     {
         private readonly string USERFILES_BUCKET = GetVarOrThrow("SIL_TR_USERFILES_BUCKET");
-        public readonly string PUBLISHREQ_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHREQ_BUCKET");
-        public readonly string PUBLISHED_BUCKET = GetVarOrThrow("SIL_TR_PUBLISHED_BUCKET");
+
         private readonly IAmazonS3 _client = client;
         protected ILogger<S3Service> Logger { get; set; } = loggerFactory.CreateLogger<S3Service>();
 
@@ -209,34 +208,7 @@ namespace SIL.Transcriber.Services
                      + ext
                  : newfilename;
         }
-        public async Task<S3Response> CreatePublishRequest(int id, string inputKey, string outputKey, string tags)
-        {
-            /*
-            {
-                "id": 12345678,
-                "inputBucket": "sil-transcriber-userfiles-dev",
-                "inputKey": "3434_Obtco/3671_Matth/JOS1_2-ver3_l3671_Matth.wav",
-                "outputBucket": "apm-published-dev",
-                "outputKey": "OBTENG/OBTENG_JON1_3_3.mp3",
-                "tags": {
-                    "title": "Chapter 1",
-                    "artist": "SJH",
-                    "album": "This Bible",
-		            "cover": "https://sil-transcriber-userfiles-dev.s3.us-east-1.amazonaws.com/graphics/002_NOTE_General_0.01_0.01_3911_13357_31744_graphic-512.webp"
-                }
-            } */
-            try
-            {
-                string json = $"{{\"id\":{id},\"inputBucket\":\"{USERFILES_BUCKET}\",\"inputKey\":\"{inputKey}\",\"outputBucket\":\"{PUBLISHED_BUCKET}\",\"outputKey\":\"{outputKey}\", \"tags\":{tags}}}";
-                string requestKey = id + ".key";
-                using Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-                return await UploadFileAsync(stream, true, requestKey, "", PUBLISHREQ_BUCKET);
-            }
-            catch (Exception e)
-            {
-                return S3Response(e.Message, HttpStatusCode.InternalServerError);
-            }
-        }
+
         public async Task<S3Response> CreateBucketAsync(string bucketName)
         {
             try
@@ -368,11 +340,120 @@ namespace SIL.Transcriber.Services
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
             }
         }
+        public async Task<MultipartInitiateResponse> InitiateMultipartUploadAsync(string key, string contentType, int parts, string folder, bool aerobucket)
+        {
+            string fullKey = ProperFolder(folder) + key;
+            InitiateMultipartUploadRequest initiateRequest = new()
+            {
+                BucketName = aerobucket ? GetVarOrThrow("SIL_TR_AERO_BUCKET") : USERFILES_BUCKET,
+                Key = fullKey,
+                ContentType = contentType,
+            };
+            InitiateMultipartUploadResponse initiateResponse = await _client.InitiateMultipartUploadAsync(initiateRequest);
+            string uploadId = initiateResponse.UploadId;
+
+            AmazonS3Client s3Client = new();
+            List<string> presignedUrls = [];
+            for (int i = 1; i <= parts; i++)
+            {
+                GetPreSignedUrlRequest request = new()
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = fullKey,
+                    Verb = HttpVerb.PUT,
+                    Expires = DateTime.Now.AddMinutes(25),
+                    UploadId = uploadId,
+                    PartNumber = i,
+                };
+                presignedUrls.Add(s3Client.GetPreSignedURL(request));
+            }
+            return new MultipartInitiateResponse
+            {
+                UploadId = uploadId,
+                Key = fullKey,
+                Filename = key,
+                Folder = folder,
+                Parts = presignedUrls,
+            };
+        }
+        public async Task<Fileresponse> ReplaceMultipartPartAsync(string uploadId, int part, string key, string folder = "")
+        {
+            AmazonS3Client s3Client = new();
+            string fullKey = ProperFolder(folder) + key;
+            GetPreSignedUrlRequest request = new()
+            {
+                BucketName = USERFILES_BUCKET,
+                Key = fullKey,
+                Verb = HttpVerb.PUT,
+                Expires = DateTime.Now.AddMinutes(25),
+                UploadId = uploadId,
+                PartNumber = part,
+            };
+            string url = s3Client.GetPreSignedURL(request);
+
+            return new Fileresponse
+            {
+                Message = key,
+                FileURL = url,
+                Status = HttpStatusCode.OK,
+            };
+        }
+        public async Task<Fileresponse> CompleteMultipartUploadAsync(string key, string uploadId, List<MultipartPartETag> parts)
+        {
+            try
+            {
+                CompleteMultipartUploadRequest request = new()
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = key,
+                    UploadId = uploadId,
+                    PartETags = [.. parts.Select(p => new PartETag(p.PartNumber, p.ETag))],
+                };
+                CompleteMultipartUploadResponse response = await _client.CompleteMultipartUploadAsync(request);
+                return new Fileresponse
+                {
+                    Message = key,
+                    FileURL = response.Location,
+                    Status = response.HttpStatusCode,
+                };
+            }
+            catch (AmazonS3Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = e.StatusCode };
+            }
+            catch (Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = HttpStatusCode.InternalServerError };
+            }
+        }
+        public async Task<Fileresponse> AbortMultipartUploadAsync(string key, string uploadId)
+        {
+            try
+            {
+                AbortMultipartUploadRequest request = new()
+                {
+                    BucketName = USERFILES_BUCKET,
+                    Key = key,
+                    UploadId = uploadId,
+                };
+                AbortMultipartUploadResponse response = await _client.AbortMultipartUploadAsync(request);
+                return new Fileresponse { Message = key, Status = response.HttpStatusCode };
+            }
+            catch (AmazonS3Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = e.StatusCode };
+            }
+            catch (Exception e)
+            {
+                return new Fileresponse { Message = e.Message, Status = HttpStatusCode.InternalServerError };
+            }
+        }
         public string GetPublicUrl(string fileName, string folder = "", string bucket = "")
         {
             return $"https://{(bucket == "" ? USERFILES_BUCKET : bucket)}.s3.amazonaws.com/{ProperFolder(folder)}{fileName}";
 
         }
+
 
         public async Task<HttpStatusCode> CopyS3FileAsync(string sourceFileUrl, string destinationBucket, string folder, string file)
         {

@@ -29,6 +29,41 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "startindex")]
         public string Startindex { get; set; }
     }
+    public class MultipartPartRequest
+    {
+        public string UploadId { get; set; } = "";
+        public string Filename { get; set; } = "";
+        public string Folder { get; set; } = "";
+        public int PartNumber { get; set; }
+    }
+    public class MultipartInitiateResponse
+    {
+        public string UploadId { get; set; } = "";
+        public string Key { get; set; } = "";
+        public string Filename { get; set; } = "";
+        public string Folder { get; set; } = "";
+        public List<string> Parts { get; set; } = [];
+    }
+
+    public class MultipartPartETag
+    {
+        public int PartNumber { get; set; }
+        public string ETag { get; set; } = "";
+    }
+
+    public class MultipartCompleteRequest
+    {
+        public string Key { get; set; } = "";
+        public string UploadId { get; set; } = "";
+        public List<MultipartPartETag> Parts { get; set; } = [];
+    }
+
+    public class MultipartAbortRequest
+    {
+        public string Key { get; set; } = "";
+        public string UploadId { get; set; } = "";
+    }
+
 #pragma warning disable IDE1006 // Naming Styles
     public class JFRData
     {

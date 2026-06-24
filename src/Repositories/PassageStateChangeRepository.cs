@@ -56,8 +56,7 @@ namespace SIL.Transcriber.Repositories
             IQueryable<Section>? sections = null
         )
         {
-            if (sections == null)
-                sections = SectionRepository.UsersSections(dbContext.Sections);
+            sections ??= SectionRepository.UsersSections(dbContext.Sections);
             return SectionsPassageStateChanges(entities, sections);
         }
 

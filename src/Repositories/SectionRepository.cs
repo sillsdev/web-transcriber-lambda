@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
-using static SIL.Transcriber.Utility.HttpContextHelpers;
+using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Repositories
 {
@@ -132,15 +132,98 @@ namespace SIL.Transcriber.Repositories
         }
         #endregion
 
-        private async Task<bool> PublishSection(Section section)
+        private async Task PublishPassages(int sectionid, string publishTo)
         {
+            bool publish = PublishToAkuo(publishTo) || PublishAsSharedResource(publishTo);
 
+            if (!publish)
+            {
+                // Unpublishing for whole section: update all mediafiles for all passages in this section in one DB operation.
+                JObject pt = JObject.Parse(publishTo);
+                pt.Add("PublishPassage", false);
+                string newPublishTo = pt.ToString();
+
+                // Join mediafiles to passages in this section and update in a single DB operation.
+                IQueryable<Mediafile> q = dbContext.Mediafiles
+                    .Join(
+                        dbContext.Passages.Where(p => p.SectionId == sectionid),
+                        m => m.PassageId,
+                        p => p.Id,
+                        (m, p) => m
+                    )
+                    .Where(m => m.ArtifactTypeId == null && !m.Archived && m.ReadyToShare);
+
+                bool any = await q.AnyAsync();
+                if (any)
+                {
+                    await q.ExecuteUpdateAsync(s => s
+                        .SetProperty(m => m.ReadyToShare, false)
+                        .SetProperty(m => m.PublishTo, newPublishTo)
+                        .SetProperty(m => m.DateUpdated, DateTime.UtcNow)
+                        .SetProperty(m => m.LastModifiedOrigin, "publish")
+                    );
+                }
+
+                return;
+            }
+
+            List<Passage> passages = [.. dbContext.Passages.Where(p => p.SectionId == sectionid)];
+
+            foreach (Passage? passage in passages)
+            {
+                //do not do linked notes...only if this note is the source.  This query will include notes that are the source
+                IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
+                        .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
+                        .OrderByDescending(m => m.VersionNumber);
+#pragma warning disable CS8604 // Possible null reference argument.
+                List <Mediafile> medialist = publish && mediafiles.Any()
+                ?
+                [
+                    mediafiles.FirstOrDefault()
+                ]
+                : [.. mediafiles];
+#pragma warning restore CS8604 // Possible null reference argument.
+
+
+                // Publishing path - enqueue publish messages for each mediafile (do not perform long-running Akuo work inline)
+                foreach (Mediafile mediafile in medialist)
+                {
+                    if (mediafile.PublishTo != publishTo || (mediafile.PublishedAs ?? "") == "")
+                        // Build minimal mediafile info by reusing repository publish prefetch and then enqueue via MediafileRepository
+                        await MediafileRepository.Publish(mediafile, publishTo);
+                }
+            }
+        }
+        private async Task PublishTitle(Section resourceFromRequest, Section resourceFromDatabase)
+        {
+            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromRequest.TitleMediafile?.Id ?? resourceFromDatabase.TitleMediafileId ?? resourceFromDatabase.TitleMediafile?.Id;
+            if (titleMedia != null) //always do titles and movements
+                await MediafileRepository.PublishTitle((int)titleMedia);
+        }
+        public override async Task CreateAsync(Section resourceFromRequest, Section resourceForDatabase, CancellationToken cancellationToken)
+        {
+            await CheckPublish(resourceFromRequest, resourceForDatabase);
+            await base.CreateAsync(resourceFromRequest, resourceForDatabase, cancellationToken);
+        }
+        public async Task<bool> CheckPublish(Section section, Section resourceFromDatabase)
+        {
+            try
+            {
+                await PublishTitle(section, resourceFromDatabase);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "no bible")
+                    return false;
+                else
+                    throw;
+            }
             if (PublishToAkuo(section.PublishTo))
             {
                 //find the book and altbook and make sure the titles are published -- may not have had the bible set before
                 //maybe they're in another plan...but not handling that for now
                 int planId = section.Plan?.Id ?? section.PlanId;
-                List<Section> books = dbContext.Sections.Where(s => s.PlanId == planId && s.Sequencenum < 0 ).ToList();
+                List<Section> books = [.. dbContext.Sections.Where(s => s.PlanId == planId && s.Sequencenum < 0 )];
                 foreach (Section booksection in books)
                 {
                     await PublishTitle(booksection, booksection);
@@ -157,71 +240,6 @@ namespace SIL.Transcriber.Repositories
             }
             return false;
         }
-        private async Task PublishPassages(int sectionid, string publishTo)
-        {
-            bool publish = PublishToAkuo(publishTo) || PublishAsSharedResource(publishTo);
-            List<Passage> passages = [.. dbContext.Passages.Where(p => p.SectionId == sectionid)];
-            foreach (Passage? passage in passages)
-            {
-                //do not do linked notes...only if this note is the source.  This query will include notes that are the source
-                IOrderedQueryable<Mediafile> mediafiles = dbContext.Mediafiles
-                        .Where(m => m.PassageId == passage.Id && m.ArtifactTypeId == null && !m.Archived)
-                        .OrderByDescending(m => m.VersionNumber);
-                List <Mediafile> medialist = publish && mediafiles.Any()
-                ?
-                [
-                    mediafiles.FirstOrDefault()
-                ]
-                : [.. mediafiles];
-
-                foreach (Mediafile mediafile in medialist)
-                {
-                    if (publish)
-                        await MediafileRepository.Publish(mediafile, publishTo);
-                    else if (mediafile.ReadyToShare && (publishTo != "{}"))
-                    {
-                        JObject pt = JObject.Parse(publishTo);
-                        pt.Add("PublishPassage", false);
-                        mediafile.ReadyToShare = false;
-                        mediafile.PublishTo = pt.ToString();
-                    }
-                    dbContext.Mediafiles.Update(mediafile);
-                }
-                ;
-                _ = dbContext.SaveChanges();
-            }
-        }
-        private async Task PublishTitle(Section resourceFromRequest, Section resourceFromDatabase)
-        {
-            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromRequest.TitleMediafile?.Id ?? resourceFromDatabase.TitleMediafileId ?? resourceFromDatabase.TitleMediafile?.Id;
-            if (titleMedia != null) //always do titles and movements
-                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}");
-        }
-        public override async Task CreateAsync(Section resourceFromRequest, Section resourceForDatabase, CancellationToken cancellationToken)
-        {
-            await CheckPublish(resourceFromRequest, resourceForDatabase);
-            await base.CreateAsync(resourceFromRequest, resourceForDatabase, cancellationToken);
-        }
-        public async Task CheckPublish(Section resourceFromRequest, Section resourceFromDatabase)
-        {
-            try
-            {
-                await PublishTitle(resourceFromRequest, resourceFromDatabase);
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message != "no bible")
-                    throw;
-            }
-            if ((resourceFromRequest.PublishTo ?? "{}") != "{}")//&& resourceFromDatabase.PublishTo != resourceFromRequest.PublishTo)
-            {
-                await PublishSection(resourceFromRequest);
-            }
-            //merged from prod...do I need this still?????
-            int? titleMedia = resourceFromRequest.TitleMediafileId ?? resourceFromDatabase.TitleMediafileId;
-            if (titleMedia != null) //always do titles and movements
-                await MediafileRepository.Publish((int)titleMedia, "{\"Public\": \"true\"}");
-        }
         public override async Task UpdateAsync(Section resourceFromRequest, Section resourceFromDatabase, CancellationToken cancellationToken)
         {
             //if we meant to send it it will have destinationsetbyuser:true in it
@@ -232,10 +250,18 @@ namespace SIL.Transcriber.Repositories
         public IEnumerable<Section> AssignSections(int scheme, string idlist)
         {
             string[] ids = idlist.Split('|');
-            Section[] sections = [.. dbContext.Sections.Where(s => ids.Contains(s.Id.ToString()))];
-            foreach (Section section in sections)
+            List<Section> sections = [];
+            foreach (string idstr in ids)
             {
-                section.OrganizationSchemeId = scheme;
+                if (int.TryParse(idstr, out int id))
+                {
+                    Section? section = dbContext.Sections.Find(id);
+                    if (section != null)
+                    {
+                        section.OrganizationSchemeId = scheme;
+                        sections.Add(section);
+                    }
+                }
             }
             dbContext.Sections.UpdateRange(sections);
             dbContext.SaveChanges();

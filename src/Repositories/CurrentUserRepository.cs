@@ -60,10 +60,20 @@ namespace SIL.Transcriber.Repositories
                                 changed = true;
                             }
                         }
-                        IEnumerable<Organizationmembership> oms = [.. dbContext.Organizationmemberships.Where(x => !x.Archived).Join(dupUsers, gm => gm.UserId, u => u.Id, (gm, u) => gm)];
+                        IEnumerable<Organizationmembership> oms = [.. dbContext.Organizationmemberships.Join(dupUsers, gm => gm.UserId, u => u.Id, (gm, u) => gm).Join(dbContext.Organizations.Where(o => !o.Archived), om => om.OrganizationId, o => o.Id, (om, o) => om)];
                         foreach (Organizationmembership om in oms.Where(gm => gm.UserId != curUser.Id))
                         {
-                            if (!oms.Any(x => x.UserId == curUser.Id && x.OrganizationId == om.OrganizationId))
+                            Organizationmembership? tmp = oms.Where(x => x.UserId == curUser.Id && x.OrganizationId == om.OrganizationId).FirstOrDefault();
+                            if (tmp != null)
+                            {
+                                if (tmp.Archived)
+                                {
+                                    tmp.Archived = false;
+                                    dbContext.Update(tmp);
+                                    changed = true;
+                                }
+                            }
+                            else
                             {
                                 om.UserId = curUser.Id;
 
@@ -71,10 +81,20 @@ namespace SIL.Transcriber.Repositories
                                 changed = true;
                             }
                         }
-                        IEnumerable<Groupmembership> gms = [.. dbContext.Groupmemberships.Where(x => !x.Archived).Join(dupUsers, gm => gm.UserId, u => u.Id, (gm, u) => gm)];
+                        IEnumerable<Groupmembership> gms = [.. dbContext.Groupmemberships.Join(dupUsers, gm => gm.UserId, u => u.Id, (gm, u) => gm).Join(dbContext.Groups.Where(o => !o.Archived), om => om.GroupId, o => o.Id, (om, o) => om)];
                         foreach (Groupmembership gm in gms.Where(gm => gm.UserId != curUser.Id))
                         {
-                            if (!gms.Any(x => x.UserId == curUser.Id && x.GroupId == gm.GroupId))
+                            Groupmembership? tmp = gms.Where(x => x.UserId == curUser.Id && x.GroupId == gm.GroupId).FirstOrDefault();
+                            if (tmp != null)
+                            {
+                                if (tmp.Archived)
+                                {
+                                    tmp.Archived = false;
+                                    dbContext.Update(tmp);
+                                    changed = true;
+                                }
+                            }
+                            else
                             {
                                 gm.UserId = curUser.Id;
                                 dbContext.Update(gm);
@@ -108,9 +128,11 @@ namespace SIL.Transcriber.Repositories
                         }
                         if (changed)
                         {
+                            string fp = HttpContext?.GetFP() ?? "";
                             HttpContext?.SetFP("dupuser");
                             dbContext.Update(curUser); //I want to update the date if anything changed
                             dbContext.SaveChanges();
+                            HttpContext?.SetFP(fp);
                         }
                     }
                 }

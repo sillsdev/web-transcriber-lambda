@@ -73,7 +73,10 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "organization-scheme")]
         public virtual Organizationscheme? OrganizationScheme { get; set; }
+        [Attr(PublicName = "organization-scheme-id")]
         public int? OrganizationSchemeId { get; set; }
+
+        [Attr(PublicName = "group-id")]
         public int? GroupId { get; set; }
         [EagerLoad]
         [HasOne(PublicName = "group")]
@@ -93,8 +96,10 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "title-mediafile")]
         public Mediafile? TitleMediafile { get; set; }
-        public bool Archived { get; set; }
 
+        [Attr(PublicName = "offline-title-mediafile-id")]
+        public string? OfflineTitleMediafileId { get; set; }
+        public bool Archived { get; set; }
 
         public string SectionHeader(bool addNumbers, SectionMap[] sectionMap)
         {

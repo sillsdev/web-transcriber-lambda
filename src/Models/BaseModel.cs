@@ -9,7 +9,6 @@ namespace SIL.Transcriber.Models
         [NotMapped]
         [Attr(PublicName = "id-list")]
         public string? IdList { get; set; }
-
         [Attr(PublicName = "date-created")]
         public DateTime? DateCreated { get; set; }
         [Attr(PublicName = "date-updated")]
@@ -23,12 +22,12 @@ namespace SIL.Transcriber.Models
 
         [Attr(PublicName = "last-modified-origin")]
         public string? LastModifiedOrigin { get; set; }
+        [Attr(PublicName = "offline-id")]
+        public string? OfflineId { get; set; }
         public object ShallowCopy()
         {
             return this.MemberwiseClone();
         }
     }
-
-
 
 }

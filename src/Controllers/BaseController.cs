@@ -2,8 +2,6 @@
 using JsonApiDotNetCore.Controllers;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;

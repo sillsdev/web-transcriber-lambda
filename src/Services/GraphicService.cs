@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
+using SIL.Transcriber.Services.Contracts;
 using SIL.Transcriber.Utility;
 
 namespace SIL.Transcriber.Services

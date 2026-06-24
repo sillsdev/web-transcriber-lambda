@@ -40,17 +40,17 @@ namespace SIL.Transcriber
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(
             IApplicationBuilder app,
-            IWebHostEnvironment env,
+            //IWebHostEnvironment env,
             ILoggerFactory loggerFactory
         )
         {
-            if (env.IsDevelopment())
-            {
-                //always do what it will do in production
-                // _ = app.UseDeveloperExceptionPage();
-                _ = app.UseSwagger();
-                _ = app.UseSwaggerUI();
-            }
+            //if (env.IsDevelopment())
+            //{
+            //always do what it will do in production
+            // _ = app.UseDeveloperExceptionPage();
+            _ = app.UseSwagger();
+            _ = app.UseSwaggerUI();
+            //}
 
             _ = app.UseExceptionHandler(exceptionHandlerApp => {
                 exceptionHandlerApp.Run(async context => {

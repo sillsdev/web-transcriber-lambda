@@ -4,10 +4,12 @@ namespace SIL.Transcriber.Models;
 
 public partial class Note: BaseModel
 {
+    [Attr(PublicName = "project-id")]
     public int ProjectId { get; set; }
     [Attr(PublicName = "project-name")]
     public string? ProjectName { get; set; }
 
+    [Attr(PublicName = "organization-id")]
     public int OrganizationId { get; set; }
     [Attr(PublicName = "organization")]
     public string? Organization { get; set; }
@@ -15,12 +17,14 @@ public partial class Note: BaseModel
     [Attr(PublicName = "language")]
     public string? Language { get; set; }
 
+    [Attr(PublicName = "plan-id")]
     public int PlanId { get; set; }
     [Attr(PublicName = "plan")]
     public string? Planname { get; set; }
     [Attr(PublicName = "plantype")]
     public string? Plantype { get; set; }
 
+    [Attr(PublicName = "section-id")]
     public int SectionId { get; set; }
     [Attr(PublicName = "section")]
     public string? SectionName { get; set; }
@@ -69,6 +73,7 @@ public partial class Note: BaseModel
     [Attr(PublicName = "latest")]
     public bool Latest { get; set; }
 
+    [Attr(PublicName = "cluster-id")]
     public int? ClusterId { get; set; }
     [HasOne(PublicName = "cluster")]
     public Organization? Cluster { get; set; }

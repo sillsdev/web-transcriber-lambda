@@ -81,16 +81,26 @@ namespace SIL.Transcriber.Models
 
         [HasOne(PublicName = "editsheetgroup")]
         public virtual Group? EditsheetGroup { get; set; }
+
+        [Attr(PublicName = "editsheet-group-id")]
         public int? EditsheetGroupId { get; set; }
+
         [HasOne(PublicName = "editsheetuser")]
         public virtual User? EditsheetUser { get; set; }
+
+        [Attr(PublicName = "editsheet-user-id")]
         public int? EditsheetUserId { get; set; }
 
         [HasOne(PublicName = "publishgroup")]
         public virtual Group? PublishGroup { get; set; }
+
+        [Attr(PublicName = "publish-group-id")]
         public int? PublishGroupId { get; set; }
+
         [HasOne(PublicName = "publishuser")]
         public virtual User? PublishUser { get; set; }
+
+        [Attr(PublicName = "publish-user-id")]
         public int? PublishUserId { get; set; }
 
         [JsonIgnore]
@@ -126,7 +136,7 @@ namespace SIL.Transcriber.Models
             else
                 sectionMapstr = sectionMapstr?.ToString();
             List<List<object>>? tmp = sectionMapstr == null ? null : Newtonsoft.Json.JsonConvert.DeserializeObject<List<List<object>>>(sectionMapstr.ToString());
-            tmp?.ForEach((List<object> item) => {
+            tmp?.ForEach(item => {
                 if (!decimal.TryParse(item[0]?.ToString(), out decimal num))
                     num = 0;
                 ret = [.. ret, new SectionMap { Sequencenum = num, Label = item[1]?.ToString() ?? "" }];
