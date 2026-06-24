@@ -43,7 +43,6 @@ namespace SIL.Transcriber.Repositories
                     .Where(user => !user.Archived && (user.ExternalId ?? "").Equals(auth0Id))
                     .Include(user => user.OrganizationMemberships.Where(om => !om.Archived))
                     .Include(user => user.GroupMemberships.Where(gm => !gm.Archived)).FirstOrDefault();
-                HttpContext?.SetFP("dupuser");
 
                 if (curUser != null)
                 {
@@ -129,9 +128,11 @@ namespace SIL.Transcriber.Repositories
                         }
                         if (changed)
                         {
+                            string fp = HttpContext?.GetFP() ?? "";
                             HttpContext?.SetFP("dupuser");
                             dbContext.Update(curUser); //I want to update the date if anything changed
                             dbContext.SaveChanges();
+                            HttpContext?.SetFP(fp);
                         }
                     }
                 }
