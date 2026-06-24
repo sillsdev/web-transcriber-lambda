@@ -274,6 +274,10 @@ namespace SIL.Transcriber.Services
         {
             return await MyRepository.Publish(m, publishTo);
         }
+        public async Task<Mediafile?> Publish(Mediafile m, string publishTo)
+        {
+            return await MyRepository.Publish(m, publishTo);
+        }
         public async Task<Mediafile?> Publish(int id, string publishTo)
         {
             return await MyRepository.Publish(id, publishTo);
