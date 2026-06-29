@@ -215,9 +215,6 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     }
     #endregion
     #region Transcription
-    /// <summary>
-    /// </summary>
-    /// <returns>taskId</returns>
     [AllowAnonymous]
     [HttpGet("transcription/languages")]
     public async Task<IActionResult> TranscriptionLanguages()
@@ -229,6 +226,56 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         catch (Exception ex)
         {
             return HandleError(ex, nameof(TranscriptionLanguages));
+        }
+    }
+    [AllowAnonymous]
+    [HttpGet("transcription/asrlanguages/{iso}")]
+    public async Task<IActionResult> TranscriptionAsrMethods([FromRoute] string iso)
+    {
+        try
+        {
+            return Ok(await _service.TranscriptionAsrMethods(iso));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(TranscriptionAsrMethods));
+        }
+    }
+    [AllowAnonymous]
+    [HttpGet("transcription/asrsisters")]
+    public async Task<IActionResult> TranscriptionAsrSisters([FromQuery] string iso)
+    {
+        if (string.IsNullOrWhiteSpace(iso))
+            return BadRequest("iso is required");
+        try
+        {
+            return Ok(await _service.TranscriptionAsrSisters(iso));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(TranscriptionAsrSisters));
+        }
+    }
+    /// <summary>
+    /// check to see if transcription task is complete
+    /// </summary>
+    /// <param name="taskId">taskId from voice conversion call</param>
+    /// <returns>null if not done or a File</returns>
+    [AllowAnonymous]
+    [HttpGet("transcription/asrsisters/{taskId}")]
+    public async Task<IActionResult> CheckSisters([FromRoute] string taskId)
+    {
+        try
+        {
+            return Ok(await _service.AsrSistersStatus(taskId));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(CheckSisters));
         }
     }
     /// <summary>
@@ -256,17 +303,36 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
     }
     /// <summary>
-    /// check to see if voice conversion task is complete
+    /// check to see if transcription task is complete
+    /// </summary>
+    /// <param name="taskId">taskId from voice conversion call</param>
+    /// <param name="phonetic">whether to check phonetic transcription</param>
+    /// <returns>null if not done or a File</returns>
+    [AllowAnonymous]
+    [HttpGet("transcription/{taskId}")]
+    public async Task<IActionResult> CheckTranscription([FromRoute] string taskId, [FromQuery] bool phonetic = false)
+    {
+        try
+        {
+            return Ok(await _service.TranscriptionStatus(taskId, phonetic));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(CheckTranscription));
+        }
+    }
+    /// <summary>
+    /// check to see if transcription task is complete
     /// </summary>
     /// <param name="taskId">taskId from voice conversion call</param>
     /// <returns>null if not done or a File</returns>
     [AllowAnonymous]
-    [HttpGet("transcription/{taskId}")]
-    public async Task<IActionResult> CheckTranscription([FromRoute] string taskId)
+    [HttpGet("phonetic/{taskId}")]
+    public async Task<IActionResult> CheckPhoneticTranscription([FromRoute] string taskId)
     {
         try
         {
-            return Ok(await _service.TranscriptionStatus(taskId));
+            return Ok(await _service.TranscriptionStatus(taskId, true));
         }
         catch (Exception ex)
         {

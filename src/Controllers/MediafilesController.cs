@@ -187,14 +187,22 @@ namespace SIL.Transcriber.Controllers
         {
             if (!bool.TryParse(romanize, out bool roman))
                 throw new ArgumentException("Invalid romanize");
-            Mediafile? mf = await _service.Transcription(id, iso,  roman);
+            Mediafile? mf = await _service.Transcription(id, iso,  roman, null);
+            return mf != null ? Ok(mf) : NotFound();
+        }
+        [HttpPost("{id}/transcription/{iso}/{romanize}/{method}")]
+        public async Task<IActionResult> TranscriptionAsync([FromRoute] int id, [FromRoute] string iso, [FromRoute] string romanize, [FromRoute] string method, [FromQuery] bool phonetic = false)
+        {
+            if (!bool.TryParse(romanize, out bool roman))
+                roman = false;
+            Mediafile? mf = await _service.Transcription(id, iso,  roman, method, phonetic);
             return mf != null ? Ok(mf) : NotFound();
         }
 
         [HttpGet("{id}/transcription/{taskId}")]
-        public async Task<IActionResult> TranscriptionStatusAsync([FromRoute] int id, [FromRoute] string taskId)
+        public async Task<IActionResult> TranscriptionStatusAsync([FromRoute] int id, [FromRoute] string taskId, [FromQuery] bool phonetic = false)
         {
-            Mediafile? mf = await _service.TranscriptionStatus(id, taskId);
+            Mediafile? mf = await _service.TranscriptionStatus(id, taskId, phonetic);
             return Ok(mf);
         }
     }
