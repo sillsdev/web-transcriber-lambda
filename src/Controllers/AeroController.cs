@@ -243,13 +243,13 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     }
     [AllowAnonymous]
     [HttpGet("transcription/asrsisters")]
-    public async Task<IActionResult> TranscriptionAsrSisters([FromQuery] string userLanguage)
+    public async Task<IActionResult> TranscriptionAsrSisters([FromQuery] string iso)
     {
-        if (string.IsNullOrWhiteSpace(userLanguage))
-            return BadRequest("userLanguage is required");
+        if (string.IsNullOrWhiteSpace(iso))
+            return BadRequest("iso is required");
         try
         {
-            return Ok(await _service.TranscriptionAsrSisters(userLanguage));
+            return Ok(await _service.TranscriptionAsrSisters(iso));
         }
         catch (ArgumentException ex)
         {

@@ -296,7 +296,7 @@ public class AeroService(
     public async Task<string[]?> TranscriptionAsrMethods(string iso)
     {
         using HttpClient httpClient = new();
-        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/asr/languages?language_iso={iso}");
+        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/v2/asr/languages?language_iso={iso}");
         string jsonString = await response.Content.ReadAsStringAsync();
         // returns {  "languages": [{"iso": "eng", "name": "English"}], "entries": [{"language_iso": "eng", "script": "Latn", "method": "mms"},
         // {"language_iso": "eng", "script": "Latn", "method": "omnilingual"}, {"language_iso": "eng", "script": "Latn", "method": "whisper"}]}
@@ -310,16 +310,20 @@ public class AeroService(
 
         return [.. ranked];
     }
-    public async Task<string?> TranscriptionAsrSisters(string userLanguage)
+    public async Task<string?> TranscriptionAsrSisters(string iso)
     {
-        string api = $"{Domain}/asr/recommend-language?user_language={Uri.EscapeDataString(userLanguage)}";
-        //string formData = $"user_language={Uri.EscapeDataString(userLanguage)}";
-        //StringContent formContent = new(formData, System.Text.Encoding.UTF8, "application/x-www-form-urlencoded");
-        return await GetResult(api, null, "task_id");
+        string api = $"{Domain}/v2/asr/recommend-language";
+        var payload = new
+        {
+            iso
+        };
+        string json = JsonConvert.SerializeObject(payload);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult(api, content, "task_id");
     }
     public async Task<string?> AsrSistersStatus(string taskId)
     {
-        HttpContent? content = await GetStatus("asr/recommend-language", false, taskId);
+        HttpContent? content = await GetStatus("v2/asr/recommend-language", false, taskId);
         if (content != null)
         {
             string json = await content.ReadAsStringAsync();
@@ -354,7 +358,7 @@ public class AeroService(
     }
     public async Task<string[]?> Transcription(string[] fileUrls, string lang_iso, bool romanize)
     {
-        string api = $"{Domain}/asr/batch?s3_upload=true&language_iso={lang_iso}&romanize={romanize}";
+        string api = $"{Domain}/v2/asr/batch?s3_upload=true&language_iso={lang_iso}&romanize={romanize}";
         MultipartFormDataContent multipartContent = [];
         List<ByteArrayContent> files = [];
         int count = 1;
@@ -379,7 +383,7 @@ public class AeroService(
             }
             method = methods[0];
         }
-        string api = phonetic == true ? $"{Domain}/asr/phonetic" : $"{Domain}/asr/batch";
+        string api = phonetic == true ? $"{Domain}/v2/asr/phonetic" : $"{Domain}/asr/batch";
         int count = 1;
         string fn = DateTime.Now.Ticks.ToString();
         List<string> urlList = [];
