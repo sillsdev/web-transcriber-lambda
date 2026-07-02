@@ -31,6 +31,7 @@ namespace SIL.Transcriber.Models
                 ? tryint
                 : null;
             State = item["reference"]?.ToString();
+            Archived = false;
             return this;
         }
 

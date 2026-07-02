@@ -473,7 +473,7 @@ namespace SIL.Transcriber.Repositories
 
                 m.ReadyToShare = true;
                 m.PublishTo = publishTo;
-                Logger.LogInformation("Publish {MediafileId}: finished main work - ReadyToShare={Ready} PublishTo={PublishTo}", m.Id, m.ReadyToShare, m.PublishTo);
+                //Logger.LogInformation("Publish {MediafileId}: finished main work - ReadyToShare={Ready} PublishTo={PublishTo}", m.Id, m.ReadyToShare, m.PublishTo);
                 return m;
             }
             catch (Exception err)
