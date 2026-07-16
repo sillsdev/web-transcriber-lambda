@@ -552,9 +552,13 @@ namespace SIL.Transcriber.Services
             StatusInfo info = GetStatusInfo(id, "NR");
 
             //get a status...if done create a mediafile and return the new id
-            string? result = await Aeroservice.NoiseRemovalStatus(taskId, info.s3File, info.folder );
-            info.mediafile?.AudioQuality = result;
-            return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
+            string? resp = await Aeroservice.NoiseRemovalStatus(taskId, info.s3File, info.folder);
+            info.mediafile?.AudioQuality = resp;
+            // resp == null indicates still pending
+            if (resp == null)
+                return info.mediafile;
+            // success -> create new mediafile
+            return CreateNewMediafile(info);
         }
 
         public async Task<Mediafile?> VoiceConversion(int id, string targetUrl)
@@ -571,9 +575,9 @@ namespace SIL.Transcriber.Services
             StatusInfo info = GetStatusInfo(id, "VC");
 
             //get a status...if done create a mediafile and return the new id
-            string? result = await Aeroservice.VoiceConversionStatus(taskId, info.s3File, info.folder );
-            info.mediafile?.AudioQuality = result;
-            return result == "PENDING" ? info.mediafile : result is null or "FAILURE" ? null : CreateNewMediafile(info);
+            string? resp = await Aeroservice.VoiceConversionStatus(taskId, info.s3File, info.folder);
+            info.mediafile?.AudioQuality = resp;
+            return resp == null ? info.mediafile : CreateNewMediafile(info);
         }
 
         public async Task<Mediafile?> Transcription(int id, string iso, bool romanize, string? method, bool phonetic = false)

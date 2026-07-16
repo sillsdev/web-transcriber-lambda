@@ -37,6 +37,65 @@ namespace SIL.Transcriber.Services
             _length = data.ContentLength;
         }
 
+        // A small stream that sequentially reads from an initial prefix stream
+        // and then continues reading from the underlying stream. Disposing this
+        // stream will dispose both parts.
+        private class ConcatenatedStream : Stream
+        {
+            private readonly Stream _prefix;
+            private readonly Stream _rest;
+
+            public ConcatenatedStream(Stream prefix, Stream rest)
+            {
+                _prefix = prefix ?? Stream.Null;
+                _rest = rest ?? Stream.Null;
+            }
+
+            public override bool CanRead => _prefix.CanRead || _rest.CanRead;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+            public override void Flush() { }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                if (_prefix != null && _prefix.Position < _prefix.Length)
+                {
+                    int r = _prefix.Read(buffer, offset, count);
+                    if (r > 0)
+                        return r;
+                }
+                return _rest.Read(buffer, offset, count);
+            }
+
+            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                if (_prefix != null && _prefix.Position < _prefix.Length)
+                {
+                    int r = await _prefix.ReadAsync(buffer, offset, count, cancellationToken);
+                    if (r > 0)
+                        return r;
+                }
+                return await _rest.ReadAsync(buffer, offset, count, cancellationToken);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    try { _prefix.Dispose(); } catch { }
+                    try { _rest.Dispose(); } catch { }
+                }
+                base.Dispose(disposing);
+            }
+        }
+
         // Implementations of Stream's properties
         public override bool CanSeek => true;
         public override bool CanRead => true;
@@ -514,12 +573,44 @@ namespace SIL.Transcriber.Services
                 {
                     _ = await RemoveFile(fileName, folder, bucket);
                 }
-                TransferUtility fileTransferUtility = new(_client);
-                await fileTransferUtility.UploadAsync(
-                    stream,
-                    bucket == "" ? USERFILES_BUCKET : bucket,
-                    ProperFolder(folder) + fileName
-                );
+
+                string destBucket = bucket == "" ? USERFILES_BUCKET : bucket;
+                string destKey = ProperFolder(folder) + fileName;
+
+                // TransferUtility may attempt to read Stream.Length which is not
+                // supported by some streams (e.g., HttpClient response streams).
+                // If Length is not available or stream is not seekable, use multipart upload
+                bool needTempFile = false;
+                try
+                {
+                    // Accessing Length may throw NotSupportedException
+                    _ = stream.Length;
+                }
+                catch
+                {
+                    needTempFile = true;
+                }
+
+                if (needTempFile || !stream.CanSeek)
+                {
+                    if (stream.CanSeek)
+                        stream.Position = 0;
+                    await UploadStreamMultipartAsync(stream, destBucket, destKey);
+                }
+                else
+                {
+                    if (stream.CanSeek)
+                        stream.Position = 0;
+                    TransferUtility fileTransferUtility = new(_client);
+                    TransferUtilityUploadRequest uploadRequest = new()
+                    {
+                        InputStream = stream,
+                        BucketName = destBucket,
+                        Key = destKey,
+                        AutoCloseStream = false
+                    };
+                    await fileTransferUtility.UploadAsync(uploadRequest);
+                }
 
                 return new S3Response
                 {
@@ -536,6 +627,97 @@ namespace SIL.Transcriber.Services
             catch (Exception e)
             {
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
+
+        private async Task<bool> UploadStreamMultipartAsync(Stream stream, string bucket, string key)
+        {
+            const int partSize = 8 * 1024 * 1024; // 8MB
+            InitiateMultipartUploadResponse initiateResponse = await _client.InitiateMultipartUploadAsync(
+                new InitiateMultipartUploadRequest
+                {
+                    BucketName = bucket,
+                    Key = key,
+                }
+            );
+
+            string uploadId = initiateResponse.UploadId;
+            List<PartETag> partETags = [];
+            byte[] buffer = new byte[partSize];
+            int partNumber = 1;
+
+            try
+            {
+                while (true)
+                {
+                    int bytesReadTotal = 0;
+                    while (bytesReadTotal < partSize)
+                    {
+                        int bytesRead = await stream.ReadAsync(buffer, bytesReadTotal, partSize - bytesReadTotal);
+                        if (bytesRead == 0)
+                            break;
+                        bytesReadTotal += bytesRead;
+                    }
+
+                    if (bytesReadTotal == 0)
+                        break;
+
+                    using MemoryStream partStream = new(buffer, 0, bytesReadTotal, writable: false);
+                    UploadPartResponse uploadPartResponse = await _client.UploadPartAsync(
+                        new UploadPartRequest
+                        {
+                            BucketName = bucket,
+                            Key = key,
+                            UploadId = uploadId,
+                            PartNumber = partNumber,
+                            PartSize = bytesReadTotal,
+                            InputStream = partStream,
+                        }
+                    );
+
+                    partETags.Add(new PartETag(partNumber, uploadPartResponse.ETag));
+                    partNumber++;
+                }
+
+                if (partETags.Count == 0)
+                {
+                    await _client.AbortMultipartUploadAsync(
+                        new AbortMultipartUploadRequest
+                        {
+                            BucketName = bucket,
+                            Key = key,
+                            UploadId = uploadId,
+                        }
+                    );
+                    return false;
+                }
+
+                await _client.CompleteMultipartUploadAsync(
+                    new CompleteMultipartUploadRequest
+                    {
+                        BucketName = bucket,
+                        Key = key,
+                        UploadId = uploadId,
+                        PartETags = partETags,
+                    }
+                );
+                return true;
+            }
+            catch
+            {
+                try
+                {
+                    await _client.AbortMultipartUploadAsync(
+                        new AbortMultipartUploadRequest
+                        {
+                            BucketName = bucket,
+                            Key = key,
+                            UploadId = uploadId,
+                        }
+                    );
+                }
+                catch { }
+                throw;
             }
         }
 
