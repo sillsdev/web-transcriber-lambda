@@ -46,6 +46,18 @@ namespace SIL.Transcriber.Repositories
             return sections;
         }
 
+        public async Task<int> BulkDeleteSectionsByIds(List<int> sectionIds)
+        {
+            if (sectionIds == null || sectionIds.Count == 0)
+                return 0;
+
+            // Perform a set-based delete without loading entities into memory
+            int deleted = await dbContext.Sections
+                .Where(s => sectionIds.Contains(s.Id))
+                .ExecuteDeleteAsync();
+            return deleted;
+        }
+
         public List<Passage> BulkUpdatePassages(List<Passage> passages)
         {
             dbContext.UpdateRange(passages);
