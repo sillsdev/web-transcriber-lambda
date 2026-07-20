@@ -14,6 +14,7 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Utility;
+using System.Diagnostics;
 
 namespace SIL.Transcriber.Services
 {
@@ -28,7 +29,8 @@ namespace SIL.Transcriber.Services
         IResourceChangeTracker<Sectionpassage> resourceChangeTracker,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
         SectionPassageRepository myRepository,
-        AppDbContextResolver contextResolver
+        AppDbContextResolver contextResolver,
+        SectionRepository sectionRepository
         ) : JsonApiResourceService<Sectionpassage, int>(
             repositoryAccessor,
             queryLayerComposer,
@@ -43,6 +45,7 @@ namespace SIL.Transcriber.Services
         protected SectionPassageRepository MyRepository { get; } = myRepository;
         protected readonly AppDbContext dbContext = (AppDbContext)contextResolver.GetContext();
         readonly private HttpContext? HttpContext = httpContextAccessor.HttpContext;
+        readonly private SectionRepository SectionRepository = sectionRepository;
 
         //protected IJsonApiOptions options { get; }
         protected ILogger<Sectionpassage> Logger { get; set; } = loggerFactory.CreateLogger<Sectionpassage>();
@@ -59,6 +62,7 @@ namespace SIL.Transcriber.Services
 
         private async Task<Sectionpassage> ProcessData(Sectionpassage entity)
         {
+            Logger.LogInformation("SPX ProcessData start: Sectionpassage.Id={Id}, PlanId={PlanId}", entity.Id, entity.PlanId);
             object? input = entity.Data != null ? JsonConvert.DeserializeObject(entity.Data) : null;
 
             if (input == null || !input.GetType().IsAssignableFrom(typeof(JArray)))
@@ -95,11 +99,11 @@ namespace SIL.Transcriber.Services
                 catch { }
                 return false;
             }
-            using IDbContextTransaction transaction = MyRepository.BeginTransaction();
             HttpContext?.SetFP("onlinesave");
             // Use the dtBail pattern used elsewhere in the codebase: bail after a fixed wall-clock time
-            DateTime dtBail = DateTime.Now.AddSeconds(10);
-            int loopCount = 0;
+            DateTime dtBail = DateTime.Now.AddSeconds(18);
+            Logger.LogInformation("SPX ProcessData dtBail set to {dtBail:o}", dtBail);
+            using IDbContextTransaction transaction = MyRepository.BeginTransaction();
 
             // local helper to persist partial progress and exit when dtBail is exceeded
             async Task<bool> BailIfNeeded()
@@ -107,37 +111,33 @@ namespace SIL.Transcriber.Services
                 if (DateTime.Now > dtBail)
                 {
                     entity.Data = JsonConvert.SerializeObject(data);
+                    entity.Processing = false;
+                    entity.Complete = false;
                     // release processing claim so another worker can pick up
                     // Perform a direct SQL update to avoid EF tracking conflicts when saving partial progress
                     try
                     {
-                        await dbContext.Sectionpassages
-                            .Where(x => x.Id == entity.Id)
-                        .ExecuteUpdateAsync(s => s
-                            .SetProperty(x => x.Data, entity.Data)
-                            .SetProperty(x => x.Processing, false)
-                            .SetProperty(x => x.Complete, false)
-                        );
+                        await UpdateIt(entity);
                     }
                     catch
                     {
                         // fallback to tracked update if raw SQL fails
                         try
                         {
-                            entity.Processing = false;
-                            entity.ProcessingStarted = null;
-                            entity.Complete = false;
                             dbContext.Sectionpassages.Update(entity);
                             dbContext.SaveChanges();
                         }
                         catch { }
                     }
 
+                    Logger.LogInformation("SPX BailIfNeeded: bailing out for Sectionpassage.Id={Id} at {now}", entity.Id, DateTime.UtcNow);
                     transaction.Commit();
+
                     return true;
                 }
                 return false;
             }
+
 
             try
             {
@@ -147,154 +147,230 @@ namespace SIL.Transcriber.Services
                     d => TokToBool(d[0]?["issection"]) && TokToBool(d[0]?["changed"]) && !TokToBool(d[0]?["complete"])
                 );
 
-                //add all sections
-                List<Section> updsections = [];
+                //add all sections in batches
+                List<JArray> updsecItems = [.. updsecs.Cast<JArray>()];
+                Logger.LogInformation("SPX Found {count} sections to add/update", updsecItems.Count);
+                const int sectionBatchSize = 50;
+                for (int si = 0; si < updsecItems.Count; si += sectionBatchSize)
+                {
+                    List<JArray> batchItems = [.. updsecItems.Skip(si).Take(sectionBatchSize)];
+                    List<int> idsToFetch = [.. batchItems
+                        .Select(item => TokToInt(item[0]?["id"]) ?? 0)
+                        .Where(id => id != 0)
+                        .Distinct()];
 
-                foreach (JArray item in updsecs.Cast<JArray>())
-                {
-                    int? sid = TokToInt(item[0]?["id"]);
-                    updsections.Add(
-                        sid.HasValue
-                            ? MyRepository.GetSection(sid.Value).UpdateFrom(item[0])
-                            : new Section().UpdateFrom(item[0], entity.PlanId)
-                    );
-                    if (DateTime.Now > dtBail)
-                        break;
-                }
-                if (updsections.Count > 0)
-                {
-                    await MyRepository.BulkUpdateSections(updsections);
-                    int ix = 0;
-                    foreach (JArray item in updsecs)
+                    Dictionary<int, Section> existing = idsToFetch.Count > 0
+                        ? dbContext.Sections
+                            .Where(s => idsToFetch.Contains(s.Id))
+                            .ToDictionary(s => s.Id)
+                        : [];
+
+                    List<Section> batchSections = [];
+                    int batchIndex = (si / sectionBatchSize) + 1;
+                    foreach (JArray item in batchItems)
                     {
-                        item[0]["id"] = updsections[ix].Id;
-                        // mark this section as completed so future resumes do not re-run section updates
-                        item[0]["complete"] = true;
-                        ix++;
+                        int? sid = TokToInt(item[0]?["id"]);
+                        Section? fromDb = sid.HasValue && existing.TryGetValue(sid.Value, out Section? existingSection)
+                            ? existingSection
+                            : null;
+                        Section updatedSection = fromDb != null
+                            ? fromDb.UpdateFrom(item[0])
+                            : new Section().UpdateFrom(item[0], entity.PlanId);
+                        batchSections.Add(updatedSection);
+                        if (fromDb != null)
+                            await SectionRepository.CheckPublish(updatedSection, fromDb);
                     }
+
+                    if (batchSections.Count > 0)
+                    {
+                        Stopwatch swSections = Stopwatch.StartNew();
+                        await MyRepository.BulkUpdateSections(batchSections);
+                        swSections.Stop();
+                        Logger.LogInformation("SPX BulkUpdateSections batch starting at {start} updated {count} sections in {ms}ms", si, batchSections.Count, swSections.ElapsedMilliseconds);
+                        for (int j = 0; j < batchItems.Count; j++)
+                        {
+                            batchItems[j][0]["id"] = batchSections[j].Id;
+                            // mark this section as completed so future resumes do not re-run section updates
+                            batchItems[j][0]["complete"] = true;
+                        }
+                    }
+
+                    if (await BailIfNeeded())
+                        return entity;
+
                 }
-                // Bail check before starting heavy DB work
-                if (await BailIfNeeded())
-                    return entity;
                 int lastSectionId = 0;
+                bool lastSectionDeleted = false;
                 /* process all the passages now */
                 List<JArray> updpass = [];
                 List<Passage> updpassages = [];
-                List<Passage> delpassages = [];
+                List<int> delPassageIds = [];
+                // collect unique section ids that need their "modified" state updated
+                HashSet<int> sectionIdsToUpdate = [];
+                List<JArray> delsecItems = [.. data.Where(
+                    d => TokToBool(d[0]?["issection"]) && TokToBool(d[0]?["deleted"]) && !TokToBool(d[0]?["complete"])).Cast<JArray>()];
 
-                foreach (JArray item in data)
+                void ProcessPassage(JArray item)
                 {
-                    loopCount++;
-                    if (DateTime.Now > dtBail)
-                        break;
+                    int index = item.Count-1;
+                    int? pid = TokToInt(item[index]?["id"]);
+                    if (TokToBool(item[index]?["changed"]) && !TokToBool(item[index]?["complete"]))
+                    {
+                        updpass.Add(item);
+                        updpassages.Add(
+                            pid.HasValue
+                                ? MyRepository
+                                    .GetPassage(pid.Value)
+                                    .UpdateFrom(item[index], lastSectionId)
+                                : new Passage().UpdateFrom(item[index], lastSectionId)
+                        );
+                        item[index]["complete"] = true;
+                    }
+                    else if (TokToBool(item[index]?["deleted"]) && !lastSectionDeleted && !TokToBool(item[index]?["complete"]) && pid.HasValue)
+                    {
+                        delPassageIds.Add(pid.Value);
+                        item[index]["complete"] = true;
+                    }
+                }
+                async Task ProcessPassageBatch()
+                {
+
+                    if (updpassages.Count > 0)
+                    {
+                        Stopwatch swPassages = Stopwatch.StartNew();
+                        _ = MyRepository.BulkUpdatePassages(updpassages);
+                        swPassages.Stop();
+                        Logger.LogInformation("SPX BulkUpdatePassages updated {count} passages in {ms}ms", updpassages.Count, swPassages.ElapsedMilliseconds);
+                        int ix = 0;
+                        foreach (JArray item in updpass)
+                        {
+                            item[item.Count - 1]["id"] = updpassages[ix].Id;
+                            sectionIdsToUpdate.Add(updpassages[ix].SectionId);
+                            ix++;
+                        }
+                        updpassages = [];
+                        updpass = [];
+                    }
+
+                    if (delPassageIds.Count > 0)
+                    {
+                        Stopwatch swDel = Stopwatch.StartNew();
+                        _ = await MyRepository.BulkDeletePassagesByIds(delPassageIds);
+                        swDel.Stop();
+                        Logger.LogInformation("SPX BulkDeletePassagesByIds removed {count} passages in {ms}ms", delPassageIds.Count, swDel.ElapsedMilliseconds);
+                        //skip it
+                        //foreach (int id in delPassageIds) sectionIdsToUpdate.Add(p.SectionId);
+                        delPassageIds = [];
+                    }
+                }
+                async Task UpdateModifiedPassageSections()
+                {
+                    //now remove the ones we're going to delete soon anyway
+                    IEnumerable<int> delIds = delsecItems
+                    .Select(item => TokToInt(item[0]?["id"]))
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value);
+                    sectionIdsToUpdate.ExceptWith(delIds);
+
+                    // update each section's modified state once in a single DB call
+                    if (sectionIdsToUpdate.Count > 0)
+                    {
+                        Stopwatch swSectUpd = Stopwatch.StartNew();
+                        string origin = DbContextExtentions.GetFingerprint(HttpContext);
+                        await dbContext.Sections
+                            .Where(s => sectionIdsToUpdate.Contains(s.Id))
+                            .ExecuteUpdateAsync(s => s
+                                .SetProperty(x => x.DateUpdated, DateTime.UtcNow)
+                                .SetProperty(x => x.LastModifiedOrigin, origin)
+                            );
+                        swSectUpd.Stop();
+                        Logger.LogInformation("SPX Updated {count} sections modified state in {ms}ms", sectionIdsToUpdate.Count, swSectUpd.ElapsedMilliseconds);
+                    }
+                }
+
+                int batchCount = 0;
+                foreach (JArray item in data.Cast<JArray>())
+                {
                     if (TokToBool(item[0]?["issection"]))
                     {
                         int? s = TokToInt(item[0]?["id"]);
                         if (s.HasValue) //saving in chunks may not have saved this section...passages will be marked unchanged
                         {
                             lastSectionId = s.Value;
+                            lastSectionDeleted = TokToBool(item[0]?["deleted"]);
                             if (item.Count > 1)
                             {
-                                int? pid = TokToInt(item[1]?["id"]);
-                                if (TokToBool(item[1]?["changed"]) && !TokToBool(item[1]?["complete"]))
-                                {
-                                    updpass.Add(item);
-                                    updpassages.Add(
-                                        pid.HasValue
-                                            ? MyRepository
-                                                .GetPassage(pid.Value)
-                                                .UpdateFrom(item[1], lastSectionId)
-                                            : new Passage().UpdateFrom(item[1], lastSectionId)
-                                    );
-                                    item[1]["complete"] = true;
-                                }
-                                else if (TokToBool(item[1]?["deleted"]) && !TokToBool(item[1]?["complete"]) && pid.HasValue)
-                                {
-                                    delpassages.Add(
-                                        MyRepository
-                                            .GetPassage(pid.Value)
-                                    );
-                                    item[1]["complete"] = true;
-                                }
+                                batchCount++;
+                                ProcessPassage(item);
+                            }
+                        }
+                        if (batchCount > 50)
+                        {
+                            await ProcessPassageBatch();
+                            batchCount = 0;
+                            if (await BailIfNeeded())
+                            {
+                                //after the transaction is committed but that's ok
+                                await UpdateModifiedPassageSections();
+                                return entity;
                             }
                         }
                     }
                     // process any top-level passages that are not under a section
                     else
                     {
-                        int? pid = TokToInt(item[0]?["id"]);
-                        if (TokToBool(item[0]?["changed"]) && !TokToBool(item[0]?["complete"]))
-                        {
-                            updpass.Add(item);
-                            updpassages.Add(
-                                pid.HasValue
-                                    ? MyRepository.GetPassage(pid.Value).UpdateFrom(item[0], lastSectionId)
-                                    : new Passage().UpdateFrom(item[0], lastSectionId)
-                            );
-                            item[0]["complete"] = true;
-                        }
-                        else if (TokToBool(item[0]?["deleted"]) && !TokToBool(item[0]?["complete"]))
-                        {
-                            delpassages.Add(
-                                MyRepository.GetPassage((int?)item[0]["id"] ?? 0).UpdateFrom(item[0])
-                            );
-                            item[0]["complete"] = true;
-                        }
+                        batchCount++;
+                        ProcessPassage(item);
                     }
                 }
-
-                if (updpassages.Count > 0)
-                {
-                    //Logger.LogInformation($"updpassages {updpassages.Count} {updpassages}");
-                    _ = MyRepository.BulkUpdatePassages(updpassages);
-                    int ix = 0;
-                    foreach (JArray item in updpass)
-                    {
-                        item[item.Count - 1]["id"] = updpassages[ix].Id;
-                        _ = MyRepository.UpdateSectionModified(updpassages[ix].SectionId);
-                        ix++;
-                    }
-                }
-
-                if (delpassages.Count > 0)
-                {
-                    _ = MyRepository.BulkDeletePassages(delpassages);
-                    delpassages.ForEach(p => MyRepository.UpdateSectionModified(p.SectionId));
-                }
+                await ProcessPassageBatch();
+                await UpdateModifiedPassageSections();
 
                 if (await BailIfNeeded())
                     return entity;
-                IEnumerable<JToken> delsecs = data.Where(
-                    d => TokToBool(d[0]?["issection"]) && TokToBool(d[0]?["deleted"]) && !TokToBool(d[0]?["complete"])
-                );
-                List<Section> delsections = [];
-                foreach (JArray item in delsecs)
-                {
-                    delsections.Add(MyRepository.GetSection((int?)item[0]["id"] ?? 0));
-                    item[0]["complete"] = true;
-                }
-                if (delsections.Count > 0)
-                {
-                    _ = MyRepository.BulkDeleteSections(delsections);
-                }
 
+                //do these 1 at a time
+                if (delsecItems.Count > 0)
+                {
+                    Logger.LogInformation("SPX About to delete {count} sections one-at-a-time", delsecItems.Count);
+                    Stopwatch swTotalDel = Stopwatch.StartNew();
+                    for (int si = 0; si < delsecItems.Count; si++)
+                    {
+                        int? id = TokToInt(delsecItems[si][0]?["id"]);
+                        if (!id.HasValue)
+                        {
+                            delsecItems[si][0]["complete"] = true;
+                            continue;
+                        }
+                        int deleted = await dbContext.Sections
+                            .Where(s => s.Id == id.Value)
+                            .ExecuteDeleteAsync();
+                        delsecItems[si][0]["complete"] = true;
+
+                        // check bail after each 
+                        if (await BailIfNeeded())
+                        {
+                            swTotalDel.Stop();
+                            Logger.LogInformation("SPX Stopped deleting sections early due to bail after processing {processed} of {total} in {ms}ms", si + 1, delsecItems.Count, swTotalDel.ElapsedMilliseconds);
+                            return entity;
+                        }
+                    }
+                    swTotalDel.Stop();
+                    Logger.LogInformation("SPX Completed deleting {count} sections one-at-a-time in {ms}ms", delsecItems.Count, swTotalDel.ElapsedMilliseconds);
+                }
                 _ = MyRepository.UpdatePlanModified(entity.PlanId);
                 transaction.Commit();
                 entity.Data = JsonConvert.SerializeObject(data);
                 entity.Complete = true;
+                entity.Processing = false;
                 // finished processing, clear the processing claim
-                await dbContext.Sectionpassages
-                    .Where(x => x.Id == entity.Id)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(x => x.Data, entity.Data)
-                    .SetProperty(x => x.Processing, false)
-                    .SetProperty(x => x.Complete, true)
-                );
+                await UpdateIt(entity);
+
                 return entity;
             }
             catch (Exception ex)
             {
-                Logger.LogCritical("Insert Error {ex}", ex);
+                Logger.LogCritical(ex, "SPX Insert Error while processing Sectionpassage.Id={Id}", entity.Id);
                 /* I'm giving up...let the next one try */
                 try
                 {
@@ -312,26 +388,32 @@ namespace SIL.Transcriber.Services
                 );
             }
         }
-        private async Task ClaimIt(Sectionpassage entity)
+        private async Task UpdateIt(Sectionpassage entity)
         {
-            // not currently processing: claim it
-            entity.Processing = true;
-            entity.ProcessingStarted = DateTime.UtcNow;
-            entity.Complete = false;
             if (entity.Id != 0)
             {
                 await dbContext.Sectionpassages
                     .Where(x => x.Id == entity.Id)
                 .ExecuteUpdateAsync(s => s
-                    .SetProperty(x => x.Processing, true)
-                    .SetProperty(x => x.Complete, false)
-                    .SetProperty(x => x.ProcessingStarted, entity.ProcessingStarted)
+                    .SetProperty(x => x.Data, x => entity.Data)
+                    .SetProperty(x => x.Processing, x => entity.Processing)
+                    .SetProperty(x => x.Complete, x => entity.Complete)
+                    .SetProperty(x => x.ProcessingStarted, x => entity.Processing ? DateTime.UtcNow : (DateTime?)null)
+                    .SetProperty(x => x.DateUpdated, x => DateTime.UtcNow)
                 );
             }
         }
+        private async Task ClaimIt(Sectionpassage entity)
+        {
+            // not currently processing: claim it
+            entity.Processing = true;
+            entity.Complete = false;
+            entity.ProcessingStarted = DateTime.UtcNow; //set it here for first claim where id is not yet known
+            await UpdateIt(entity);
+        }
         private async Task<bool> DidIClaimIt(Sectionpassage existing)
         {
-            const int PROCESSING_STALE_SECONDS = 31;
+            const int PROCESSING_STALE_SECONDS = 32;
             if (existing.Complete)
             {
                 /* another call completed successfully, so return that record */
@@ -401,7 +483,7 @@ namespace SIL.Transcriber.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError("{ex}", ex);
+                    Logger.LogError(ex, "CreateAsync failed for Sectionpassage UUID={Uuid}", entity.Uuid);
                     // duplicate UUID -> someone else inserted first. Load existing and apply claim/resume logic.
                     if (ex.InnerException != null && ex.InnerException.Message.Contains("23505"))
                     {
