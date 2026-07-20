@@ -1,4 +1,5 @@
 ﻿using JsonApiDotNetCore.Configuration;
+using Microsoft.EntityFrameworkCore;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Transcriber.Data;
@@ -14,8 +15,7 @@ namespace SIL.Transcriber.Repositories
         IEnumerable<IQueryConstraintProvider> constraintProviders,
         ILoggerFactory loggerFactory,
         IResourceDefinitionAccessor resourceDefinitionAccessor,
-        CurrentUserRepository currentUserRepository,
-        SectionRepository sectionRepository
+        CurrentUserRepository currentUserRepository
         ) : BaseRepository<Sectionpassage>(
             targetedFields,
             contextResolver,
@@ -27,8 +27,6 @@ namespace SIL.Transcriber.Repositories
             currentUserRepository
             )
     {
-        readonly private SectionRepository SectionRepository = sectionRepository;
-
         public Sectionpassage? GetByUUID(Guid uuid)
         {
             return dbContext.Sectionpassages.Where(e => e.Uuid == uuid).FirstOrDefault();
@@ -36,11 +34,6 @@ namespace SIL.Transcriber.Repositories
 
         public async Task<List<Section>> BulkUpdateSections(List<Section> sections)
         {
-            foreach (Section s in sections)
-            {
-                Section fromDb = dbContext.Sections.Find(s.Id) ?? new Section();
-                await SectionRepository.CheckPublish(s, fromDb);
-            }
             dbContext.UpdateRange(sections);
             _ = dbContext.SaveChanges();
             return sections;
@@ -51,6 +44,18 @@ namespace SIL.Transcriber.Repositories
             dbContext.RemoveRange(sections);
             _ = dbContext.SaveChanges();
             return sections;
+        }
+
+        public async Task<int> BulkDeleteSectionsByIds(List<int> sectionIds)
+        {
+            if (sectionIds == null || sectionIds.Count == 0)
+                return 0;
+
+            // Perform a set-based delete without loading entities into memory
+            int deleted = await dbContext.Sections
+                .Where(s => sectionIds.Contains(s.Id))
+                .ExecuteDeleteAsync();
+            return deleted;
         }
 
         public List<Passage> BulkUpdatePassages(List<Passage> passages)
@@ -65,6 +70,17 @@ namespace SIL.Transcriber.Repositories
             dbContext.RemoveRange(passages);
             _ = dbContext.SaveChanges();
             return passages;
+        }
+
+        public async Task<int> BulkDeletePassagesByIds(List<int> passageIds)
+        {
+            if (passageIds == null || passageIds.Count == 0)
+                return 0;
+
+            int deleted = await dbContext.Passages
+                .Where(p => passageIds.Contains(p.Id))
+                .ExecuteDeleteAsync();
+            return deleted;
         }
 
         public Section? UpdateSectionModified(int sectionId)
