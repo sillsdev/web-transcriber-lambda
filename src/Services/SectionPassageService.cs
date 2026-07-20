@@ -62,7 +62,7 @@ namespace SIL.Transcriber.Services
 
         private async Task<Sectionpassage> ProcessData(Sectionpassage entity)
         {
-            Logger.LogCritical("ProcessData start: Sectionpassage.Id={Id}, PlanId={PlanId}", entity.Id, entity.PlanId);
+            Logger.LogInformation("SPX ProcessData start: Sectionpassage.Id={Id}, PlanId={PlanId}", entity.Id, entity.PlanId);
             object? input = entity.Data != null ? JsonConvert.DeserializeObject(entity.Data) : null;
 
             if (input == null || !input.GetType().IsAssignableFrom(typeof(JArray)))
@@ -102,8 +102,8 @@ namespace SIL.Transcriber.Services
             HttpContext?.SetFP("onlinesave");
             // Use the dtBail pattern used elsewhere in the codebase: bail after a fixed wall-clock time
             DateTime dtBail = DateTime.Now.AddSeconds(18);
-            Logger.LogCritical("ProcessData dtBail set to {dtBail}", dtBail.ToString("o"));
-            IDbContextTransaction transaction = MyRepository.BeginTransaction();
+            Logger.LogInformation("SPX ProcessData dtBail set to {dtBail:o}", dtBail);
+            using IDbContextTransaction transaction = MyRepository.BeginTransaction();
 
             // local helper to persist partial progress and exit when dtBail is exceeded
             async Task<bool> BailIfNeeded()
@@ -130,7 +130,7 @@ namespace SIL.Transcriber.Services
                         catch { }
                     }
 
-                    Logger.LogCritical("BailIfNeeded: bailing out for Sectionpassage.Id={Id} at {now}", entity.Id, DateTime.UtcNow);
+                    Logger.LogInformation("SPX BailIfNeeded: bailing out for Sectionpassage.Id={Id} at {now}", entity.Id, DateTime.UtcNow);
                     transaction.Commit();
 
                     return true;
@@ -149,7 +149,7 @@ namespace SIL.Transcriber.Services
 
                 //add all sections in batches
                 List<JArray> updsecItems = [.. updsecs.Cast<JArray>()];
-                Logger.LogCritical("Found {count} sections to add/update", updsecItems.Count);
+                Logger.LogInformation("SPX Found {count} sections to add/update", updsecItems.Count);
                 const int sectionBatchSize = 50;
                 for (int si = 0; si < updsecItems.Count; si += sectionBatchSize)
                 {
@@ -186,7 +186,7 @@ namespace SIL.Transcriber.Services
                         Stopwatch swSections = Stopwatch.StartNew();
                         await MyRepository.BulkUpdateSections(batchSections);
                         swSections.Stop();
-                        Logger.LogCritical("BulkUpdateSections batch starting at {start} updated {count} sections in {ms}ms", si, batchSections.Count, swSections.ElapsedMilliseconds);
+                        Logger.LogInformation("SPX BulkUpdateSections batch starting at {start} updated {count} sections in {ms}ms", si, batchSections.Count, swSections.ElapsedMilliseconds);
                         for (int j = 0; j < batchItems.Count; j++)
                         {
                             batchItems[j][0]["id"] = batchSections[j].Id;
@@ -240,7 +240,7 @@ namespace SIL.Transcriber.Services
                         Stopwatch swPassages = Stopwatch.StartNew();
                         _ = MyRepository.BulkUpdatePassages(updpassages);
                         swPassages.Stop();
-                        Logger.LogCritical("BulkUpdatePassages updated {count} passages in {ms}ms", updpassages.Count, swPassages.ElapsedMilliseconds);
+                        Logger.LogInformation("SPX BulkUpdatePassages updated {count} passages in {ms}ms", updpassages.Count, swPassages.ElapsedMilliseconds);
                         int ix = 0;
                         foreach (JArray item in updpass)
                         {
@@ -257,7 +257,7 @@ namespace SIL.Transcriber.Services
                         Stopwatch swDel = Stopwatch.StartNew();
                         _ = await MyRepository.BulkDeletePassagesByIds(delPassageIds);
                         swDel.Stop();
-                        Logger.LogCritical("BulkDeletePassagesByIds removed {count} passages in {ms}ms", delPassageIds.Count, swDel.ElapsedMilliseconds);
+                        Logger.LogInformation("SPX BulkDeletePassagesByIds removed {count} passages in {ms}ms", delPassageIds.Count, swDel.ElapsedMilliseconds);
                         //skip it
                         //foreach (int id in delPassageIds) sectionIdsToUpdate.Add(p.SectionId);
                         delPassageIds = [];
@@ -267,8 +267,9 @@ namespace SIL.Transcriber.Services
                 {
                     //now remove the ones we're going to delete soon anyway
                     IEnumerable<int> delIds = delsecItems
-                    .Select(item => (int?)item[0]?["id"] ?? 0)
-                    .Where(id => id != 0);
+                    .Select(item => TokToInt(item[0]?["id"]))
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value);
                     sectionIdsToUpdate.ExceptWith(delIds);
 
                     // update each section's modified state once in a single DB call
@@ -283,7 +284,7 @@ namespace SIL.Transcriber.Services
                                 .SetProperty(x => x.LastModifiedOrigin, origin)
                             );
                         swSectUpd.Stop();
-                        Logger.LogCritical("Updated {count} sections modified state in {ms}ms", sectionIdsToUpdate.Count, swSectUpd.ElapsedMilliseconds);
+                        Logger.LogInformation("SPX Updated {count} sections modified state in {ms}ms", sectionIdsToUpdate.Count, swSectUpd.ElapsedMilliseconds);
                     }
                 }
 
@@ -309,6 +310,7 @@ namespace SIL.Transcriber.Services
                             batchCount = 0;
                             if (await BailIfNeeded())
                             {
+                                //after the transaction is committed but that's ok
                                 await UpdateModifiedPassageSections();
                                 return entity;
                             }
@@ -330,13 +332,18 @@ namespace SIL.Transcriber.Services
                 //do these 1 at a time
                 if (delsecItems.Count > 0)
                 {
-                    Logger.LogCritical("About to delete {count} sections one-at-a-time", delsecItems.Count);
+                    Logger.LogInformation("SPX About to delete {count} sections one-at-a-time", delsecItems.Count);
                     Stopwatch swTotalDel = Stopwatch.StartNew();
                     for (int si = 0; si < delsecItems.Count; si++)
                     {
-                        int id = (int?)delsecItems[si][0]?["id"] ?? 0;
+                        int? id = TokToInt(delsecItems[si][0]?["id"]);
+                        if (!id.HasValue)
+                        {
+                            delsecItems[si][0]["complete"] = true;
+                            continue;
+                        }
                         int deleted = await dbContext.Sections
-                            .Where(s => s.Id == id)
+                            .Where(s => s.Id == id.Value)
                             .ExecuteDeleteAsync();
                         delsecItems[si][0]["complete"] = true;
 
@@ -344,12 +351,12 @@ namespace SIL.Transcriber.Services
                         if (await BailIfNeeded())
                         {
                             swTotalDel.Stop();
-                            Logger.LogCritical("Stopped deleting sections early due to bail after processing {processed} of {total} in {ms}ms", si + 1, delsecItems.Count, swTotalDel.ElapsedMilliseconds);
+                            Logger.LogInformation("SPX Stopped deleting sections early due to bail after processing {processed} of {total} in {ms}ms", si + 1, delsecItems.Count, swTotalDel.ElapsedMilliseconds);
                             return entity;
                         }
                     }
                     swTotalDel.Stop();
-                    Logger.LogCritical("Completed deleting {count} sections one-at-a-time in {ms}ms", delsecItems.Count, swTotalDel.ElapsedMilliseconds);
+                    Logger.LogInformation("SPX Completed deleting {count} sections one-at-a-time in {ms}ms", delsecItems.Count, swTotalDel.ElapsedMilliseconds);
                 }
                 _ = MyRepository.UpdatePlanModified(entity.PlanId);
                 transaction.Commit();
@@ -363,7 +370,7 @@ namespace SIL.Transcriber.Services
             }
             catch (Exception ex)
             {
-                Logger.LogCritical("Insert Error {ex}", ex);
+                Logger.LogCritical(ex, "SPX Insert Error while processing Sectionpassage.Id={Id}", entity.Id);
                 /* I'm giving up...let the next one try */
                 try
                 {
@@ -401,6 +408,7 @@ namespace SIL.Transcriber.Services
             // not currently processing: claim it
             entity.Processing = true;
             entity.Complete = false;
+            entity.ProcessingStarted = DateTime.UtcNow; //set it here for first claim where id is not yet known
             await UpdateIt(entity);
         }
         private async Task<bool> DidIClaimIt(Sectionpassage existing)
@@ -475,7 +483,7 @@ namespace SIL.Transcriber.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError("{ex}", ex);
+                    Logger.LogError(ex, "CreateAsync failed for Sectionpassage UUID={Uuid}", entity.Uuid);
                     // duplicate UUID -> someone else inserted first. Load existing and apply claim/resume logic.
                     if (ex.InnerException != null && ex.InnerException.Message.Contains("23505"))
                     {

@@ -134,7 +134,7 @@ public class AeroService(
 
         if (string.IsNullOrWhiteSpace(audioUrl))
         {
-            Logger.LogError("Noise removal result missing audio URL [{TaskId}]: {Json}", taskId, env.result?.ToString());
+            Logger.LogError("Noise removal result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
             return null;
         }
 
@@ -423,7 +423,7 @@ public class AeroService(
 
         if (string.IsNullOrWhiteSpace(audioUrl))
         {
-            Logger.LogError("Voice conversion result missing audio URL [{TaskId}]: {Json}", taskId, env.result?.ToString());
+            Logger.LogError("Voice conversion result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
             return null;
         }
 
@@ -487,7 +487,7 @@ public class AeroService(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.result?.ToString());
+            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.result);
             throw;
         }
         return null;
@@ -681,7 +681,7 @@ public class AeroService(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.result?.ToString());
+            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.result);
             throw;
         }
     }
@@ -847,7 +847,7 @@ public class AeroService(
 
         if (string.IsNullOrWhiteSpace(audioUrl))
         {
-            Logger.LogError("Audio infilling result missing audio URL [{TaskId}]: {Json}", taskId, env.result?.ToString());
+            Logger.LogError("Audio infilling result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
             return null;
         }
 
