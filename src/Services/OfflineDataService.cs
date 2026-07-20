@@ -3812,7 +3812,8 @@ namespace SIL.Transcriber.Services
                                     Note = c.Note,
                                     OfflineTitleMediafileId = c.TitleMediafileId.ToString(),
                                     OfflineId = c.StringId,
-                                    Specialuse = c.Specialuse
+                                    Specialuse = c.Specialuse,
+                                    Color = c.Color
                                 })];
                                 SaveMap(CopyArtifactCategorys(acs, org.Id), name, mapKey);
                             }
