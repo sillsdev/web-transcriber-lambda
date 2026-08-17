@@ -1,4 +1,4 @@
-﻿using JsonApiDotNetCore.Configuration;
+using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Resources.Annotations;
 using JsonApiDotNetCore.Serialization.Objects;
@@ -3544,27 +3544,11 @@ namespace SIL.Transcriber.Services
                         m.OfflineSourceMediaId = m.SourceMediaId.ToString();
                         m.SourceMediaId = null;
                     }
-                    if (string.IsNullOrEmpty(m.OriginalFile) && !string.IsNullOrEmpty(m.AudioUrl)) //OneStory scrape looked like this
-                    {
-                        // Extract filename from AudioUrl
-                        // Handle both cases: "media/filename.mp3" and "https://...../filename.mp3?params"
-                        string audioUrl = m.AudioUrl;
-
-                        // First, remove query string parameters if present
-                        int queryIndex = audioUrl.IndexOf('?');
-                        if (queryIndex > 0)
-                        {
-                            audioUrl = audioUrl[..queryIndex];
-                        }
-
-                        // Now extract the filename from the path
-                        int lastSlashIndex = audioUrl.LastIndexOf('/');
-                        if (lastSlashIndex >= 0 && lastSlashIndex < audioUrl.Length - 1)
-                        {
-                            m.OriginalFile = audioUrl[(lastSlashIndex + 1)..];
-                        }
-                    }
-                    string? originalS3File = m.S3File??"";
+                    m.OriginalFile = FileName.S3ObjectName(
+                        string.IsNullOrEmpty(m.OriginalFile) ? m.AudioUrl : m.OriginalFile);
+                    string? originalS3File = m.S3File ?? "";
+                    if (originalS3File.Contains("://") || originalS3File.Contains('?'))
+                        originalS3File = FileName.S3ObjectName(originalS3File);
                     int oldPlan = m.PlanId;
                     m.PlanId = plan.Id;
                     //if it's not biblebrain or aquifer - make a copy
@@ -3573,21 +3557,29 @@ namespace SIL.Transcriber.Services
                     bool copyIt = !centralCopy;
 
                     //if we have a file we might not have the biblebrain or aquifer file
-                    if (archive != null)
+                    try
                     {
-                        if (centralCopy)
-                            copyIt = !await _S3Service.FileExistsAsync(m.S3File ?? "junk", mediaService.DirectoryName(m));
-                        else
-                            m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
-                        if (copyIt)
+                        if (archive != null)
                         {
-                            await CopyMediaFile(originalS3File, m, archive);
+                            if (centralCopy)
+                                copyIt = !await _S3Service.FileExistsAsync(m.S3File ?? "junk", mediaService.DirectoryName(m));
+                            else
+                                m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
+                            if (copyIt)
+                            {
+                                await CopyMediaFile(originalS3File, m, archive);
+                            }
+                        }
+                        else if (copyIt)
+                        {
+                            m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
+                            await CopyMediafile(originalS3File, oldPlan, m);
                         }
                     }
-                    else if (copyIt)
+                    catch (Exception ex)
                     {
-                        m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
-                        await CopyMediafile(originalS3File, oldPlan, m);
+                        // one bad S3 object must not abort the whole copy; row is still saved so resume can skip it
+                        Logger.LogError(ex, "Copy mediafile {id} {file}", id, originalS3File);
                     }
 
                     EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(m);
@@ -4028,7 +4020,7 @@ namespace SIL.Transcriber.Services
                                         //TextQuality = m.TextQuality,
                                         Transcription = m.Transcription,
                                         PlanId = m.PlanId, //don't map this here - we need to know the old one to find the original file
-                                        OriginalFile = m.OriginalFile ?? m.S3File,
+                                        OriginalFile = FileName.S3ObjectName(m.OriginalFile ?? m.S3File ?? m.AudioUrl),
                                         Filesize = m.Filesize,
                                         Position = 0,
                                         Segments = m.Segments,

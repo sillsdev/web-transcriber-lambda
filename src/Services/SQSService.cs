@@ -156,13 +156,36 @@ namespace SIL.Transcriber.Services
         {
             try
             {
+                // Allow the caller to provide either a full queue URL, a queue name, or an ARN.
+                // Resolve to a full QueueUrl when needed so the AmazonSQS client always gets a valid URI.
+                string finalQueueUrl = url ?? string.Empty;
+                if (!finalQueueUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    // If an ARN was provided (arn:aws:sqs:region:acct:queue-name) or a path-like value,
+                    // extract the queue name (the last segment) and resolve the URL from SQS.
+                    string queueName = finalQueueUrl;
+                    if (queueName.StartsWith("arn:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string[] parts = queueName.Split(':');
+                        if (parts.Length > 0) queueName = parts[parts.Length - 1];
+                    }
+                    if (queueName.Contains('/'))
+                    {
+                        string[] segs = queueName.Split('/');
+                        queueName = segs[segs.Length - 1];
+                    }
+
+                    var getQueueUrlResp = _client.GetQueueUrlAsync(new GetQueueUrlRequest { QueueName = queueName }).Result;
+                    finalQueueUrl = getQueueUrlResp.QueueUrl;
+                }
+
                 SendMessageRequest sendMessageRequest = new ()
                 {
-                    QueueUrl = url,
+                    QueueUrl = finalQueueUrl,
                     MessageBody = body,
                     MessageGroupId = groupId,
                 };
-                if (url.EndsWith("fifo"))
+                if (finalQueueUrl.EndsWith("fifo", StringComparison.OrdinalIgnoreCase))
                     sendMessageRequest.MessageDeduplicationId = string.Concat(deDup ?? "", Guid.NewGuid().ToString());
 
                 Logger.LogCritical("***** body {m} groupId {g} deDup {d}", sendMessageRequest.MessageBody, sendMessageRequest.MessageGroupId, sendMessageRequest.MessageDeduplicationId);

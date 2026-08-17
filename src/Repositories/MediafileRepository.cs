@@ -445,42 +445,33 @@ namespace SIL.Transcriber.Repositories
             if (sendResult == "error")
                 throw new Exception("Failed to enqueue publish message");
         }
-        public async Task<Mediafile?> Publish(Mediafile m, string publishTo, Bible? bible = null, Plan? plan = null, Sharedresource? sr = null)
+        public async Task<Mediafile> Publish(Mediafile m, string publishTo, Bible? bible = null, Plan? plan = null, Sharedresource? sr = null)
         {
             if (publishTo == "{}")
                 return m;
-            try
-            {
-                // Performance logging to find bottlenecks
 
-                //string fp = HttpContext?.GetFP() ?? "";
-                Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
-                sr ??= passage != null ? GetSharedResource(passage) : null;
-                plan ??= PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
-                bible ??= PlanRepository.Bible(plan) ?? throw new Exception("no bible");
+            Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
+            sr ??= passage != null ? GetSharedResource(passage) : null;
+            plan ??= PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+            bible ??= PlanRepository.Bible(plan) ?? throw new Exception("no bible");
 
-                QueuePublish(m, publishTo, passage, bible, sr, plan);
+            QueuePublish(m, publishTo, passage, bible, sr, plan);
+            m.ReadyToShare = true;
+            m.PublishTo = publishTo;
+            m.DateUpdated = DateTime.UtcNow;
+            // Persist minimal state quickly
+            await dbContext.Mediafiles
+                .Where(x => x.Id == m.Id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.ReadyToShare, m.ReadyToShare)
+                    .SetProperty(x => x.PublishTo, m.PublishTo)
+                    .SetProperty(m => m.DateUpdated, m.DateUpdated)
+                    .SetProperty(m => m.LastModifiedOrigin, "publish")
+                );
 
-                // Persist minimal state quickly
-                await dbContext.Mediafiles
-                    .Where(x => x.Id == m.Id)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(x => x.ReadyToShare, true)
-                        .SetProperty(x => x.PublishTo, publishTo)
-                        .SetProperty(m => m.DateUpdated, DateTime.UtcNow)
-                        .SetProperty(m => m.LastModifiedOrigin, "publish")
-                    );
 
-                m.ReadyToShare = true;
-                m.PublishTo = publishTo;
-                //Logger.LogInformation("Publish {MediafileId}: finished main work - ReadyToShare={Ready} PublishTo={PublishTo}", m.Id, m.ReadyToShare, m.PublishTo);
-                return m;
-            }
-            catch (Exception err)
-            {
-                Logger.LogError(err, "Publish {MediafileId}: error", m?.Id ?? 0);
-                return null;
-            }
+            //Logger.LogInformation("Publish {MediafileId}: finished main work - ReadyToShare={Ready} PublishTo={PublishTo}", m.Id, m.ReadyToShare, m.PublishTo);
+            return m;
         }
         public async Task<Mediafile?> PublishTitle(int id, Bible? bible = null, Sharedresource? sr = null)
         {
@@ -499,8 +490,9 @@ namespace SIL.Transcriber.Repositories
             }
             catch (Exception err)
             {
+                // Do not swallow exceptions here; rethrow so callers (controllers) can observe the real error
                 Console.WriteLine(err);
-                return null;
+                throw;
             }
 
         }

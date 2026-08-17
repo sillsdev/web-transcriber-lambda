@@ -1,9 +1,10 @@
-﻿using Amazon.S3;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services.Contracts;
+using SIL.Transcriber.Utility;
 using System.Net;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
@@ -233,30 +234,38 @@ namespace SIL.Transcriber.Services
         public async Task<bool> FileExistsAsync(string fileName, string folder = "",
             string bucket = "")
         {
-            fileName = ProperFolder(folder) + fileName;
-            ListObjectsResponse response = await _client.ListObjectsAsync(
-                bucket == "" ? USERFILES_BUCKET : bucket,
-                fileName
-            );
-            //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
-            if (response.HttpStatusCode == HttpStatusCode.OK)
+            try
             {
-                for (int o = 0; o < response.S3Objects.Count; o++)
+                fileName = ProperFolder(folder) + fileName;
+                ListObjectsResponse response = await _client.ListObjectsAsync(
+                    bucket == "" ? USERFILES_BUCKET : bucket,
+                    fileName
+                );
+                //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
+                if (response.HttpStatusCode == HttpStatusCode.OK)
                 {
-                    if (response.S3Objects[o].Key == fileName)
-                        return true;
+                    for (int o = 0; o < response.S3Objects.Count; o++)
+                    {
+                        if (response.S3Objects[o].Key == fileName)
+                            return true;
+                    }
                 }
-            }
-            else
-            {
-                Console.WriteLine("FileExistsAsync error:" + response.HttpStatusCode.ToString());
+                else
+                {
+                    Console.WriteLine("FileExistsAsync error:" + response.HttpStatusCode.ToString());
+                    return false;
+                }
                 return false;
             }
-            return false;
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, "FileExistsAsync {file}", fileName);
+                return false;
+            }
         }
         public async Task<string> GetFilename(string folder, string filename, bool overwrite = false, string suffix = "")
         {
-            filename = filename.Split('?')[0];
+            filename = FileName.S3ObjectName(filename);
             string ext = Path.GetExtension(filename)??"";
             string newfilename = Path.GetFileNameWithoutExtension(filename) +suffix + ext;
             return !overwrite && await FileExistsAsync(newfilename, folder)
@@ -754,20 +763,27 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                //save it as the newName
-                S3Response s3response = ReadObjectDataAsync(fileName, folder).Result;
-                if (s3response.FileStream == null)
+                CopyObjectRequest copyRequest = new()
                 {
-                    return s3response;
+                    SourceBucket = USERFILES_BUCKET,
+                    SourceKey = ProperFolder(folder) + fileName,
+                    DestinationBucket = USERFILES_BUCKET,
+                    DestinationKey = ProperFolder(newFolder) + newFileName,
+                };
+                try
+                {
+                    CopyObjectResponse response = await _client.CopyObjectAsync(copyRequest);
+                    return S3Response(newFileName, response.HttpStatusCode);
                 }
-
-                s3response = await UploadFileAsync(
-                    s3response.FileStream,
-                    true,
-                    newFileName,
-                    newFolder
-                );
-                return S3Response(newFileName, s3response.Status);
+                catch (AmazonS3Exception e) when (
+                    string.Equals(e.ErrorCode, "RequestHeaderSectionTooLarge", StringComparison.OrdinalIgnoreCase)
+                    || (e.Message?.Contains("header section", StringComparison.OrdinalIgnoreCase) ?? false))
+                {
+                    // ponytail: S3 8KB header cap; REPLACE drops source user-metadata so the copy request fits
+                    copyRequest.MetadataDirective = S3MetadataDirective.REPLACE;
+                    CopyObjectResponse response = await _client.CopyObjectAsync(copyRequest);
+                    return S3Response(newFileName, response.HttpStatusCode);
+                }
             }
             catch (AmazonS3Exception e)
             {
