@@ -14,7 +14,6 @@ using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Utility;
-using System.Diagnostics;
 
 namespace SIL.Transcriber.Services
 {
@@ -183,10 +182,7 @@ namespace SIL.Transcriber.Services
 
                     if (batchSections.Count > 0)
                     {
-                        Stopwatch swSections = Stopwatch.StartNew();
                         await MyRepository.BulkUpdateSections(batchSections);
-                        swSections.Stop();
-                        Logger.LogInformation("SPX BulkUpdateSections batch starting at {start} updated {count} sections in {ms}ms", si, batchSections.Count, swSections.ElapsedMilliseconds);
                         for (int j = 0; j < batchItems.Count; j++)
                         {
                             batchItems[j][0]["id"] = batchSections[j].Id;
@@ -234,33 +230,40 @@ namespace SIL.Transcriber.Services
                 }
                 async Task ProcessPassageBatch()
                 {
-
-                    if (updpassages.Count > 0)
+                    // Temporarily disable AutoDetectChanges to speed up bulk operations
+                    bool oldAutoDetect = dbContext.ChangeTracker.AutoDetectChangesEnabled;
+                    dbContext.ChangeTracker.AutoDetectChangesEnabled = false;
+                    try
                     {
-                        Stopwatch swPassages = Stopwatch.StartNew();
-                        _ = MyRepository.BulkUpdatePassages(updpassages);
-                        swPassages.Stop();
-                        Logger.LogInformation("SPX BulkUpdatePassages updated {count} passages in {ms}ms", updpassages.Count, swPassages.ElapsedMilliseconds);
-                        int ix = 0;
-                        foreach (JArray item in updpass)
+                        if (updpassages.Count > 0)
                         {
-                            item[item.Count - 1]["id"] = updpassages[ix].Id;
-                            sectionIdsToUpdate.Add(updpassages[ix].SectionId);
-                            ix++;
+                            _ = MyRepository.BulkUpdatePassages(updpassages);
+                            int ix = 0;
+                            foreach (JArray item in updpass)
+                            {
+                                item[item.Count - 1]["id"] = updpassages[ix].Id;
+                                sectionIdsToUpdate.Add(updpassages[ix].SectionId);
+                                ix++;
+                            }
+                            updpassages = [];
+                            updpass = [];
                         }
-                        updpassages = [];
-                        updpass = [];
-                    }
 
-                    if (delPassageIds.Count > 0)
+                        if (delPassageIds.Count > 0)
+                        {
+                            // delete in chunks to avoid huge SQL IN lists and reduce transaction time
+                            const int CHUNK = 500;
+                            for (int off = 0; off < delPassageIds.Count; off += CHUNK)
+                            {
+                                List<int> chunk = delPassageIds.Skip(off).Take(CHUNK).ToList();
+                                _ = await MyRepository.BulkDeletePassagesByIds(chunk);
+                            }
+                            delPassageIds = [];
+                        }
+                    }
+                    finally
                     {
-                        Stopwatch swDel = Stopwatch.StartNew();
-                        _ = await MyRepository.BulkDeletePassagesByIds(delPassageIds);
-                        swDel.Stop();
-                        Logger.LogInformation("SPX BulkDeletePassagesByIds removed {count} passages in {ms}ms", delPassageIds.Count, swDel.ElapsedMilliseconds);
-                        //skip it
-                        //foreach (int id in delPassageIds) sectionIdsToUpdate.Add(p.SectionId);
-                        delPassageIds = [];
+                        dbContext.ChangeTracker.AutoDetectChangesEnabled = oldAutoDetect;
                     }
                 }
                 async Task UpdateModifiedPassageSections()
@@ -275,7 +278,6 @@ namespace SIL.Transcriber.Services
                     // update each section's modified state once in a single DB call
                     if (sectionIdsToUpdate.Count > 0)
                     {
-                        Stopwatch swSectUpd = Stopwatch.StartNew();
                         string origin = DbContextExtentions.GetFingerprint(HttpContext);
                         await dbContext.Sections
                             .Where(s => sectionIdsToUpdate.Contains(s.Id))
@@ -283,8 +285,6 @@ namespace SIL.Transcriber.Services
                                 .SetProperty(x => x.DateUpdated, DateTime.UtcNow)
                                 .SetProperty(x => x.LastModifiedOrigin, origin)
                             );
-                        swSectUpd.Stop();
-                        Logger.LogInformation("SPX Updated {count} sections modified state in {ms}ms", sectionIdsToUpdate.Count, swSectUpd.ElapsedMilliseconds);
                     }
                 }
 
@@ -329,34 +329,87 @@ namespace SIL.Transcriber.Services
                 if (await BailIfNeeded())
                     return entity;
 
-                //do these 1 at a time
                 if (delsecItems.Count > 0)
                 {
-                    Logger.LogInformation("SPX About to delete {count} sections one-at-a-time", delsecItems.Count);
-                    Stopwatch swTotalDel = Stopwatch.StartNew();
-                    for (int si = 0; si < delsecItems.Count; si++)
+                    int processed = 0;
+                    const int archiveBatchSize = 10; // process archived updates in chunks of 10
+                    for (int si = 0; si < delsecItems.Count; si += archiveBatchSize)
                     {
-                        int? id = TokToInt(delsecItems[si][0]?["id"]);
-                        if (!id.HasValue)
+                        List<JArray> batchItems = delsecItems.Skip(si).Take(archiveBatchSize).ToList();
+
+                        // mark items with no id as complete immediately
+                        foreach (JArray bi in batchItems)
                         {
-                            delsecItems[si][0]["complete"] = true;
+                            int? nid = TokToInt(bi[0]?["id"]);
+                            if (!nid.HasValue)
+                            {
+                                bi[0]["complete"] = true;
+                                processed++;
+                            }
+                        }
+
+                        List<int> ids = batchItems
+                            .Select(item => TokToInt(item[0]?["id"]))
+                            .Where(id => id.HasValue)
+                            .Select(id => id!.Value)
+                            .ToList();
+
+                        if (ids.Count == 0)
+                        {
+                            // nothing to do for this batch
+                            if (await BailIfNeeded())
+                            {
+                                return entity;
+                            }
                             continue;
                         }
-                        int deleted = await dbContext.Sections
-                            .Where(s => s.Id == id.Value)
-                            .ExecuteDeleteAsync();
-                        delsecItems[si][0]["complete"] = true;
 
-                        // check bail after each 
+                        try
+                        {
+                            int updated = await dbContext.Sections
+                                .Where(s => ids.Contains(s.Id))
+                                .ExecuteUpdateAsync(s => s
+                                    .SetProperty(x => x.Archived, true)
+                                    .SetProperty(x => x.DateUpdated, DateTime.UtcNow)
+                                    .SetProperty(x => x.LastModifiedOrigin, "archive")
+                                );
+
+                            // mark batch items complete
+                            foreach (JArray bi in batchItems)
+                            {
+                                int? bid = TokToInt(bi[0]?["id"]);
+                                if (bid.HasValue)
+                                {
+                                    bi[0]["complete"] = true;
+                                    processed++;
+                                }
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            // If this is a Postgres lock/timeout error, log and continue so other sections can be processed.
+                            string exType = ex.GetType().FullName ?? string.Empty;
+                            if (exType == "Npgsql.PostgresException" || ex.Message?.IndexOf("lock", StringComparison.OrdinalIgnoreCase) >= 0 || ex.Message?.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                // leave items incomplete so they will be retried later
+                                continue;
+                            }
+                            else
+                            {
+                                // unexpected error - log and rethrow to abort processing
+                                Logger.LogError(ex, "SPX Archiving section batch starting at {si} failed unexpectedly", si);
+                                throw;
+                            }
+                        }
+
+                        // check bail after each batch
                         if (await BailIfNeeded())
                         {
-                            swTotalDel.Stop();
-                            Logger.LogInformation("SPX Stopped deleting sections early due to bail after processing {processed} of {total} in {ms}ms", si + 1, delsecItems.Count, swTotalDel.ElapsedMilliseconds);
                             return entity;
                         }
                     }
-                    swTotalDel.Stop();
-                    Logger.LogInformation("SPX Completed deleting {count} sections one-at-a-time in {ms}ms", delsecItems.Count, swTotalDel.ElapsedMilliseconds);
+
                 }
                 _ = MyRepository.UpdatePlanModified(entity.PlanId);
                 transaction.Commit();
