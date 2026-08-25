@@ -4282,7 +4282,7 @@ namespace SIL.Transcriber.Services
             //These tables are processed before mediafiles so update their titles now
             //fix the title media for artifact categories
             List<Artifactcategory> cats = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.ArtifactCategorys && c.Newprojid == mapKey)
-                                            .Join(dbContext.Artifactcategorys, cp => cp.Newid, ac => ac.Id, (cp, ac) => ac).Where(ac => ac.OfflineTitleMediafileId != null && ac.TitleMediafileId == null)];
+                                           .Join(dbContext.Artifactcategorys, cp => cp.Newid, ac => ac.Id, (cp, ac) => ac).Where(ac => ac.OfflineTitleMediafileId != null)];
             cats.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
@@ -4290,7 +4290,7 @@ namespace SIL.Transcriber.Services
             if (DateTime.Now > dtBail)
                 return false;
             List<Section> sections = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Sections && c.Newprojid == mapKey)
-                                        .Join(dbContext.Sections, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null && s.TitleMediafileId == null)];
+                                       .Join(dbContext.Sections, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null)];
             sections.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
@@ -4298,7 +4298,7 @@ namespace SIL.Transcriber.Services
             if (DateTime.Now > dtBail)
                 return false;
             List<Sharedresource> resources = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.SharedResources && c.Newprojid == mapKey)
-                                        .Join(dbContext.Sharedresources, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null && s.TitleMediafileId == null)];
+                                       .Join(dbContext.Sharedresources, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null)];
             resources.ForEach(n => {
                 n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
@@ -4309,7 +4309,7 @@ namespace SIL.Transcriber.Services
                 return false;
 
             List<Passage> psgs =  [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Passages && c.Newprojid == mapKey)
-                                        .Join(dbContext.Passages, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSharedResourceId != null && m.SharedResourceId == null)];
+                                        .Join(dbContext.Passages, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSharedResourceId != null)];
             psgs.ForEach(p => p.SharedResourceId = GetMappedId(Tables.SharedResources, mapKey, p.OfflineSharedResourceId));
             dbContext.Passages.UpdateRange(psgs);
             if (DateTime.Now > dtBail)
@@ -4318,7 +4318,7 @@ namespace SIL.Transcriber.Services
             //I may not need to do this because it's handled in UpdateOfflineIds...
             //internalization resources from general resource...
             List<Mediafile> mediafiles = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Mediafiles && c.Newprojid == mapKey)
-                                        .Join(dbContext.Mediafiles, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSourceMediaId != null && m.SourceMediaId == null)];
+                                        .Join(dbContext.Mediafiles, cp => cp.Newid, m => m.Id, (cp, m) => m).Where(m => m.OfflineSourceMediaId != null)];
             mediafiles.ForEach(m => m.SourceMediaId = GetMappedId(Tables.Mediafiles, mapKey, m.OfflineSourceMediaId));
 
             dbContext.Mediafiles.UpdateRange(mediafiles);
