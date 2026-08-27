@@ -18,5 +18,13 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "default-order")]
         public int DefaultOrder { get; set; }
 
+        public bool IsNote()
+        {
+            return Abbrev == "NOTE";
+        }
+        public bool IsChapterNumber()
+        {
+            return Abbrev == "CHNUM";
+        }
     }
 }

@@ -4336,8 +4336,8 @@ namespace SIL.Transcriber.Services
         {
             //can't wait for a new project id since we have to process 20 entries before then
             //use
-            //give myself 20 seconds to get as much as I can...
-            DateTime dtBail = DateTime.Now.AddSeconds(20);
+            //give myself 15 seconds to get as much as I can...
+            DateTime dtBail = DateTime.Now.AddSeconds(15);
             User currentuser = CurrentUser() ?? new User();
             string name = "";
             try

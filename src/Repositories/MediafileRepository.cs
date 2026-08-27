@@ -276,7 +276,7 @@ namespace SIL.Transcriber.Repositories
                         $"{title}c{startChap}{chapsep}{startVerse}-{endVerse}"
                     : $"{title}c{startChap}{chapsep}{startVerse}-c{endChap}{chapsep}{endVerse}";
             }
-            else if (p?.Passagetype?.Abbrev == "NOTE")
+            else if (p?.Passagetype?.IsNote() ?? false)
             {
                 Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId);
                 sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id && !sr.Archived);
@@ -284,7 +284,7 @@ namespace SIL.Transcriber.Repositories
                     ? $"{title}NOTE_{FileName.CleanFileName(sr?.Title ?? "")}"
                     : $"{title}{Path.ChangeExtension(m.OriginalFile, PUBLISHED_EXTENSION)}";
             }
-            else if (p?.Passagetype?.Abbrev == "CHNUM")
+            else if (p?.Passagetype?.IsChapterNumber() ?? false)
             {
                 title = $"{title}{FileName.CleanFileName(p.Reference ?? Path.ChangeExtension(m.OriginalFile, PUBLISHED_EXTENSION) ?? p.Id.ToString())}";
             }
@@ -339,9 +339,8 @@ namespace SIL.Transcriber.Repositories
             return sr;
         }
 
-        public Sharedresource? CreateSharedResource(Mediafile m, Passage p, Plan? plan = null)
+        public Sharedresource? CreateSharedResource(Mediafile m, Passage p, Plan plan)
         {
-            plan ??= PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
             Artifactcategory? ac = null;
             if (p.Passagetype == null && plan.Project.Projecttype.Name == "Scripture")
                 ac = dbContext.ArtifactcategoriesData.SingleOrDefault(ac => !ac.Archived && ac.OrganizationId == null && ac.Categoryname == "scripture");
@@ -445,15 +444,18 @@ namespace SIL.Transcriber.Repositories
             if (sendResult == "error")
                 throw new Exception("Failed to enqueue publish message");
         }
-        public async Task<Mediafile> Publish(Mediafile m, string publishTo, Bible? bible = null, Plan? plan = null, Sharedresource? sr = null)
+        public async Task<Mediafile> Publish(Mediafile m, string publishTo, Bible? bible = null, Sharedresource? sr = null)
         {
             if (publishTo == "{}")
                 return m;
-
+            HttpContext?.SetFP("publish");
             Passage? passage = dbContext.PassagesData.SingleOrDefault(p => p.Id == (m.PassageId ?? 0));
-            sr ??= passage != null ? GetSharedResource(passage) : null;
-            plan ??= PlanRepository.GetWithProject(m.PlanId) ?? throw new Exception("no plan");
+            Plan plan = PlanRepository.GetWithProject(m.Plan?.Id ?? m.PlanId) ?? throw new Exception("no plan");
             bible ??= PlanRepository.Bible(plan) ?? throw new Exception("no bible");
+            sr ??= passage != null ? GetSharedResource(passage) : null;
+            if (sr == null && passage != null &&
+                ((passage.Passagetype?.IsNote() ?? false) || (passage.Passagetype is null && PublishAsSharedResource(publishTo))))
+                sr = CreateSharedResource(m, passage, plan);
 
             QueuePublish(m, publishTo, passage, bible, sr, plan);
             m.ReadyToShare = true;
@@ -485,7 +487,7 @@ namespace SIL.Transcriber.Repositories
                 if (m == null)
                     return null;
                 HttpContext?.SetFP("publish");
-                m = await Publish(m, publishTo, bible, null, sr);
+                m = await Publish(m, publishTo, bible, sr);
                 return m;
             }
             catch (Exception err)
