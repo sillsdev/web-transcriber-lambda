@@ -86,11 +86,11 @@ namespace SIL.Transcriber.Services
             CancellationToken cancellationToken
         )
         {
-
             //orbit sometimes sends two in a row...see if we already know about this one
+            string fp = Repo.Fingerprint();
             TResource? x = resource.DateCreated == null ? null : Repo.Get().Where(t =>
                         t.DateCreated == resource.DateCreated
-                        && t.LastModifiedBy == resource.LastModifiedBy
+                        && t.LastModifiedOrigin == fp
                 )
                 .FirstOrDefault();
             return x ?? await base.CreateAsync(resource, cancellationToken);

@@ -114,6 +114,11 @@ namespace SIL.Transcriber.Repositories
             get { return CurrentUserRepository.GetCurrentUser(); }
         }
 
+        public string Fingerprint()
+        {
+            return dbContext.Fingerprint();
+        }
+
         #region MultipleData //orgdata, projdata
         protected string InitData(bool withBracket = true)
         {

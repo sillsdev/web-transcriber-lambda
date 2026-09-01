@@ -534,6 +534,12 @@ namespace SIL.Transcriber.Services
             );
             HttpResponseMessage response = await _registryClient.SendAsync(request);
             string responseJson = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.LogError("Paratext refresh failed: status={status} reason={reason} body={body}", response.StatusCode, response.ReasonPhrase, responseJson);
+                response.EnsureSuccessStatusCode();
+            }
+
             JObject responseObj = JObject.Parse(responseJson);
 
             //log it
@@ -541,8 +547,6 @@ namespace SIL.Transcriber.Services
             //TokenHistoryRepo.Create(new(userSecret.ParatextTokens.UserId, (string?)responseObj ["access_token"], (string?)responseObj ["refresh_token"] ?? "", requestObj.ToString(), response.ReasonPhrase + responseObj));
             if (responseObj?.Count > 0 && (responseObj["error_description"]?.ToString()?.Contains("refresh token") ?? false))
                 throw new SecurityException("401 RefreshTokenInvalid.  Expected on Dev and QA.  Login again with Paratext connection.");
-
-            _ = response.EnsureSuccessStatusCode();
 
             userSecret.ParatextTokens.AccessToken = (string?)responseObj?["access_token"] ?? "";
             userSecret.ParatextTokens.RefreshToken = (string?)responseObj?["refresh_token"] ?? "";
