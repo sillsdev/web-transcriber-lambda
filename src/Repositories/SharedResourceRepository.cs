@@ -40,8 +40,9 @@ public class SharedResourceRepository(
         return CurrentUser == null ? entities.Where(e => e.Id == -1) : entities;
     }
 
+#pragma warning disable IDE0060
     public IQueryable<Sharedresource> ProjectSharedResources(
-        IQueryable<Sharedresource> entities,
+    IQueryable<Sharedresource> entities,
         string projectid
     )
     {
@@ -49,6 +50,7 @@ public class SharedResourceRepository(
         //TODO get where (clusterid is null) + (clusterid is set and my org is in the cluster)
         return entities;
     }
+#pragma warning restore IDE0060
 
     public IQueryable<Sharedresource> GetMine()
     {

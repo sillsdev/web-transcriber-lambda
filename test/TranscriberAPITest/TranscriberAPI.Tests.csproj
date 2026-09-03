@@ -1,13 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Bogus" Version="34.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting.Server.Abstractions" Version="2.2.0" />
@@ -28,6 +31,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\TranscriberAPI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Acceptance\**\*.cs" />
+    <Compile Remove="Unit\**\*.cs" />
+    <Compile Remove="Utilities\**\*.cs" />
+    <Compile Remove="TestFixture.cs" />
+    <Compile Remove="TestScopedServiceProvider.cs" />
+    <Compile Remove="TestStartup.cs" />
+    <Compile Remove="WebHostCollection.cs" />
   </ItemGroup>
 
   <ItemGroup>

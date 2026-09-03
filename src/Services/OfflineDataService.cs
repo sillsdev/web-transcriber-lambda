@@ -3764,7 +3764,13 @@ namespace SIL.Transcriber.Services
             IQueryable<CopyProject> mappings = dbContext.Copyprojects.Where(cp => cp.Newprojid == mapKey && cp.Sourcetable == sourceTable);
             if (importedOnly)
                 mappings = mappings.Where(cp => cp.Newid > 0);
-            return [.. mappings.Select(cp => cp.Oldid).Where(id => !string.IsNullOrEmpty(id))!];
+            HashSet<string> result = [.. mappings.Select(cp => cp.Oldid).Where(id => !string.IsNullOrEmpty(id))!];
+            foreach (KeyValuePair<string, int> mapping in GetCachedMap(table, mapKey))
+            {
+                if (!string.IsNullOrEmpty(mapping.Key) && (!importedOnly || mapping.Value > 0))
+                    result.Add(mapping.Key);
+            }
+            return result;
         }
         public void RemoveCopyProject(string projId)
         {
@@ -3785,10 +3791,7 @@ namespace SIL.Transcriber.Services
             if (projId == "" || string.IsNullOrEmpty(oldId))
                 return null;
             IdMap map = GetCachedMap(table, projId);
-            if (map.TryGetValue(oldId, out int mappedId))
-                return mappedId;
-
-            return int.TryParse(oldId, out int id) ? id : null;
+            return map.TryGetValue(oldId, out int mappedId) ? mappedId : int.TryParse(oldId, out int id) ? id : null;
         }
         //DEPRECATED
         private async Task<Fileresponse> ProcessImportCopyProjectDeprecatedAsync(
@@ -4431,6 +4434,7 @@ namespace SIL.Transcriber.Services
             {
                 HttpContext?.SetFP("import");
 
+                Project? fileproject = ReadFileProject(archive);
                 Project? sourceproject = GetFileProject(archive); //don't pass in the mapKey here.  we don't want the org mapped yet.
 
                 string mapKey = myMapKey ?? $"{sourceproject?.OfflineId}{DateTime.Now.Ticks}";
@@ -4458,7 +4462,7 @@ namespace SIL.Transcriber.Services
                 string status = "";
                 int entryNum = start;
                 int sourceOrgId = sourceproject?.OrganizationId ?? 0;
-                string sourceProjectId = sourceproject?.Id.ToString() ?? "";
+                string sourceProjectId = fileproject?.Id.ToString() ?? "";
                 List<ResourceObject>? sourceOrgSchemes = null;
                 HashSet<string> sourceOrgSchemeIds = [];
                 HashSet<string> sourceProjectSectionIds = [];
@@ -4656,15 +4660,17 @@ namespace SIL.Transcriber.Services
                             while (pmap.Count < lst.Count && DateTime.Now < dtBail)
                             {
                                 List<Passage> plst = [];
+                                IdMap skippedPassageIds = [];
                                 IEnumerable<ResourceObject> tmpchunk = lst.Skip(pmap.Count).Take(DataChunkSize);
                                 foreach (ResourceObject ro in tmpchunk)
                                 {
                                     Passage psg = ResourceObjectToResource(ro, new Passage(), mapKey);
                                     if (psg.Section != null) //supporting passages won't be imported
                                         plst.Add(psg);
-                                    else
-                                        _ = pmap.TryAdd(psg.OfflineId, -1);
+                                    else if (pmap.TryAdd(psg.OfflineId, -1))
+                                        skippedPassageIds.TryAdd(psg.OfflineId, -1);
                                 }
+                                SaveMap(skippedPassageIds, name, mapKey);
                                 IdMap newIds = CopyPassages(plst, mapKey, dtBail);
                                 SaveMap(newIds, name, mapKey);
                                 pmap = MergeIdMaps(pmap, newIds);
@@ -4778,7 +4784,6 @@ namespace SIL.Transcriber.Services
                             List<ResourceObject> sourceProjectSharedResources = [.. lst.Where(ro =>
                                 sourceProjectPassageIds.Contains(GetRelationshipOrAttributeId<Sharedresource>(ro, "passage", "passage-id", "passageId"))
                             )];
-                            sourceProjectSharedResourceIds = [.. sourceProjectSharedResources.Select(ro => ro.Id).Where(id => !string.IsNullOrEmpty(id))!];
                             List<Sharedresource> shrlst = [];
                             IdMap shrmap = GetMap(name, mapKey);
                             int sharedResourceTotal = sourceProjectSharedResources.Count;
@@ -4814,6 +4819,7 @@ namespace SIL.Transcriber.Services
                                 shrmap = MergeIdMaps(shrmap, newIds);
                                 pendingSharedResources = [.. pendingSharedResources.Skip(tmpchunk.Count)];
                             }
+                            sourceProjectSharedResourceIds = GetSourceIdsFromMap(mapKey, Tables.SharedResources, true);
                             if (pendingSharedResources.Count > 0)
                             {
                                 status = $"{name} {sharedResourceTotal - pendingSharedResources.Count}/{sharedResourceTotal}";
@@ -4823,7 +4829,7 @@ namespace SIL.Transcriber.Services
 
                         case Tables.SharedResourceReferences:
                             if (sourceProjectSharedResourceIds.Count == 0)
-                                sourceProjectSharedResourceIds = GetSourceIdsFromMap(mapKey, Tables.SharedResources);
+                                sourceProjectSharedResourceIds = GetSourceIdsFromMap(mapKey, Tables.SharedResources, true);
                             List<Sharedresourcereference> shrrlst = [.. lst
                                 .Where(ro => sourceProjectSharedResourceIds.Contains(GetRelationshipOrAttributeId<Sharedresourcereference>(ro, "shared-resource", "shared-resource-id", "sharedResourceId")))
                                 .Select(ro => ResourceObjectToResource(ro, new Sharedresourcereference(), mapKey))
