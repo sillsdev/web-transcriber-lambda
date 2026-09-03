@@ -30,8 +30,10 @@ public class OfflineDataServiceTests
     private const string SourceSupportingPassageId = "1041";
     private const string SourceSupportingSharedResourceId = "1050";
     private const string SourceSupportingReferenceId = "1060";
+    private const string SourceSupportingCategoryId = "1070";
     private const int BatchSourcePassageBaseId = 7000;
     private const int BatchSharedResourceBaseId = 9000;
+    private const int BatchSectionBaseId = 11000;
 
     [Fact]
     public async Task ProcessImportCopyFileAsync_PreservesSupportingNotesAcrossResumeWithExtraOrganizations()
@@ -73,7 +75,7 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope fullAssertScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = fullAssertScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.DoesNotContain(dbContext.Copyprojects, cp => cp.Newprojid == fullMapKey && cp.Sourcetable == Tables.Organizations && cp.Oldid == ExtraOrganizationId);
+            Assert.Contains(dbContext.Copyprojects, cp => cp.Newprojid == fullMapKey && cp.Sourcetable == Tables.Organizations && cp.Oldid == ExtraOrganizationId && cp.Newid == fullImportTargetOrgId);
             fullImportState = LoadImportedSupportingNoteState(dbContext, fullMapKey);
         }
 
@@ -106,6 +108,7 @@ public class OfflineDataServiceTests
             Assert.Equal(fullImportState.ImportedPassageCount, resumedState.ImportedPassageCount);
             Assert.Equal(fullImportState.SharedResourceCount, resumedState.SharedResourceCount);
             Assert.Equal(fullImportState.SharedResourceReferenceCount, resumedState.SharedResourceReferenceCount);
+            Assert.Equal(fullImportState.SupportingCategoryName, resumedState.SupportingCategoryName);
         }
     }
 
@@ -160,6 +163,60 @@ public class OfflineDataServiceTests
             Assert.Equal(sharedResourceCount, sharedResourceMaps.Count);
             Assert.Equal(sharedResourceCount, sharedResourceMaps.Select(cp => cp.Oldid).Distinct().Count());
             Assert.DoesNotContain(sharedResourceMaps, cp => cp.Newid <= 0);
+        }
+    }
+
+    [Fact]
+    public async Task ProcessImportCopyFileAsync_SectionsBatchingOnResume_DoesNotSkipPendingSections()
+    {
+        string databaseName = $"offline-import-sections-{Guid.NewGuid():N}";
+        await using ServiceProvider provider = BuildServiceProvider(databaseName);
+
+        int targetOrgId;
+        await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.EnsureCreatedAsync();
+            SeedLookupData(dbContext);
+            SeedCurrentUser(dbContext);
+            targetOrgId = SeedTargetOrganization(dbContext, "Import Target Sections");
+            await dbContext.SaveChangesAsync();
+        }
+
+        const int sectionCount = 130;
+        byte[] archiveBytes;
+        int sectionsStartIndex;
+        await using (AsyncServiceScope archiveScope = provider.CreateAsyncScope())
+        {
+            archiveBytes = CreateArchiveWithSections(archiveScope.ServiceProvider, sectionCount);
+            sectionsStartIndex = GetDataEntryIndex(archiveBytes, "F_sections.json");
+        }
+
+        const string mapKey = "sections-resume-map";
+        await using (AsyncServiceScope resumeSeedScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = resumeSeedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            SeedResumedImportStateForSectionsBatch(dbContext, targetOrgId, mapKey);
+            await dbContext.SaveChangesAsync();
+        }
+
+        await using (AsyncServiceScope importScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)importScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            using ZipArchive archive = OpenArchive(archiveBytes);
+            Fileresponse response = await service.ProcessImportCopyFileAsync(archive, targetOrgId, "resume-sections.ptf", sectionsStartIndex, mapKey);
+            Assert.True(response.Status == HttpStatusCode.OK, response.Message);
+        }
+
+        await using (AsyncServiceScope assertScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            List<CopyProject> sectionMaps = [.. dbContext.Copyprojects
+                .Where(cp => cp.Newprojid == mapKey && cp.Sourcetable == Tables.Sections)];
+
+            Assert.Equal(sectionCount, sectionMaps.Count);
+            Assert.Equal(sectionCount, sectionMaps.Select(cp => cp.Oldid).Distinct().Count());
+            Assert.DoesNotContain(sectionMaps, cp => cp.Newid <= 0);
         }
     }
 
@@ -528,6 +585,62 @@ public class OfflineDataServiceTests
         return stream.ToArray();
     }
 
+    private static byte[] CreateArchiveWithSections(IServiceProvider serviceProvider, int sectionCount)
+    {
+        Organization sourceOrganization = new()
+        {
+            Id = int.Parse(SourceOrganizationId),
+            Name = "Archive Source Organization",
+            Slug = "archive-source-organization"
+        };
+        Project sourceProject = new()
+        {
+            Id = int.Parse(SourceProjectId),
+            Name = "Archive Source Project",
+            Organization = sourceOrganization,
+            OrganizationId = sourceOrganization.Id,
+            ProjecttypeId = 1,
+            Projecttype = new Projecttype { Id = 1, Name = "Story" }
+        };
+        Plan sourcePlan = new()
+        {
+            Id = int.Parse(SourcePlanId),
+            Name = "Archive Source Plan",
+            Project = sourceProject,
+            ProjectId = sourceProject.Id,
+            PlantypeId = 1,
+            Plantype = new Plantype { Id = 1, Name = "Standard" }
+        };
+
+        List<Section> sections = [];
+        for (int i = 0; i < sectionCount; i++)
+        {
+            sections.Add(new Section
+            {
+                Id = BatchSectionBaseId + i,
+                Name = $"Batch Section {i}",
+                Plan = sourcePlan,
+                PlanId = sourcePlan.Id,
+                Sequencenum = i + 1,
+                Level = 1,
+                Published = true,
+                State = "assigned",
+                PublishTo = "{}"
+            });
+        }
+
+        using MemoryStream stream = new();
+        using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
+        {
+            WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
+            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization }, serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
+            AddJsonEntry(archive, "data/F_sections.json", sections, serviceProvider);
+        }
+        return stream.ToArray();
+    }
+
     private static byte[] CreateArchive(IServiceProvider serviceProvider)
     {
         Organization sourceOrganization = new()
@@ -572,13 +685,24 @@ public class OfflineDataServiceTests
             State = "assigned",
             PublishTo = "{}"
         };
+        Artifactcategory supportingCategory = new()
+        {
+            Id = int.Parse(SourceSupportingCategoryId),
+            Categoryname = "Supporting Note Category",
+            Note = true,
+            Resource = true,
+            Discussion = false,
+            OrganizationId = int.Parse(ExtraOrganizationId)
+        };
         Sharedresource supportingSharedResource = new()
         {
             Id = int.Parse(SourceSupportingSharedResourceId),
             Title = "Supporting Note",
             Description = "Supporting note owned by a skipped passage",
             Note = true,
-            PassageId = int.Parse(SourceSupportingPassageId)
+            PassageId = int.Parse(SourceSupportingPassageId),
+            ArtifactCategoryId = supportingCategory.Id,
+            ArtifactCategory = supportingCategory
         };
         Passage sourcePrimaryPassage = new()
         {
@@ -622,6 +746,7 @@ public class OfflineDataServiceTests
         {
             WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
             AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization, extraOrganization }, serviceProvider);
+            AddJsonEntry(archive, "data/C_artifactcategorys.json", new[] { supportingCategory }, serviceProvider);
             AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
             AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
             AddJsonEntry(archive, "data/F_sections.json", new[] { sourceSection }, serviceProvider);
@@ -686,13 +811,26 @@ public class OfflineDataServiceTests
         dbContext.Passages.Add(passage);
         dbContext.SaveChanges();
 
+        Artifactcategory supportingCategory = new()
+        {
+            Categoryname = "Supporting Note Category",
+            Note = true,
+            Resource = true,
+            Discussion = false,
+            OrganizationId = targetOrganizationId
+        };
+        dbContext.Artifactcategorys.Add(supportingCategory);
+        dbContext.SaveChanges();
+
         dbContext.Copyprojects.AddRange(
             new CopyProject { Sourcetable = Tables.Organizations, Newprojid = mapKey, Oldid = SourceOrganizationId, Newid = targetOrganizationId },
+            new CopyProject { Sourcetable = Tables.Organizations, Newprojid = mapKey, Oldid = ExtraOrganizationId, Newid = targetOrganizationId },
             new CopyProject { Sourcetable = Tables.Projects, Newprojid = mapKey, Oldid = SourceProjectId, Newid = project.Id },
             new CopyProject { Sourcetable = Tables.Plans, Newprojid = mapKey, Oldid = SourcePlanId, Newid = plan.Id },
             new CopyProject { Sourcetable = Tables.Sections, Newprojid = mapKey, Oldid = SourceSectionId, Newid = section.Id },
             new CopyProject { Sourcetable = Tables.Passages, Newprojid = mapKey, Oldid = SourcePrimaryPassageId, Newid = passage.Id },
-            new CopyProject { Sourcetable = Tables.Passages, Newprojid = mapKey, Oldid = SourceSupportingPassageId, Newid = -1 });
+            new CopyProject { Sourcetable = Tables.Passages, Newprojid = mapKey, Oldid = SourceSupportingPassageId, Newid = -1 },
+            new CopyProject { Sourcetable = Tables.ArtifactCategorys, Newprojid = mapKey, Oldid = SourceSupportingCategoryId, Newid = supportingCategory.Id });
     }
 
     private static void SeedResumedImportStateForBatch(AppDbContext dbContext, int targetOrganizationId, string mapKey, int sharedResourceCount)
@@ -771,6 +909,52 @@ public class OfflineDataServiceTests
         dbContext.Copyprojects.AddRange(maps);
     }
 
+    private static void SeedResumedImportStateForSectionsBatch(AppDbContext dbContext, int targetOrganizationId, string mapKey)
+    {
+        Project project = new()
+        {
+            Name = "Archive Source Project",
+            OrganizationId = targetOrganizationId,
+            ProjecttypeId = 1,
+            OwnerId = 1,
+            GroupId = dbContext.Groups.Single(group => group.OwnerId == targetOrganizationId && group.AllUsers).Id
+        };
+        dbContext.Projects.Add(project);
+        dbContext.SaveChanges();
+
+        Plan plan = new()
+        {
+            Name = "Archive Source Project",
+            ProjectId = project.Id,
+            PlantypeId = 1,
+            OwnerId = 1,
+            Flat = false,
+            SectionCount = 1
+        };
+        dbContext.Plans.Add(plan);
+        dbContext.SaveChanges();
+
+        Section section = new()
+        {
+            Name = "Pre-imported Section",
+            PlanId = plan.Id,
+            Sequencenum = 1,
+            Level = 1,
+            Published = true,
+            State = "assigned",
+            PublishTo = "{}",
+            OfflineId = BatchSectionBaseId.ToString()
+        };
+        dbContext.Sections.Add(section);
+        dbContext.SaveChanges();
+
+        dbContext.Copyprojects.AddRange(
+            new CopyProject { Sourcetable = Tables.Organizations, Newprojid = mapKey, Oldid = SourceOrganizationId, Newid = targetOrganizationId },
+            new CopyProject { Sourcetable = Tables.Projects, Newprojid = mapKey, Oldid = SourceProjectId, Newid = project.Id },
+            new CopyProject { Sourcetable = Tables.Plans, Newprojid = mapKey, Oldid = SourcePlanId, Newid = plan.Id },
+            new CopyProject { Sourcetable = Tables.Sections, Newprojid = mapKey, Oldid = BatchSectionBaseId.ToString(), Newid = section.Id });
+    }
+
     private static ImportedSupportingNoteState LoadImportedSupportingNoteState(AppDbContext dbContext, string mapKey)
     {
         int projectId = dbContext.Copyprojects.Single(cp => cp.Newprojid == mapKey && cp.Sourcetable == Tables.Projects && cp.Oldid == SourceProjectId).Newid;
@@ -788,6 +972,11 @@ public class OfflineDataServiceTests
         Assert.Equal(importedPassage.Id, supportingResource.PassageId);
         Assert.Null(importedPassage.SharedResourceId);
         Assert.Null(importedPassage.OfflineSharedResourceId);
+        Assert.Equal(projectId, dbContext.Plans.Where(p => p.Id == importedPassage.Section!.PlanId).Select(p => p.ProjectId).Single());
+        Assert.NotNull(supportingResource.ArtifactCategoryId);
+        Artifactcategory supportingCategory = dbContext.Artifactcategorys.Single(category => category.Id == supportingResource.ArtifactCategoryId!.Value);
+        Assert.Equal("Supporting Note Category", supportingCategory.Categoryname);
+        Assert.Equal(dbContext.Projects.Where(p => p.Id == projectId).Select(p => p.OrganizationId).Single(), supportingCategory.OrganizationId);
 
         return new ImportedSupportingNoteState(
             projectId,
@@ -795,6 +984,7 @@ public class OfflineDataServiceTests
             supportingReference.Book,
             supportingReference.Chapter,
             supportingReference.Verses ?? string.Empty,
+            supportingCategory.Categoryname ?? string.Empty,
             dbContext.Passages.Count(passage => passage.Section != null && passage.Section.Plan != null && passage.Section.Plan.ProjectId == projectId),
             dbContext.Sharedresources.Count(resource => resource.Passage != null && resource.Passage.Section != null && resource.Passage.Section.Plan != null && resource.Passage.Section.Plan.ProjectId == projectId),
             dbContext.Sharedresourcereferences.Count(reference => dbContext.Sharedresources.Any(resource => resource.Id == reference.SharedResourceId && resource.Passage != null && resource.Passage.Section != null && resource.Passage.Section.Plan != null && resource.Passage.Section.Plan.ProjectId == projectId)));
@@ -819,7 +1009,11 @@ public class OfflineDataServiceTests
     private static HashSet<string> GetEntryIds(byte[] archiveBytes, string entryName)
     {
         using ZipArchive archive = OpenArchive(archiveBytes);
-        ZipArchiveEntry entry = archive.Entries.First(e => e.Name == entryName);
+        ZipArchiveEntry? entry = archive.Entries.FirstOrDefault(e =>
+            string.Equals(e.Name, entryName, StringComparison.OrdinalIgnoreCase)
+            || e.FullName.EndsWith(entryName, StringComparison.OrdinalIgnoreCase));
+        if (entry == null)
+            return [];
         using StreamReader reader = new(entry.Open());
         JObject payload = JObject.Parse(reader.ReadToEnd());
         JToken? data = payload["data"];
@@ -862,6 +1056,7 @@ public class OfflineDataServiceTests
         string SupportingReferenceBook,
         int SupportingReferenceChapter,
         string SupportingReferenceVerses,
+        string SupportingCategoryName,
         int ImportedPassageCount,
         int SharedResourceCount,
         int SharedResourceReferenceCount);

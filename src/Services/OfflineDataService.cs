@@ -4525,6 +4525,13 @@ namespace SIL.Transcriber.Services
                             }
                             else
                                 SaveId(name, org.OfflineId, existingOrgId, mapKey);
+
+                            foreach (string sourceOrgOfflineId in lst.Select(ro => ro.Id ?? string.Empty).Where(id => !string.IsNullOrEmpty(id)).Distinct())
+                            {
+                                if (!GetMap(name, mapKey).ContainsKey(sourceOrgOfflineId))
+                                    SaveId(name, sourceOrgOfflineId, orgid, mapKey);
+                            }
+
                             //add all users to the org
                             AddUsersToOrg(orgid, mapKey);
                             foreach (string email in UsersToInvite)
@@ -4569,7 +4576,12 @@ namespace SIL.Transcriber.Services
                             if (orgid == 0)
                                 throw new Exception("No Org in ArtifactCategory");
                             foreach (ResourceObject ro in lst)
-                                ac.Add(ResourceObjectToResource(ro, new Artifactcategory(), mapKey));
+                            {
+                                Artifactcategory category = ResourceObjectToResource(ro, new Artifactcategory(), mapKey);
+                                if (category.OrganizationId != null)
+                                    category.OrganizationId = GetMappedId(Tables.Organizations, mapKey, category.OrganizationId.ToString()) ?? category.OrganizationId;
+                                ac.Add(category);
+                            }
                             SaveMap(CopyArtifactCategorys([.. ac.Where(s => s.OrganizationId == orgid || s.OrganizationId is null)], orgid), name, mapKey);
                             break;
 
@@ -4641,21 +4653,22 @@ namespace SIL.Transcriber.Services
                                 plan = dbContext.Plans.Find(id);
                             }
                             IdMap smap = GetMap(name, mapKey);
-                            int lstCount = lst.Count;
-                            lst = [.. lst.Where(ro => !smap.ContainsKey(ro.Id ?? ""))];
+                            int sectionTotal = lst.Count;
+                            List<ResourceObject> pendingSections = [.. lst.Where(ro => !smap.ContainsKey(ro.Id ?? ""))];
 
-                            while (smap.Count < lst.Count && DateTime.Now < dtBail)
+                            while (pendingSections.Count > 0 && DateTime.Now < dtBail)
                             {
-                                IEnumerable<ResourceObject> tmpchunk = lst.Skip(smap.Count).Take(DataChunkSize);
+                                List<ResourceObject> tmpchunk = [.. pendingSections.Take(DataChunkSize)];
                                 List<Section> slst = [.. tmpchunk
                                     .Select(ro => ResourceObjectToResource(ro, new Section(), mapKey))];
                                 IdMap newIds = CopySections(slst, plan?.Id ?? 0, dtBail);
                                 SaveMap(newIds, name, mapKey);
                                 smap = MergeIdMaps(smap, newIds);
+                                pendingSections = [.. pendingSections.Skip(tmpchunk.Count)];
                             }
-                            if (smap.Count < lst.Count)
+                            if (pendingSections.Count > 0)
                             {
-                                status = $"{name} {smap.Count}/{lstCount}";
+                                status = $"{name} {sectionTotal - pendingSections.Count}/{sectionTotal}";
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }
                             break;
@@ -4906,17 +4919,20 @@ namespace SIL.Transcriber.Services
                                 return sourceOrgSchemeIds.Contains(schemeId);
                             })];
                             IdMap ossMap = GetMap(name, mapKey);
-                            while (ossMap.Count < sourceOrgSchemeSteps.Count && DateTime.Now < dtBail)
+                            int orgSchemeStepTotal = sourceOrgSchemeSteps.Count;
+                            List<ResourceObject> pendingOrgSchemeSteps = [.. sourceOrgSchemeSteps.Where(ro => !ossMap.ContainsKey(ro.Id ?? ""))];
+                            while (pendingOrgSchemeSteps.Count > 0 && DateTime.Now < dtBail)
                             {
-                                List<ResourceObject> sourceOrgSchemeStepsChunk = [.. sourceOrgSchemeSteps.Skip(ossMap.Count).Take(DataChunkSize)];
+                                List<ResourceObject> sourceOrgSchemeStepsChunk = [.. pendingOrgSchemeSteps.Take(DataChunkSize)];
                                 List<Organizationschemestep> ossList = [.. sourceOrgSchemeStepsChunk.Select(ro => ResourceObjectToResource(ro, new Organizationschemestep(), mapKey))];
                                 IdMap newids = CopyOrgSchemeSteps(ossList);
                                 SaveMap(newids, name, mapKey);
                                 ossMap = MergeIdMaps(ossMap, newids);
+                                pendingOrgSchemeSteps = [.. pendingOrgSchemeSteps.Skip(sourceOrgSchemeStepsChunk.Count)];
                             }
-                            if (ossMap.Count < sourceOrgSchemeSteps.Count)
+                            if (pendingOrgSchemeSteps.Count > 0)
                             {
-                                status = $"{name} {ossMap.Count}/{sourceOrgSchemeSteps.Count}";
+                                status = $"{name} {orgSchemeStepTotal - pendingOrgSchemeSteps.Count}/{orgSchemeStepTotal}";
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }
                             break;
