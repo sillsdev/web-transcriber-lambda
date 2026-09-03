@@ -4467,7 +4467,7 @@ namespace SIL.Transcriber.Services
                 string status = "";
                 int entryNum = start;
                 int sourceOrgId = sourceproject?.OrganizationId ?? 0;
-                string sourceProjectId = fileproject?.Id.ToString() ?? "";
+                string sourceProjectId = fileproject?.OfflineId ?? fileproject?.StringId ?? fileproject?.Id.ToString() ?? "";
                 List<ResourceObject>? sourceOrgSchemes = null;
                 HashSet<string> sourceOrgSchemeIds = [];
                 HashSet<string> sourceProjectSectionIds = [];
@@ -4664,7 +4664,10 @@ namespace SIL.Transcriber.Services
                                 IdMap newIds = CopySections(slst, plan?.Id ?? 0, dtBail);
                                 SaveMap(newIds, name, mapKey);
                                 smap = MergeIdMaps(smap, newIds);
-                                pendingSections = [.. pendingSections.Skip(tmpchunk.Count)];
+                                int processedCount = Math.Min(newIds.Count, tmpchunk.Count);
+                                if (processedCount == 0)
+                                    break;
+                                pendingSections = [.. pendingSections.Skip(processedCount)];
                             }
                             if (pendingSections.Count > 0)
                             {
@@ -4718,7 +4721,10 @@ namespace SIL.Transcriber.Services
                                 IdMap newIds = CopySectionResources(srlst, orgid, GetSingleId(Tables.Projects, mapKey), dtBail);
                                 SaveMap(newIds, name, mapKey);
                                 srmap = MergeIdMaps(srmap, newIds);
-                                pendingSectionResources = [.. pendingSectionResources.Skip(tmpchunk.Count)];
+                                int processedCount = Math.Min(newIds.Count, tmpchunk.Count);
+                                if (processedCount == 0)
+                                    break;
+                                pendingSectionResources = [.. pendingSectionResources.Skip(processedCount)];
                             }
                             if (pendingSectionResources.Count > 0)
                             {
@@ -4835,7 +4841,10 @@ namespace SIL.Transcriber.Services
                                 IdMap newIds = CopySharedResources(shrlst, shrmap, dtBail);
                                 SaveMap(newIds, name, mapKey);
                                 shrmap = MergeIdMaps(shrmap, newIds);
-                                pendingSharedResources = [.. pendingSharedResources.Skip(tmpchunk.Count)];
+                                int processedCount = Math.Min(newIds.Count, tmpchunk.Count);
+                                if (processedCount == 0)
+                                    break;
+                                pendingSharedResources = [.. pendingSharedResources.Skip(processedCount)];
                             }
                             sourceProjectSharedResourceIds = GetSourceIdsFromMap(mapKey, Tables.SharedResources, true);
                             if (pendingSharedResources.Count > 0)
