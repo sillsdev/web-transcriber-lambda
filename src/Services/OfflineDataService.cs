@@ -100,6 +100,7 @@ namespace SIL.Transcriber.Services
         };
         IdMap? MediafileMap = null;
         IdMap? UserMap = null;
+        private readonly Dictionary<string, IdMap> MappedIdCache = [];
         private readonly List<string> UsersToInvite = [];
 
         private User? CurrentUser()
@@ -1017,11 +1018,24 @@ namespace SIL.Transcriber.Services
             if (start >= 0)
             {
                 using ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true);
-                IQueryable<Organization> orgs = dbContext.Organizations.Where(
+                IQueryable<Organization> primaryOrg = dbContext.Organizations.Where(
                         o => o.Id == project.OrganizationId
                     );
+                IQueryable<VWProject> sharednotes = dbContext.VWProjects.Where(x => x.ProjectId == project.Id && x.SharedResourceId != null);
+                IQueryable<Note> supportingNotes = dbContext.Notes
+                    .Join(sharednotes, n => n.ResourceId, sn => sn.SharedResourceId, (n, sn) => n);
+                List<int> supportingSharedResourceIds = [.. sharednotes.Select(n => n.SharedResourceId ?? 0).Distinct()];
+                supportingSharedResourceIds.AddRange([.. supportingNotes.Select(n => n.ResourceId ?? 0).Distinct()]);
+                List<int> exportOrgIds = [project.OrganizationId];
+                exportOrgIds.AddRange([.. dbContext.SharedresourcesData
+                    .Where(sr => !sr.Archived && sr.ArtifactCategoryId != null && supportingSharedResourceIds.Contains(sr.Id))
+                    .Join(dbContext.Artifactcategorys.Where(ac => !ac.Archived), sr => sr.ArtifactCategoryId, ac => ac.Id, (sr, ac) => ac.OrganizationId)
+                    .Where(oid => oid != null && oid != project.OrganizationId)
+                    .Select(oid => oid ?? 0)
+                    .Distinct()]);
+                IQueryable<Organization> orgs = dbContext.Organizations.Where(o => exportOrgIds.Contains(o.Id));
 
-                IQueryable<Intellectualproperty>? ip = OrgIPs(orgs);
+                IQueryable<Intellectualproperty>? ip = OrgIPs(primaryOrg);
                 if (start == 0)
                 {
                     Dictionary<string, string> fonts = new()
@@ -1048,14 +1062,15 @@ namespace SIL.Transcriber.Services
                         dbContext.Workflowsteps.ToList()
                     );
                     //org
-                    List<Organization> orgList = [.. orgs];
+                    List<Organization> orgList = [.. primaryOrg];
+                    orgList.AddRange([.. orgs.Where(o => o.Id != project.OrganizationId)]);
 
                     AddOrgLogos(zipArchive, orgList);
                     AddJsonEntry(zipArchive, Tables.Organizations, orgList);
 
                     //groups
                     IQueryable<Group> groups = dbContext.GroupsData.Join(
-                        orgs,
+                        primaryOrg,
                         g => g.OwnerId,
                         o => o.Id,
                         (g, o) => g
@@ -1151,11 +1166,8 @@ namespace SIL.Transcriber.Services
                         .Where(x => !x.Archived);
                     IQueryable<Artifactcategory> categories = dbContext.Artifactcategorys.Where(a =>
                                         (   a.OrganizationId == null
-                                            || a.OrganizationId == project.OrganizationId
+                                            || exportOrgIds.Contains(a.OrganizationId ?? 0)
                                         ) && !a.Archived);
-                    IQueryable<VWProject> sharednotes = dbContext.VWProjects.Where(x => x.ProjectId == project.Id && x.SharedResourceId != null);
-                    IQueryable<Note> supportingNotes = dbContext.Notes
-                        .Join(sharednotes, n => n.ResourceId, sn => sn.SharedResourceId, (n, sn) => n);
 
                     IQueryable<Orgkeytermtarget> orgkeytermtargets = dbContext.OrgKeytermTargetsData.Where(
                                     a => (a.OrganizationId == project.OrganizationId) && !a.Archived
@@ -1203,6 +1215,12 @@ namespace SIL.Transcriber.Services
                         .Where(x => !x.Archived);
                     IQueryable<Passage>  supportingPassages = dbContext.PassagesData.Join(
                                                supportingNotes, p => p.Id, n => n.PassageId, (p,n) => p);
+                    IQueryable<int> exportedSectionIds = sections
+                        .Select(s => s.Id)
+                        .Concat(supportingSections.Select(s => s.Id));
+                    IQueryable<int> exportedPassageIds = passages
+                        .Select(p => p.Id)
+                        .Concat(supportingPassages.Select(p => p.Id));
                     if (
                         !CheckAdd(
                             4,
@@ -1461,7 +1479,15 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.Graphics,
-                             dbContext.GraphicsData.Where(om => om.OrganizationId == project.OrganizationId && !om.Archived).ToList()
+                             dbContext.GraphicsData.Where(g =>
+                                    g.OrganizationId == project.OrganizationId
+                                    && !g.Archived
+                                    && (
+                                        g.ResourceType == "category"
+                                        || (g.ResourceType == "section" && exportedSectionIds.Contains(g.ResourceId))
+                                        || (g.ResourceType == "passage" && exportedPassageIds.Contains(g.ResourceId))
+                                    )
+                             ).ToList()
                         )
                     )
                         break;
@@ -1482,8 +1508,7 @@ namespace SIL.Transcriber.Services
                             zipArchive,
                             Tables.Bibles,
                              orgBibles.ToList()
-                        )
-)
+                        ))
                         break;
                     //Now I need the media list of just those files to download...
                     //pick just the highest version media per passage (vernacular only) for eaf (TODO: what about bt?!)
@@ -2057,6 +2082,29 @@ namespace SIL.Transcriber.Services
                         rel => rel.Key == relationship
                     ).FirstOrDefault();
             return row.Value?.Data.SingleValue?.Id ?? "";
+        }
+        private static string GetAttributeId(ResourceObject ro, params string[] attributeNames)
+        {
+            if (ro.Attributes == null)
+                return "";
+            foreach (string attributeName in attributeNames)
+            {
+                if (!ro.Attributes.TryGetValue(attributeName, out object? rawId))
+                    continue;
+                return rawId switch
+                {
+                    JsonElement idElement when idElement.ValueKind == JsonValueKind.Number && idElement.TryGetInt32(out int idNum) => idNum.ToString(),
+                    JsonElement idElement when idElement.ValueKind == JsonValueKind.String => idElement.GetString() ?? "",
+                    _ => rawId?.ToString() ?? ""
+                };
+            }
+            return "";
+        }
+        private string GetRelationshipOrAttributeId<TResource>(ResourceObject ro, string relationship, params string[] attributeNames)
+            where TResource : class, IIdentifiable
+        {
+            string id = GetRelationshipId<TResource>(ro, relationship);
+            return string.IsNullOrEmpty(id) ? GetAttributeId(ro, attributeNames) : id;
         }
         private TResource ResourceObjectToResource<TResource>(ResourceObject ro, TResource s, string mapKey = "")
             where TResource : class, IIdentifiable
@@ -3413,7 +3461,7 @@ namespace SIL.Transcriber.Services
                         savedId = e?.Id ?? 0;
                     }
                     SaveId(Tables.Graphics, id, savedId, mapKey);
-                    oldmap.Add(id, savedId);
+                    _ = oldmap.TryAdd(id, savedId);
                 }
             }
             return oldmap;
@@ -3586,7 +3634,7 @@ namespace SIL.Transcriber.Services
                     //save as we go in case we have to resume
                     dbContext.SaveChanges();
                     SaveId(Tables.Mediafiles, id, t.Entity.Id, mapKey);
-                    oldmap.Add(id, t.Entity.Id);
+                    _ = oldmap.TryAdd(id, t.Entity.Id);
                     dbContext.SaveChanges();
                 }
             }
@@ -3650,15 +3698,51 @@ namespace SIL.Transcriber.Services
             UserMap ??= GetMap(Tables.Users, newProjId) ?? [];
             return UserMap;
         }
+        private static IdMap MergeIdMaps(IdMap currentMap, IdMap newMap)
+        {
+            foreach (KeyValuePair<string, int> kvp in newMap)
+            {
+                _ = currentMap.TryAdd(kvp.Key, kvp.Value);
+            }
+            return currentMap;
+        }
+        private static string NormalizeTableName(string table)
+        {
+            if (!table.EndsWith('s'))
+                table += "s";
+            return table.ToLower();
+        }
+        private static string GetMappedIdCacheKey(string projId, string table)
+        {
+            return $"{projId}|{NormalizeTableName(table)}";
+        }
+        private IdMap GetCachedMap(string table, string newProjId)
+        {
+            string cacheKey = GetMappedIdCacheKey(newProjId, table);
+            if (MappedIdCache.TryGetValue(cacheKey, out IdMap? cached))
+                return cached;
+
+            string sourceTable = NormalizeTableName(table);
+            IdMap map = [];
+            IQueryable<CopyProject> cps = dbContext.Copyprojects.Where(c => c.Newprojid == newProjId && c.Sourcetable == sourceTable);
+            foreach (CopyProject cp in cps)
+            {
+                map.TryAdd(cp.Oldid, cp.Newid);
+            }
+            MappedIdCache[cacheKey] = map;
+            return map;
+        }
         private void SaveId(string table, string oldId, int newId, string mapKey, bool Save = true)
         {
+            string sourceTable = NormalizeTableName(table);
             dbContext.Copyprojects.Add(new CopyProject()
             {
-                Sourcetable = table,
+                Sourcetable = sourceTable,
                 Newprojid = mapKey,
                 Oldid = oldId,
                 Newid = newId
             });
+            _ = GetCachedMap(sourceTable, mapKey).TryAdd(oldId, newId);
             if (Save)
                 dbContext.SaveChanges();
         }
@@ -3672,36 +3756,39 @@ namespace SIL.Transcriber.Services
         }
         private IdMap GetMap(string table, string newProjId)
         {
-            IdMap map = [];
-            IQueryable<CopyProject> cps = dbContext.Copyprojects.Where(c => c.Newprojid == newProjId && c.Sourcetable == table);
-            foreach (CopyProject cp in cps)
-            {
-                map.TryAdd(cp.Oldid, cp.Newid);
-            }
-            return map;
+            return GetCachedMap(table, newProjId);
+        }
+        private HashSet<string> GetSourceIdsFromMap(string mapKey, string table, bool importedOnly = false)
+        {
+            string sourceTable = NormalizeTableName(table);
+            IQueryable<CopyProject> mappings = dbContext.Copyprojects.Where(cp => cp.Newprojid == mapKey && cp.Sourcetable == sourceTable);
+            if (importedOnly)
+                mappings = mappings.Where(cp => cp.Newid > 0);
+            return [.. mappings.Select(cp => cp.Oldid).Where(id => !string.IsNullOrEmpty(id))!];
         }
         public void RemoveCopyProject(string projId)
         {
             foreach (CopyProject cp in dbContext.Copyprojects.Where(c => c.Newprojid == projId))
                 dbContext.Remove(cp);
             dbContext.SaveChanges();
+            foreach (string key in MappedIdCache.Keys.Where(k => k.StartsWith($"{projId}|", StringComparison.Ordinal)).ToList())
+                MappedIdCache.Remove(key);
         }
         private int GetSingleId(string table, string projId)
         {
-            CopyProject? cp = dbContext.Copyprojects.Where(c => c.Newprojid == projId && c.Sourcetable == table).FirstOrDefault();
+            string sourceTable = NormalizeTableName(table);
+            CopyProject? cp = dbContext.Copyprojects.Where(c => c.Newprojid == projId && c.Sourcetable == sourceTable).FirstOrDefault();
             return cp?.Newid ?? 0;
         }
         private int? GetMappedId(string table, string projId, string? oldId)
         {
             if (projId == "" || string.IsNullOrEmpty(oldId))
                 return null;
-            if (!table.EndsWith('s'))
-                table += "s";
-            CopyProject? cp = dbContext.Copyprojects.Where(c => c.Newprojid == projId && c.Sourcetable == table.ToLower() && c.Oldid == oldId).FirstOrDefault();
-            int id = 0;
-            if (cp == null)
-                _ = int.TryParse(oldId, out id);
-            return cp?.Newid ?? id;
+            IdMap map = GetCachedMap(table, projId);
+            if (map.TryGetValue(oldId, out int mappedId))
+                return mappedId;
+
+            return int.TryParse(oldId, out int id) ? id : null;
         }
         //DEPRECATED
         private async Task<Fileresponse> ProcessImportCopyProjectDeprecatedAsync(
@@ -3927,7 +4014,7 @@ namespace SIL.Transcriber.Services
                                     })];
                                 IdMap newids = CopySections(sections, plan.Id, dtBail);
                                 SaveMap(newids, name, mapKey);
-                                sectmap = sectmap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
+                                sectmap = MergeIdMaps(sectmap, newids);
                             }
                             if (sectmap.Count == totalCount)
                                 ix++;
@@ -3960,7 +4047,7 @@ namespace SIL.Transcriber.Services
                                 })];
                                 IdMap newids = CopyPassages(passages, mapKey, dtBail);
                                 SaveMap(newids, name, mapKey);
-                                psgmap = psgmap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
+                                psgmap = MergeIdMaps(psgmap, newids);
                             }
                             if (psgmap.Count == psgCount)
                                 ix++;
@@ -3986,7 +4073,7 @@ namespace SIL.Transcriber.Services
                                 })];
                                 IdMap newids = CopySectionResources(srs, org.Id, project.Id, dtBail);
                                 SaveMap(newids, name, mapKey);
-                                srMap = srMap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
+                                srMap = MergeIdMaps(srMap, newids);
                             }
                             if (srMap.Count == srCount)
                                 ix++;
@@ -4085,7 +4172,7 @@ namespace SIL.Transcriber.Services
                                  })];
                                 IdMap newids = CopyDiscussions(discussions,  dtBail);
                                 SaveMap(newids, name, mapKey);
-                                dmap = dmap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
+                                dmap = MergeIdMaps(dmap, newids);
                             }
                             if (dmap.Count == desccount)
                                 ix++;
@@ -4118,7 +4205,7 @@ namespace SIL.Transcriber.Services
                                 })];
                                 IdMap newids = CopyComments(comments,  dtBail);
                                 SaveMap(newids, name, mapKey);
-                                cmap = cmap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
+                                cmap = MergeIdMaps(cmap, newids);
                             }
                             if (cmap.Count == commentsCount)
                                 ix++;
@@ -4215,7 +4302,7 @@ namespace SIL.Transcriber.Services
                                     })];
                                 IdMap newids = CopySharedResources(srList, shrMap, dtBail);
                                 SaveMap(newids, name, mapKey);
-                                shrMap = shrMap.Union(newids).ToDictionary(k => k.Key, v => v.Value);
+                                shrMap = MergeIdMaps(shrMap, newids);
                             }
                             if (shrMap.Count == shrCount)
                                 ix++;
@@ -4370,6 +4457,14 @@ namespace SIL.Transcriber.Services
                 Plan? plan = null;
                 string status = "";
                 int entryNum = start;
+                int sourceOrgId = sourceproject?.OrganizationId ?? 0;
+                string sourceProjectId = sourceproject?.Id.ToString() ?? "";
+                List<ResourceObject>? sourceOrgSchemes = null;
+                HashSet<string> sourceOrgSchemeIds = [];
+                HashSet<string> sourceProjectSectionIds = [];
+                HashSet<string> sourceProjectPassageIds = [];
+                HashSet<string> sourceProjectSectionResourceIds = [];
+                HashSet<string> sourceProjectSharedResourceIds = [];
                 foreach (ZipArchiveEntry entry in archive.Entries
                     .Where(e => e.FullName.StartsWith("data"))
                     .OrderBy(e => e.Name)
@@ -4547,7 +4642,7 @@ namespace SIL.Transcriber.Services
                                     .Select(ro => ResourceObjectToResource(ro, new Section(), mapKey))];
                                 IdMap newIds = CopySections(slst, plan?.Id ?? 0, dtBail);
                                 SaveMap(newIds, name, mapKey);
-                                smap = smap.Union(newIds).ToDictionary(k => k.Key, v => v.Value);
+                                smap = MergeIdMaps(smap, newIds);
                             }
                             if (smap.Count < lst.Count)
                             {
@@ -4557,10 +4652,10 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.Passages:
-                            List<Passage> plst = [];
                             IdMap pmap = GetMap(name, mapKey);
                             while (pmap.Count < lst.Count && DateTime.Now < dtBail)
                             {
+                                List<Passage> plst = [];
                                 IEnumerable<ResourceObject> tmpchunk = lst.Skip(pmap.Count).Take(DataChunkSize);
                                 foreach (ResourceObject ro in tmpchunk)
                                 {
@@ -4568,11 +4663,11 @@ namespace SIL.Transcriber.Services
                                     if (psg.Section != null) //supporting passages won't be imported
                                         plst.Add(psg);
                                     else
-                                        pmap.Add(psg.OfflineId, -1);
+                                        _ = pmap.TryAdd(psg.OfflineId, -1);
                                 }
                                 IdMap newIds = CopyPassages(plst, mapKey, dtBail);
                                 SaveMap(newIds, name, mapKey);
-                                pmap = pmap.Union(newIds).ToDictionary(k => k.Key, v => v.Value);
+                                pmap = MergeIdMaps(pmap, newIds);
                             }
                             if (pmap.Count < lst.Count)
                             {
@@ -4582,26 +4677,40 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.SectionResources:
+                            if (sourceProjectSectionIds.Count == 0)
+                                sourceProjectSectionIds = GetSourceIdsFromMap(mapKey, Tables.Sections, true);
+                            List<ResourceObject> sourceProjectSectionResources = [.. lst.Where(ro =>
+                                sourceProjectSectionIds.Contains(GetRelationshipOrAttributeId<Sectionresource>(ro, "section", "section-id", "sectionId"))
+                            )];
                             IdMap srmap = GetMap(name, mapKey);
-                            while (srmap.Count < lst.Count && DateTime.Now < dtBail)
+                            int sectionResourceTotal = sourceProjectSectionResources.Count;
+                            List<ResourceObject> pendingSectionResources = [.. sourceProjectSectionResources.Where(ro => !srmap.ContainsKey(ro.Id ?? ""))];
+                            while (pendingSectionResources.Count > 0 && DateTime.Now < dtBail)
                             {
-                                IEnumerable<ResourceObject> tmpchunk = lst.Skip(srmap.Count).Take(DataChunkSize);
+                                List<ResourceObject> tmpchunk = [.. pendingSectionResources.Take(DataChunkSize)];
                                 List<Sectionresource> srlst = [.. tmpchunk
                                     .Select(ro => ResourceObjectToResource(ro, new Sectionresource(), mapKey))];
 
                                 IdMap newIds = CopySectionResources(srlst, orgid, GetSingleId(Tables.Projects, mapKey), dtBail);
                                 SaveMap(newIds, name, mapKey);
-                                srmap = srmap.Union(newIds).ToDictionary(k => k.Key, v => v.Value);
+                                srmap = MergeIdMaps(srmap, newIds);
+                                pendingSectionResources = [.. pendingSectionResources.Skip(tmpchunk.Count)];
                             }
-                            if (srmap.Count < lst.Count)
+                            if (pendingSectionResources.Count > 0)
                             {
-                                status = $"{name} {srmap.Count}/{lst.Count}";
+                                status = $"{name} {sectionResourceTotal - pendingSectionResources.Count}/{sectionResourceTotal}";
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }
                             break;
 
                         case Tables.SectionResourceUsers:
-                            //don't copy user completion info
+                            if (sourceProjectSectionResourceIds.Count == 0)
+                                sourceProjectSectionResourceIds = GetSourceIdsFromMap(mapKey, Tables.SectionResources, true);
+                            List<Sectionresourceuser> sruLst = [.. lst
+                                .Where(ro => sourceProjectSectionResourceIds.Contains(GetRelationshipOrAttributeId<Sectionresourceuser>(ro, "sectionresource", "section-resource-id", "sectionresource-id", "sectionresourceId")))
+                                .Select(ro => ResourceObjectToResource(ro, new Sectionresourceuser(), mapKey))
+                                .Where(sru => sru.SectionResourceId > 0 && sru.UserId > 0)];
+                            CopySectionResourceUsers(sruLst);
                             break;
 
                         case Tables.Mediafiles:
@@ -4636,7 +4745,7 @@ namespace SIL.Transcriber.Services
                                     .Select(ro => ResourceObjectToResource(ro, new Discussion(), mapKey))];
                                 IdMap newIds = CopyDiscussions(dlst,  dtBail);
                                 SaveMap(newIds, name, mapKey);
-                                dmap = dmap.Union(newIds).ToDictionary(k => k.Key, v => v.Value);
+                                dmap = MergeIdMaps(dmap, newIds);
                             }
                             if (dmap.Count < lst.Count)
                             {
@@ -4654,7 +4763,7 @@ namespace SIL.Transcriber.Services
                                     .Select(ro => ResourceObjectToResource(ro, new Comment(), mapKey))];
                                 IdMap newIds = CopyComments(clst,  dtBail);
                                 SaveMap(newIds, name, mapKey);
-                                cmap = cmap.Union(newIds).ToDictionary(k => k.Key, v => v.Value);
+                                cmap = MergeIdMaps(cmap, newIds);
                             }
                             if (cmap.Count < lst.Count)
                             {
@@ -4664,11 +4773,19 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.SharedResources:
+                            if (sourceProjectPassageIds.Count == 0)
+                                sourceProjectPassageIds = GetSourceIdsFromMap(mapKey, Tables.Passages);
+                            List<ResourceObject> sourceProjectSharedResources = [.. lst.Where(ro =>
+                                sourceProjectPassageIds.Contains(GetRelationshipOrAttributeId<Sharedresource>(ro, "passage", "passage-id", "passageId"))
+                            )];
+                            sourceProjectSharedResourceIds = [.. sourceProjectSharedResources.Select(ro => ro.Id).Where(id => !string.IsNullOrEmpty(id))!];
                             List<Sharedresource> shrlst = [];
                             IdMap shrmap = GetMap(name, mapKey);
-                            while (shrmap.Count < lst.Count && DateTime.Now < dtBail)
+                            int sharedResourceTotal = sourceProjectSharedResources.Count;
+                            List<ResourceObject> pendingSharedResources = [.. sourceProjectSharedResources.Where(ro => !shrmap.ContainsKey(ro.Id ?? ""))];
+                            while (pendingSharedResources.Count > 0 && DateTime.Now < dtBail)
                             {
-                                IEnumerable<ResourceObject> tmpchunk = lst.Skip(shrmap.Count).Take(DataChunkSize);
+                                List<ResourceObject> tmpchunk = [.. pendingSharedResources.Take(DataChunkSize)];
                                 foreach (ResourceObject ro in tmpchunk)
                                 {
                                     Sharedresource sr = ResourceObjectToResource(ro, new Sharedresource(), mapKey);
@@ -4694,23 +4811,23 @@ namespace SIL.Transcriber.Services
                                 }
                                 IdMap newIds = CopySharedResources(shrlst, shrmap, dtBail);
                                 SaveMap(newIds, name, mapKey);
-                                shrmap = shrmap.Union(newIds).ToDictionary(k => k.Key, v => v.Value);
+                                shrmap = MergeIdMaps(shrmap, newIds);
+                                pendingSharedResources = [.. pendingSharedResources.Skip(tmpchunk.Count)];
                             }
-                            if (shrmap.Count < lst.Count)
+                            if (pendingSharedResources.Count > 0)
                             {
-                                status = $"{name} {shrmap.Count}/{lst.Count}";
+                                status = $"{name} {sharedResourceTotal - pendingSharedResources.Count}/{sharedResourceTotal}";
                                 entryNum--; //we must have bailed out because of time, so continue to start here.
                             }
                             break;
 
                         case Tables.SharedResourceReferences:
-                            List<Sharedresourcereference> shrrlst = [];
-                            foreach (ResourceObject ro in lst)
-                            {
-                                Sharedresourcereference srr = ResourceObjectToResource(ro, new Sharedresourcereference(), mapKey);
-                                if (srr.SharedResourceId > 0)
-                                    shrrlst.Add(srr);
-                            }
+                            if (sourceProjectSharedResourceIds.Count == 0)
+                                sourceProjectSharedResourceIds = GetSourceIdsFromMap(mapKey, Tables.SharedResources);
+                            List<Sharedresourcereference> shrrlst = [.. lst
+                                .Where(ro => sourceProjectSharedResourceIds.Contains(GetRelationshipOrAttributeId<Sharedresourcereference>(ro, "shared-resource", "shared-resource-id", "sharedResourceId")))
+                                .Select(ro => ResourceObjectToResource(ro, new Sharedresourcereference(), mapKey))
+                                .Where(srr => srr.SharedResourceId > 0)];
                             CopySharedResourceReferences(shrrlst);
                             break;
 
@@ -4729,7 +4846,10 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.OrgKeyTermReferences:
-                            List<Orgkeytermreference> oktrlst = [..lst.Select(ro => ResourceObjectToResource(ro, new Orgkeytermreference(), mapKey))];
+                            List<ResourceObject> sourceProjectOrgKeyTermReferences = [.. lst.Where(ro =>
+                                GetRelationshipOrAttributeId<Orgkeytermreference>(ro, "project", "project-id", "projectId") == sourceProjectId
+                            )];
+                            List<Orgkeytermreference> oktrlst = [..sourceProjectOrgKeyTermReferences.Select(ro => ResourceObjectToResource(ro, new Orgkeytermreference(), mapKey))];
                             CopyOrgkeytermreferences(oktrlst);
                             break;
 
@@ -4750,13 +4870,44 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.OrganizationSchemes:
-                            List<Organizationscheme> osList = [..lst.Select(ro => ResourceObjectToResource(ro, new Organizationscheme(), mapKey))];
+
+                            //a bug in export included all schemes.  Limit the list to those for this organization
+                            sourceOrgSchemes = [.. lst.Where(ro =>
+                                GetRelationshipOrAttributeId<Organizationscheme>(ro, "organization", "organization-id", "organizationId") == sourceOrgId.ToString()
+                            )];
+                            sourceOrgSchemeIds = [.. sourceOrgSchemes.Select(ro => ro.Id).Where(id => !string.IsNullOrEmpty(id))!];
+                            List<Organizationscheme> osList = [.. sourceOrgSchemes.Select(ro => ResourceObjectToResource(ro, new Organizationscheme(), mapKey))];
                             SaveMap(CopyOrgSchemes(osList, orgid), name, mapKey);
                             break;
 
                         case Tables.OrganizationSchemeSteps:
-                            List<Organizationschemestep> ossList = [..lst.Select(ro => ResourceObjectToResource(ro, new Organizationschemestep(), mapKey))];
-                            CopyOrgSchemeSteps(ossList);
+                            //a bug in export included all schemes.  Limit the list to those for this organization
+                            if (sourceOrgSchemes == null)
+                            {
+                                sourceOrgSchemeIds = [.. dbContext.Copyprojects
+                                    .Where(cp => cp.Sourcetable == Tables.OrganizationSchemes && cp.Newprojid == mapKey)
+                                    .Select(cp => cp.Oldid)
+                                    .Where(id => !string.IsNullOrEmpty(id))!];
+                            }
+                            List<ResourceObject> sourceOrgSchemeSteps = [.. lst.Where(ro =>
+                            {
+                                string schemeId = GetRelationshipOrAttributeId<Organizationschemestep>(ro, "organizationscheme", "organizationscheme-id", "organizationschemeId");
+                                return sourceOrgSchemeIds.Contains(schemeId);
+                            })];
+                            IdMap ossMap = GetMap(name, mapKey);
+                            while (ossMap.Count < sourceOrgSchemeSteps.Count && DateTime.Now < dtBail)
+                            {
+                                List<ResourceObject> sourceOrgSchemeStepsChunk = [.. sourceOrgSchemeSteps.Skip(ossMap.Count).Take(DataChunkSize)];
+                                List<Organizationschemestep> ossList = [.. sourceOrgSchemeStepsChunk.Select(ro => ResourceObjectToResource(ro, new Organizationschemestep(), mapKey))];
+                                IdMap newids = CopyOrgSchemeSteps(ossList);
+                                SaveMap(newids, name, mapKey);
+                                ossMap = MergeIdMaps(ossMap, newids);
+                            }
+                            if (ossMap.Count < sourceOrgSchemeSteps.Count)
+                            {
+                                status = $"{name} {ossMap.Count}/{sourceOrgSchemeSteps.Count}";
+                                entryNum--; //we must have bailed out because of time, so continue to start here.
+                            }
                             break;
                     }
                     if (DateTime.Now >= dtBail)
