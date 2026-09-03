@@ -1026,10 +1026,14 @@ namespace SIL.Transcriber.Services
                     .Join(sharednotes, n => n.ResourceId, sn => sn.SharedResourceId, (n, sn) => n);
                 List<int> supportingSharedResourceIds = [.. sharednotes.Select(n => n.SharedResourceId ?? 0).Distinct()];
                 supportingSharedResourceIds.AddRange([.. supportingNotes.Select(n => n.ResourceId ?? 0).Distinct()]);
-                List<int> exportOrgIds = [project.OrganizationId];
-                exportOrgIds.AddRange([.. dbContext.SharedresourcesData
+                List<int> supportingCategoryIds = [.. dbContext.SharedresourcesData
                     .Where(sr => !sr.Archived && sr.ArtifactCategoryId != null && supportingSharedResourceIds.Contains(sr.Id))
-                    .Join(dbContext.Artifactcategorys.Where(ac => !ac.Archived), sr => sr.ArtifactCategoryId, ac => ac.Id, (sr, ac) => ac.OrganizationId)
+                    .Select(sr => sr.ArtifactCategoryId ?? 0)
+                    .Distinct()];
+                List<int> exportOrgIds = [project.OrganizationId];
+                exportOrgIds.AddRange([.. dbContext.Artifactcategorys
+                    .Where(ac => !ac.Archived && supportingCategoryIds.Contains(ac.Id))
+                    .Select(ac => ac.OrganizationId)
                     .Where(oid => oid != null && oid != project.OrganizationId)
                     .Select(oid => oid ?? 0)
                     .Distinct()]);
@@ -1166,7 +1170,8 @@ namespace SIL.Transcriber.Services
                         .Where(x => !x.Archived);
                     IQueryable<Artifactcategory> categories = dbContext.Artifactcategorys.Where(a =>
                                         (   a.OrganizationId == null
-                                            || exportOrgIds.Contains(a.OrganizationId ?? 0)
+                                            || a.OrganizationId == project.OrganizationId
+                                            || supportingCategoryIds.Contains(a.Id)
                                         ) && !a.Archived);
 
                     IQueryable<Orgkeytermtarget> orgkeytermtargets = dbContext.OrgKeytermTargetsData.Where(
@@ -4784,13 +4789,13 @@ namespace SIL.Transcriber.Services
                             List<ResourceObject> sourceProjectSharedResources = [.. lst.Where(ro =>
                                 sourceProjectPassageIds.Contains(GetRelationshipOrAttributeId<Sharedresource>(ro, "passage", "passage-id", "passageId"))
                             )];
-                            List<Sharedresource> shrlst = [];
                             IdMap shrmap = GetMap(name, mapKey);
                             int sharedResourceTotal = sourceProjectSharedResources.Count;
                             List<ResourceObject> pendingSharedResources = [.. sourceProjectSharedResources.Where(ro => !shrmap.ContainsKey(ro.Id ?? ""))];
                             while (pendingSharedResources.Count > 0 && DateTime.Now < dtBail)
                             {
                                 List<ResourceObject> tmpchunk = [.. pendingSharedResources.Take(DataChunkSize)];
+                                List<Sharedresource> shrlst = [];
                                 foreach (ResourceObject ro in tmpchunk)
                                 {
                                     Sharedresource sr = ResourceObjectToResource(ro, new Sharedresource(), mapKey);
