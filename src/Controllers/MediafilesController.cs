@@ -130,9 +130,7 @@ namespace SIL.Transcriber.Controllers
             try
             {
                 Mediafile? result = await _service.PublishM(id);
-                if (result == null)
-                    return Problem(detail: "Mediafile not found", statusCode: (int)HttpStatusCode.NotFound);
-                return Ok(result);
+                return result == null ? Problem(detail: "Mediafile not found", statusCode: (int)HttpStatusCode.NotFound) : (IActionResult)Ok(result);
             }
             catch (Exception ex)
             {

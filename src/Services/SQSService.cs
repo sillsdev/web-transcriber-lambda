@@ -167,7 +167,8 @@ namespace SIL.Transcriber.Services
                     if (queueName.StartsWith("arn:", StringComparison.OrdinalIgnoreCase))
                     {
                         string[] parts = queueName.Split(':');
-                        if (parts.Length > 0) queueName = parts[parts.Length - 1];
+                        if (parts.Length > 0)
+                            queueName = parts[parts.Length - 1];
                     }
                     if (queueName.Contains('/'))
                     {
@@ -175,7 +176,7 @@ namespace SIL.Transcriber.Services
                         queueName = segs[segs.Length - 1];
                     }
 
-                    var getQueueUrlResp = _client.GetQueueUrlAsync(new GetQueueUrlRequest { QueueName = queueName }).Result;
+                    GetQueueUrlResponse getQueueUrlResp = _client.GetQueueUrlAsync(new GetQueueUrlRequest { QueueName = queueName }).Result;
                     finalQueueUrl = getQueueUrlResp.QueueUrl;
                 }
 
