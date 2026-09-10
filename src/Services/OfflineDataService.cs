@@ -621,8 +621,10 @@ namespace SIL.Transcriber.Services
             mediafiles.ForEach(m => {
                 //get stored book and ref out of audioquality
                 string[] split = (m.AudioQuality ?? "|").Split("|");
-                string book = split[0];
-                string reference = split[1];
+                string book = split.Length > 0 ? split[0] : "";
+                string reference = split.Length > 1 ? split[1] : "";
+                if (string.IsNullOrWhiteSpace(book) || string.IsNullOrWhiteSpace(reference))
+                    return;
                 if (!scopes.ContainsKey(book))
                     scopes.Add(book, []);
                 scopes[book].Add(reference);
@@ -708,8 +710,9 @@ namespace SIL.Transcriber.Services
                 m.AudioUrl = IPFullPath(m);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
-            AddJsonEntry(zipArchive, "attachedmediafiles", mediafiles.Concat(ipMedia).ToList<Mediafile>());
-            return mediafiles;
+            List<Mediafile> allMedia = [.. mediafiles.Concat(ipMedia)];
+            AddJsonEntry(zipArchive, "attachedmediafiles", allMedia);
+            return allMedia;
         }
         private static string ToStr(int? value)
         {
@@ -791,11 +794,11 @@ namespace SIL.Transcriber.Services
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
             string fileName = string.Format(
-                "{0}{1}_{2}_{3}",
-                addElan ? "Elan" : "Audio",
-                FileName.CleanFileName(project.Name + artifactType),
+                "APM{0}_{1}_{2}_{3}",
+                 CurrentUser()?.Id,
                 project.Id.ToString(),
-                CurrentUser()?.Id
+                FileName.CleanFileName(project.Name + artifactType),
+                addElan ? "Elan" : "Audio"
             );
             if (start > LAST_ADD)
                 return CheckProgress(fileName + ext, LAST_ADD);
@@ -806,7 +809,7 @@ namespace SIL.Transcriber.Services
                 {
                     DateTime exported = AddCheckEntry(
                         zipArchive,
-                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 5
+                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 11
                     );
                     List<Mediafile> mediafiles = [.. dbContext.Mediafiles.Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))];
                     AddJsonEntry(zipArchive, Tables.Mediafiles, mediafiles);
@@ -823,7 +826,7 @@ namespace SIL.Transcriber.Services
                 }
                 WriteMemoryStream(ms, fileName, startNext, ext);
             }
-            string id= _SQSService.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
+            _ = _SQSService.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
             return new()
             {
                 Message = fileName + ext,
@@ -843,29 +846,27 @@ namespace SIL.Transcriber.Services
             IQueryable<Project> projects = dbContext.Projects.Where(p => p.Id == projectid);
             Project project = projects.First();
             string fileName = string.Format(
-                "Burrito{0}_{1}_{2}",
-                FileName.CleanFileName(project.Name),
+                "APM{0}_{1}_{2}_Burrito",
+                CurrentUser()?.Id,
                 project.Id.ToString(),
-                CurrentUser()?.Id
+                FileName.CleanFileName(project.Name)
             );
-
-            if (start > LAST_ADD)
-                return CheckProgress(fileName + ext, LAST_ADD);
+            //do we already have one going?
+            Fileresponse? going = CheckProgress(fileName + ext, start == 0 ? -1 : LAST_ADD);
+            if (going.Id != 0)
+                return going;
 
             Stream ms = GetMemoryStream(start, fileName, ext);
             using (ZipArchive zipArchive = new(ms, ZipArchiveMode.Update, true))
             {
-                if (start == 0)
-                {
-                    List<Mediafile> mediaList = [.. dbContext.Mediafiles.Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))];
-                    mediaList = AddBurritoMedia(zipArchive, project, mediaList);
-                    AddBurritoMeta(zipArchive, project, mediaList);
-                    startNext = 1;
-                }
+                List<Mediafile> mediaList = [.. dbContext.Mediafiles.Where(x => (idList ?? "").Contains("," + x.Id.ToString() + ","))];
+                mediaList = AddBurritoMedia(zipArchive, project, mediaList);
+                AddBurritoMeta(zipArchive, project, mediaList);
+                startNext = 1;
             }
             WriteMemoryStream(ms, fileName, startNext, ext);
             //add the mediafiles
-            string id= _SQSService.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
+            _ = _SQSService.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
             return new()
             {
                 Message = fileName + ext,
@@ -1000,9 +1001,9 @@ namespace SIL.Transcriber.Services
             Project project = projects.First();
             string fileName = string.Format(
                 "APM{0}_{1}_{2}",
-                FileName.CleanFileName(project.Name),
+                CurrentUser()?.Id,
                 project.Id.ToString(),
-                CurrentUser()?.Id
+                FileName.CleanFileName(project.Name)
             );
             if (start == 0)
             {
@@ -1030,16 +1031,46 @@ namespace SIL.Transcriber.Services
                     .Where(sr => !sr.Archived && sr.ArtifactCategoryId != null && supportingSharedResourceIds.Contains(sr.Id))
                     .Select(sr => sr.ArtifactCategoryId ?? 0)
                     .Distinct()];
-                List<int> exportOrgIds = [project.OrganizationId];
-                exportOrgIds.AddRange([.. dbContext.Artifactcategorys
+                List<int> supportingOrgIds = [];
+                //notes are only shared within one organization so we don't need to check those
+                supportingOrgIds.AddRange([.. dbContext.Organizations
+                    .Where(o => !o.Archived && o.Name == "BibleMedia")
+                    .Select(o => o.Id)]);
+                supportingOrgIds.AddRange([.. dbContext.Artifactcategorys
                     .Where(ac => !ac.Archived && supportingCategoryIds.Contains(ac.Id))
                     .Select(ac => ac.OrganizationId)
                     .Where(oid => oid != null && oid != project.OrganizationId)
                     .Select(oid => oid ?? 0)
                     .Distinct()]);
-                IQueryable<Organization> orgs = dbContext.Organizations.Where(o => exportOrgIds.Contains(o.Id));
-
                 IQueryable<Intellectualproperty>? ip = OrgIPs(primaryOrg);
+                IQueryable<Plan> plans = projects
+                    .Join(dbContext.PlansData, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
+                    .Where(x => !x.Archived);
+                IQueryable<Artifactcategory> categories = dbContext.Artifactcategorys.Where(a =>
+                                    (   a.OrganizationId == null
+                                        || a.OrganizationId == project.OrganizationId
+                                        || supportingCategoryIds.Contains(a.Id)
+                                    ) && !a.Archived);
+
+                IQueryable<Orgkeytermtarget> orgkeytermtargets = dbContext.OrgKeytermTargetsData.Where(
+                                a => (a.OrganizationId == project.OrganizationId) && !a.Archived
+                            );
+                IQueryable<Section> sections = plans
+                    .Join(dbContext.SectionsData, p => p.Id, s => s.PlanId, (p, s) => s)
+                    .Where(x => !x.Archived);
+                IQueryable<Sectionresource> sectionresources = SectionResources(sections);
+                IQueryable<Bible> orgBibles = dbContext.Organizationbibles.Where(om => om.OrganizationId == project.OrganizationId && !om.Archived)
+                    .Join(dbContext.BiblesData.Where(b => !b.Archived), ob => ob.BibleId, b => b.Id, (ob, b) => b);
+                List<Mediafile> mediafiles = ProjectMedia(orgkeytermtargets, categories,
+                    sectionresources, ip, plans, supportingNotes, orgBibles);
+                List<int> planIds = [.. mediafiles.Select(m => m.PlanId).Distinct()];
+                IQueryable<Plan> supportingPlans = dbContext.PlansData.Where(p => planIds.Contains(p.Id) && p.ProjectId != project.Id);
+                List<int> projIds = [.. supportingPlans.Select(p => p.ProjectId)];
+                IQueryable<Project> supportingProjects = dbContext.ProjectsData.Where(p => projIds.Contains(p.Id));
+                supportingOrgIds.AddRange([.. supportingProjects
+                    .Select(p => p.OrganizationId)
+                    .Where(oid => oid != project.OrganizationId)
+                    .Distinct()]);
                 if (start == 0)
                 {
                     Dictionary<string, string> fonts = new()
@@ -1048,7 +1079,7 @@ namespace SIL.Transcriber.Services
                     };
                     DateTime exported = AddCheckEntry(
                         zipArchive,
-                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 8
+                        dbContext.Currentversions.FirstOrDefault()?.SchemaVersion ?? 11
                     );
                     AddJsonEntry(
                         zipArchive,
@@ -1066,11 +1097,12 @@ namespace SIL.Transcriber.Services
                         dbContext.Workflowsteps.ToList()
                     );
                     //org
-                    List<Organization> orgList = [.. primaryOrg];
-                    orgList.AddRange([.. orgs.Where(o => o.Id != project.OrganizationId)]);
+                    List<Organization> supportingOrgs = [.. dbContext.Organizations.Where(o => supportingOrgIds.Contains(o.Id))];
+                    List<Organization> primaryOrgAsList = [.. primaryOrg];
 
-                    AddOrgLogos(zipArchive, orgList);
-                    AddJsonEntry(zipArchive, Tables.Organizations, orgList);
+                    AddOrgLogos(zipArchive, primaryOrgAsList);
+                    AddJsonEntry(zipArchive, Tables.Organizations, primaryOrgAsList);
+                    AddJsonEntry(zipArchive, "supportingorgs", supportingOrgs);
 
                     //groups
                     IQueryable<Group> groups = dbContext.GroupsData.Join(
@@ -1165,30 +1197,6 @@ namespace SIL.Transcriber.Services
                     )
                         break;
                     //plans
-                    IQueryable<Plan> plans = projects
-                        .Join(dbContext.PlansData, p => p.Id, pl => pl.ProjectId, (p, pl) => pl)
-                        .Where(x => !x.Archived);
-                    IQueryable<Artifactcategory> categories = dbContext.Artifactcategorys.Where(a =>
-                                        (   a.OrganizationId == null
-                                            || a.OrganizationId == project.OrganizationId
-                                            || supportingCategoryIds.Contains(a.Id)
-                                        ) && !a.Archived);
-
-                    IQueryable<Orgkeytermtarget> orgkeytermtargets = dbContext.OrgKeytermTargetsData.Where(
-                                    a => (a.OrganizationId == project.OrganizationId) && !a.Archived
-                                );
-                    IQueryable<Section> sections = plans
-                        .Join(dbContext.SectionsData, p => p.Id, s => s.PlanId, (p, s) => s)
-                        .Where(x => !x.Archived);
-                    IQueryable<Sectionresource> sectionresources = SectionResources(sections);
-                    IQueryable<Bible>  orgBibles = dbContext.Organizationbibles.Where(om => om.OrganizationId == project.OrganizationId && !om.Archived)
-                        .Join(dbContext.BiblesData.Where(b=>!b.Archived), ob => ob.BibleId, b => b.Id, (ob, b) => b);
-                    List<Mediafile> mediafiles = ProjectMedia(orgkeytermtargets, categories,
-                        sectionresources, ip,plans, supportingNotes, orgBibles);
-                    List<int>  planIds = [..mediafiles.Select(m => m.PlanId).Distinct()];
-                    IQueryable<Plan> supportingPlans = dbContext.PlansData.Where(p => planIds.Contains(p.Id)) ;
-                    List<int> projIds = [.. supportingPlans.Where(p => p.ProjectId != project.Id).Select(p => p.ProjectId)];
-                    IQueryable<Project> supportingProjects = dbContext.ProjectsData.Where(p => projIds.Contains(p.Id));
                     if (
                         !CheckAdd(
                             2,
@@ -1298,14 +1306,7 @@ namespace SIL.Transcriber.Services
                             ref startNext,
                             zipArchive,
                             Tables.ArtifactTypes,
-                            dbContext.Artifacttypes
-                                .Where(a =>
-                                        (
-                                            a.OrganizationId == null
-                                            || a.OrganizationId == project.OrganizationId
-                                        ) && !a.Archived
-                                )
-                                .ToList()
+                            dbContext.Artifacttypes.ToList()
                         )
                     )
                         break;
@@ -1532,7 +1533,7 @@ namespace SIL.Transcriber.Services
             Fileresponse response = WriteMemoryStream(ms, fileName, startNext, ext);
             if (startNext == LAST_ADD + 1)
             {   //add the mediafiles
-                string id= _SQSService.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
+                _ = _SQSService.SendExportMessage(project.Id, ExportFolder, fileName + ext, 0);
             }
             return response;
         }
@@ -4526,12 +4527,6 @@ namespace SIL.Transcriber.Services
                             else
                                 SaveId(name, org.OfflineId, existingOrgId, mapKey);
 
-                            foreach (string sourceOrgOfflineId in lst.Select(ro => ro.Id ?? string.Empty).Where(id => !string.IsNullOrEmpty(id)).Distinct())
-                            {
-                                if (!GetMap(name, mapKey).ContainsKey(sourceOrgOfflineId))
-                                    SaveId(name, sourceOrgOfflineId, orgid, mapKey);
-                            }
-
                             //add all users to the org
                             AddUsersToOrg(orgid, mapKey);
                             foreach (string email in UsersToInvite)
@@ -4575,11 +4570,17 @@ namespace SIL.Transcriber.Services
                             List<Artifactcategory> ac = [];
                             if (orgid == 0)
                                 throw new Exception("No Org in ArtifactCategory");
+                            IdMap orgMap = GetMap(Tables.Organizations, mapKey);
                             foreach (ResourceObject ro in lst)
                             {
                                 Artifactcategory category = ResourceObjectToResource(ro, new Artifactcategory(), mapKey);
                                 if (category.OrganizationId != null)
-                                    category.OrganizationId = GetMappedId(Tables.Organizations, mapKey, category.OrganizationId.ToString()) ?? category.OrganizationId;
+                                {
+                                    string sourceCategoryOrgId = category.OrganizationId.ToString() ?? string.Empty;
+                                    category.OrganizationId = orgMap.TryGetValue(sourceCategoryOrgId, out int mappedOrgId)
+                                        ? mappedOrgId
+                                        : orgid;
+                                }
                                 ac.Add(category);
                             }
                             SaveMap(CopyArtifactCategorys([.. ac.Where(s => s.OrganizationId == orgid || s.OrganizationId is null)], orgid), name, mapKey);

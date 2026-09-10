@@ -75,7 +75,6 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope fullAssertScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = fullAssertScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.Contains(dbContext.Copyprojects, cp => cp.Newprojid == fullMapKey && cp.Sourcetable == Tables.Organizations && cp.Oldid == ExtraOrganizationId && cp.Newid == fullImportTargetOrgId);
             fullImportState = LoadImportedSupportingNoteState(dbContext, fullMapKey);
         }
 
