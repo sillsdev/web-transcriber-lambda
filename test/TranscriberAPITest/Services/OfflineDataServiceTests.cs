@@ -31,6 +31,8 @@ public class OfflineDataServiceTests
     private const string SourceSupportingSharedResourceId = "1050";
     private const string SourceSupportingReferenceId = "1060";
     private const string SourceSupportingCategoryId = "1070";
+    private const string SourceOwnedCategoryId = "1071";
+    private const string SourceUnusedForeignCategoryId = "1072";
     private const int BatchSourcePassageBaseId = 7000;
     private const int BatchSharedResourceBaseId = 9000;
     private const int BatchSectionBaseId = 11000;
@@ -220,6 +222,216 @@ public class OfflineDataServiceTests
     }
 
     [Fact]
+    public async Task ProcessImportCopyFileAsync_DuplicateCategoryNames_MapToSingleImportedCategory()
+    {
+        string databaseName = $"offline-import-duplicate-categories-{Guid.NewGuid():N}";
+        await using ServiceProvider provider = BuildServiceProvider(databaseName);
+
+        int targetOrgId;
+        await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.EnsureCreatedAsync();
+            SeedLookupData(dbContext);
+            SeedCurrentUser(dbContext);
+            targetOrgId = SeedTargetOrganization(dbContext, "Import Target Duplicate Categories");
+            await dbContext.SaveChangesAsync();
+        }
+
+        byte[] archiveBytes;
+        await using (AsyncServiceScope archiveScope = provider.CreateAsyncScope())
+        {
+            archiveBytes = CreateArchiveWithDuplicateCategoryNames(archiveScope.ServiceProvider);
+        }
+
+        const string mapKey = "duplicate-category-map";
+        await using (AsyncServiceScope importScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)importScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            using ZipArchive archive = OpenArchive(archiveBytes);
+            Fileresponse response = await service.ProcessImportCopyFileAsync(archive, targetOrgId, "duplicate-categories.ptf", 0, mapKey);
+            Assert.True(response.Status == HttpStatusCode.OK, response.Message);
+        }
+
+        await using (AsyncServiceScope assertScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            List<Artifactcategory> importedCategories = [.. dbContext.Artifactcategorys.Where(category => category.Categoryname == "Duplicate Category" && !category.Archived)];
+            List<CopyProject> categoryMaps = [.. dbContext.Copyprojects.Where(cp => cp.Newprojid == mapKey && cp.Sourcetable == Tables.ArtifactCategorys)];
+
+            Assert.True(importedCategories.Count == 1, $"categories: {string.Join(", ", dbContext.Artifactcategorys.Where(category => !category.Archived).Select(category => $"{category.Id}:{category.Categoryname}:{category.OrganizationId}"))}");
+            Assert.Single(categoryMaps);
+            Assert.Single(categoryMaps.Select(cp => cp.Newid).Distinct());
+        }
+    }
+
+    [Fact]
+    public async Task ProcessImportCopyFileAsync_ImportsSourceCategories_ReusesSharedById_AndSkipsUnusedForeignCategories()
+    {
+        string databaseName = $"offline-import-selective-categories-{Guid.NewGuid():N}";
+        await using ServiceProvider provider = BuildServiceProvider(databaseName);
+
+        int targetOrgId;
+        await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.EnsureCreatedAsync();
+            SeedLookupData(dbContext);
+            SeedCurrentUser(dbContext);
+            targetOrgId = SeedTargetOrganization(dbContext, "Import Target Selective Categories");
+            dbContext.Artifactcategorys.Add(new Artifactcategory
+            {
+                Id = int.Parse(SourceSupportingCategoryId),
+                Categoryname = "Supporting Note Category",
+                Note = true,
+                Resource = true,
+                Discussion = false,
+                OrganizationId = null
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        byte[] archiveBytes;
+        await using (AsyncServiceScope archiveScope = provider.CreateAsyncScope())
+        {
+            archiveBytes = CreateArchiveWithSelectiveArtifactCategories(archiveScope.ServiceProvider);
+        }
+
+        const string mapKey = "selective-category-map";
+        await using (AsyncServiceScope importScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)importScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            using ZipArchive archive = OpenArchive(archiveBytes);
+            Fileresponse response = await service.ProcessImportCopyFileAsync(archive, targetOrgId, "selective-categories.ptf", 0, mapKey);
+            Assert.True(response.Status == HttpStatusCode.OK, response.Message);
+        }
+
+        await using (AsyncServiceScope assertScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Artifactcategory? sourceOwnedCategory = dbContext.Artifactcategorys.SingleOrDefault(category => category.Categoryname == "Source Owned Category" && !category.Archived);
+            Artifactcategory reusedSharedCategory = dbContext.Artifactcategorys.Single(category => category.Id == int.Parse(SourceSupportingCategoryId));
+            Sharedresource supportingResource = dbContext.Sharedresources.Single(resource => resource.Title == "Supporting Note");
+            List<CopyProject> categoryMaps = [.. dbContext.Copyprojects.Where(cp => cp.Newprojid == mapKey && cp.Sourcetable == Tables.ArtifactCategorys)];
+
+            Assert.True(sourceOwnedCategory != null, $"categories: {string.Join(", ", dbContext.Artifactcategorys.Where(category => !category.Archived).Select(category => $"{category.Id}:{category.Categoryname}:{category.OrganizationId}"))}; maps: {string.Join(", ", categoryMaps.Select(cp => $"{cp.Oldid}->{cp.Newid}"))}");
+            Assert.Equal(targetOrgId, sourceOwnedCategory.OrganizationId);
+            Assert.Null(reusedSharedCategory.OrganizationId);
+            Assert.Equal(reusedSharedCategory.Id, supportingResource.ArtifactCategoryId);
+            Assert.DoesNotContain(dbContext.Artifactcategorys, category => category.Categoryname == "Unused Foreign Category" && !category.Archived);
+            Assert.Contains(categoryMaps, cp => cp.Oldid == SourceOwnedCategoryId && cp.Newid == sourceOwnedCategory.Id);
+            Assert.DoesNotContain(categoryMaps, cp => cp.Oldid == SourceUnusedForeignCategoryId);
+            Assert.True(categoryMaps.All(cp => cp.Newid == sourceOwnedCategory.Id || cp.Newid == reusedSharedCategory.Id));
+        }
+    }
+
+    [Fact]
+    public async Task ImportCopyProjectAsync_CopiesAquiferFormatLinkAndLinkedResourcesIntoNewProject()
+    {
+        string databaseName = $"offline-copy-project-resources-{Guid.NewGuid():N}";
+        await using ServiceProvider provider = BuildServiceProvider(databaseName);
+
+        CopyProjectResourceFixture fixture;
+        await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            FakeS3Service s3Service = (FakeS3Service)setupScope.ServiceProvider.GetRequiredService<IS3Service>();
+            await dbContext.Database.EnsureCreatedAsync();
+            SeedLookupData(dbContext);
+            SeedCurrentUser(dbContext);
+            fixture = SeedCopyProjectResourceFixture(dbContext, s3Service);
+            await dbContext.SaveChangesAsync();
+        }
+
+        await using (AsyncServiceScope copyScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)copyScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            Fileresponse response = await service.ImportCopyProjectAsync(fixture.OrganizationId, fixture.SourceProjectId, 0, "");
+            Assert.True(response.Status == HttpStatusCode.OK, response.Message);
+        }
+
+        await using (AsyncServiceScope assertScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Project copiedProject = dbContext.Projects.Single(project => project.OrganizationId == fixture.OrganizationId && project.Id != fixture.SourceProjectId);
+            Plan copiedPlan = dbContext.Plans.Single(plan => plan.ProjectId == copiedProject.Id);
+            List<int> copiedSectionIds = [.. dbContext.Sections.Where(section => section.PlanId == copiedPlan.Id).Select(section => section.Id)];
+            Passage copiedLinkedSourcePassage = dbContext.Passages.Single(passage => copiedSectionIds.Contains(passage.SectionId) && passage.Title == "Linked Source Passage");
+            List<Sectionresource> copiedSectionResources = [.. dbContext.Sectionresources.Where(resource => resource.ProjectId == copiedProject.Id).OrderBy(resource => resource.SequenceNum)];
+            List<int> copiedResourceMediaIds = [.. copiedSectionResources.Where(resource => resource.MediafileId != null).Select(resource => resource.MediafileId ?? 0)];
+            List<Mediafile> copiedResourceMedia = [.. dbContext.Mediafiles.Where(media => copiedResourceMediaIds.Contains(media.Id)).OrderBy(media => media.Id)];
+
+            Assert.Equal(4, copiedSectionResources.Count);
+            Assert.Equal(4, copiedResourceMedia.Count);
+            Assert.Equal(4, copiedResourceMedia.Select(media => media.ArtifactTypeId).Distinct().Count());
+            Assert.All(copiedSectionResources, resource => Assert.Contains(resource.Description, fixture.ResourceDescriptions));
+            Assert.All(copiedResourceMedia, media => Assert.Equal(copiedPlan.Id, media.PlanId));
+
+            Mediafile aquiferTextResource = copiedResourceMedia.Single(media => media.ArtifactTypeId == fixture.AquiferTextArtifactTypeId);
+            Assert.Equal("text/markdown", aquiferTextResource.ContentType);
+            Assert.Equal("https://api.aquifer.bible/content/aquifer-text-resource.md", aquiferTextResource.AudioUrl);
+            Assert.Equal("aquifer-text-resource.md", aquiferTextResource.S3File);
+            Assert.Equal(fixture.AquiferMarkdownOriginalFile, aquiferTextResource.OriginalFile);
+
+            Mediafile formatTextResource = copiedResourceMedia.Single(media => media.ArtifactTypeId == fixture.FormatTextArtifactTypeId);
+            Assert.Equal("text/uri-list", formatTextResource.ContentType);
+            Assert.Equal("https://example.org/resources/format-text", formatTextResource.Transcription);
+            Assert.Equal(string.Empty, formatTextResource.S3File);
+            Assert.Equal(fixture.FormatTextOriginalFile, formatTextResource.OriginalFile);
+
+            Mediafile linkResource = copiedResourceMedia.Single(media => media.ArtifactTypeId == fixture.LinkArtifactTypeId);
+            Assert.True(linkResource.Link ?? false);
+            Assert.Equal("text/html", linkResource.ContentType);
+            Assert.Equal("link-resource.html", linkResource.S3File);
+
+            Mediafile linkedResource = copiedResourceMedia.Single(media => media.ArtifactTypeId == fixture.LinkedArtifactTypeId);
+            Mediafile copiedLinkedSourceMedia = dbContext.Mediafiles.Single(media => media.Id == linkedResource.SourceMediaId);
+            Assert.Equal(copiedLinkedSourcePassage.Id, linkedResource.ResourcePassageId);
+            Assert.Equal(copiedLinkedSourcePassage.Id, copiedLinkedSourceMedia.PassageId);
+            Assert.Equal(copiedPlan.Id, copiedLinkedSourceMedia.PlanId);
+            Assert.NotEqual(fixture.LinkedSourceMediaId, copiedLinkedSourceMedia.Id);
+        }
+    }
+
+    [Fact]
+    public async Task ImportCopyProjectAsync_ResumePastLastTable_DoesNotReturnIndexOutOfRange()
+    {
+        string databaseName = $"offline-copy-project-index-{Guid.NewGuid():N}";
+        await using ServiceProvider provider = BuildServiceProvider(databaseName);
+
+        CopyProjectResourceFixture fixture;
+        await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            FakeS3Service s3Service = (FakeS3Service)setupScope.ServiceProvider.GetRequiredService<IS3Service>();
+            await dbContext.Database.EnsureCreatedAsync();
+            SeedLookupData(dbContext);
+            SeedCurrentUser(dbContext);
+            fixture = SeedCopyProjectResourceFixture(dbContext, s3Service);
+            await dbContext.SaveChangesAsync();
+        }
+
+        string mapKey;
+        await using (AsyncServiceScope copyScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)copyScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            Fileresponse first = await service.ImportCopyProjectAsync(0, fixture.SourceProjectId, 0, "");
+            Assert.True(first.Status == HttpStatusCode.OK, first.Message);
+            Assert.False(string.IsNullOrEmpty(first.FileURL));
+            mapKey = first.FileURL;
+        }
+
+        await using (AsyncServiceScope resumeScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)resumeScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            Fileresponse resume = await service.ImportCopyProjectAsync(0, fixture.SourceProjectId, 999, mapKey);
+            Assert.True(resume.Status == HttpStatusCode.OK, resume.Message);
+            Assert.DoesNotContain("Index", resume.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(-1, resume.Id);
+        }
+    }
+
+    [Fact]
     public async Task ExportProjectPTF_RestrictsForeignOrganizationCategoriesToSupportingSharedResourceCategories()
     {
         string databaseName = $"offline-export-{Guid.NewGuid():N}";
@@ -332,6 +544,253 @@ public class OfflineDataServiceTests
         });
         dbContext.SaveChanges();
         return organization.Id;
+    }
+
+    private static CopyProjectResourceFixture SeedCopyProjectResourceFixture(AppDbContext dbContext, FakeS3Service s3Service)
+    {
+        Organization organization = new()
+        {
+            Id = 3001,
+            Name = "Copy Resource Organization",
+            OwnerId = 1,
+            Slug = "copy-resource-organization"
+        };
+        Group allUsersGroup = new()
+        {
+            Id = 3002,
+            Name = "All users of Copy Resource Organization",
+            Abbreviation = "all-users",
+            AllUsers = true,
+            OwnerId = organization.Id
+        };
+        Artifacttype aquiferTextType = new()
+        {
+            Id = 3101,
+            Typename = "Aquifer Text Resource"
+        };
+        Artifacttype formatTextType = new()
+        {
+            Id = 3102,
+            Typename = "Format Text Resource"
+        };
+        Artifacttype linkType = new()
+        {
+            Id = 3103,
+            Typename = "Link Resource"
+        };
+        Artifacttype linkedType = new()
+        {
+            Id = 3104,
+            Typename = "Linked Resource"
+        };
+        Project sourceProject = new()
+        {
+            Id = 3201,
+            Name = "Copy Resource Source Project",
+            Slug = "copy-resource-source-project",
+            OrganizationId = organization.Id,
+            GroupId = allUsersGroup.Id,
+            OwnerId = 1,
+            ProjecttypeId = 1
+        };
+        Plan sourcePlan = new()
+        {
+            Id = 3202,
+            Name = "Copy Resource Source Project",
+            Slug = "copy-resource-source-plan",
+            ProjectId = sourceProject.Id,
+            OwnerId = 1,
+            PlantypeId = 1,
+            Flat = false,
+            SectionCount = 1
+        };
+        Section section = new()
+        {
+            Id = 3203,
+            Name = "Copy Resource Section",
+            PlanId = sourcePlan.Id,
+            Sequencenum = 1,
+            Level = 1,
+            Published = true,
+            State = "assigned",
+            PublishTo = "{}"
+        };
+        Passage mainPassage = new()
+        {
+            Id = 3204,
+            Title = "Primary Passage",
+            Book = "GEN",
+            Reference = "1:1",
+            State = "approved",
+            Sequencenum = 1,
+            SectionId = section.Id,
+            PassagetypeId = 1
+        };
+        Passage linkedSourcePassage = new()
+        {
+            Id = 3205,
+            Title = "Linked Source Passage",
+            Book = "GEN",
+            Reference = "1:2",
+            State = "approved",
+            Sequencenum = 2,
+            SectionId = section.Id,
+            PassagetypeId = 1
+        };
+        Orgworkflowstep resourceWorkflowStep = new()
+        {
+            Id = 3206,
+            OrganizationId = organization.Id,
+            Name = "Resource",
+            Process = "resource",
+            Sequencenum = 1,
+            Tool = "{\"tool\": \"resource\"}",
+            Permissions = "{}"
+        };
+        Mediafile linkedSourceMedia = new()
+        {
+            Id = 3301,
+            PlanId = sourcePlan.Id,
+            PassageId = linkedSourcePassage.Id,
+            VersionNumber = 2,
+            ReadyToShare = true,
+            ContentType = "audio/mpeg",
+            OriginalFile = "linked-source.mp3",
+            S3File = "linked-source.mp3",
+            AudioUrl = "linked-source.mp3"
+        };
+        const string aquiferMarkdownOriginalFile = "Aquifer text (GEN 1:1).md";
+        Mediafile aquiferTextResource = new()
+        {
+            Id = 3302,
+            PlanId = sourcePlan.Id,
+            PassageId = mainPassage.Id,
+            ArtifactTypeId = aquiferTextType.Id,
+            ContentType = "text/markdown",
+            OriginalFile = aquiferMarkdownOriginalFile,
+            S3File = "aquifer-text-resource.md",
+            AudioUrl = "https://api.aquifer.bible/content/aquifer-text-resource.md",
+            Transcription = "# Aquifer text resource",
+            Languagebcp47 = "en"
+        };
+        const string formatTextOriginalFile = "https://balsamiq.cloud/sghq53/pgolx48/rD317";
+        Mediafile formatTextResource = new()
+        {
+            Id = 3303,
+            PlanId = sourcePlan.Id,
+            PassageId = mainPassage.Id,
+            ArtifactTypeId = formatTextType.Id,
+            ContentType = "text/uri-list",
+            OriginalFile = formatTextOriginalFile,
+            S3File = string.Empty,
+            AudioUrl = string.Empty,
+            Transcription = "https://example.org/resources/format-text",
+            Languagebcp47 = "en"
+        };
+        Mediafile linkResource = new()
+        {
+            Id = 3304,
+            PlanId = sourcePlan.Id,
+            PassageId = mainPassage.Id,
+            ArtifactTypeId = linkType.Id,
+            ContentType = "text/html",
+            OriginalFile = "link-resource.html",
+            S3File = "link-resource.html",
+            AudioUrl = "link-resource.html",
+            Link = true,
+            Languagebcp47 = "en"
+        };
+        Mediafile linkedResource = new()
+        {
+            Id = 3305,
+            PlanId = sourcePlan.Id,
+            PassageId = mainPassage.Id,
+            ArtifactTypeId = linkedType.Id,
+            ContentType = "text/plain",
+            OriginalFile = "linked-resource.txt",
+            S3File = "linked-resource.txt",
+            AudioUrl = "linked-resource.txt",
+            ResourcePassageId = linkedSourcePassage.Id,
+            SourceMediaId = linkedSourceMedia.Id,
+            Languagebcp47 = "en"
+        };
+
+        dbContext.Organizations.Add(organization);
+        dbContext.Groups.Add(allUsersGroup);
+        dbContext.Artifacttypes.AddRange(aquiferTextType, formatTextType, linkType, linkedType);
+        dbContext.Projects.Add(sourceProject);
+        dbContext.Plans.Add(sourcePlan);
+        dbContext.Sections.Add(section);
+        dbContext.Passages.AddRange(mainPassage, linkedSourcePassage);
+        dbContext.Orgworkflowsteps.Add(resourceWorkflowStep);
+        dbContext.Mediafiles.AddRange(linkedSourceMedia, aquiferTextResource, formatTextResource, linkResource, linkedResource);
+        dbContext.Sectionresources.AddRange(
+            new Sectionresource
+            {
+                Id = 3401,
+                SequenceNum = 1,
+                Description = aquiferTextType.Typename,
+                SectionId = section.Id,
+                PassageId = mainPassage.Id,
+                MediafileId = aquiferTextResource.Id,
+                OrgWorkflowStepId = resourceWorkflowStep.Id
+            },
+            new Sectionresource
+            {
+                Id = 3402,
+                SequenceNum = 2,
+                Description = formatTextType.Typename,
+                SectionId = section.Id,
+                PassageId = mainPassage.Id,
+                MediafileId = formatTextResource.Id,
+                OrgWorkflowStepId = resourceWorkflowStep.Id
+            },
+            new Sectionresource
+            {
+                Id = 3403,
+                SequenceNum = 3,
+                Description = linkType.Typename,
+                SectionId = section.Id,
+                PassageId = mainPassage.Id,
+                MediafileId = linkResource.Id,
+                OrgWorkflowStepId = resourceWorkflowStep.Id
+            },
+            new Sectionresource
+            {
+                Id = 3404,
+                SequenceNum = 4,
+                Description = linkedType.Typename,
+                SectionId = section.Id,
+                PassageId = mainPassage.Id,
+                MediafileId = linkedResource.Id,
+                OrgWorkflowStepId = resourceWorkflowStep.Id
+            });
+        dbContext.SaveChanges();
+
+        string sourceFolder = $"{organization.Slug}/{sourcePlan.Slug}";
+        SeedS3File(s3Service, sourceFolder, formatTextResource.S3File ?? string.Empty, formatTextResource.Transcription ?? string.Empty);
+        SeedS3File(s3Service, sourceFolder, linkResource.S3File ?? string.Empty, "<a href=\"https://example.org/resource\">resource</a>");
+        SeedS3File(s3Service, sourceFolder, linkedResource.S3File ?? string.Empty, "Linked resource content");
+        SeedS3File(s3Service, sourceFolder, linkedSourceMedia.S3File ?? string.Empty, "linked source audio");
+
+        return new CopyProjectResourceFixture(
+            organization.Id,
+            sourceProject.Id,
+            linkedSourceMedia.Id,
+            aquiferTextType.Id,
+            formatTextType.Id,
+            linkType.Id,
+            linkedType.Id,
+            aquiferMarkdownOriginalFile,
+            formatTextOriginalFile,
+            [aquiferTextType.Typename ?? string.Empty, formatTextType.Typename ?? string.Empty, linkType.Typename ?? string.Empty, linkedType.Typename ?? string.Empty]);
+    }
+
+    private static void SeedS3File(FakeS3Service s3Service, string folder, string fileName, string contents)
+    {
+        using MemoryStream stream = new(System.Text.Encoding.UTF8.GetBytes(contents));
+        S3Response response = s3Service.UploadFileAsync(stream, true, fileName, folder).GetAwaiter().GetResult();
+        Assert.Equal(HttpStatusCode.OK, response.Status);
     }
 
     private static ExportFixture SeedExportCategoryFixture(AppDbContext dbContext)
@@ -636,6 +1095,220 @@ public class OfflineDataServiceTests
             AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
             AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
             AddJsonEntry(archive, "data/F_sections.json", sections, serviceProvider);
+        }
+        return stream.ToArray();
+    }
+
+    private static byte[] CreateArchiveWithDuplicateCategoryNames(IServiceProvider serviceProvider)
+    {
+        Organization sourceOrganization = new()
+        {
+            Id = int.Parse(SourceOrganizationId),
+            Name = "Archive Source Organization",
+            Slug = "archive-source-organization"
+        };
+        Organization extraOrganization = new()
+        {
+            Id = int.Parse(ExtraOrganizationId),
+            Name = "Archive Extra Organization",
+            Slug = "archive-extra-organization"
+        };
+        Project sourceProject = new()
+        {
+            Id = int.Parse(SourceProjectId),
+            Name = "Archive Source Project",
+            Organization = sourceOrganization,
+            OrganizationId = sourceOrganization.Id,
+            ProjecttypeId = 1,
+            Projecttype = new Projecttype { Id = 1, Name = "Story" }
+        };
+        Plan sourcePlan = new()
+        {
+            Id = int.Parse(SourcePlanId),
+            Name = "Archive Source Plan",
+            Project = sourceProject,
+            ProjectId = sourceProject.Id,
+            PlantypeId = 1,
+            Plantype = new Plantype { Id = 1, Name = "Standard" }
+        };
+        Section sourceSection = new()
+        {
+            Id = int.Parse(SourceSectionId),
+            Name = "Archive Section",
+            Plan = sourcePlan,
+            PlanId = sourcePlan.Id,
+            Sequencenum = 1,
+            Level = 1,
+            Published = true,
+            State = "assigned",
+            PublishTo = "{}"
+        };
+        Artifactcategory globalCategory = new()
+        {
+            Id = 12001,
+            Categoryname = "Duplicate Category",
+            Note = false,
+            Resource = true,
+            Discussion = false,
+            OrganizationId = null
+        };
+        Artifactcategory orgCategory = new()
+        {
+            Id = 12002,
+            Categoryname = "Duplicate Category",
+            Note = true,
+            Resource = true,
+            Discussion = false,
+            OrganizationId = sourceOrganization.Id,
+            Organization = sourceOrganization
+        };
+
+        using MemoryStream stream = new();
+        using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
+        {
+            WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
+            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization, extraOrganization }, serviceProvider);
+            AddJsonEntry(archive, "data/C_artifactcategorys.json", new[] { globalCategory, orgCategory }, serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
+            AddJsonEntry(archive, "data/F_sections.json", new[] { sourceSection }, serviceProvider);
+        }
+        return stream.ToArray();
+    }
+
+    private static byte[] CreateArchiveWithSelectiveArtifactCategories(IServiceProvider serviceProvider)
+    {
+        Organization sourceOrganization = new()
+        {
+            Id = int.Parse(SourceOrganizationId),
+            Name = "Archive Source Organization",
+            Slug = "archive-source-organization"
+        };
+        Organization extraOrganization = new()
+        {
+            Id = int.Parse(ExtraOrganizationId),
+            Name = "Archive Extra Organization",
+            Slug = "archive-extra-organization"
+        };
+        Project sourceProject = new()
+        {
+            Id = int.Parse(SourceProjectId),
+            Name = "Archive Source Project",
+            Organization = sourceOrganization,
+            OrganizationId = sourceOrganization.Id,
+            ProjecttypeId = 1,
+            Projecttype = new Projecttype { Id = 1, Name = "Story" }
+        };
+        Plan sourcePlan = new()
+        {
+            Id = int.Parse(SourcePlanId),
+            Name = "Archive Source Plan",
+            Project = sourceProject,
+            ProjectId = sourceProject.Id,
+            PlantypeId = 1,
+            Plantype = new Plantype { Id = 1, Name = "Standard" }
+        };
+        Section sourceSection = new()
+        {
+            Id = int.Parse(SourceSectionId),
+            Name = "Archive Section",
+            Plan = sourcePlan,
+            PlanId = sourcePlan.Id,
+            Sequencenum = 1,
+            Level = 1,
+            Published = true,
+            State = "assigned",
+            PublishTo = "{}"
+        };
+        Artifactcategory reusedSharedCategory = new()
+        {
+            Id = int.Parse(SourceSupportingCategoryId),
+            Categoryname = "Supporting Note Category",
+            Note = true,
+            Resource = true,
+            Discussion = false,
+            OrganizationId = int.Parse(ExtraOrganizationId),
+            Organization = extraOrganization
+        };
+        Artifactcategory sourceOwnedCategory = new()
+        {
+            Id = int.Parse(SourceOwnedCategoryId),
+            Categoryname = "Source Owned Category",
+            Note = false,
+            Resource = true,
+            Discussion = false,
+            OrganizationId = int.Parse(SourceOrganizationId),
+            Organization = sourceOrganization
+        };
+        Artifactcategory unusedForeignCategory = new()
+        {
+            Id = int.Parse(SourceUnusedForeignCategoryId),
+            Categoryname = "Unused Foreign Category",
+            Note = false,
+            Resource = true,
+            Discussion = false,
+            OrganizationId = int.Parse(ExtraOrganizationId),
+            Organization = extraOrganization
+        };
+        Sharedresource supportingSharedResource = new()
+        {
+            Id = int.Parse(SourceSupportingSharedResourceId),
+            Title = "Supporting Note",
+            Description = "Supporting note owned by a skipped passage",
+            Note = true,
+            PassageId = int.Parse(SourceSupportingPassageId),
+            ArtifactCategoryId = reusedSharedCategory.Id,
+            ArtifactCategory = reusedSharedCategory
+        };
+        Passage sourcePrimaryPassage = new()
+        {
+            Id = int.Parse(SourcePrimaryPassageId),
+            Title = "Imported Passage",
+            Book = "GEN",
+            Reference = "1:1",
+            State = "approved",
+            Sequencenum = 1,
+            Section = sourceSection,
+            SectionId = sourceSection.Id,
+            SharedResource = supportingSharedResource,
+            SharedResourceId = supportingSharedResource.Id,
+            PassagetypeId = 1,
+            Passagetype = new Passagetype { Id = 1, Abbrev = "SCR", USFM = "GEN", Title = "Scripture" }
+        };
+        Passage sourceSupportingPassage = new()
+        {
+            Id = int.Parse(SourceSupportingPassageId),
+            Title = "Skipped Supporting Passage",
+            Book = "GEN",
+            Reference = "1:1 note",
+            State = "approved",
+            Sequencenum = 2,
+            PassagetypeId = 1,
+            Passagetype = new Passagetype { Id = 1, Abbrev = "SCR", USFM = "GEN", Title = "Scripture" }
+        };
+        supportingSharedResource.Passage = sourceSupportingPassage;
+        Sharedresourcereference supportingReference = new()
+        {
+            Id = int.Parse(SourceSupportingReferenceId),
+            SharedResource = supportingSharedResource,
+            SharedResourceId = supportingSharedResource.Id,
+            Book = "GEN",
+            Chapter = 1,
+            Verses = "1"
+        };
+
+        using MemoryStream stream = new();
+        using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
+        {
+            WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
+            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization, extraOrganization }, serviceProvider);
+            AddJsonEntry(archive, "data/C_artifactcategorys.json", new[] { reusedSharedCategory, sourceOwnedCategory, unusedForeignCategory }, serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
+            AddJsonEntry(archive, "data/F_sections.json", new[] { sourceSection }, serviceProvider);
+            AddJsonEntry(archive, "data/G_passages.json", new[] { sourcePrimaryPassage, sourceSupportingPassage }, serviceProvider);
+            AddJsonEntry(archive, "data/I_sharedresources.json", new[] { supportingSharedResource }, serviceProvider);
+            AddJsonEntry(archive, "data/J_sharedresourcereferences.json", new[] { supportingReference }, serviceProvider);
         }
         return stream.ToArray();
     }
@@ -1059,6 +1732,18 @@ public class OfflineDataServiceTests
         int ImportedPassageCount,
         int SharedResourceCount,
         int SharedResourceReferenceCount);
+
+    private sealed record CopyProjectResourceFixture(
+        int OrganizationId,
+        int SourceProjectId,
+        int LinkedSourceMediaId,
+        int AquiferTextArtifactTypeId,
+        int FormatTextArtifactTypeId,
+        int LinkArtifactTypeId,
+        int LinkedArtifactTypeId,
+        string AquiferMarkdownOriginalFile,
+        string FormatTextOriginalFile,
+        string[] ResourceDescriptions);
 
     private sealed record ExportFixture(
         int ProjectId,

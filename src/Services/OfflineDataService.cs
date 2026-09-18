@@ -770,7 +770,7 @@ namespace SIL.Transcriber.Services
                 //S3File has just the filename
                 //AudioUrl has the signed GetUrl which has the path + filename as url (so spaces changed etc) + signed stuff
                 //change the audioUrl to have the offline path + filename
-                //change the s3File to have the onlinepath + filename 
+                //change the s3File to have the onlinepath + filename
                 m.AudioUrl = "media/" + NameFromTemplate(m, nameTemplate);
                 m.S3File = mediaService.DirectoryName(m) + "/" + m.S3File;
             });
@@ -2122,6 +2122,9 @@ namespace SIL.Transcriber.Services
             if (mapKey == "" && IsNumber(ro.Id))
                 s.StringId = ro.Id;
 
+            // Track which *-id attributes were set from the attributes section
+            var processedIdAttributes = new HashSet<string>(StringComparer.Ordinal);
+
             if (ro.Attributes != null)
                 foreach (KeyValuePair<string, object?> row in ro.Attributes)
                 {
@@ -2135,7 +2138,30 @@ namespace SIL.Transcriber.Services
                         object? value = ((JsonElement)row.Value).Deserialize(
                             myTypeAttribute.Property.PropertyType
                         );
-                        if (value is DateTime)
+                        bool isIdAttribute = myTypeAttribute.Property.PropertyType == typeof(int?)
+                            && myTypeAttribute.PublicName.EndsWith("-id", StringComparison.Ordinal);
+                        if (isIdAttribute)
+                        {
+                            if (value is int mappedIdCandidate)
+                            {
+                                if (mappedIdCandidate < 0)
+                                    value = null;
+                                if (!string.IsNullOrEmpty(mapKey) && mappedIdCandidate > 0)
+                                {
+                                    string relationshipName = myTypeAttribute.PublicName[..^3];
+                                    RelationshipAttribute? relationshipAttribute = rels.FirstOrDefault(r => r.PublicName == relationshipName);
+                                    if (relationshipAttribute == null && relationshipName == "last-modified-by")
+                                        relationshipAttribute = rels.FirstOrDefault(r => r.PublicName == "last-modified-by-user");
+                                    if (relationshipAttribute != null)
+                                    {
+                                        int? mappedId = GetMappedId(relationshipAttribute.Property.PropertyType.Name, mapKey, mappedIdCandidate.ToString());
+                                        value = mappedId > 0 ? mappedId : null;
+                                    }
+                                }
+                            }
+                            processedIdAttributes.Add(myTypeAttribute.PublicName);
+                        }
+                        else if (value is DateTime)
                             value = ((DateTime)value).SetKindUtc();
 
                         myTypeAttribute.SetValue(s, value);
@@ -2164,19 +2190,38 @@ namespace SIL.Transcriber.Services
                     {
                         string oldIdStr = row.Value?.Data.SingleValue?.Id??"";
 
-                        bool isNum = int.TryParse(oldIdStr, out int oldid);
-                        int id = !string.IsNullOrEmpty(mapKey) && !string.IsNullOrEmpty(oldIdStr)
-                            ? GetMappedId(myTypeRelationship.Property.PropertyType.Name, mapKey, oldIdStr) ?? 0
-                            : oldid;
+                        // Check if the *-id attribute was already processed in the attributes section
+                        string idAttributeName = myTypeRelationship.PublicName + "-id";
+                        if (idAttributeName == "last-modified-by-user-id")
+                            idAttributeName = "last-modified-by";
+                        bool idAlreadyProcessed = processedIdAttributes.Contains(idAttributeName);
+
+                        int id = 0;
+                        if (!idAlreadyProcessed)
+                        {
+                            // Only map from relationship if the *-id attribute wasn't in the attributes section
+                            bool isNum = int.TryParse(oldIdStr, out int oldid);
+                            id = !string.IsNullOrEmpty(mapKey) && !string.IsNullOrEmpty(oldIdStr)
+                                ? GetMappedId(myTypeRelationship.Property.PropertyType.Name, mapKey, oldIdStr) ?? 0
+                                : oldid;
+                        }
+                        else
+                        {
+                            // The id was already looked up and mapped in the attributes section, get it from there
+                            AttrAttribute? myIdAttribute = attrs.FirstOrDefault(
+                                a => a.PublicName == idAttributeName);
+                            if (myIdAttribute != null && myIdAttribute.GetValue(s) is int idValue)
+                                id = idValue;
+                        }
 
                         AttrAttribute? offlineAttribute = attrs.FirstOrDefault(
                             a => a.PublicName == "offline-" + myTypeRelationship.PublicName + "-id");
                         if (offlineAttribute != null && mapKey != "")
                             offlineAttribute?.SetValue(s, oldIdStr);
-                        AttrAttribute? myIdAttribute = attrs.FirstOrDefault(
+                        AttrAttribute? myIdAttribute2 = attrs.FirstOrDefault(
                         a => a.PublicName == myTypeRelationship.PublicName + "-id");
-                        if (myIdAttribute == null && myTypeRelationship.PublicName == "last-modified-by-user")
-                            myIdAttribute = attrs.FirstOrDefault(a => a.PublicName == "last-modified-by");
+                        if (myIdAttribute2 == null && myTypeRelationship.PublicName == "last-modified-by-user")
+                            myIdAttribute2 = attrs.FirstOrDefault(a => a.PublicName == "last-modified-by");
                         try
                         {
                             object? p = null;
@@ -2193,11 +2238,11 @@ namespace SIL.Transcriber.Services
                             Logger.LogError("unable to find {r} with id {id} oldid {oldid} {e}", myTypeRelationship.PublicName, id, oldIdStr, e);
                             id = 0;
                         }
-                        if (myIdAttribute != null)
+                        if (myIdAttribute2 != null)
                             if (id > 0)
-                                myIdAttribute.SetValue(s, id);
+                                myIdAttribute2.SetValue(s, id);
                             else
-                                myIdAttribute.SetValue(s, null);
+                                myIdAttribute2.SetValue(s, null);
 
                     }
                 }
@@ -2266,6 +2311,31 @@ namespace SIL.Transcriber.Services
             ResourceObject? fileorg = doc?.Data.SingleValue ?? (doc?.Data.ManyValue?[0]);
 
             return fileorg == null ? null : ResourceObjectToResource(fileorg, new Organization());
+        }
+        private Dictionary<string, ResourceObject> ReadFileArtifactCategories(ZipArchive archive)
+        {
+            Dictionary<string, ResourceObject> acs = [];
+            IJsonApiOptions options = new JsonApiOptions();
+            ZipArchiveEntry? orgsEntry = archive.GetEntry("data/C_artifactcategorys.json");
+            if (orgsEntry == null)
+                return acs;
+            string json = new StreamReader(orgsEntry.Open()).ReadToEnd();
+
+            Document? doc = JsonSerializer.Deserialize<Document>(
+                    json,
+                    options.SerializerReadOptions
+                );
+            IList<ResourceObject>? lst = doc?.Data.ManyValue;
+            if (lst is null)
+                return acs;
+            for (int ix = 0; ix < lst.Count; ix++)
+            {
+                ResourceObject ro = lst[ix];
+                if (!string.IsNullOrEmpty(ro.Id))
+                    acs[ro.Id] = ro;
+            }
+
+            return acs;
         }
 
         private int UpdateUsers(IList<ResourceObject> lst, int startId, DateTime sourceDate, List<string> report, DateTime dtBail)
@@ -2529,8 +2599,10 @@ namespace SIL.Transcriber.Services
                             passageVersions[(int)m.PassageId] = m.VersionNumber ?? 1;
                         }
                         string originalS3 = m.S3File??"";
+
                         m.S3File = await mediaService.GetNewFileNameAsync(m);
                         await CopyMediaFile(originalS3, m, archive);
+
                         _ = dbContext.Mediafiles.Add(
                             new Mediafile
                             {
@@ -3002,7 +3074,7 @@ namespace SIL.Transcriber.Services
                     OrganizationId= orgId,
                     Language= source.Language,
                     LanguageName= source.LanguageName,
-                    IsPublic = source.IsPublic,
+                    IsPublic = false, //if they have permission, they can turn it on themselves
                     Uilanguagebcp47 = source.Uilanguagebcp47,
                     DefaultFont = source.DefaultFont,
                     DefaultFontSize = source.DefaultFontSize,
@@ -3010,7 +3082,7 @@ namespace SIL.Transcriber.Services
                     GroupId = allusers.Id,
                     SpellCheck = source.SpellCheck,
                     AllowClaim = source.AllowClaim,
-                    // Publishing/Editing permissions 
+                    // Publishing/Editing permissions
                     EditsheetGroupId = null,
                     EditsheetUserId = null,
                     PublishGroupId = null,
@@ -3050,6 +3122,8 @@ namespace SIL.Transcriber.Services
                 string id = s.OfflineId ?? "error";
                 if (!map.ContainsKey(id) && s.PlanId == planid)  //supporting sections will not be imported
                 {
+                    s.Published = false;
+                    s.PublishTo = "{}";
                     EntityEntry<Section>? t = dbContext.Sections.Add(s);
                     map.Add(id, t.Entity);
                 }
@@ -3192,15 +3266,15 @@ namespace SIL.Transcriber.Services
             Dictionary<string, Artifactcategory> map = [];
             foreach (Artifactcategory c in lst)
             {
-                Artifactcategory? myc = dbContext.Artifactcategorys.FirstOrDefault(m => (m.OrganizationId == null || m.OrganizationId == orgId) && m.Categoryname == c.Categoryname && !m.Archived);
                 string id = c.OfflineId ?? "error";
+                if (id == "error" || map.ContainsKey(id))
+                    continue;
+
+                Artifactcategory? myc = ResolveArtifactCategory(c, orgId, map.Values, false);
                 if (myc == null)
                 {
-                    if (!map.ContainsKey(id))
-                    {
-                        EntityEntry<Artifactcategory>? t = dbContext.Artifactcategorys.Add(c);
-                        map.Add(id, t.Entity);
-                    }
+                    EntityEntry<Artifactcategory>? t = dbContext.Artifactcategorys.Add(c);
+                    map.Add(id, t.Entity);
                 }
                 else
                 {
@@ -3212,6 +3286,22 @@ namespace SIL.Transcriber.Services
             foreach (KeyValuePair<string, Artifactcategory> kvp in map)
                 result.TryAdd(kvp.Key, kvp.Value.Id);
             return result;
+        }
+        private Artifactcategory? ResolveArtifactCategory(Artifactcategory category, int orgId, IEnumerable<Artifactcategory>? pendingCategories = null, bool createIfMissing = false)
+        {
+            string categoryName = category.Categoryname ?? string.Empty;
+            Artifactcategory? existing = dbContext.Artifactcategorys.FirstOrDefault(m => m.Id == category.Id && !m.Archived);
+            existing ??= dbContext.Artifactcategorys.FirstOrDefault(m => m.OrganizationId == orgId && m.Categoryname == categoryName && !m.Archived);
+            existing ??= dbContext.Artifactcategorys.FirstOrDefault(m => m.OrganizationId == null && m.Categoryname == categoryName && !m.Archived);
+            existing ??= pendingCategories?.FirstOrDefault(value => value.Categoryname == categoryName);
+            if (existing != null || !createIfMissing)
+                return existing;
+
+            category.Id = 0;
+            category.OrganizationId = orgId;
+            EntityEntry<Artifactcategory>? created = dbContext.Artifactcategorys.Add(category);
+            dbContext.SaveChanges();
+            return created.Entity;
         }
         private IdMap MapArtifactTypes(IList<ResourceObject> lst, string mapKey)
         {
@@ -3598,9 +3688,12 @@ namespace SIL.Transcriber.Services
                         m.OfflineSourceMediaId = m.SourceMediaId.ToString();
                         m.SourceMediaId = null;
                     }
-                    m.OriginalFile = FileName.S3ObjectName(
-                        string.IsNullOrEmpty(m.OriginalFile) ? m.AudioUrl : m.OriginalFile);
+                    //removed the FileName.S3ObjectName - why do we care what the orignal was? but if you have to put it back
+                    //don't mess with it if the contenttype is a text type.
+                    m.OriginalFile = string.IsNullOrEmpty(m.OriginalFile) ? m.AudioUrl : m.OriginalFile;
+
                     string? originalS3File = m.S3File ?? "";
+                    bool hasSourceS3File = !string.IsNullOrEmpty(originalS3File);
                     if (originalS3File.Contains("://") || originalS3File.Contains('?'))
                         originalS3File = FileName.S3ObjectName(originalS3File);
                     int oldPlan = m.PlanId;
@@ -3608,19 +3701,18 @@ namespace SIL.Transcriber.Services
                     //if it's not biblebrain or aquifer - make a copy
                     string audiourl = m.AudioUrl??"";
                     bool centralCopy = audiourl.Contains("biblebrain") || audiourl.Contains("aquifer");
-                    bool copyIt = !centralCopy;
+                    bool copyIt = !centralCopy && !m.ContentType.StartsWith("text");
 
                     //if we have a file we might not have the biblebrain or aquifer file
                     try
                     {
                         if (archive != null)
                         {
-                            if (centralCopy)
+                            if (centralCopy && hasSourceS3File)
                                 copyIt = !await _S3Service.FileExistsAsync(m.S3File ?? "junk", mediaService.DirectoryName(m));
-                            else
-                                m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
                             if (copyIt)
                             {
+                                m.S3File = await mediaService.GetNewFileNameAsync(m, suffix);
                                 await CopyMediaFile(originalS3File, m, archive);
                             }
                         }
@@ -3635,7 +3727,9 @@ namespace SIL.Transcriber.Services
                         // one bad S3 object must not abort the whole copy; row is still saved so resume can skip it
                         Logger.LogError(ex, "Copy mediafile {id} {file}", id, originalS3File);
                     }
-
+                    m.ReadyToShare = false;
+                    m.PublishTo = "{}";
+                    m.PublishedAs = null;
                     EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(m);
                     //save as we go in case we have to resume
                     dbContext.SaveChanges();
@@ -3812,6 +3906,7 @@ namespace SIL.Transcriber.Services
             int orgid = sameOrg ? sourceOrg.FirstOrDefault()?.Id ?? 0 : 0;
             return await ProcessImportCopyProjectAsync(sourceproject, orgid, start, projId);
         }
+
         private async Task<Fileresponse> ProcessImportCopyProjectAsync(
                 Project sourceproject,
                 int orgId,
@@ -3882,7 +3977,7 @@ namespace SIL.Transcriber.Services
 
                 int ix = start;
                 string status = "";
-                do
+                while (DateTime.Now < dtBail && ix < TableOrder.Count)
                 {
                     string name = TableOrder.Keys.ElementAt(ix);
                     status = name;
@@ -4116,7 +4211,7 @@ namespace SIL.Transcriber.Services
                                         //TextQuality = m.TextQuality,
                                         Transcription = m.Transcription,
                                         PlanId = m.PlanId, //don't map this here - we need to know the old one to find the original file
-                                        OriginalFile = FileName.S3ObjectName(m.OriginalFile ?? m.S3File ?? m.AudioUrl),
+                                        OriginalFile = m.OriginalFile ?? FileName.S3ObjectName(m.S3File ?? m.AudioUrl),
                                         Filesize = m.Filesize,
                                         Position = 0,
                                         Segments = m.Segments,
@@ -4341,10 +4436,9 @@ namespace SIL.Transcriber.Services
                             ix++;
                             break;
                     }
-                } while (DateTime.Now < dtBail && ix < TableOrder.Count)
-                                ;
+                }
                 _ = dbContext.SaveChanges();
-                bool complete = (ix == TableOrder.Count);
+                bool complete = ix >= TableOrder.Count;
                 if (complete)
                 {
                     complete = FixEarlyIds(mapKey, dtBail);
@@ -4441,6 +4535,7 @@ namespace SIL.Transcriber.Services
                 HttpContext?.SetFP("import");
 
                 Project? fileproject = ReadFileProject(archive);
+                //fetch the project if from our db
                 Project? sourceproject = GetFileProject(archive); //don't pass in the mapKey here.  we don't want the org mapped yet.
 
                 string mapKey = myMapKey ?? $"{sourceproject?.OfflineId}{DateTime.Now.Ticks}";
@@ -4467,9 +4562,15 @@ namespace SIL.Transcriber.Services
                 Plan? plan = null;
                 string status = "";
                 int entryNum = start;
-                int sourceOrgId = sourceproject?.OrganizationId ?? 0;
+                Organization? sourceFileOrganization = ReadFileOrganization(archive);
+                int sourceOrgId = sourceproject?.OrganizationId > 0
+                    ? sourceproject.OrganizationId
+                    : fileproject?.OrganizationId > 0
+                        ? fileproject.OrganizationId
+                        : (int.TryParse(sourceFileOrganization?.OfflineId ?? sourceFileOrganization?.StringId, out int parsedSourceOrgId) ? parsedSourceOrgId : 0);
                 string sourceProjectId = fileproject?.OfflineId ?? fileproject?.StringId ?? fileproject?.Id.ToString() ?? "";
                 List<ResourceObject>? sourceOrgSchemes = null;
+                Dictionary<string, ResourceObject>? sourceArtifactCategories = null;
                 HashSet<string> sourceOrgSchemeIds = [];
                 HashSet<string> sourceProjectSectionIds = [];
                 HashSet<string> sourceProjectPassageIds = [];
@@ -4570,20 +4671,17 @@ namespace SIL.Transcriber.Services
                             List<Artifactcategory> ac = [];
                             if (orgid == 0)
                                 throw new Exception("No Org in ArtifactCategory");
-                            IdMap orgMap = GetMap(Tables.Organizations, mapKey);
+                            sourceArtifactCategories = [];
                             foreach (ResourceObject ro in lst)
                             {
+                                if (!string.IsNullOrEmpty(ro.Id))
+                                    sourceArtifactCategories[ro.Id] = ro;
                                 Artifactcategory category = ResourceObjectToResource(ro, new Artifactcategory(), mapKey);
-                                if (category.OrganizationId != null)
-                                {
-                                    string sourceCategoryOrgId = category.OrganizationId.ToString() ?? string.Empty;
-                                    category.OrganizationId = orgMap.TryGetValue(sourceCategoryOrgId, out int mappedOrgId)
-                                        ? mappedOrgId
-                                        : orgid;
-                                }
+                                if (category.OrganizationId != orgid)
+                                    continue;
                                 ac.Add(category);
                             }
-                            SaveMap(CopyArtifactCategorys([.. ac.Where(s => s.OrganizationId == orgid || s.OrganizationId is null)], orgid), name, mapKey);
+                            SaveMap(CopyArtifactCategorys(ac, orgid), name, mapKey);
                             break;
 
                         case Tables.ArtifactTypes:
@@ -4819,6 +4917,7 @@ namespace SIL.Transcriber.Services
                                 foreach (ResourceObject ro in tmpchunk)
                                 {
                                     Sharedresource sr = ResourceObjectToResource(ro, new Sharedresource(), mapKey);
+
                                     if (sr.Passage == null) //a shared resource that we didn't import the passage
                                     {
                                         //find an owner
@@ -4834,7 +4933,25 @@ namespace SIL.Transcriber.Services
                                             List<Mediafile> internalizemedia = [.. dbContext.Mediafiles.Where(m => m.OfflineResourcePassageId == psgid)];
                                             internalizemedia.ForEach(m => m.ResourcePassageId = psg.Id);
                                             dbContext.SaveChanges();
-
+                                            //I may not have imported the artifact category for this shared resource that came from another org
+                                            string sourceArtifactCategoryId = GetRelationshipOrAttributeId<Sharedresource>(ro, "artifact-category", "artifact-category-id", "artifactCategoryId");
+                                            if (!string.IsNullOrEmpty(sourceArtifactCategoryId) && (sr.ArtifactCategoryId == null || sr.ArtifactCategoryId <= 0))
+                                            {
+                                                if (sourceArtifactCategories is null)
+                                                    sourceArtifactCategories = ReadFileArtifactCategories(archive);
+                                                if (sourceArtifactCategories.TryGetValue(sourceArtifactCategoryId, out ResourceObject? categoryRo))
+                                                {
+                                                    Artifactcategory deferredCategory = ResourceObjectToResource(categoryRo, new Artifactcategory());
+                                                    deferredCategory.Id = int.TryParse(sourceArtifactCategoryId, out int parsedCategoryId) ? parsedCategoryId : 0;
+                                                    deferredCategory.OfflineId = sourceArtifactCategoryId;
+                                                    Artifactcategory? resolvedCategory = ResolveArtifactCategory(deferredCategory, orgid, createIfMissing: true);
+                                                    if (resolvedCategory != null)
+                                                    {
+                                                        sr.ArtifactCategoryId = resolvedCategory.Id;
+                                                        SaveId(Tables.ArtifactCategorys, sourceArtifactCategoryId, resolvedCategory.Id, mapKey);
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                     shrlst.Add(sr);

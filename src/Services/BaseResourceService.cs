@@ -17,6 +17,9 @@ public class BaseResourceService(
     protected Mediafile CreateMedia(string originalFile, string contentType, string desc, int? passageId, int planId,
                                 int artifacttypeId, string lang, string s3file, string folder, int? artifactcategoryId = null, int? sourceMediaId = null, string? segments = "{}")
     {
+        string? audioUrl = string.IsNullOrEmpty(s3file)
+            ? S3service.SignedUrlForPut(originalFile, folder, contentType).Message
+            : S3service.SignedUrlForGet(s3file, folder, contentType).Message;
         EntityEntry<Mediafile> m =
                             DbContext.Mediafiles.Add(new Mediafile
                             {
@@ -32,7 +35,7 @@ public class BaseResourceService(
                                 S3File = s3file,
                                 S3Folder = folder,
                                 Link = false,
-                                AudioUrl =  S3service.SignedUrlForPut(originalFile, folder, contentType).Message,
+                                AudioUrl = audioUrl,
                                 ArtifactCategoryId = artifactcategoryId,
                                 SourceMediaId = sourceMediaId,
                                 Segments=segments,
