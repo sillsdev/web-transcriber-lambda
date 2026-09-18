@@ -62,6 +62,30 @@ public class AeroService(
         return memoryStream.ToArray();
     }
 
+    private static JArray BuildClipArray(IEnumerable<string> s3paths, float[]? timing = null)
+    {
+        JArray clips = new();
+        foreach (string s3path in s3paths)
+        {
+            JObject clip = new()
+            {
+                ["s3_path"] = s3path
+            };
+
+            if (timing != null && timing.Length > 0)
+            {
+                JArray timestamps = new();
+                foreach (float t in timing)
+                    timestamps.Add(t);
+                clip["timestamps"] = timestamps;
+            }
+
+            clips.Add(clip);
+        }
+
+        return clips;
+    }
+
     // multipart/form-data helpers removed — API now accepts JSON-only inputs
 
     private async Task<string?> GetResult(string api, HttpContent? content, string result)
@@ -140,7 +164,7 @@ public class AeroService(
 
         return await FetchAndUploadAsync(audioUrl, outputFile, outputFolder);
     }
-    public record TaskStatusEnvelope(string task_id, string state, JToken? result, JToken? error);
+    public record TaskStatusEnvelope(string task_id, string state, JToken? result, JToken? progress, JToken? error);
 
     private async Task<TaskStatusEnvelope> GetStatus(string service, string TaskId)
     {
@@ -160,7 +184,7 @@ public class AeroService(
         {
             Logger.LogWarning("Aero status response empty [{Service}/{TaskId}]", service, TaskId);
             // Return an envelope with empty fields and PENDING state
-            return new TaskStatusEnvelope(TaskId, "PENDING", null, null);
+            return new TaskStatusEnvelope(TaskId, "PENDING", null, null, null);
         }
 
         try
@@ -177,8 +201,10 @@ public class AeroService(
             }
 
             JToken? result = json["result"] as JToken;
+            JToken? progress = json["progress"] as JToken;
             JToken? error = json["error"] as JToken;
-            return new TaskStatusEnvelope(json["task_id"]?.ToString() ?? TaskId, state ?? "PENDING", result, error);
+            var env =  new TaskStatusEnvelope(json["task_id"]?.ToString() ?? TaskId, state ?? "PENDING", result, progress, error);
+            return env;
         }
         catch (JsonException ex)
         {
@@ -492,6 +518,11 @@ public class AeroService(
         }
         return null;
     }
+    private string? cleanupResult(string tmp)
+    {
+        return tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']', '"', ' ');
+
+    }
     private async Task<string[]?> Transcription(
         Stream stream, string filename, string lang_iso, bool romanize, float[]? timing = null)
     {
@@ -538,13 +569,13 @@ public class AeroService(
         string? tmp = await GetResult(api, content, "task_id");
         if (tmp == null)
             return null;
-        string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']', '"', ' ');
+        string? result = cleanupResult(tmp);
         return result?.Split(',');
     }
     public async Task<string[]?> Transcription(string[] fileUrls, string lang_iso, bool romanize)
     {
         string api = $"{Domain}{TRANSCRIPTION}";
-        // Copy files to S3 input folder and build s3_paths
+        // Copy files to S3 input folder and build clips
         List<string> s3paths = new();
         int count = 1;
         foreach (string fileUrl in fileUrls)
@@ -560,10 +591,7 @@ public class AeroService(
 
         JObject payload = new();
         if (s3paths.Count > 0)
-        {
-            JArray paths = [.. s3paths];
-            payload["s3_paths"] = paths;
-        }
+            payload["clips"] = BuildClipArray(s3paths);
 
         payload["language_iso"] = lang_iso;
         string? method = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
@@ -580,7 +608,7 @@ public class AeroService(
         string? tmp = await GetResult(api, content, "task_id");
         if (tmp == null)
             return null;
-        string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']', '"', ' ');
+        string? result = cleanupResult(tmp);
         return result?.Split(',');
     }
     /// <summary>
@@ -614,10 +642,7 @@ public class AeroService(
 
         JObject payload = [];
         if (s3paths.Count > 0)
-        {
-            JArray paths = [.. s3paths];
-            payload["s3_paths"] = paths;
-        }
+            payload["clips"] = BuildClipArray(s3paths, timing);
 
         payload["language_iso"] = lang_iso;
         if (!string.IsNullOrEmpty(method))
@@ -641,13 +666,6 @@ public class AeroService(
 
         payload["s3_upload"] = true;
         payload["romanize"] = romanize;
-        if (timing != null && timing.Length > 0)
-        {
-            JArray timestamps = new();
-            foreach (float t in timing)
-                timestamps.Add(t);
-            payload["timestamps"] = timestamps;
-        }
         payload["timestamp_level"] = "chunk";
         payload["best_quality"] = false;
 
@@ -656,34 +674,170 @@ public class AeroService(
         string? tmp = await GetResult(api, content, "task_id");
         if (tmp == null)
             return null;
-        string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']', '"', ' ');
+        string? result = cleanupResult(tmp);
         return result?.Split(',');
     }
 
-    public async Task<TranscriptionResponse?> TranscriptionStatus(string taskId, bool phonetic)
+    public async Task<TranscriptionStatusResponse?> TranscriptionStatus(string taskId, bool phonetic)
     {
         TaskStatusEnvelope? env = await GetStatus(phonetic ? PHONETIC : TRANSCRIPTION, taskId);
-        if (env == null || !string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+        return env == null ? null : ParseTranscriptionStatus(env);
+    }
+
+    public async Task<TranscriptionResponse?> TranscriptionResult(string taskId, bool phonetic)
+    {
+        TranscriptionStatusResponse? status = await TranscriptionStatus(taskId, phonetic);
+        if (status == null || !string.Equals(status.State, "SUCCESS", StringComparison.OrdinalIgnoreCase))
             return null;
 
         try
         {
-            JToken? firstResult = env.result?["items"]?[0] ?? env.result?[0];
-            if (firstResult == null)
+            string? transcription = ExtractTranscriptionText(status.Result.Items);
+            if (string.IsNullOrWhiteSpace(transcription))
                 return null;
 
-            TranscriptionResponse response = new()
+            int transcriptionId = status.Result.Items
+                .SelectMany(item => item.Segments)
+                .Select(segment => segment.LogId ?? 0)
+                .FirstOrDefault(id => id != 0);
+
+            return new TranscriptionResponse
             {
-                Transcription = firstResult?["transcription"]?["transcription"]?.ToString() ?? "",
-                TranscriptionId = firstResult?["log_id"]?.Value<int>() ?? 0
+                Transcription = transcription,
+                TranscriptionId = transcriptionId
             };
-            return response;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.result);
+            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", status);
             throw;
         }
+    }
+
+    private static TranscriptionStatusResponse ParseTranscriptionStatus(TaskStatusEnvelope env)
+    {
+        TranscriptionStatusResult result = ParseTranscriptionStatusResult(env.result);
+        TranscriptionProgress progress = new(CountCompletedItems(result.Items), result.Total);
+        return new TranscriptionStatusResponse(env.task_id, env.state, result, progress, env.error);
+    }
+
+    private static TranscriptionStatusResult ParseTranscriptionStatusResult(JToken? result)
+    {
+        IReadOnlyList<TranscriptionStatusItem> items = GetTranscriptionStatusItems(result)
+            .Select(ParseTranscriptionStatusItem)
+            .ToList();
+
+        int total = result?["total"]?.Value<int>() ?? items.Count;
+        return new TranscriptionStatusResult(total, items);
+    }
+
+    private static IEnumerable<JToken> GetTranscriptionStatusItems(JToken? result)
+    {
+        if (result == null)
+            yield break;
+
+        if (result is JObject resultObject)
+        {
+            if (resultObject["items"] is JArray items)
+            {
+                foreach (JToken item in items)
+                    yield return item;
+                yield break;
+            }
+
+            yield return resultObject;
+            yield break;
+        }
+
+        if (result is JArray resultArray)
+        {
+            foreach (JToken item in resultArray)
+            {
+                foreach (JToken nested in GetTranscriptionStatusItems(item))
+                    yield return nested;
+            }
+        }
+    }
+
+    private static TranscriptionStatusItem ParseTranscriptionStatusItem(JToken item)
+    {
+        string clip = item["clip"]?.ToString() ?? item["name"]?.ToString() ?? string.Empty;
+        string state = item["state"]?.ToString() ?? "PENDING";
+        IReadOnlyList<TranscriptionStatusSegment> segments = GetTranscriptionStatusSegments(item["segments"])
+            .Select(ParseTranscriptionStatusSegment)
+            .ToList();
+
+        TranscriptionProgress progress = new(
+            string.Equals(state, "SUCCESS", StringComparison.OrdinalIgnoreCase) || string.Equals(state, "FAILURE", StringComparison.OrdinalIgnoreCase) ? segments.Count : 0,
+            segments.Count > 0 ? segments.Count : 1);
+
+        return new TranscriptionStatusItem(clip, state, segments, progress, item["error"]);
+    }
+
+    private static IEnumerable<JToken> GetTranscriptionStatusSegments(JToken? segments)
+    {
+        if (segments == null)
+            yield break;
+
+        if (segments is JArray segmentArray)
+        {
+            foreach (JToken segment in segmentArray)
+                yield return segment;
+            yield break;
+        }
+
+        yield return segments;
+    }
+
+    private static TranscriptionStatusSegment ParseTranscriptionStatusSegment(JToken segment)
+    {
+        JToken? transcription = segment["transcription"];
+        string text = transcription switch
+        {
+            JObject transcriptionToken => transcriptionToken["transcription"]?.ToString() ?? transcriptionToken.ToString(),
+            null => string.Empty,
+            _ => transcription.ToString()
+        };
+
+        string? method = segment["method"]?.ToString();
+        if (string.IsNullOrWhiteSpace(method) && transcription is JObject transcriptionObject)
+            method = transcriptionObject["method"]?.ToString();
+
+        return new TranscriptionStatusSegment(
+            segment["start"]?.Value<float>() ?? 0,
+            segment["end"]?.Value<float>() ?? segment["start"]?.Value<float>() ?? 0,
+            text,
+            segment["log_id"]?.Value<int>() ?? segment["logId"]?.Value<int>(),
+            method,
+            segment["lang_code"]?.ToString() ?? segment["langCode"]?.ToString());
+    }
+
+    private static int CountCompletedItems(IEnumerable<TranscriptionStatusItem> items)
+    {
+        return items.Count(item =>
+            string.Equals(item.State, "SUCCESS", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(item.State, "FAILURE", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? ExtractTranscriptionText(IEnumerable<TranscriptionStatusItem> items)
+    {
+        List<(float Start, float End, string Text)> segments = [];
+
+        foreach (TranscriptionStatusItem item in items)
+        {
+            foreach (TranscriptionStatusSegment segment in item.Segments)
+            {
+                if (string.IsNullOrWhiteSpace(segment.Transcription))
+                    continue;
+
+                segments.Add((segment.Start, segment.End, segment.Transcription.Trim()));
+            }
+        }
+
+        if (segments.Count == 0)
+            return null;
+
+        return string.Join(" ", segments.OrderBy(s => s.Start).ThenBy(s => s.End).Select(s => s.Text));
     }
 
     //if small enough to fit in the request
@@ -883,6 +1037,36 @@ public class TranscriptionResponse
     public string Transcription { get; set; } = ""; // The transcription of the audio in the target language.
     public int TranscriptionId { get; set; } // The ID of the transcription log entry.
 }
+public sealed record TranscriptionStatusResponse(
+    string TaskId,
+    string State,
+    TranscriptionStatusResult Result,
+    TranscriptionProgress Progress,
+    JToken? Error);
+
+public sealed record TranscriptionStatusResult(
+    int Total,
+    IReadOnlyList<TranscriptionStatusItem> Items);
+
+public sealed record TranscriptionStatusItem(
+    string Clip,
+    string State,
+    IReadOnlyList<TranscriptionStatusSegment> Segments,
+    TranscriptionProgress Progress,
+    JToken? Error);
+
+public sealed record TranscriptionProgress(
+    int Completed,
+    int Total);
+
+public sealed record TranscriptionStatusSegment(
+    float Start,
+    float End,
+    string Transcription,
+    int? LogId,
+    string? Method,
+    string? LangCode);
+
 public class AudioInfillingRequest
 {
     /// <summary>

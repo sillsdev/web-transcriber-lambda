@@ -192,11 +192,16 @@ namespace SIL.Transcriber.Services
             {
                 if (pd != null)
                 {
-                    Project? x = dbContext.Projects.Find(pd.id) ?? throw new Exception("Project not found " + pd.id);
-                    ret = GetChanges(origin, pd.since, 0, pd.id, dbVersion, start);
-                    AddNewChanges(ret.changes, changes);
-                    AddNewChanges(ret.deleted, deleted);
-                    start = ret.startNext;
+                    Project? x = dbContext.Projects.Find(pd.id);
+                    if (x != null)
+                    {
+                        ret = GetChanges(origin, pd.since, 0, pd.id, dbVersion, start);
+                        AddNewChanges(ret.changes, changes);
+                        AddNewChanges(ret.deleted, deleted);
+                        start = ret.startNext;
+                    }
+                    else
+                        start = -1;
                 }
             }
             _ = changes.RemoveAll(c => c.Ids.Count == 0);
