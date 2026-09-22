@@ -729,7 +729,9 @@ public class AeroService(
             .Select(item => ParseTranscriptionStatusItem(item, phonetic))
             .ToList();
 
-        int total = result?["total"]?.Value<int>() ?? items.Count;
+        // A top-level result array has no named "total"; Newtonsoft throws on string keys
+        // against a JArray, so only read "total" when result is an object.
+        int total = (result as JObject)?["total"]?.Value<int>() ?? items.Count;
         return new TranscriptionStatusResult(total, items);
     }
 
