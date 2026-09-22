@@ -2123,7 +2123,7 @@ namespace SIL.Transcriber.Services
                 s.StringId = ro.Id;
 
             // Track which *-id attributes were set from the attributes section
-            var processedIdAttributes = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> processedIdAttributes = new HashSet<string>(StringComparer.Ordinal);
 
             if (ro.Attributes != null)
                 foreach (KeyValuePair<string, object?> row in ro.Attributes)
@@ -3124,6 +3124,7 @@ namespace SIL.Transcriber.Services
                 {
                     s.Published = false;
                     s.PublishTo = "{}";
+                    s.DateUpdated = DateTime.UtcNow;
                     EntityEntry<Section>? t = dbContext.Sections.Add(s);
                     map.Add(id, t.Entity);
                 }
@@ -3149,6 +3150,7 @@ namespace SIL.Transcriber.Services
                 if (!map.ContainsKey(id))
                 {
                     p.StepComplete = MapStepComplete(p.StepComplete, mapKey);
+                    p.DateUpdated = DateTime.UtcNow;
                     EntityEntry<Passage>? t = dbContext.Passages.Add(p);
                     map.Add(id, t.Entity);
                 }
@@ -3273,6 +3275,7 @@ namespace SIL.Transcriber.Services
                 Artifactcategory? myc = ResolveArtifactCategory(c, orgId, map.Values, false);
                 if (myc == null)
                 {
+                    c.DateUpdated = DateTime.UtcNow;
                     EntityEntry<Artifactcategory>? t = dbContext.Artifactcategorys.Add(c);
                     map.Add(id, t.Entity);
                 }
@@ -3299,6 +3302,7 @@ namespace SIL.Transcriber.Services
 
             category.Id = 0;
             category.OrganizationId = orgId;
+            category.DateUpdated = DateTime.UtcNow;
             EntityEntry<Artifactcategory>? created = dbContext.Artifactcategorys.Add(category);
             dbContext.SaveChanges();
             return created.Entity;
@@ -3329,6 +3333,7 @@ namespace SIL.Transcriber.Services
                 {
                     if (!map.ContainsKey(id))
                     {
+                        s.DateUpdated = DateTime.UtcNow;
                         EntityEntry<Organizationscheme>? t = dbContext.Organizationschemes.Add(s);
                         map.Add(id, t.Entity);
                     }
@@ -3385,6 +3390,7 @@ namespace SIL.Transcriber.Services
                 {
                     if (!map.ContainsKey(id))
                     {
+                        s.DateUpdated = DateTime.UtcNow;
                         EntityEntry<Orgkeyterm>? t = dbContext.Orgkeyterms.Add(s);
                         map.Add(id, t.Entity);
                     }
@@ -3438,7 +3444,15 @@ namespace SIL.Transcriber.Services
             foreach (Orgworkflowstep s in lst.OrderBy(o => o.Sequencenum))
             {
                 string id =  s.OfflineId ?? "error";
-                Orgworkflowstep? ex = destSteps.FirstOrDefault(o => AreToolsEquivalent(o.Tool, s.Tool));
+                Orgworkflowstep? ex = null;
+                List<Orgworkflowstep> steps = destSteps.FindAll(o => AreToolsEquivalent(o.Tool, s.Tool));
+                //if there are more than one, try to match by name too
+                if (steps.Count > 0)
+                {
+                    ex = steps.FirstOrDefault(o => o.Name == s.Name);
+                    //if there isn't a name match, find the first one we haven't used
+                    ex ??= steps.FirstOrDefault(o => !map.ContainsValue(o)) ?? steps.Last();
+                }
                 if (ex != null && !map.ContainsValue(ex))
                     map.Add(id, ex);
                 else
@@ -3451,6 +3465,7 @@ namespace SIL.Transcriber.Services
                             uniqueName = s.Name + "_c" + tryn++;
                         s.Name = uniqueName;
 
+                        s.DateUpdated = DateTime.UtcNow;
                         EntityEntry<Orgworkflowstep>? t = dbContext.Orgworkflowsteps.Add(s);
                         destSteps.Add(t.Entity);
                         map.Add(id, t.Entity);
@@ -3505,6 +3520,7 @@ namespace SIL.Transcriber.Services
                 string id = s.OfflineId ?? "error";
                 if (!map.ContainsKey(id))
                 {
+                    s.DateUpdated = DateTime.UtcNow;
                     EntityEntry<Orgkeytermtarget>? t = dbContext.Orgkeytermtargets.Add(s);
                     map.Add(id, t.Entity);
                 }
@@ -3520,6 +3536,7 @@ namespace SIL.Transcriber.Services
             foreach (Orgkeytermreference s in lst)
             {
                 string id = s.OfflineId ?? "error";
+                s.DateUpdated = DateTime.UtcNow;
                 EntityEntry<Orgkeytermreference>? t = dbContext.Orgkeytermreferences.Add(s);
             }
             dbContext.SaveChanges();
@@ -3546,6 +3563,7 @@ namespace SIL.Transcriber.Services
                         g.ResourceId = (int)newResourceId;
                         if (!dbContext.Graphics.Where(og => og.OrganizationId == g.OrganizationId && og.ResourceType == g.ResourceType && og.ResourceId == g.ResourceId).Any())
                         {
+                            g.DateUpdated = DateTime.UtcNow;
                             EntityEntry<Graphic>? t = dbContext.Graphics.Add(g);
                             dbContext.SaveChanges();
                             savedId = t.Entity.Id;
@@ -3567,6 +3585,7 @@ namespace SIL.Transcriber.Services
         {
             foreach (Intellectualproperty ip in lst)
             {
+                ip.DateUpdated = DateTime.UtcNow;
                 _ = dbContext.IntellectualPropertys.Add(ip);
             }
         }
@@ -3590,6 +3609,7 @@ namespace SIL.Transcriber.Services
                 string id = sr.OfflineId ?? "error";
                 if (!map.ContainsKey(id))
                 {
+                    sr.DateUpdated = DateTime.UtcNow;
                     EntityEntry<Sectionresource>? t =  dbContext.Sectionresources.Add(sr);
                     map.Add(id, t.Entity);
                 }
@@ -3627,6 +3647,7 @@ namespace SIL.Transcriber.Services
 
                 if (sr.PassageId != null && !alreadydone.Contains(id) && !map.ContainsKey(id) && !dbContext.Sharedresources.Where(r => r.PassageId == sr.PassageId && r.Note == sr.Note).Any())
                 {
+                    sr.DateUpdated = DateTime.UtcNow;
                     EntityEntry<Sharedresource>? t = dbContext.Sharedresources.Add(sr);
                     map.Add(id, t.Entity);
                 }
@@ -3647,6 +3668,7 @@ namespace SIL.Transcriber.Services
         {
             foreach (Sharedresourcereference srr in lst)
             {
+                srr.DateUpdated = DateTime.UtcNow;
                 _ = dbContext.Sharedresourcereferences.Add(srr);
             }
             dbContext.SaveChanges();
@@ -3701,8 +3723,9 @@ namespace SIL.Transcriber.Services
                     //if it's not biblebrain or aquifer - make a copy
                     string audiourl = m.AudioUrl??"";
                     bool centralCopy = audiourl.Contains("biblebrain") || audiourl.Contains("aquifer");
-                    bool copyIt = !centralCopy && !m.ContentType.StartsWith("text");
-
+                    bool copyIt = !centralCopy && !(m?.ContentType?.StartsWith("text") ?? false);
+                    if (m is null) //not sure why the compiler suddenly thinks this could be null
+                        return oldmap;
                     //if we have a file we might not have the biblebrain or aquifer file
                     try
                     {
@@ -3730,6 +3753,7 @@ namespace SIL.Transcriber.Services
                     m.ReadyToShare = false;
                     m.PublishTo = "{}";
                     m.PublishedAs = null;
+                    m.DateUpdated = DateTime.UtcNow;
                     EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(m);
                     //save as we go in case we have to resume
                     dbContext.SaveChanges();
@@ -3761,6 +3785,7 @@ namespace SIL.Transcriber.Services
                 Discussion d = lst[ix];
                 string id = d.OfflineId ?? "error";
 
+                d.DateUpdated = DateTime.UtcNow;
                 EntityEntry<Discussion>? t = dbContext.Discussions.Add(d);
                 map.Add(id, t.Entity);
             }
@@ -3778,6 +3803,7 @@ namespace SIL.Transcriber.Services
             {
                 Comment c = lst[ix];
                 string id = c.OfflineId ?? "error";
+                c.DateUpdated = DateTime.UtcNow;
                 EntityEntry<Comment> t = dbContext.Comments.Add(c);
                 map.TryAdd(id, t.Entity);
             }
@@ -4937,8 +4963,7 @@ namespace SIL.Transcriber.Services
                                             string sourceArtifactCategoryId = GetRelationshipOrAttributeId<Sharedresource>(ro, "artifact-category", "artifact-category-id", "artifactCategoryId");
                                             if (!string.IsNullOrEmpty(sourceArtifactCategoryId) && (sr.ArtifactCategoryId == null || sr.ArtifactCategoryId <= 0))
                                             {
-                                                if (sourceArtifactCategories is null)
-                                                    sourceArtifactCategories = ReadFileArtifactCategories(archive);
+                                                sourceArtifactCategories ??= ReadFileArtifactCategories(archive);
                                                 if (sourceArtifactCategories.TryGetValue(sourceArtifactCategoryId, out ResourceObject? categoryRo))
                                                 {
                                                     Artifactcategory deferredCategory = ResourceObjectToResource(categoryRo, new Artifactcategory());

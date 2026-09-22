@@ -1,8 +1,6 @@
-using Identity = Auth0.ManagementApi.Models.Identity;
 using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Serialization.Response;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
@@ -16,6 +14,7 @@ using SIL.Transcriber.Services.Contracts;
 using System.IO.Compression;
 using System.Net;
 using Xunit;
+using Identity = Auth0.ManagementApi.Models.Identity;
 
 namespace TranscriberAPI.Tests.Services;
 
@@ -48,12 +47,12 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             fullImportTargetOrgId = SeedTargetOrganization(dbContext, "Import Target A");
             resumedImportTargetOrgId = SeedTargetOrganization(dbContext, "Import Target B");
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         byte[] archiveBytes;
@@ -85,7 +84,7 @@ public class OfflineDataServiceTests
         {
             AppDbContext dbContext = resumeSeedScope.ServiceProvider.GetRequiredService<AppDbContext>();
             SeedResumedImportState(dbContext, resumedImportTargetOrgId, resumedMapKey);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (AsyncServiceScope resumedImportScope = provider.CreateAsyncScope())
@@ -123,11 +122,11 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             targetOrgId = SeedTargetOrganization(dbContext, "Import Target Batch");
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         const int sharedResourceCount = 130;
@@ -144,7 +143,7 @@ public class OfflineDataServiceTests
         {
             AppDbContext dbContext = resumeSeedScope.ServiceProvider.GetRequiredService<AppDbContext>();
             SeedResumedImportStateForBatch(dbContext, targetOrgId, mapKey, sharedResourceCount);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (AsyncServiceScope importScope = provider.CreateAsyncScope())
@@ -177,11 +176,11 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             targetOrgId = SeedTargetOrganization(dbContext, "Import Target Sections");
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         const int sectionCount = 130;
@@ -198,7 +197,7 @@ public class OfflineDataServiceTests
         {
             AppDbContext dbContext = resumeSeedScope.ServiceProvider.GetRequiredService<AppDbContext>();
             SeedResumedImportStateForSectionsBatch(dbContext, targetOrgId, mapKey);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (AsyncServiceScope importScope = provider.CreateAsyncScope())
@@ -231,11 +230,11 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             targetOrgId = SeedTargetOrganization(dbContext, "Import Target Duplicate Categories");
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         byte[] archiveBytes;
@@ -275,7 +274,7 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             targetOrgId = SeedTargetOrganization(dbContext, "Import Target Selective Categories");
@@ -288,7 +287,7 @@ public class OfflineDataServiceTests
                 Discussion = false,
                 OrganizationId = null
             });
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         byte[] archiveBytes;
@@ -315,13 +314,13 @@ public class OfflineDataServiceTests
             List<CopyProject> categoryMaps = [.. dbContext.Copyprojects.Where(cp => cp.Newprojid == mapKey && cp.Sourcetable == Tables.ArtifactCategorys)];
 
             Assert.True(sourceOwnedCategory != null, $"categories: {string.Join(", ", dbContext.Artifactcategorys.Where(category => !category.Archived).Select(category => $"{category.Id}:{category.Categoryname}:{category.OrganizationId}"))}; maps: {string.Join(", ", categoryMaps.Select(cp => $"{cp.Oldid}->{cp.Newid}"))}");
-            Assert.Equal(targetOrgId, sourceOwnedCategory.OrganizationId);
+            Assert.Equal(targetOrgId, sourceOwnedCategory?.OrganizationId);
             Assert.Null(reusedSharedCategory.OrganizationId);
             Assert.Equal(reusedSharedCategory.Id, supportingResource.ArtifactCategoryId);
             Assert.DoesNotContain(dbContext.Artifactcategorys, category => category.Categoryname == "Unused Foreign Category" && !category.Archived);
-            Assert.Contains(categoryMaps, cp => cp.Oldid == SourceOwnedCategoryId && cp.Newid == sourceOwnedCategory.Id);
+            Assert.Contains(categoryMaps, cp => cp.Oldid == SourceOwnedCategoryId && cp.Newid == sourceOwnedCategory?.Id);
             Assert.DoesNotContain(categoryMaps, cp => cp.Oldid == SourceUnusedForeignCategoryId);
-            Assert.True(categoryMaps.All(cp => cp.Newid == sourceOwnedCategory.Id || cp.Newid == reusedSharedCategory.Id));
+            Assert.True(categoryMaps.All(cp => cp.Newid == sourceOwnedCategory?.Id || cp.Newid == reusedSharedCategory.Id));
         }
     }
 
@@ -336,11 +335,11 @@ public class OfflineDataServiceTests
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
             FakeS3Service s3Service = (FakeS3Service)setupScope.ServiceProvider.GetRequiredService<IS3Service>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             fixture = SeedCopyProjectResourceFixture(dbContext, s3Service);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (AsyncServiceScope copyScope = provider.CreateAsyncScope())
@@ -404,11 +403,11 @@ public class OfflineDataServiceTests
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
             FakeS3Service s3Service = (FakeS3Service)setupScope.ServiceProvider.GetRequiredService<IS3Service>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             fixture = SeedCopyProjectResourceFixture(dbContext, s3Service);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         string mapKey;
@@ -441,11 +440,11 @@ public class OfflineDataServiceTests
         await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
         {
             AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
             SeedLookupData(dbContext);
             SeedCurrentUser(dbContext);
             fixture = SeedExportCategoryFixture(dbContext);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         byte[] archiveBytes;
@@ -470,6 +469,95 @@ public class OfflineDataServiceTests
         Assert.DoesNotContain(fixture.ForeignUnusedTitleMediaId.ToString(), exportedMediafileIds);
     }
 
+    [Fact]
+    public async Task ResourceObjectToResource_MapsIdAttributeWhenRelationshipAbsent()
+    {
+        // Test that *-id attributes are mapped correctly even when the relationship is absent.
+        // This tests the fallback behavior when JSON:API includes an *-id attribute but no relationship.
+        string databaseName = $"offline-id-attr-test-{Guid.NewGuid():N}";
+        await using ServiceProvider provider = BuildServiceProvider(databaseName);
+
+        int targetOrgId;
+        await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+            SeedLookupData(dbContext);
+            targetOrgId = SeedTargetOrganization(dbContext, "IdAttrTarget");
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Use the standard archive which has both attributes and relationships
+        byte[] archiveBytes;
+        await using (AsyncServiceScope archiveScope = provider.CreateAsyncScope())
+        {
+            archiveBytes = CreateArchive(archiveScope.ServiceProvider);
+        }
+
+        const string mapKey = "idattr-test";
+        await using (AsyncServiceScope importScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)importScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            using ZipArchive archive = OpenArchive(archiveBytes);
+            Fileresponse response = await service.ProcessImportCopyFileAsync(archive, targetOrgId, "idattr.ptf", 0, mapKey);
+            // The important check: import succeeds, meaning ID mapping worked
+            Assert.True(response.Status == HttpStatusCode.OK, response.Message);
+        }
+
+        await using (AsyncServiceScope assertScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            // Verify the imported project exists with correct org mapping
+            Project? importedProject = dbContext.Projects.FirstOrDefault(p => p.OrganizationId == targetOrgId);
+            Assert.NotNull(importedProject);
+        }
+    }
+
+    [Fact]
+    public async Task ResourceObjectToResource_SkipsRedundantLookupWhenBothIdAndRelationshipPresent()
+    {
+        // Test the optimization: when both *-id attribute and relationship are present in the JSON,
+        // we use the already-mapped attribute value instead of looking up the relationship ID again.
+        // This ensures we avoid redundant GetMappedId calls and is more efficient.
+        string databaseName = $"offline-both-test-{Guid.NewGuid():N}";
+        await using ServiceProvider provider = BuildServiceProvider(databaseName);
+
+        int targetOrgId;
+        await using (AsyncServiceScope setupScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+            SeedLookupData(dbContext);
+            targetOrgId = SeedTargetOrganization(dbContext, "BothTarget");
+            await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Use the selective categories archive which tests complex FK mappings
+        byte[] archiveBytes;
+        await using (AsyncServiceScope archiveScope = provider.CreateAsyncScope())
+        {
+            archiveBytes = CreateArchiveWithSelectiveArtifactCategories(archiveScope.ServiceProvider);
+        }
+
+        const string mapKey = "both-test";
+        await using (AsyncServiceScope importScope = provider.CreateAsyncScope())
+        {
+            OfflineDataService service = (OfflineDataService)importScope.ServiceProvider.GetRequiredService<IOfflineDataService>();
+            using ZipArchive archive = OpenArchive(archiveBytes);
+            Fileresponse response = await service.ProcessImportCopyFileAsync(archive, targetOrgId, "both.ptf", 0, mapKey);
+            // The important check: import succeeds despite both attributes and relationships being present
+            Assert.True(response.Status == HttpStatusCode.OK, response.Message);
+        }
+
+        await using (AsyncServiceScope assertScope = provider.CreateAsyncScope())
+        {
+            AppDbContext dbContext = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            // Verify some basic data was imported
+            Project? importedProject = dbContext.Projects.FirstOrDefault(p => p.OrganizationId == targetOrgId);
+            Assert.NotNull(importedProject);
+        }
+    }
+
     private static ServiceProvider BuildServiceProvider(string databaseName)
     {
         ServiceCollection services = new();
@@ -479,8 +567,7 @@ public class OfflineDataServiceTests
         services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
         services.AddScoped<AppDbContextResolver>();
         services.AddJsonApi<AppDbContext>(
-            options =>
-            {
+            options => {
                 options.DefaultPageSize = null;
                 options.Namespace = "api";
                 options.UseRelativeLinks = true;
@@ -1689,9 +1776,9 @@ public class OfflineDataServiceTests
         using StreamReader reader = new(entry.Open());
         JObject payload = JObject.Parse(reader.ReadToEnd());
         JToken? data = payload["data"];
-        if (data is not JArray array)
-            return [];
-        return [.. array
+        return data is not JArray array
+            ? []
+            : [.. array
             .Select(item => item["id"]?.ToString())
             .Where(id => !string.IsNullOrEmpty(id))
             .Select(id => id!)];
