@@ -630,7 +630,7 @@ namespace SIL.Transcriber.Services
         public async Task<Mediafile?> TranscriptionStatus(int id, string taskId, bool phonetic = false)
         {
             //get a status...if done create a mediafile and return the new id
-            TranscriptionResponse? result = await Aeroservice.TranscriptionStatus(taskId, phonetic);
+            TranscriptionResponse? result = await Aeroservice.TranscriptionResult(taskId, phonetic);
             if (result != null)
             {
                 Mediafile mf = MyRepository.Get(id) ?? throw new Exception("Mediafile not found");
