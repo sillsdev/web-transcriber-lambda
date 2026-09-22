@@ -243,8 +243,10 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     /// <summary>
     /// check to see if transcription task is complete
     /// </summary>
-    /// <param name="taskId">taskId from voice conversion call</param>
-    /// <param name="phonetic">whether to check phonetic transcription</param>
+    /// <param name="taskId">taskId from the transcription call</param>
+    /// <param name="phonetic">when true, select the phonetic (method="phonetic") result from the
+    /// unified transcription status. As of Aero v2 there is no separate phonetic endpoint - both
+    /// regular and phonetic results are polled from /v2/transcriptions and distinguished by method.</param>
     /// <returns>null if not done or a File</returns>
     [AllowAnonymous]
     [HttpGet("transcription/{taskId}")]
@@ -260,9 +262,12 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
     }
     /// <summary>
-    /// check to see if transcription task is complete
+    /// check to see if a phonetic transcription task is complete.
+    /// As of Aero v2 the dedicated /v2/phonetic-transcriptions endpoint has been removed; the task
+    /// is polled from the unified /v2/transcriptions endpoint and the phonetic (method="phonetic")
+    /// result is selected from the segment's transcriptions array.
     /// </summary>
-    /// <param name="taskId">taskId from voice conversion call</param>
+    /// <param name="taskId">taskId from the transcription call</param>
     /// <returns>null if not done or a File</returns>
     [AllowAnonymous]
     [HttpGet("phonetic/{taskId}")]
@@ -274,7 +279,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
         catch (Exception ex)
         {
-            return HandleError(ex, nameof(CheckTranscription));
+            return HandleError(ex, nameof(CheckPhoneticTranscription));
         }
     }
     #endregion

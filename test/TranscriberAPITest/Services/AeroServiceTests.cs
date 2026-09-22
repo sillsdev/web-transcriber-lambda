@@ -22,6 +22,8 @@ public class AeroServiceTests
     [Fact]
     public void ParseTranscriptionStatusResult_MapsNestedItemsAndSegments()
     {
+        // Aero v2 shape: each segment carries a "transcriptions" array whose entries hold the
+        // model-specific fields (method, lang_code, log_id).
         JObject status = new()
         {
             ["total"] = 1,
@@ -37,27 +39,31 @@ public class AeroServiceTests
                         {
                             ["start"] = 0.0,
                             ["end"] = 25.2,
-                            ["transcription"] = new JObject
+                            ["transcriptions"] = new JArray
                             {
-                                ["transcription"] = "hello world",
-                                ["method"] = "omnilingual"
-                            },
-                            ["log_id"] = 7482,
-                            ["method"] = "omnilingual",
-                            ["lang_code"] = "seh_Latn"
+                                new JObject
+                                {
+                                    ["transcription"] = "hello world",
+                                    ["method"] = "omnilingual",
+                                    ["lang_code"] = "seh_Latn",
+                                    ["log_id"] = 7482
+                                }
+                            }
                         },
                         new JObject
                         {
                             ["start"] = 25.2,
                             ["end"] = 32.7,
-                            ["transcription"] = new JObject
+                            ["transcriptions"] = new JArray
                             {
-                                ["transcription"] = "second segment",
-                                ["method"] = "omnilingual"
-                            },
-                            ["log_id"] = 7480,
-                            ["method"] = "omnilingual",
-                            ["lang_code"] = "seh_Latn"
+                                new JObject
+                                {
+                                    ["transcription"] = "second segment",
+                                    ["method"] = "omnilingual",
+                                    ["lang_code"] = "seh_Latn",
+                                    ["log_id"] = 7480
+                                }
+                            }
                         }
                     },
                     ["progress"] = new JObject
@@ -92,6 +98,62 @@ public class AeroServiceTests
     }
 
     [Fact]
+    public void ParseTranscriptionStatusResult_TranscriptionsArray_SelectsEntryByMethod()
+    {
+        // A single segment can carry both a base and a phonetic transcription in v2.
+        JObject status = new()
+        {
+            ["total"] = 1,
+            ["items"] = new JArray
+            {
+                new JObject
+                {
+                    ["clip"] = "a.wav",
+                    ["state"] = "SUCCESS",
+                    ["segments"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["start"] = 0.0,
+                            ["end"] = 12.5,
+                            ["transcriptions"] = new JArray
+                            {
+                                new JObject
+                                {
+                                    ["transcription"] = "hello world",
+                                    ["method"] = "omnilingual",
+                                    ["lang_code"] = "nld_Latn",
+                                    ["log_id"] = 51
+                                },
+                                new JObject
+                                {
+                                    ["transcription"] = "hɛˈloʊ",
+                                    ["method"] = "phonetic"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            ["error"] = JValue.CreateNull()
+        };
+
+        // Non-phonetic request selects the non-phonetic entry.
+        TranscriptionStatusResult regular = InvokeParseTranscriptionStatusResult(status, phonetic: false);
+        TranscriptionStatusSegment regularSegment = regular.Items[0].Segments[0];
+        Assert.Equal("hello world", regularSegment.Transcription);
+        Assert.Equal("omnilingual", regularSegment.Method);
+        Assert.Equal("nld_Latn", regularSegment.LangCode);
+        Assert.Equal(51, regularSegment.LogId);
+
+        // Phonetic request selects the method="phonetic" entry.
+        TranscriptionStatusResult phonetic = InvokeParseTranscriptionStatusResult(status, phonetic: true);
+        TranscriptionStatusSegment phoneticSegment = phonetic.Items[0].Segments[0];
+        Assert.Equal("hɛˈloʊ", phoneticSegment.Transcription);
+        Assert.Equal("phonetic", phoneticSegment.Method);
+    }
+
+    [Fact]
     public void ParseTranscriptionStatus_UsesClipAndSegmentProgressCounts()
     {
         JObject status = new()
@@ -113,10 +175,16 @@ public class AeroServiceTests
                             {
                                 ["start"] = 0.0,
                                 ["end"] = 10.0,
-                                ["transcription"] = "alpha",
-                                ["logId"] = 1,
-                                ["method"] = "omnilingual",
-                                ["langCode"] = "seh_Latn"
+                                ["transcriptions"] = new JArray
+                                {
+                                    new JObject
+                                    {
+                                        ["transcription"] = "alpha",
+                                        ["method"] = "omnilingual",
+                                        ["lang_code"] = "seh_Latn",
+                                        ["log_id"] = 1
+                                    }
+                                }
                             }
                         }
                     },
@@ -175,15 +243,15 @@ public class AeroServiceTests
         return (JArray)method.Invoke(null, [s3Paths, timing])!;
     }
 
-    private static TranscriptionStatusResult InvokeParseTranscriptionStatusResult(JToken? result)
+    private static TranscriptionStatusResult InvokeParseTranscriptionStatusResult(JToken? result, bool phonetic = false)
     {
         MethodInfo method = typeof(AeroService).GetMethod("ParseTranscriptionStatusResult", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new MissingMethodException(typeof(AeroService).FullName, "ParseTranscriptionStatusResult");
 
-        return (TranscriptionStatusResult)method.Invoke(null, [result])!;
+        return (TranscriptionStatusResult)method.Invoke(null, [result, phonetic])!;
     }
 
-    private static TranscriptionStatusResponse InvokeParseTranscriptionStatus(JToken? status)
+    private static TranscriptionStatusResponse InvokeParseTranscriptionStatus(JToken? status, bool phonetic = false)
     {
         MethodInfo method = typeof(AeroService).GetMethod("ParseTranscriptionStatus", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new MissingMethodException(typeof(AeroService).FullName, "ParseTranscriptionStatus");
@@ -199,7 +267,7 @@ public class AeroServiceTests
             status?["progress"],
             status?["error"])!;
 
-        return (TranscriptionStatusResponse)method.Invoke(null, [envelope])!;
+        return (TranscriptionStatusResponse)method.Invoke(null, [envelope, phonetic])!;
     }
 
     private static string? InvokeExtractTranscriptionText(IEnumerable<TranscriptionStatusItem> items)

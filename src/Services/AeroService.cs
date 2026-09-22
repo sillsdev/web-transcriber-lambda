@@ -23,7 +23,8 @@ public class AeroService(
     private const string VOICE_CONVERSION = "v2/voice-conversions";
     private const string AUDIO_INFILLING = "v2/audio-infillings";
     private const string TRANSCRIPTION = "v2/transcriptions";
-    private const string PHONETIC = "v2/phonetic-transcriptions";
+    // Aero v2: the dedicated phonetic-transcriptions endpoint was removed (now 404).
+    // Phonetic transcription is requested via method="phonetic" on the transcriptions endpoint.
     private const string LANGUAGES = "v2/transcriptions/languages";
     private const string RECOMMENDATIONS = "v2/language-recommendations";
 
@@ -203,7 +204,7 @@ public class AeroService(
             JToken? result = json["result"] as JToken;
             JToken? progress = json["progress"] as JToken;
             JToken? error = json["error"] as JToken;
-            var env =  new TaskStatusEnvelope(json["task_id"]?.ToString() ?? TaskId, state ?? "PENDING", result, progress, error);
+            TaskStatusEnvelope env =  new TaskStatusEnvelope(json["task_id"]?.ToString() ?? TaskId, state ?? "PENDING", result, progress, error);
             return env;
         }
         catch (JsonException ex)
@@ -526,7 +527,7 @@ public class AeroService(
     private async Task<string[]?> Transcription(
         Stream stream, string filename, string lang_iso, bool romanize, float[]? timing = null)
     {
-        // Build JSON payload using audio_clips for inline audio
+        // Build JSON payload using the unified "clips" array for inline audio (Aero v2)
         string api = $"{Domain}{TRANSCRIPTION}";
 
         if (stream.CanSeek)
@@ -541,7 +542,8 @@ public class AeroService(
             ["audio_format"] = GetAudioFormatFromFilename(filename)
         };
         audioClips.Add(clip);
-        payload["audio_clips"] = audioClips;
+        // Aero v2: audio sources (s3_path or inline audio_base64+audio_format) go in the unified "clips" array.
+        payload["clips"] = audioClips;
 
         payload["language_iso"] = lang_iso;
         // choose default method
@@ -554,10 +556,11 @@ public class AeroService(
 
         if (timing != null && timing.Length > 0)
         {
+            // Aero v2: timestamps live on the individual clip, not at the request root.
             JArray timestamps = new();
             foreach (float t in timing)
                 timestamps.Add(t);
-            payload["timestamps"] = timestamps;
+            clip["timestamps"] = timestamps;
         }
 
         payload["timestamp_level"] = "chunk";
@@ -638,30 +641,28 @@ public class AeroService(
             count++;
         }
 
-        string api = phonetic ? $"{Domain}/{PHONETIC}" : $"{Domain}/{TRANSCRIPTION}";
+        // Aero v2: phonetic is no longer a separate endpoint - it is requested as method="phonetic"
+        // on the transcriptions endpoint.
+        string api = $"{Domain}/{TRANSCRIPTION}";
 
         JObject payload = [];
         if (s3paths.Count > 0)
             payload["clips"] = BuildClipArray(s3paths, timing);
 
         payload["language_iso"] = lang_iso;
-        if (!string.IsNullOrEmpty(method))
+        if (phonetic)
         {
-            if (phonetic)
-                payload["guidance_method"] = method;
-            else
-                payload["method"] = method;
+            payload["method"] = "phonetic";
+        }
+        else if (!string.IsNullOrEmpty(method))
+        {
+            payload["method"] = method;
         }
         else
         {
             string? defaultMethod = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
             if (!string.IsNullOrEmpty(defaultMethod))
-            {
-                if (phonetic)
-                    payload["guidance_method"] = defaultMethod;
-                else
-                    payload["method"] = defaultMethod;
-            }
+                payload["method"] = defaultMethod;
         }
 
         payload["s3_upload"] = true;
@@ -680,8 +681,9 @@ public class AeroService(
 
     public async Task<TranscriptionStatusResponse?> TranscriptionStatus(string taskId, bool phonetic)
     {
-        TaskStatusEnvelope? env = await GetStatus(phonetic ? PHONETIC : TRANSCRIPTION, taskId);
-        return env == null ? null : ParseTranscriptionStatus(env);
+        // Aero v2: both regular and phonetic tasks are polled from the unified transcriptions endpoint.
+        TaskStatusEnvelope? env = await GetStatus(TRANSCRIPTION, taskId);
+        return env == null ? null : ParseTranscriptionStatus(env, phonetic);
     }
 
     public async Task<TranscriptionResponse?> TranscriptionResult(string taskId, bool phonetic)
@@ -714,17 +716,17 @@ public class AeroService(
         }
     }
 
-    private static TranscriptionStatusResponse ParseTranscriptionStatus(TaskStatusEnvelope env)
+    private static TranscriptionStatusResponse ParseTranscriptionStatus(TaskStatusEnvelope env, bool phonetic)
     {
-        TranscriptionStatusResult result = ParseTranscriptionStatusResult(env.result);
+        TranscriptionStatusResult result = ParseTranscriptionStatusResult(env.result, phonetic);
         TranscriptionProgress progress = new(CountCompletedItems(result.Items), result.Total);
         return new TranscriptionStatusResponse(env.task_id, env.state, result, progress, env.error);
     }
 
-    private static TranscriptionStatusResult ParseTranscriptionStatusResult(JToken? result)
+    private static TranscriptionStatusResult ParseTranscriptionStatusResult(JToken? result, bool phonetic)
     {
         IReadOnlyList<TranscriptionStatusItem> items = GetTranscriptionStatusItems(result)
-            .Select(ParseTranscriptionStatusItem)
+            .Select(item => ParseTranscriptionStatusItem(item, phonetic))
             .ToList();
 
         int total = result?["total"]?.Value<int>() ?? items.Count;
@@ -759,12 +761,12 @@ public class AeroService(
         }
     }
 
-    private static TranscriptionStatusItem ParseTranscriptionStatusItem(JToken item)
+    private static TranscriptionStatusItem ParseTranscriptionStatusItem(JToken item, bool phonetic)
     {
         string clip = item["clip"]?.ToString() ?? item["name"]?.ToString() ?? string.Empty;
         string state = item["state"]?.ToString() ?? "PENDING";
         IReadOnlyList<TranscriptionStatusSegment> segments = GetTranscriptionStatusSegments(item["segments"])
-            .Select(ParseTranscriptionStatusSegment)
+            .Select(segment => ParseTranscriptionStatusSegment(segment, phonetic))
             .ToList();
 
         TranscriptionProgress progress = new(
@@ -789,27 +791,40 @@ public class AeroService(
         yield return segments;
     }
 
-    private static TranscriptionStatusSegment ParseTranscriptionStatusSegment(JToken segment)
+    private static TranscriptionStatusSegment ParseTranscriptionStatusSegment(JToken segment, bool phonetic)
     {
-        JToken? transcription = segment["transcription"];
-        string text = transcription switch
-        {
-            JObject transcriptionToken => transcriptionToken["transcription"]?.ToString() ?? transcriptionToken.ToString(),
-            null => string.Empty,
-            _ => transcription.ToString()
-        };
+        string text = string.Empty;
+        string? method = null;
+        string? langCode = null;
+        int? logId = null;
 
-        string? method = segment["method"]?.ToString();
-        if (string.IsNullOrWhiteSpace(method) && transcription is JObject transcriptionObject)
-            method = transcriptionObject["method"]?.ToString();
+        // Aero v2: each segment carries a "transcriptions" array; each entry identifies its source
+        // model via "method" (e.g. "omnilingual", "phonetic") and carries its own lang_code/log_id.
+        // An empty array means there is no result for this segment.
+        if (segment["transcriptions"] is JArray transcriptions && transcriptions.Count > 0)
+        {
+            JToken? chosen = null;
+            if (phonetic)
+                chosen = transcriptions.FirstOrDefault(t =>
+                    string.Equals(t["method"]?.ToString(), "phonetic", StringComparison.OrdinalIgnoreCase));
+            // When not requesting phonetic (or no phonetic entry exists), prefer a non-phonetic entry.
+            chosen ??= transcriptions.FirstOrDefault(t =>
+                    !string.Equals(t["method"]?.ToString(), "phonetic", StringComparison.OrdinalIgnoreCase))
+                ?? transcriptions[0];
+
+            text = chosen?["transcription"]?.ToString() ?? string.Empty;
+            method = chosen?["method"]?.ToString();
+            langCode = chosen?["lang_code"]?.ToString();
+            logId = chosen?["log_id"]?.Value<int>() ?? segment["log_id"]?.Value<int>();
+        }
 
         return new TranscriptionStatusSegment(
             segment["start"]?.Value<float>() ?? 0,
             segment["end"]?.Value<float>() ?? segment["start"]?.Value<float>() ?? 0,
             text,
-            segment["log_id"]?.Value<int>() ?? segment["logId"]?.Value<int>(),
+            logId,
             method,
-            segment["lang_code"]?.ToString() ?? segment["langCode"]?.ToString());
+            langCode);
     }
 
     private static int CountCompletedItems(IEnumerable<TranscriptionStatusItem> items)
@@ -834,10 +849,7 @@ public class AeroService(
             }
         }
 
-        if (segments.Count == 0)
-            return null;
-
-        return string.Join(" ", segments.OrderBy(s => s.Start).ThenBy(s => s.End).Select(s => s.Text));
+        return segments.Count == 0 ? null : string.Join(" ", segments.OrderBy(s => s.Start).ThenBy(s => s.End).Select(s => s.Text));
     }
 
     //if small enough to fit in the request
