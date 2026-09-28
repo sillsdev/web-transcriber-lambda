@@ -1,3 +1,4 @@
+using Amazon.Lambda.Core;
 using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Resources;
 using JsonApiDotNetCore.Resources.Annotations;
@@ -46,6 +47,8 @@ namespace SIL.Transcriber.Services
         private const string ExportFolder = "exports";
         private const int MediafileChunkSize = 50;
         private const int DataChunkSize = 100;
+        //API Gateway/lambda hard limit is 29s; keep this much time free for the final SaveChanges + response
+        private const int LambdaReserveSeconds = 7;
 
 
         protected ILogger<OfflineDataService> Logger { get; set; } = loggerFactory.CreateLogger<OfflineDataService>();
@@ -99,6 +102,8 @@ namespace SIL.Transcriber.Services
 
         };
         IdMap? MediafileMap = null;
+        //longest single mediafile copy (S3 + db) seen this request - used to avoid starting one we can't finish
+        TimeSpan SlowestMediaCopy = TimeSpan.Zero;
         IdMap? UserMap = null;
         private readonly Dictionary<string, IdMap> MappedIdCache = [];
         private readonly List<string> UsersToInvite = [];
@@ -919,18 +924,20 @@ namespace SIL.Transcriber.Services
                         )
                         .Where(x => x.ReadyToShare && !x.Archived)];
             //pick just the highest version media per passage
-            sourcemediafiles =
+            List<Mediafile> latest = [.. (
                 from m in sourcemediafiles
                 group m by m.PassageId into grp
-                select grp.OrderByDescending(m => m.VersionNumber).FirstOrDefault();
+                select grp.OrderByDescending(m => m.VersionNumber).First())];
+            sourcemediafiles = latest;
+            Dictionary<int, Mediafile> latestByPassage = latest
+                .Where(s => s.PassageId != null)
+                .ToDictionary(s => (int)s.PassageId!, s => s);
 
             foreach (
                 Mediafile mf in resourcemediafiles.ToList().Where(m => m.ResourcePassageId != null)
             )
             { //make sure we have the latest
-                Mediafile? res = sourcemediafiles
-                            .Where(s => s.PassageId == mf.ResourcePassageId)
-                            .FirstOrDefault();
+                Mediafile? res = latestByPassage.GetValueOrDefault((int)mf.ResourcePassageId!);
                 if (res?.S3File != null)
                     mf.AudioUrl = _S3Service
                         .SignedUrlForGet(
@@ -3699,12 +3706,14 @@ namespace SIL.Transcriber.Services
             //the planid in the lst is still the old one
             IdMap oldmap = GetMediafileMap(mapKey);
             string suffix = "_" + plan.Slug;
-            for (int ix = 0; ix < lst.Count && (dtBail == null || DateTime.Now < dtBail); ix++)
+            //an S3 copy of a large file can take many seconds, so don't start one we probably can't finish before dtBail
+            for (int ix = 0; ix < lst.Count && (dtBail == null || DateTime.Now + SlowestMediaCopy < dtBail); ix++)
             {
                 Mediafile m = lst[ix];
                 string id = m.OfflineId ?? "error";
                 if (!oldmap.ContainsKey(id))
                 {
+                    DateTime itemStart = DateTime.Now;
                     if (m.SourceMedia == null && m.SourceMediaId != null)
                     {
                         m.OfflineSourceMediaId = m.SourceMediaId.ToString();
@@ -3757,9 +3766,11 @@ namespace SIL.Transcriber.Services
                     EntityEntry<Mediafile>? t =  dbContext.Mediafiles.Add(m);
                     //save as we go in case we have to resume
                     dbContext.SaveChanges();
-                    SaveId(Tables.Mediafiles, id, t.Entity.Id, mapKey);
+                    SaveId(Tables.Mediafiles, id, t.Entity.Id, mapKey); //SaveId saves
                     _ = oldmap.TryAdd(id, t.Entity.Id);
-                    dbContext.SaveChanges();
+                    TimeSpan elapsed = DateTime.Now - itemStart;
+                    if (elapsed > SlowestMediaCopy)
+                        SlowestMediaCopy = elapsed;
                 }
             }
             return oldmap;
@@ -3933,13 +3944,26 @@ namespace SIL.Transcriber.Services
             return await ProcessImportCopyProjectAsync(sourceproject, orgid, start, projId);
         }
 
+        //soft deadline: the requested seconds, but never later than the lambda's real remaining time minus a reserve
+        //(time spent before we got here - auth, cold start, loading the project - is already gone)
+        private DateTime BailTime(int seconds)
+        {
+            DateTime dt = DateTime.Now.AddSeconds(seconds);
+            if (HttpContext?.Items.TryGetValue("LambdaContext", out object? ctx) == true && ctx is ILambdaContext lambdaContext)
+            {
+                DateTime hard = DateTime.Now.Add(lambdaContext.RemainingTime).AddSeconds(-LambdaReserveSeconds);
+                if (hard < dt)
+                    dt = hard;
+            }
+            return dt;
+        }
         private async Task<Fileresponse> ProcessImportCopyProjectAsync(
                 Project sourceproject,
                 int orgId,
                 int start,
                 string? projId)
         {
-            DateTime dtBail = DateTime.Now.AddSeconds(20);
+            DateTime dtBail = BailTime(20);
             User currentuser = CurrentUser() ?? new User();
             bool sameOrg =  sourceproject.OrganizationId == orgId;
             IQueryable<Organization>? sourceOrg =  dbContext.Organizations.Where(o => o.Id == sourceproject.OrganizationId && !o.Archived);
@@ -3984,7 +4008,6 @@ namespace SIL.Transcriber.Services
                 IQueryable<Passage> sourcepassages = sourcesections.Join(dbContext.Passages, s => s.Id, p=> p.SectionId, (s, p) => p).Where(x => !x.Archived).OrderBy(p => p.Id);
                 IQueryable<Sectionresource> sectionresources = SectionResources(sourcesections);
 
-                IEnumerable<Mediafile> sourcemediafiles = PlanSourceMedia(sectionresources).Where(m => m.PlanId == origPlan);
 
                 IQueryable<Orgkeytermtarget> oktt = sameOrg ? dbContext.Orgkeytermtargets.Where(s => s.Id == -1) :
                                                               dbContext.Orgkeytermtargets.Where(s => s.OrganizationId == sourceproject.OrganizationId);
@@ -3998,12 +4021,13 @@ namespace SIL.Transcriber.Services
                                                                 OrgIPs(dbContext.Organizations.Where(o => o.Id == sourceproject.OrganizationId));
                 IQueryable<Bible>  orgBibles = dbContext.BiblesData.Where(b => b.Id == -1); //don't copy bibles data
 
-                List<Mediafile> pm = ProjectMedia(oktt, categories, sectionresources, ip, sourceplans, supportingNotes, orgBibles);
-                IEnumerable<Mediafile> myMedia = pm.Where(m => m.PlanId == origPlan);
+                //ProjectMedia is expensive (PlanSourceMedia signs urls and saves) - only build it for the Mediafiles step, once
+                List<Mediafile>? projectMedia = null;
+                bool outOfTime = false;
 
                 int ix = start;
                 string status = "";
-                while (DateTime.Now < dtBail && ix < TableOrder.Count)
+                while (!outOfTime && DateTime.Now < dtBail && ix < TableOrder.Count)
                 {
                     string name = TableOrder.Keys.ElementAt(ix);
                     status = name;
@@ -4217,10 +4241,11 @@ namespace SIL.Transcriber.Services
                             break;
 
                         case Tables.Mediafiles:
-                            List<Mediafile> allSourceMedia = [.. myMedia.Distinct()];
+                            List<Mediafile> allSourceMedia = projectMedia ??= [.. ProjectMedia(oktt, categories, sectionresources, ip, sourceplans, supportingNotes, orgBibles)
+                                                                .Where(m => m.PlanId == origPlan).Distinct()];
                             int totalMediaCount = allSourceMedia.Count;
                             IdMap mfMap = GetMediafileMap(mapKey);
-                            while (mfMap.Count < totalMediaCount && DateTime.Now < dtBail)
+                            while (mfMap.Count < totalMediaCount && DateTime.Now + SlowestMediaCopy < dtBail)
                             {
                                 int skip = mfMap.Count;
                                 IEnumerable<Mediafile> tmpchunk = allSourceMedia.Skip(skip).Take(MediafileChunkSize);
@@ -4268,7 +4293,10 @@ namespace SIL.Transcriber.Services
                             if (mfMap.Count == totalMediaCount)
                                 ix++;
                             else
+                            {
                                 status = string.Format("{0} {1}/{2}", status, mfMap.Count, totalMediaCount);
+                                outOfTime = true; //not enough time left for another copy - return and let the client call again
+                            }
                             break;
 
                         case Tables.PassageStateChanges:
