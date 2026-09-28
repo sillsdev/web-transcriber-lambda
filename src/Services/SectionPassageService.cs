@@ -172,12 +172,23 @@ namespace SIL.Transcriber.Services
                         Section? fromDb = sid.HasValue && existing.TryGetValue(sid.Value, out Section? existingSection)
                             ? existingSection
                             : null;
+                        // UpdateFrom mutates fromDb in place, so snapshot the original values
+                        // CheckPublish compares against (otherwise PublishTo always looks unchanged
+                        // and passages are never propagated).
+                        Section? original = fromDb == null ? null : new Section
+                        {
+                            Id = fromDb.Id,
+                            PlanId = fromDb.PlanId,
+                            PublishTo = fromDb.PublishTo,
+                            Published = fromDb.Published,
+                            TitleMediafileId = fromDb.TitleMediafileId,
+                        };
                         Section updatedSection = fromDb != null
                             ? fromDb.UpdateFrom(item[0])
                             : new Section().UpdateFrom(item[0], entity.PlanId);
                         batchSections.Add(updatedSection);
-                        if (fromDb != null)
-                            await SectionRepository.CheckPublish(updatedSection, fromDb);
+                        if (original != null)
+                            await SectionRepository.CheckPublish(updatedSection, original);
                     }
 
                     if (batchSections.Count > 0)
