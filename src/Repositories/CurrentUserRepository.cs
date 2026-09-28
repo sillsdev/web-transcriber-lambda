@@ -61,7 +61,9 @@ namespace SIL.Transcriber.Repositories
                             }
                         }
                         IEnumerable<Organizationmembership> oms = [.. dbContext.Organizationmemberships.Join(dupUsers, gm => gm.UserId, u => u.Id, (gm, u) => gm).Join(dbContext.Organizations.Where(o => !o.Archived), om => om.OrganizationId, o => o.Id, (om, o) => om)];
-                        foreach (Organizationmembership om in oms.Where(gm => gm.UserId != curUser.Id))
+                        //only merge active dup memberships, and archive the dup's copy once merged
+                        //so a later delete of curUser's membership isn't undone on the next request
+                        foreach (Organizationmembership om in oms.Where(gm => gm.UserId != curUser.Id && !gm.Archived))
                         {
                             Organizationmembership? tmp = oms.Where(x => x.UserId == curUser.Id && x.OrganizationId == om.OrganizationId).FirstOrDefault();
                             if (tmp != null)
@@ -70,8 +72,10 @@ namespace SIL.Transcriber.Repositories
                                 {
                                     tmp.Archived = false;
                                     dbContext.Update(tmp);
-                                    changed = true;
                                 }
+                                om.Archived = true;
+                                dbContext.Update(om);
+                                changed = true;
                             }
                             else
                             {
@@ -82,7 +86,7 @@ namespace SIL.Transcriber.Repositories
                             }
                         }
                         IEnumerable<Groupmembership> gms = [.. dbContext.Groupmemberships.Join(dupUsers, gm => gm.UserId, u => u.Id, (gm, u) => gm).Join(dbContext.Groups.Where(o => !o.Archived), om => om.GroupId, o => o.Id, (om, o) => om)];
-                        foreach (Groupmembership gm in gms.Where(gm => gm.UserId != curUser.Id))
+                        foreach (Groupmembership gm in gms.Where(gm => gm.UserId != curUser.Id && !gm.Archived))
                         {
                             Groupmembership? tmp = gms.Where(x => x.UserId == curUser.Id && x.GroupId == gm.GroupId).FirstOrDefault();
                             if (tmp != null)
@@ -91,8 +95,10 @@ namespace SIL.Transcriber.Repositories
                                 {
                                     tmp.Archived = false;
                                     dbContext.Update(tmp);
-                                    changed = true;
                                 }
+                                gm.Archived = true;
+                                dbContext.Update(gm);
+                                changed = true;
                             }
                             else
                             {
