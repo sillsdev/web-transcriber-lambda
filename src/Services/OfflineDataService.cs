@@ -3930,6 +3930,13 @@ namespace SIL.Transcriber.Services
             IdMap map = GetCachedMap(table, projId);
             return map.TryGetValue(oldId, out int mappedId) ? mappedId : int.TryParse(oldId, out int id) ? id : null;
         }
+        //like GetMappedId but never falls back to the old id - null if it wasn't copied
+        private int? GetCopiedId(string table, string projId, string? oldId)
+        {
+            if (projId == "" || string.IsNullOrEmpty(oldId))
+                return null;
+            return GetCachedMap(table, projId).TryGetValue(oldId, out int mappedId) && mappedId > 0 ? mappedId : null;
+        }
         //DEPRECATED
         private async Task<Fileresponse> ProcessImportCopyProjectDeprecatedAsync(
                 Project sourceproject,
@@ -4535,8 +4542,9 @@ namespace SIL.Transcriber.Services
                 return false;
             List<Section> sections = [.. dbContext.Copyprojects.Where(c => c.Sourcetable == Tables.Sections && c.Newprojid == mapKey)
                                        .Join(dbContext.Sections, cp => cp.Newid, s => s.Id, (cp, s) => s).Where(s => s.OfflineTitleMediafileId != null)];
+            //title media must be in the section's own plan - if it wasn't copied (ex. archived) don't point back to the source project's mediafile
             sections.ForEach(n => {
-                n.TitleMediafileId = GetMappedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
+                n.TitleMediafileId = GetCopiedId(Tables.Mediafiles, mapKey, n.OfflineTitleMediafileId);
             });
             dbContext.Sections.UpdateRange(sections);
             if (DateTime.Now > dtBail)
