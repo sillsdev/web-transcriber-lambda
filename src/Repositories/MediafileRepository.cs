@@ -279,7 +279,7 @@ namespace SIL.Transcriber.Repositories
             else if (p?.Passagetype?.IsNote() ?? false)
             {
                 Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId);
-                sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id && !sr.Archived);
+                sr ??= dbContext.SharedresourcesData.Where(sr => sr.PassageId == p.Id && !sr.Archived).OrderByDescending(sr => sr.Id).FirstOrDefault();
                 title = (sr?.Title ?? "") != ""
                     ? $"{title}NOTE_{FileName.CleanFileName(sr?.Title ?? "")}"
                     : $"{title}{Path.ChangeExtension(m.OriginalFile, PUBLISHED_EXTENSION)}";
@@ -315,18 +315,18 @@ namespace SIL.Transcriber.Repositories
             Graphic? graphic = null;
             if (m.PassageId != null)
             {
-                graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == m.PassageId && g.ResourceType == "passage" && !g.Archived);
+                graphic = dbContext.Graphics.Where(g => g.ResourceId == m.PassageId && g.ResourceType == "passage" && !g.Archived).OrderByDescending(g => g.Id).FirstOrDefault();
                 if (graphic == null)
                 {
                     int sectionId = passage?.SectionId ?? 0;
-                    graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == sectionId && g.ResourceType == "section" && !g.Archived);
+                    graphic = dbContext.Graphics.Where(g => g.ResourceId == sectionId && g.ResourceType == "section" && !g.Archived).OrderByDescending(g => g.Id).FirstOrDefault();
                 }
             }
             if (graphic == null)
             {
-                Section? s = dbContext.SectionsData.SingleOrDefault(s => s.TitleMediafileId == m.Id && !s.Archived);
+                Section? s = dbContext.SectionsData.Where(s => s.TitleMediafileId == m.Id && !s.Archived).FirstOrDefault();
                 if (s != null)
-                    graphic = dbContext.Graphics.SingleOrDefault(g => g.ResourceId == s.Id && g.ResourceType == "section" && !g.Archived);
+                    graphic = dbContext.Graphics.Where(g => g.ResourceId == s.Id && g.ResourceType == "section" && !g.Archived).OrderByDescending(g => g.Id).FirstOrDefault();
             }
             dynamic? json = JsonConvert.DeserializeObject(graphic?.Info ?? "{}");
             return json?["512"]?["content"] ?? "";
@@ -335,7 +335,7 @@ namespace SIL.Transcriber.Repositories
         private Sharedresource? GetSharedResource(Passage p)
         {
             Sharedresource? sr = dbContext.SharedresourcesData.SingleOrDefault(sr => sr.Id == p.SharedResourceId); //linked note
-            sr ??= dbContext.SharedresourcesData.SingleOrDefault(sr => sr.PassageId == p.Id); //source note
+            sr ??= dbContext.SharedresourcesData.Where(sr => sr.PassageId == p.Id && !sr.Archived).OrderByDescending(sr => sr.Id).FirstOrDefault(); //source note
             return sr;
         }
 
