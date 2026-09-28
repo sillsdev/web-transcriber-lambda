@@ -3300,10 +3300,22 @@ namespace SIL.Transcriber.Services
         private Artifactcategory? ResolveArtifactCategory(Artifactcategory category, int orgId, IEnumerable<Artifactcategory>? pendingCategories = null, bool createIfMissing = false)
         {
             string categoryName = category.Categoryname ?? string.Empty;
+            //category_unique_name includes archived rows, so revive an archived match rather than inserting a duplicate
             Artifactcategory? existing = dbContext.Artifactcategorys.FirstOrDefault(m => m.Id == category.Id && !m.Archived);
-            existing ??= dbContext.Artifactcategorys.FirstOrDefault(m => m.OrganizationId == orgId && m.Categoryname == categoryName && !m.Archived);
-            existing ??= dbContext.Artifactcategorys.FirstOrDefault(m => m.OrganizationId == null && m.Categoryname == categoryName && !m.Archived);
-            existing ??= pendingCategories?.FirstOrDefault(value => value.Categoryname == categoryName);
+            existing ??= dbContext.Artifactcategorys.FirstOrDefault(m => m.OrganizationId == orgId && m.Categoryname == categoryName
+                            && m.Discussion == category.Discussion && m.Resource == category.Resource && m.Note == category.Note);
+
+            existing ??= dbContext.Artifactcategorys.FirstOrDefault(m => m.OrganizationId == null && m.Categoryname == categoryName);
+            if (existing?.Archived ?? false)
+            {
+                existing.Archived = false;
+                existing.DateUpdated = DateTime.UtcNow;
+                dbContext.Artifactcategorys.Update(existing);
+                dbContext.SaveChanges();
+            }
+            existing ??= pendingCategories?.FirstOrDefault(value => value.Categoryname == categoryName
+                            && value.Discussion == category.Discussion && value.Resource == category.Resource && value.Note == category.Note);
+
             if (existing != null || !createIfMissing)
                 return existing;
 
