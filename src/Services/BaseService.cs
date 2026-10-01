@@ -86,15 +86,38 @@ namespace SIL.Transcriber.Services
             CancellationToken cancellationToken
         )
         {
-
             //orbit sometimes sends two in a row...see if we already know about this one
+            string fp = Repo.Fingerprint();
             TResource? x = resource.DateCreated == null ? null : Repo.Get().Where(t =>
                         t.DateCreated == resource.DateCreated
-                        && t.LastModifiedBy == resource.LastModifiedBy
+                        && t.LastModifiedOrigin == fp
                 )
                 .FirstOrDefault();
-            return x ?? await base.CreateAsync(resource, cancellationToken);
 
+            if (x != null)
+                return x;
+
+            // Insert the new resource
+            TResource? created = await base.CreateAsync(resource, cancellationToken);
+            // Check again immediately after insert - a concurrent request may have inserted 
+            // a duplicate between our initial check and this insert
+            if (created != null)
+            {
+                TResource? duplicate = Repo.Get().Where(t =>
+                    t.DateCreated == resource.DateCreated
+                    && t.LastModifiedOrigin == fp
+                    && t.Id != created.Id  // Exclude the one we just created
+                ).FirstOrDefault();
+
+                if (duplicate != null)
+                {
+                    // A concurrent request beat us to it - delete our insert and return theirs
+                    await base.DeleteAsync(created.Id, cancellationToken);
+                    return duplicate;
+                }
+            }
+
+            return created;
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Models;
@@ -20,6 +19,15 @@ public class AeroService(
     readonly private string Bucket = GetVarOrThrow("SIL_TR_AERO_BUCKET");
     readonly private IS3Service s3Service = s3service;
     private const  string AERO_FOLDER = "input_files";
+    private const string NOISE_REMOVAL = "v2/noise-removals";
+    private const string VOICE_CONVERSION = "v2/voice-conversions";
+    private const string AUDIO_INFILLING = "v2/audio-infillings";
+    private const string TRANSCRIPTION = "v2/transcriptions";
+    // Aero v2: the dedicated phonetic-transcriptions endpoint was removed (now 404).
+    // Phonetic transcription is requested via method="phonetic" on the transcriptions endpoint.
+    private const string LANGUAGES = "v2/transcriptions/languages";
+    private const string RECOMMENDATIONS = "v2/language-recommendations";
+
     private ILogger Logger { get; set; } = loggerFactory.CreateLogger("AeroService");
 
     private async Task<string> GetToken()
@@ -48,46 +56,6 @@ public class AeroService(
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }
-    private static void AddSaveS3(MultipartFormDataContent content, bool upload)
-    {
-        content.Add(new StringContent(upload.ToString()), "s3_upload"); // Sends 's3_upload=True' in the request
-    }
-    private static void AddSaveS3(string parameters, bool upload) => parameters += $"&s3_upload={upload.ToString().ToLower()}"; // Sends 's3_upload=True' in the request
-    private static ByteArrayContent GetFileContent(Stream stream)
-    {
-        byte[] data = ConvertStreamToByteArray(stream);
-        // Create the ByteArrayContent for the file
-        ByteArrayContent fileContent = new (data);
-        // Add the required headers for the file content
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        /* this breaks it
-        fileContent.Headers.ContentDisposition = new ContentDispositionHeaderValue(fileName)
-        {
-            FileName = fileName
-        };
-        */
-        return fileContent;
-    }
-
-    private static MultipartFormDataContent AddFileToRequest(Stream stream, string filename, string param, MultipartFormDataContent? content = null)
-    {
-        ByteArrayContent fileContent = GetFileContent(stream);
-        // Prepare the multipart content
-        MultipartFormDataContent multipartContent = content ?? [];
-        multipartContent.Add(fileContent, param, filename);
-        return multipartContent;
-    }
-    private async Task<HttpResponseMessage> SendBinaryDataToApiAsync(Stream stream, string filename, string apiUrl)
-    {
-        using HttpClient httpClient = await Httpclient();
-        MultipartFormDataContent multipartContent = AddFileToRequest(stream, filename, "file");
-        // Optionally, add other form data if needed (e.g., s3_upload boolean or user data)
-        multipartContent.Add(new StringContent("true"), "s3_upload"); // Sends 's3_upload=True' in the request
-                                                                      // Send the HTTP POST request to the FastAPI endpoint
-        HttpResponseMessage response = await httpClient.PostAsync(apiUrl, multipartContent);
-        response.EnsureSuccessStatusCode();
-        return response;
-    }
     private static byte[] ConvertStreamToByteArray(Stream stream)
     {
         using MemoryStream memoryStream = new();
@@ -95,54 +63,37 @@ public class AeroService(
         return memoryStream.ToArray();
     }
 
-    private static async Task LogMultipartContent(MultipartFormDataContent? multipartContent, ILogger logger)
+    private static JArray BuildClipArray(IEnumerable<string> s3paths, float[]? timing = null)
     {
-        if (multipartContent == null)
+        JArray clips = new();
+        foreach (string s3path in s3paths)
         {
-            logger.LogCritical("NO MPC");
-            return;
+            JObject clip = new()
+            {
+                ["s3_path"] = s3path
+            };
+
+            if (timing != null && timing.Length > 0)
+            {
+                JArray timestamps = new();
+                foreach (float t in timing)
+                    timestamps.Add(t);
+                clip["timestamps"] = timestamps;
+            }
+
+            clips.Add(clip);
         }
 
-        foreach (HttpContent content in multipartContent)
-        {
-            if (content is StringContent stringContent)
-            {
-                string? name = content.Headers.ContentDisposition?.Name;
-                string value = await stringContent.ReadAsStringAsync();
-                logger.LogCritical("StringContent Name: {Name}, Value: {Value}", name, value);
-            }
-            else if (content is StreamContent streamContent)
-            {
-                string? name = content.Headers.ContentDisposition?.Name;
-                logger.LogCritical("StreamContent Name: {Name}, Length: {Length}, Type: {Type}",
-                    name, content.Headers.ContentLength, content.Headers.ContentType);
-            }
-            else if (content is ByteArrayContent byteArrayContent)
-            {
-                string? name = content.Headers.ContentDisposition?.Name ?? content.Headers.ContentDisposition?.FileName;
-                logger.LogCritical("ByteArrayContent Name: {Name}, Length: {Length}, Type: {Type}",
-                    name, content.Headers.ContentLength, content.Headers.ContentType);
-            }
-            else
-            {
-                logger.LogCritical("Unknown Content Type: {Type}", content.GetType().Name);
-            }
-        }
-    }
-    private async Task<string[]?> GetTaskIds(string api, MultipartFormDataContent? content)
-    {
-        string? tmp = await GetResult(api, content?.Any()??false ? content : null, "task_ids");
-        string? result = tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']','"', ' ');
-        return result?.Split(',');
+        return clips;
     }
 
+    // multipart/form-data helpers removed — API now accepts JSON-only inputs
 
-    private async Task<string?> GetResult(string api, MultipartFormDataContent? multipartContent, string result)
+    private async Task<string?> GetResult(string api, HttpContent? content, string result)
     {
         Logger.LogDebug("GetResult {Api}", api);
         using HttpClient httpClient = await Httpclient();
-        await LogMultipartContent(multipartContent, Logger);
-        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), multipartContent?.Any() ?? false ? multipartContent : null);
+        HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), content);
         string responseBody = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
@@ -150,99 +101,309 @@ public class AeroService(
             throw new HttpRequestException($"Aero API returned {(int)response.StatusCode} {response.ReasonPhrase}: {responseBody}", null, response.StatusCode);
         }
         dynamic? x = JsonConvert.DeserializeObject(responseBody);
-        return x?[result]?.ToString();
+        string? ret = x?[result]?.ToString();
+        return ret;
     }
-
-    /*
-    public async Task<string?> NoiseRemoval(IFormFile file)
-    {
-        // Prepare the multipart content
-        using Stream fileStream = file.OpenReadStream();
-        return await NoiseRemoval(fileStream, file.FileName);
-    } */
 
     //if small enough to fit in the request
     public async Task<string?> NoiseRemoval(string base64data, string filename)
     {
-        byte[] fileBytes = Convert.FromBase64String(base64data);
-        MemoryStream fileStream = new (fileBytes);
-        MultipartFormDataContent multipartContent = AddFileToRequest(fileStream, filename, "file");
-        AddSaveS3(multipartContent, true);
-        return await GetResult($"{Domain}/noise_removal", multipartContent, "task_id");
-
-        //return await NoiseRemoval(fileStream, filename);
+        // Build JSON payload per new NoiseRemoval API (JSON-only)
+        var payload = new
+        {
+            audio_base64 = base64data,
+            audio_format = GetAudioFormatFromFilename(filename),
+            s3_upload = true,
+            method = "sam",
+            prompt = "speech",
+            quality = "high"
+        };
+        string json = JsonConvert.SerializeObject(payload);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult($"{Domain}/{NOISE_REMOVAL}", content, "task_id");
     }
 
     //not small enough to fit in the request - send an s3 file that has been put in aero input_files
     public async Task<string?> NoiseRemoval(string fileName)
     {
         await S3service.BucketOwner(fileName, AERO_FOLDER, Bucket);
-        string p = $"s3_file_path=s3://{Bucket}/{AERO_FOLDER}/{fileName}";
-        AddSaveS3(p, true);
-        return await GetResult($"{Domain}/noise_removal?{p}", null, "task_id");
+        // Build JSON payload with s3_path per new NoiseRemoval API
+        var payload = new
+        {
+            s3_path = $"s3://{Bucket}/{AERO_FOLDER}/{fileName}",
+            s3_upload = true,
+            method = "sam",
+            prompt = "speech",
+            quality = "standard"
+        };
+        string json = JsonConvert.SerializeObject(payload);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult($"{Domain}/{NOISE_REMOVAL}", content, "task_id");
     }
 
-    private async Task<HttpContent?> GetStatus(string service, string? TaskId)
+
+    public async Task<TaskStatusEnvelope?> NoiseRemovalStatus(string taskId)
     {
-        using HttpClient httpClient = await Httpclient();
-        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{service}_status/{TaskId}");
-        if (!response.IsSuccessStatusCode)
+        return await GetStatus(NOISE_REMOVAL, taskId);
+    }
+    public async Task<string?> NoiseRemovalStatus(string taskId, string outputFile, string outputFolder)
+    {
+        TaskStatusEnvelope? env = await NoiseRemovalStatus(taskId);
+        if (env == null)
+            return null;
+
+        if (!string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        string? audioUrl = env.result?["audio_url"]?.ToString();
+
+        if (string.IsNullOrWhiteSpace(audioUrl))
         {
-            string body = await response.Content.ReadAsStringAsync();
-            Logger.LogError("Aero status check failed [{Service}/{TaskId}]: {Status} {Reason} - {Body}",
-                service, TaskId, response.StatusCode, response.ReasonPhrase, body);
-            throw new HttpRequestException($"Aero status check for '{service}' returned {(int)response.StatusCode} {response.ReasonPhrase}: {body}", null, response.StatusCode);
-        }
-        if (response.Headers.TryGetValues("task-state", out IEnumerable<string>? taskStates))
-        {
-            string? taskState = taskStates.FirstOrDefault();
-            if (taskState is "SUCCESS" or "finished")
-                return response.Content;
-            if (taskState == "FAILURE")
-            {
-                string body = await response.Content.ReadAsStringAsync();
-                Logger.LogError("Aero task failed [{Service}/{TaskId}]: {Body}", service, TaskId, body);
-                throw new Exception($"Aero task failed for '{service}' (task: {TaskId}): {body}");
-            }
+            Logger.LogError("Noise removal result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
             return null;
         }
-        Logger.LogWarning("Aero status response missing task-state header [{Service}/{TaskId}]", service, TaskId);
-        return null;
-    }
-    public async Task<HttpContent?> NoiseRemovalStatus(string? taskId)
-    {
-        return await GetStatus("noise_removal", taskId);
-    }
-    public async Task<string?> NoiseRemovalStatus(string? taskId, string outputFile, string outputFolder)
-    {
 
-        Stream? stream = (await NoiseRemovalStatus(taskId))?.ReadAsStream();
+        return await FetchAndUploadAsync(audioUrl, outputFile, outputFolder);
+    }
+    public record TaskStatusEnvelope(string task_id, string state, JToken? result, JToken? progress, JToken? error);
 
-        if (stream != null)
+    private async Task<TaskStatusEnvelope> GetStatus(string service, string TaskId)
+    {
+        using HttpClient httpClient = await Httpclient();
+        string url = $"{Domain}/{service}/{TaskId}";
+        HttpResponseMessage response = await httpClient.GetAsync(url);
+        string body = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
         {
-            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
-            return s3resp.Message;
+            Logger.LogError("Aero status check failed [{Service}/{TaskId}]: {Status} {Reason} - {Body}",
+               service, TaskId, response.StatusCode, response.ReasonPhrase, body);
+            throw new HttpRequestException($"Aero status check for '{service}' returned {(int)response.StatusCode} {response.ReasonPhrase}: {body}", null, response.StatusCode);
         }
-        return null;
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            Logger.LogWarning("Aero status response empty [{Service}/{TaskId}]", service, TaskId);
+            // Return an envelope with empty fields and PENDING state
+            return new TaskStatusEnvelope(TaskId, "PENDING", null, null, null);
+        }
+
+        try
+        {
+            JObject json = JObject.Parse(body);
+            string? state = json["state"]?.ToString();
+
+            if (string.Equals(state, "FAILURE", StringComparison.OrdinalIgnoreCase))
+            {
+                string? err = json["error"]?["message"]?.ToString() ?? body;
+                Logger.LogError("Aero task failed [{Service}/{TaskId}]: {Body}", service, TaskId, body);
+                // Use HttpRequestException with no status parameter; controllers map exceptions to status codes
+                throw new HttpRequestException($"Aero task failed: {err}");
+            }
+
+            JToken? result = json["result"] as JToken;
+            JToken? progress = json["progress"] as JToken;
+            JToken? error = json["error"] as JToken;
+            TaskStatusEnvelope env =  new TaskStatusEnvelope(json["task_id"]?.ToString() ?? TaskId, state ?? "PENDING", result, progress, error);
+            return env;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Aero status response was not valid JSON [{Service}/{TaskId}]: {Body}", service, TaskId, body);
+            throw;
+        }
     }
     private static string GetFileName(string sourceUrl)
     {
         Uri uri = new (sourceUrl);
         return Path.GetFileName(uri.LocalPath);
     }
-    private static async Task<Stream> GetStream(string sourceUrl)
+    private static string GetAudioFormatFromFilename(string filename)
     {
-        HttpClient client = new ();
-        Stream s = await client.GetStreamAsync(sourceUrl);
-        return s;
+        string ext = Path.GetExtension(filename)?.ToLowerInvariant() ?? "";
+        return ext switch
+        {
+            ".mp3" => "audio/mpeg",
+            ".wav" => "audio/wav",
+            ".ogg" => "audio/ogg",
+            ".m4a" => "audio/mp4",
+            ".flac" => "audio/flac",
+            _ => "application/octet-stream",
+        };
+    }
+    // Wrap the response stream so disposing the returned Stream will also
+    // dispose the HttpResponseMessage and HttpClient that created it.
+    private class ResponseDisposingStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly HttpResponseMessage _response;
+        private readonly HttpClient _client;
+        private readonly MemoryStream? _prefix;
 
+        public ResponseDisposingStream(Stream inner, HttpResponseMessage response, HttpClient client, byte[]? prefix = null)
+        {
+            _inner = inner;
+            _response = response;
+            _client = client;
+            if (prefix != null && prefix.Length > 0)
+                _prefix = new MemoryStream(prefix, writable: false);
+        }
+
+        public override bool CanRead => _inner.CanRead;
+        public override bool CanSeek => _inner.CanSeek;
+        public override bool CanWrite => _inner.CanWrite;
+        public override long Length => _inner.Length;
+        public override long Position { get => _inner.Position; set => _inner.Position = value; }
+
+        public override void Flush() => _inner.Flush();
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            return _prefix != null && _prefix.Position < _prefix.Length
+                ? _prefix.Read(buffer, offset, count)
+                : _inner.Read(buffer, offset, count);
+        }
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return _prefix != null && _prefix.Position < _prefix.Length
+                ? await _prefix.ReadAsync(buffer, offset, count, cancellationToken)
+                : await _inner.ReadAsync(buffer, offset, count, cancellationToken);
+        }
+        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+        public override void SetLength(long value) => _inner.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _inner.WriteAsync(buffer, offset, count, cancellationToken);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try
+                { _inner.Dispose(); }
+                catch { }
+                try
+                { _response.Dispose(); }
+                catch { }
+                try
+                { _client.Dispose(); }
+                catch { }
+            }
+            base.Dispose(disposing);
+        }
+    }
+
+    private async Task<Stream> GetStream(string presignedGetUrl)
+    {
+        HttpClient client = new();
+        HttpResponseMessage response = await client.GetAsync(presignedGetUrl, HttpCompletionOption.ResponseHeadersRead);
+        Logger.LogDebug("GetStream: {Url} -> {Status}", presignedGetUrl, response.StatusCode);
+        response.EnsureSuccessStatusCode();
+
+        Stream sourceStream = await response.Content.ReadAsStreamAsync();
+        Logger.LogDebug("GetStream: content-length={Length} canread={CanRead} canseek={CanSeek}", response.Content.Headers.ContentLength, sourceStream.CanRead, sourceStream.CanSeek);
+
+        // Probe the first bytes so we can detect an empty body early and
+        // also support underlying streams that have been advanced by the probe
+        // by returning those bytes as a prefix to the returned stream.
+        byte[] probe = new byte[4096];
+        int bytesRead = 0;
+        try
+        {
+            if (sourceStream.CanRead)
+            {
+                bytesRead = await sourceStream.ReadAsync(probe, 0, probe.Length);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "GetStream: probe read failed");
+        }
+
+        if (bytesRead > 0)
+        {
+            byte[] prefix = new byte[bytesRead];
+            Array.Copy(probe, 0, prefix, 0, bytesRead);
+            Logger.LogDebug("GetStream: probe read {Bytes} bytes", bytesRead);
+            return new ResponseDisposingStream(sourceStream, response, client, prefix);
+        }
+
+        if (!sourceStream.CanRead || bytesRead == 0)
+        {
+            Logger.LogWarning("GetStream: response stream not readable or empty: content-length={Length} canread={CanRead}", response.Content.Headers.ContentLength, sourceStream.CanRead);
+        }
+
+        return new ResponseDisposingStream(sourceStream, response, client);
+    }
+    // Consolidated processing of v2 status envelopes returned by Aero APIs.
+    private async Task<AeroResult> ProcessResult(HttpContent content, string service, string taskId)
+    {
+        string json = await content.ReadAsStringAsync();
+        JObject obj = JObject.Parse(json);
+        string? state = obj["state"]?.ToString();
+
+        if (string.Equals(state, "FAILURE", StringComparison.OrdinalIgnoreCase))
+        {
+            string? err = obj["error"]?["message"]?.ToString() ?? "task failed";
+            Logger.LogError("Aero task failed [{Service}/{TaskId}]: {Error}", service, taskId, err);
+            return new AeroResult(false, null, err, json);
+        }
+
+        if (!string.Equals(state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+        {
+            // Not finished yet (PENDING/STARTED/etc.)
+            return new AeroResult(false, null, null, json);
+        }
+
+        JToken? result = obj["result"] as JToken;
+        string? audioUrl = result?["audio_url"]?.ToString()
+            ?? result?["presigned_audio_url"]?.ToString()
+            ?? result?["url"]?.ToString();
+
+        return new AeroResult(true, audioUrl, null, json);
+    }
+
+    // Download the audio from a presigned URL and upload to S3. Returns S3 response message or null.
+    private async Task<string?> FetchAndUploadAsync(string audioUrl, string outputFile, string outputFolder)
+    {
+        if (string.IsNullOrWhiteSpace(audioUrl))
+        {
+            Logger.LogError("FetchAndUploadAsync called with empty audioUrl");
+            return null;
+        }
+
+        using Stream stream = await GetStream(audioUrl);
+        S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
+        return s3resp.Message;
     }
     private async Task<string?> VoiceConversion(Stream source, string sourcefilename, Stream target, string targetfilename)
     {
-        MultipartFormDataContent multipartContent =  AddFileToRequest(source, sourcefilename, "source_file");
-        AddFileToRequest(target, targetfilename, "target_file", multipartContent);
-        AddSaveS3(multipartContent, false);
-        return await GetResult($"{Domain}/voice_conversion", multipartContent, "task_id");
+        if (source.CanSeek)
+            source.Position = 0;
+        if (target.CanSeek)
+            target.Position = 0;
+
+        byte[] sourceBytes = ConvertStreamToByteArray(source);
+        byte[] targetBytes = ConvertStreamToByteArray(target);
+        JObject payload = [];
+        JObject sourceObj = new()
+        {
+            ["audio_base64"] = Convert.ToBase64String(sourceBytes),
+            ["audio_format"] = GetAudioFormatFromFilename(sourcefilename)
+        };
+        payload["source"] = sourceObj;
+
+        JObject targetObj = new()
+        {
+            ["audio_base64"] = Convert.ToBase64String(targetBytes),
+            ["audio_format"] = GetAudioFormatFromFilename(targetfilename)
+        };
+        payload["target"] = targetObj;
+
+        payload["s3_upload"] = true;
+        payload["model"] = "SeedVC";
+        string json = payload.ToString(Formatting.None);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult($"{Domain}/{VOICE_CONVERSION}", content, "task_id");
     }
 
     public async Task<string?> VoiceConversion(string fileName, string targetUrl)
@@ -251,26 +412,49 @@ public class AeroService(
         string tgt = $"tgt{fileName}";
         await S3service.CopyS3FileAsync(targetUrl, Bucket, AERO_FOLDER, tgt);
         await S3service.BucketOwner(tgt, AERO_FOLDER, Bucket);
-        string p = $"s3_source_file_path=s3://{Bucket}/{AERO_FOLDER}/{fileName}";
-        string t = $"&s3_target_file_path=s3://{Bucket}/{AERO_FOLDER}/{tgt}";
-        AddSaveS3(t, false);
-        return await GetResult($"{Domain}/voice_conversion?{p}{t}", null, "task_id");
-    }
-    public async Task<HttpContent?> VoiceConversionStatus(string? taskId)
-    {
-        return await GetStatus("voice_conversion", taskId);
-    }
-    public async Task<string?> VoiceConversionStatus(string? taskId, string outputFile, string outputFolder)
-    {
-
-        Stream? stream = (await VoiceConversionStatus(taskId))?.ReadAsStream();
-
-        if (stream != null)
+        JObject payload = new();
+        JObject sourceObj = new()
         {
-            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
-            return s3resp.Message;
+            ["s3_path"] = $"s3://{Bucket}/{AERO_FOLDER}/{fileName}"
+        };
+        payload["source"] = sourceObj;
+
+        JObject targetObj = new()
+        {
+            ["s3_path"] = $"s3://{Bucket}/{AERO_FOLDER}/{tgt}"
+        };
+        payload["target"] = targetObj;
+
+        payload["s3_upload"] = true;
+        payload["model"] = "freevc";
+        string json = payload.ToString(Formatting.None);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult($"{Domain}/{VOICE_CONVERSION}", content, "task_id");
+    }
+    public async Task<TaskStatusEnvelope?> VoiceConversionStatus(string taskId)
+    {
+        return await GetStatus(VOICE_CONVERSION, taskId);
+    }
+    public async Task<string?> VoiceConversionStatus(string taskId, string outputFile, string outputFolder)
+    {
+        TaskStatusEnvelope? env = await VoiceConversionStatus(taskId);
+        if (env == null)
+            return null;
+
+        if (!string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        string? audioUrl = env.result?["audio_url"]?.ToString()
+            ?? env.result?["presigned_audio_url"]?.ToString()
+            ?? env.result?["url"]?.ToString();
+
+        if (string.IsNullOrWhiteSpace(audioUrl))
+        {
+            Logger.LogError("Voice conversion result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
+            return null;
         }
-        return null;
+
+        return await FetchAndUploadAsync(audioUrl, outputFile, outputFolder);
     }
     /// <summary>
     /// 
@@ -279,128 +463,426 @@ public class AeroService(
     public async Task<string> TranscriptionLanguages()
     {
         using HttpClient httpClient = new();
-        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/languages");
+        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{LANGUAGES}");
         string jsonString =  await response.Content.ReadAsStringAsync();
         JArray jsonArray = JArray.Parse(jsonString);
         JArray filteredArray = new (jsonArray.Where(item => item["is_mms_asr"]?.Value<bool>() ?? false));
         return filteredArray.ToString();
 
     }
+    public async Task<string[]?> TranscriptionAsrMethods(string iso)
+    {
+        using HttpClient httpClient = new();
+        HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{LANGUAGES}?language_iso={iso}");
+        string jsonString = await response.Content.ReadAsStringAsync();
+        // returns {  "languages": [{"iso": "eng", "name": "English"}], "entries": [{"language_iso": "eng", "script": "Latn", "method": "mms"},
+        // {"language_iso": "eng", "script": "Latn", "method": "omnilingual"}, {"language_iso": "eng", "script": "Latn", "method": "whisper"}]}
+        JObject jsonObject = JObject.Parse(jsonString);
+        JArray? entries = jsonObject["entries"] as JArray;
+        List<string> methods = entries?.Select(e => e["method"]?.Value<string>()).OfType<string>().Distinct().ToList() ?? [];
+
+        string[] ranking = ["whisper", "w2v-bert", "omnilingual", "mms"];
+        List<string> ranked = [.. ranking.Where(m => methods.Contains(m))];
+        ranked.AddRange(methods.Where(m => !ranking.Contains(m)));
+
+        return [.. ranked];
+    }
+    public async Task<string?> TranscriptionAsrSisters(string iso)
+    {
+        string api = $"{Domain}/{RECOMMENDATIONS}";
+        var payload = new
+        {
+            iso
+        };
+        string json = JsonConvert.SerializeObject(payload);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult(api, content, "task_id");
+    }
+    public async Task<string?> AsrSistersStatus(string taskId)
+    {
+        TaskStatusEnvelope? env = await GetStatus(RECOMMENDATIONS, taskId);
+        if (env == null || !string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        try
+        {
+            if (env.result != null)
+            {
+                string ret = JsonConvert.SerializeObject(env.result["result"] ?? env.result);
+                return ret;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.result);
+            throw;
+        }
+        return null;
+    }
+    private string? cleanupResult(string tmp)
+    {
+        return tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']', '"', ' ');
+
+    }
     private async Task<string[]?> Transcription(
         Stream stream, string filename, string lang_iso, bool romanize, float[]? timing = null)
     {
-        string api = $"{Domain}/batch_transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
-        for (int ix = 0; ix < timing?.Length; ix++)
+        // Build JSON payload using the unified "clips" array for inline audio (Aero v2)
+        string api = $"{Domain}{TRANSCRIPTION}";
+
+        if (stream.CanSeek)
+            stream.Position = 0;
+        byte[] bytes = ConvertStreamToByteArray(stream);
+        JObject payload = new();
+
+        JArray audioClips = new();
+        JObject clip = new()
         {
-            api += $"&timestamps={timing[ix]}";
+            ["audio_base64"] = Convert.ToBase64String(bytes),
+            ["audio_format"] = GetAudioFormatFromFilename(filename)
+        };
+        audioClips.Add(clip);
+        // Aero v2: audio sources (s3_path or inline audio_base64+audio_format) go in the unified "clips" array.
+        payload["clips"] = audioClips;
+
+        payload["language_iso"] = lang_iso;
+        // choose default method
+        string? method = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
+        if (!string.IsNullOrEmpty(method))
+            payload["method"] = method;
+
+        payload["s3_upload"] = true;
+        payload["romanize"] = romanize;
+
+        if (timing != null && timing.Length > 0)
+        {
+            // Aero v2: timestamps live on the individual clip, not at the request root.
+            JArray timestamps = new();
+            foreach (float t in timing)
+                timestamps.Add(t);
+            clip["timestamps"] = timestamps;
         }
 
-        MultipartFormDataContent content =  AddFileToRequest(stream, filename, "files");
-        return await GetTaskIds(api, content);
+        payload["timestamp_level"] = "chunk";
+        payload["best_quality"] = false;
+
+        string json = payload.ToString(Formatting.None);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+
+        string? tmp = await GetResult(api, content, "task_id");
+        if (tmp == null)
+            return null;
+        string? result = cleanupResult(tmp);
+        return result?.Split(',');
     }
     public async Task<string[]?> Transcription(string[] fileUrls, string lang_iso, bool romanize)
     {
-        string api = $"{Domain}/batch_transcription?s3_upload=true&sister_lang_iso={lang_iso}&romanize={romanize}";
-        MultipartFormDataContent multipartContent = [];
-        List<ByteArrayContent> files = [];
+        string api = $"{Domain}{TRANSCRIPTION}";
+        // Copy files to S3 input folder and build clips
+        List<string> s3paths = new();
         int count = 1;
         foreach (string fileUrl in fileUrls)
         {
-            Stream stream = await GetStream(fileUrl);
-            string filename = GetFileName(fileUrl);
-            AddFileToRequest(stream, count.ToString() + filename, "files", multipartContent);
-            count++;
-        }
-        string[]? tasks = await GetTaskIds(api, multipartContent);
-        return tasks;
-    }
-    private async Task<string> BuildTranscriptionApi(string[] fileUrls, string lang_iso, bool romanize, float[]? timing = null)
-    {
-        string api = $"{Domain}/batch_transcription";
-        int count = 1;
-        string fn = DateTime.Now.Ticks.ToString();
-        List<string> urlList = [];
-        foreach (string fileUrl in fileUrls)
-        {
-            Uri uri = new (fileUrl);
+            Uri uri = new(fileUrl);
             string ext = Path.GetExtension(uri.LocalPath);
-            string tgt = $"{count}{fn}.{ext}";
+            string tgt = $"{count}{DateTime.Now.Ticks}{ext}";
             await S3service.CopyS3FileAsync(fileUrl, Bucket, AERO_FOLDER, tgt);
             await S3service.BucketOwner(tgt, AERO_FOLDER, Bucket);
-            urlList.Add($"s3://{Bucket}/{AERO_FOLDER}/{tgt}");
+            s3paths.Add($"s3://{Bucket}/{AERO_FOLDER}/{tgt}");
             count++;
         }
-        KeyValuePair<string, string?>[] queryString = [new("s3_upload", "true"), new("sister_lang_iso", lang_iso), new("romanize", romanize.ToString()), new("s3_file_paths",string.Join("," ,urlList))];
-        api = QueryHelpers.AddQueryString(api, queryString);
-        for (int ix = 0; ix < timing?.Length; ix++)
-        {
-            api += $"&timestamps={timing[ix]}";
-        }
-        return api;
+
+        JObject payload = new();
+        if (s3paths.Count > 0)
+            payload["clips"] = BuildClipArray(s3paths);
+
+        payload["language_iso"] = lang_iso;
+        string? method = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
+        if (!string.IsNullOrEmpty(method))
+            payload["method"] = method;
+
+        payload["s3_upload"] = true;
+        payload["romanize"] = romanize;
+        payload["timestamp_level"] = "chunk";
+        payload["best_quality"] = false;
+
+        string json = payload.ToString(Formatting.None);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        string? tmp = await GetResult(api, content, "task_id");
+        if (tmp == null)
+            return null;
+        string? result = cleanupResult(tmp);
+        return result?.Split(',');
     }
-    /*
-    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize)
-    {
-        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize);
-        string[]? tasks = await GetTaskIds(api, []);
-        return tasks;
-    } */
     /// <summary>
     /// 
     /// </summary>
     /// <param name="fileUrls">The files containing the audio to transcribe.</param>
     /// <param name="lang_iso">The ISO code of the language to transcribe the audio into</param>
     /// <param name="romanize">Whether to romanize the transcription</param>
+    /// <param name="method">The transcription method to use</param>
+    /// <param name="phonetic">Whether to use phonetic transcription</param>
     /// <param name="timing">verse timing</param>
     /// <returns></returns>
-    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize, float[]? timing = null)
+    public async Task<string[]?> TranscriptionNew(string[] fileUrls, string lang_iso, bool romanize, bool phonetic, string? method = null, float[]? timing = null)
     {
-        string api = await BuildTranscriptionApi(fileUrls, lang_iso, romanize, timing);
-        string[]? tasks = await GetTaskIds(api, []);
-        return tasks;
+        // Copy files to S3 and build payload
+        List<string> s3paths = [];
+        int count = 1;
+        string fn = DateTime.Now.Ticks.ToString();
+        foreach (string fileUrl in fileUrls)
+        {
+            Uri uri = new(fileUrl);
+            string ext = Path.GetExtension(uri.LocalPath);
+            string tgt = $"{count}{fn}{ext}";
+            await S3service.CopyS3FileAsync(fileUrl, Bucket, AERO_FOLDER, tgt);
+            await S3service.BucketOwner(tgt, AERO_FOLDER, Bucket);
+            s3paths.Add($"s3://{Bucket}/{AERO_FOLDER}/{tgt}");
+            count++;
+        }
+
+        // Aero v2: phonetic is no longer a separate endpoint - it is requested as method="phonetic"
+        // on the transcriptions endpoint.
+        string api = $"{Domain}/{TRANSCRIPTION}";
+
+        JObject payload = [];
+        if (s3paths.Count > 0)
+            payload["clips"] = BuildClipArray(s3paths, timing);
+
+        payload["language_iso"] = lang_iso;
+        if (phonetic)
+        {
+            payload["method"] = "phonetic";
+        }
+        else if (!string.IsNullOrEmpty(method))
+        {
+            payload["method"] = method;
+        }
+        else
+        {
+            string? defaultMethod = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
+            if (!string.IsNullOrEmpty(defaultMethod))
+                payload["method"] = defaultMethod;
+        }
+
+        payload["s3_upload"] = true;
+        payload["romanize"] = romanize;
+        payload["timestamp_level"] = "chunk";
+        payload["best_quality"] = false;
+
+        string json = payload.ToString(Formatting.None);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        string? tmp = await GetResult(api, content, "task_id");
+        if (tmp == null)
+            return null;
+        string? result = cleanupResult(tmp);
+        return result?.Split(',');
     }
 
-    public async Task<TranscriptionResponse?> TranscriptionStatus(string? taskId)
+    public async Task<TranscriptionStatusResponse?> TranscriptionStatus(string taskId, bool phonetic)
     {
-        HttpContent? content = await GetStatus("batch_transcription", taskId);
-        if (content != null)
+        // Aero v2: both regular and phonetic tasks are polled from the unified transcriptions endpoint.
+        TaskStatusEnvelope? env = await GetStatus(TRANSCRIPTION, taskId);
+        return env == null ? null : ParseTranscriptionStatus(env, phonetic);
+    }
+
+    public async Task<TranscriptionResponse?> TranscriptionResult(string taskId, bool phonetic)
+    {
+        TranscriptionStatusResponse? status = await TranscriptionStatus(taskId, phonetic);
+        if (status == null || !string.Equals(status.State, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        try
         {
-            string json = await content.ReadAsStringAsync();
-            try
+            string? transcription = ExtractTranscriptionText(status.Result.Items);
+            if (string.IsNullOrWhiteSpace(transcription))
+                return null;
+
+            int transcriptionId = status.Result.Items
+                .SelectMany(item => item.Segments)
+                .Select(segment => segment.LogId ?? 0)
+                .FirstOrDefault(id => id != 0);
+
+            return new TranscriptionResponse
             {
-                dynamic? x = JsonConvert.DeserializeObject(json);
-                if (x != null)
-                {
-                    TranscriptionResponse response = new()
-                    {
-                        Phonetic = x.result.phonetic_transcription ?? "",
-                        Transcription = x.result.sister_transcription ?? "",
-                        TranscriptionId = x.result.transcription_id ?? 0
-                    };
-                    return response;
-                }
+                Transcription = transcription,
+                TranscriptionId = transcriptionId
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", status);
+            throw;
+        }
+    }
+
+    private static TranscriptionStatusResponse ParseTranscriptionStatus(TaskStatusEnvelope env, bool phonetic)
+    {
+        TranscriptionStatusResult result = ParseTranscriptionStatusResult(env.result, phonetic);
+        TranscriptionProgress progress = new(CountCompletedItems(result.Items), result.Total);
+        return new TranscriptionStatusResponse(env.task_id, env.state, result, progress, env.error);
+    }
+
+    private static TranscriptionStatusResult ParseTranscriptionStatusResult(JToken? result, bool phonetic)
+    {
+        IReadOnlyList<TranscriptionStatusItem> items = GetTranscriptionStatusItems(result)
+            .Select(item => ParseTranscriptionStatusItem(item, phonetic))
+            .ToList();
+
+        // A top-level result array has no named "total"; Newtonsoft throws on string keys
+        // against a JArray, so only read "total" when result is an object.
+        int total = (result as JObject)?["total"]?.Value<int>() ?? items.Count;
+        return new TranscriptionStatusResult(total, items);
+    }
+
+    private static IEnumerable<JToken> GetTranscriptionStatusItems(JToken? result)
+    {
+        if (result == null)
+            yield break;
+
+        if (result is JObject resultObject)
+        {
+            if (resultObject["items"] is JArray items)
+            {
+                foreach (JToken item in items)
+                    yield return item;
+                yield break;
             }
-            catch (Exception ex)
+
+            yield return resultObject;
+            yield break;
+        }
+
+        if (result is JArray resultArray)
+        {
+            foreach (JToken item in resultArray)
             {
-                Logger.LogError(ex, "Failed to parse transcription status response: {Json}", json);
-                throw;
+                foreach (JToken nested in GetTranscriptionStatusItems(item))
+                    yield return nested;
             }
         }
-        return null;
+    }
+
+    private static TranscriptionStatusItem ParseTranscriptionStatusItem(JToken item, bool phonetic)
+    {
+        string clip = item["clip"]?.ToString() ?? item["name"]?.ToString() ?? string.Empty;
+        string state = item["state"]?.ToString() ?? "PENDING";
+        IReadOnlyList<TranscriptionStatusSegment> segments = GetTranscriptionStatusSegments(item["segments"])
+            .Select(segment => ParseTranscriptionStatusSegment(segment, phonetic))
+            .ToList();
+
+        TranscriptionProgress progress = new(
+            string.Equals(state, "SUCCESS", StringComparison.OrdinalIgnoreCase) || string.Equals(state, "FAILURE", StringComparison.OrdinalIgnoreCase) ? segments.Count : 0,
+            segments.Count > 0 ? segments.Count : 1);
+
+        return new TranscriptionStatusItem(clip, state, segments, progress, item["error"]);
+    }
+
+    private static IEnumerable<JToken> GetTranscriptionStatusSegments(JToken? segments)
+    {
+        if (segments == null)
+            yield break;
+
+        if (segments is JArray segmentArray)
+        {
+            foreach (JToken segment in segmentArray)
+                yield return segment;
+            yield break;
+        }
+
+        yield return segments;
+    }
+
+    private static TranscriptionStatusSegment ParseTranscriptionStatusSegment(JToken segment, bool phonetic)
+    {
+        string text = string.Empty;
+        string? method = null;
+        string? langCode = null;
+        int? logId = null;
+
+        // Aero v2: each segment carries a "transcriptions" array; each entry identifies its source
+        // model via "method" (e.g. "omnilingual", "phonetic") and carries its own lang_code/log_id.
+        // An empty array means there is no result for this segment.
+        if (segment["transcriptions"] is JArray transcriptions && transcriptions.Count > 0)
+        {
+            JToken? chosen = null;
+            if (phonetic)
+                chosen = transcriptions.FirstOrDefault(t =>
+                    string.Equals(t["method"]?.ToString(), "phonetic", StringComparison.OrdinalIgnoreCase));
+            // When not requesting phonetic (or no phonetic entry exists), prefer a non-phonetic entry.
+            chosen ??= transcriptions.FirstOrDefault(t =>
+                    !string.Equals(t["method"]?.ToString(), "phonetic", StringComparison.OrdinalIgnoreCase))
+                ?? transcriptions[0];
+
+            text = chosen?["transcription"]?.ToString() ?? string.Empty;
+            method = chosen?["method"]?.ToString();
+            langCode = chosen?["lang_code"]?.ToString();
+            logId = chosen?["log_id"]?.Value<int>() ?? segment["log_id"]?.Value<int>();
+        }
+
+        return new TranscriptionStatusSegment(
+            segment["start"]?.Value<float>() ?? 0,
+            segment["end"]?.Value<float>() ?? segment["start"]?.Value<float>() ?? 0,
+            text,
+            logId,
+            method,
+            langCode);
+    }
+
+    private static int CountCompletedItems(IEnumerable<TranscriptionStatusItem> items)
+    {
+        return items.Count(item =>
+            string.Equals(item.State, "SUCCESS", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(item.State, "FAILURE", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? ExtractTranscriptionText(IEnumerable<TranscriptionStatusItem> items)
+    {
+        List<(float Start, float End, string Text)> segments = [];
+
+        foreach (TranscriptionStatusItem item in items)
+        {
+            foreach (TranscriptionStatusSegment segment in item.Segments)
+            {
+                if (string.IsNullOrWhiteSpace(segment.Transcription))
+                    continue;
+
+                segments.Add((segment.Start, segment.End, segment.Transcription.Trim()));
+            }
+        }
+
+        return segments.Count == 0 ? null : string.Join(" ", segments.OrderBy(s => s.Start).ThenBy(s => s.End).Select(s => s.Text));
     }
 
     //if small enough to fit in the request
     public async Task<string?> AudioInfilling(string base64data, string filename, string? replacements = null)
     {
-        byte[] fileBytes = Convert.FromBase64String(base64data);
-        MemoryStream fileStream = new (fileBytes);
-        MultipartFormDataContent multipartContent = AddFileToRequest(fileStream, filename, "file");
+        // Build JSON payload per new AudioInfilling API
+        JObject payload = new()
+        {
+            ["audio_base64"] = base64data,
+            ["audio_format"] = GetAudioFormatFromFilename(filename)
+        };
 
         if (!string.IsNullOrEmpty(replacements))
-            multipartContent.Add(new StringContent(replacements), "replacements");
+        {
+            try
+            {
+                JToken rep = JToken.Parse(replacements);
+                payload["replacements"] = rep;
+            }
+            catch (JsonException)
+            {
+                // If replacements is not valid JSON, send as raw string field
+                payload["replacements"] = replacements;
+            }
+        }
 
-        AddSaveS3(multipartContent, true);
-        return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
+        payload["s3_upload"] = true;
+
+        string json = payload.ToString(Formatting.None);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult($"{Domain}/{AUDIO_INFILLING}", content, "task_id");
     }
 
     /*public async Task<string?> AudioInfilling(string base64data, string filename, string? modifiedText = null,
@@ -436,7 +918,7 @@ public class AeroService(
         }
 
         AddSaveS3(multipartContent, true);
-        return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
+        return await GetResult($"{Domain}/{AUDIO_INFILLING}", multipartContent, "task_id");
     }
     */
     //not small enough to fit in the request - send an s3 file that has been put in aero input_files
@@ -444,68 +926,100 @@ public class AeroService(
         string? inputText = null, string? wordTimes = null, string[]? replacementAudioUrls = null, string? replacements = null)
     {
         await S3service.BucketOwner(fileName, AERO_FOLDER, Bucket);
-        MultipartFormDataContent multipartContent = [];
 
-        // Add s3_file_path parameter
-        multipartContent.Add(new StringContent($"s3://{Bucket}/{AERO_FOLDER}/{fileName}"), "s3_file_path");
+        JObject payload = new()
+        {
+            ["s3_path"] = $"s3://{Bucket}/{AERO_FOLDER}/{fileName}"
+        };
 
-        // Add modified_text parameter if provided
         if (!string.IsNullOrEmpty(modifiedText))
-            multipartContent.Add(new StringContent(modifiedText), "modified_text");
+            payload["modified_text"] = modifiedText;
 
-        // Add optional parameters
         if (!string.IsNullOrEmpty(inputText))
-            multipartContent.Add(new StringContent(inputText), "input_text");
+            payload["input_text"] = inputText;
 
         if (!string.IsNullOrEmpty(wordTimes))
-            multipartContent.Add(new StringContent(wordTimes), "word_times");
-
-        if (!string.IsNullOrEmpty(replacements))
-            multipartContent.Add(new StringContent(replacements), "replacements");
-
-        // Handle replacement audio files
-        if (replacementAudioUrls != null && replacementAudioUrls.Length > 0)
         {
-            foreach (string audioUrl in replacementAudioUrls)
+            try
             {
-                Stream audioStream = await GetStream(audioUrl);
-                string audioFilename = GetFileName(audioUrl);
-                AddFileToRequest(audioStream, audioFilename, "replacement_audio_files", multipartContent);
+                JToken wt = JToken.Parse(wordTimes);
+                payload["word_times"] = wt;
+            }
+            catch (JsonException)
+            {
+                payload["word_times"] = wordTimes;
             }
         }
-        /*
-                // Handle replacement audio files from S3
-                if (replacementAudioUrls != null && replacementAudioUrls.Length > 0)
-                {
-                    int count = 1;
-                    foreach (string audioUrl in replacementAudioUrls)
-                    {
-                        string replFilename = $"repl{count}_{Path.GetFileName(fileName)}";
-                        await S3service.CopyS3FileAsync(audioUrl, Bucket, AERO_FOLDER, replFilename);
-                        await S3service.BucketOwner(replFilename, AERO_FOLDER, Bucket);
-                        count++;
-                    }
-                }
-          */
-        AddSaveS3(multipartContent, true);
-        return await GetResult($"{Domain}/audio_infilling", multipartContent, "task_id");
-    }
 
-    public async Task<HttpContent?> AudioInfillingStatus(string? taskId)
-    {
-        return await GetStatus("audio_infilling", taskId);
-    }
-
-    public async Task<string?> AudioInfillingStatus(string? taskId, string outputFile, string outputFolder)
-    {
-        Stream? stream = (await AudioInfillingStatus(taskId))?.ReadAsStream();
-
-        if (stream != null)
+        // Process replacements: either provided JSON or build from replacementAudioUrls
+        if (!string.IsNullOrEmpty(replacements))
         {
-            S3Response s3resp = await S3service.UploadFileAsync(stream, true, outputFile, outputFolder);
-            return s3resp.Message;
+            try
+            {
+                JToken rep = JToken.Parse(replacements);
+                payload["replacements"] = rep;
+            }
+            catch (JsonException)
+            {
+                payload["replacements"] = replacements;
+            }
         }
-        return null;
+
+        if ((replacementAudioUrls != null && replacementAudioUrls.Length > 0))
+        {
+            JArray reps = payload["replacements"] as JArray ?? new JArray();
+            int count = 1;
+            foreach (string audioUrl in replacementAudioUrls)
+            {
+                string audioFilename = GetFileName(audioUrl);
+                string replName = $"repl{count}_{audioFilename}";
+                await S3service.CopyS3FileAsync(audioUrl, Bucket, AERO_FOLDER, replName);
+                await S3service.BucketOwner(replName, AERO_FOLDER, Bucket);
+
+                JObject repObj = new()
+                {
+                    ["start"] = 0,
+                    ["end"] = 0,
+                    ["audio_filename"] = replName,
+                    ["audio_s3_path"] = $"s3://{Bucket}/{AERO_FOLDER}/{replName}"
+                };
+                reps.Add(repObj);
+                count++;
+            }
+            payload["replacements"] = reps;
+        }
+
+        payload["s3_upload"] = true;
+        string json = payload.ToString(Formatting.None);
+        using StringContent content = new(json, System.Text.Encoding.UTF8, "application/json");
+        return await GetResult($"{Domain}/{AUDIO_INFILLING}", content, "task_id");
+    }
+
+    public async Task<TaskStatusEnvelope?> AudioInfillingStatus(string taskId)
+    {
+        return await GetStatus(AUDIO_INFILLING, taskId);
+    }
+
+    public async Task<string?> AudioInfillingStatus(string taskId, string outputFile, string outputFolder)
+    {
+        TaskStatusEnvelope? env = await AudioInfillingStatus(taskId);
+        if (env == null)
+            return null;
+
+        if (!string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        string? audioUrl = env.result?["audio_url"]?.ToString()
+            ?? env.result?["presigned_audio_url"]?.ToString()
+            ?? env.result?["url"]?.ToString();
+
+        if (string.IsNullOrWhiteSpace(audioUrl))
+        {
+            Logger.LogError("Audio infilling result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
+            return null;
+        }
+
+        return await FetchAndUploadAsync(audioUrl, outputFile, outputFolder);
     }
 }
 public class FileUrlRequest
@@ -534,10 +1048,39 @@ public class TranscriptionRequest
 }
 public class TranscriptionResponse
 {
-    public string Phonetic { get; set; } = ""; //The phonetic transcription of the audio.
     public string Transcription { get; set; } = ""; // The transcription of the audio in the target language.
     public int TranscriptionId { get; set; } // The ID of the transcription log entry.
 }
+public sealed record TranscriptionStatusResponse(
+    string TaskId,
+    string State,
+    TranscriptionStatusResult Result,
+    TranscriptionProgress Progress,
+    JToken? Error);
+
+public sealed record TranscriptionStatusResult(
+    int Total,
+    IReadOnlyList<TranscriptionStatusItem> Items);
+
+public sealed record TranscriptionStatusItem(
+    string Clip,
+    string State,
+    IReadOnlyList<TranscriptionStatusSegment> Segments,
+    TranscriptionProgress Progress,
+    JToken? Error);
+
+public sealed record TranscriptionProgress(
+    int Completed,
+    int Total);
+
+public sealed record TranscriptionStatusSegment(
+    float Start,
+    float End,
+    string Transcription,
+    int? LogId,
+    string? Method,
+    string? LangCode);
+
 public class AudioInfillingRequest
 {
     /// <summary>
@@ -611,6 +1154,15 @@ public class AudioInfillingFileUploadModelPhase1
     public string Replacements { get; set; } = ""; //format {"start": 8.04,"end": 9.00, "audio_format": "audio/mpeg", "audio_base64": "//..."}
 
 }
+
+public record AeroResult(bool Success, string? AudioUrl, string? ErrorMessage, string RawJson);
+
+
+
+
+
+
+
 
 
 

@@ -11,6 +11,13 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "uuid")]
         public Guid Uuid { get; set; }
 
+        [Attr(PublicName = "processing")]
+        public bool Processing { get; set; }
+
+        [Attr(PublicName = "processing-started")]
+        public DateTime? ProcessingStarted { get; set; }
+
+        [Attr(PublicName = "complete")]
         public bool Complete { get; set; }
     }
 }

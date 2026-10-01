@@ -218,6 +218,8 @@ namespace SIL.Transcriber.Repositories
                 else
                     throw;
             }
+            if (section.PublishTo == resourceFromDatabase.PublishTo)
+                return false;
             if (PublishToAkuo(section.PublishTo))
             {
                 //find the book and altbook and make sure the titles are published -- may not have had the bible set before

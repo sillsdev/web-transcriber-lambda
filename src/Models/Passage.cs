@@ -177,7 +177,5 @@ namespace SIL.Transcriber.Models
             }
             return destinationChapter;
         }
-
-
     }
 }

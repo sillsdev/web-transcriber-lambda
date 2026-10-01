@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 namespace SIL.Transcriber.Utility;
 
@@ -70,6 +70,30 @@ public static class FileName
         }
 
         return sanitizedName;
+    }
+
+    // Strip URLs/query strings to a short S3 object name. S3 rejects request headers > 8KB
+    // (RequestHeaderSectionTooLarge) if a signed URL or data URI is used as a key/prefix.
+    public static string S3ObjectName(string? filename, int maxLength = 180)
+    {
+        if (string.IsNullOrEmpty(filename))
+            return "file";
+        int cut = filename.IndexOfAny(['?', '#']);
+        if (cut >= 0)
+            filename = filename[..cut];
+        filename = filename.Replace('\\', '/');
+        int slash = filename.LastIndexOf('/');
+        filename = slash >= 0
+            ? slash < filename.Length - 1 ? filename[(slash + 1)..] : "file"
+            : filename;
+        filename = CleanFileName(filename);
+        if (string.IsNullOrEmpty(filename))
+            filename = "file";
+        string ext = Path.GetExtension(filename);
+        string stem = Path.GetFileNameWithoutExtension(filename);
+        if (stem.Length + ext.Length > maxLength)
+            stem = stem[..Math.Max(1, maxLength - ext.Length)];
+        return stem + ext;
     }
 
 }

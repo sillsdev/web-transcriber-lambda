@@ -62,7 +62,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         {
             return BadRequest("File URL is missing.");
         }
-        Logger.LogInformation("Received S3 signed URL: {FileUrl}", request.FileUrl);
+        //Logger.LogInformation("Received S3 signed URL: {FileUrl}", request.FileUrl);
         try
         {
             string? taskId = await _service.NoiseRemoval(request.FileUrl);
@@ -73,38 +73,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
             return HandleError(ex, nameof(PostS3NR));
         }
     }
-    /// <summary>
-    /// check to see if noise removal task is complete
-    /// </summary>
-    /// <param name="taskId">taskId from noiseremoval call</param>
-    /// <returns>null if not done or a File</returns>
-    [AllowAnonymous]
-    [HttpGet("noiseremoval/{taskId}")]
-    public async Task<IActionResult> CheckNR([FromRoute] string taskId)
-    {
 
-        try
-        {
-            HttpContent? content = await _service.NoiseRemovalStatus(taskId);
-            if (content != null)
-            {
-                byte[] fileBytes = await content.ReadAsByteArrayAsync();
-                string base64String = Convert.ToBase64String(fileBytes);
-                return Ok(new
-                {
-                    FileName = content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "downloaded.wav",
-                    ContentType = content.Headers.ContentType?.MediaType ?? "audio/wav",
-                    Data = base64String,
-                    IsBase64Encoded = true,
-                });
-            }
-            return Ok(null);
-        }
-        catch (Exception ex)
-        {
-            return HandleError(ex, nameof(CheckNR));
-        }
-    }
     /// <summary>
     /// check to see if noise removal task is complete - save result to s3 file
     /// </summary>
@@ -118,12 +87,12 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         try
         {
             string? response = await _service.NoiseRemovalStatus(taskId, outputFile, "AI");
-            if (response != null)
-            {
-                Models.S3Response url = _s3.SignedUrlForGet(outputFile, "AI", "audio/wav");
-                return Ok(url);
-            }
-            return Ok(null);
+            if (response == null)
+                return Ok(null);
+
+            // success
+            Models.S3Response url = _s3.SignedUrlForGet(outputFile, "AI", "audio/wav");
+            return Ok(url);
         }
         catch (Exception ex)
         {
@@ -145,7 +114,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         {
             return BadRequest("File URL is missing.");
         }
-        Logger.LogInformation("Received S3 signed URL: {S} {T}", request.SourceUrl, request.TargetUrl);
+        //Logger.LogInformation("Received S3 signed URL: {S} {T}", request.SourceUrl, request.TargetUrl);
         try
         {
             string? taskId = await _service.VoiceConversion(request.SourceUrl, request.TargetUrl);
@@ -156,38 +125,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
             return HandleError(ex, nameof(PostS3VC));
         }
     }
-    /// <summary>
-    /// check to see if voice conversion task is complete
-    /// </summary>
-    /// <param name="taskId">taskId from voice conversion call</param>
-    /// <returns>null if not done or a File</returns>
-    [AllowAnonymous]
-    [HttpGet("voiceconversion/{taskId}")]
-    public async Task<IActionResult> CheckVC([FromRoute] string taskId)
-    {
 
-        try
-        {
-            HttpContent? content = await _service.VoiceConversionStatus(taskId);
-            if (content != null)
-            {
-                byte[] fileBytes = await content.ReadAsByteArrayAsync();
-                string base64String = Convert.ToBase64String(fileBytes);
-                return Ok(new
-                {
-                    FileName = content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "downloaded.wav",
-                    ContentType = content.Headers.ContentType?.MediaType ?? "audio/wav",
-                    Data = base64String,
-                    IsBase64Encoded = true,
-                });
-            }
-            return Ok(null);
-        }
-        catch (Exception ex)
-        {
-            return HandleError(ex, nameof(CheckVC));
-        }
-    }
     /// <summary>
     /// check to see if voice conversion task is complete - save result to s3 file
     /// </summary>
@@ -201,12 +139,12 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         try
         {
             string? response = await _service.VoiceConversionStatus(taskId, outputFile, "AI");
-            if (response != null)
-            {
-                Models.S3Response url = _s3.SignedUrlForGet(outputFile, "AI", "audio/wav");
-                return Ok(url);
-            }
-            return Ok(null);
+            if (response == null)
+                return Ok(null);
+
+            // success
+            Models.S3Response url = _s3.SignedUrlForGet(outputFile, "AI", "audio/wav");
+            return Ok(url);
         }
         catch (Exception ex)
         {
@@ -215,9 +153,6 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
     }
     #endregion
     #region Transcription
-    /// <summary>
-    /// </summary>
-    /// <returns>taskId</returns>
     [AllowAnonymous]
     [HttpGet("transcription/languages")]
     public async Task<IActionResult> TranscriptionLanguages()
@@ -229,6 +164,56 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         catch (Exception ex)
         {
             return HandleError(ex, nameof(TranscriptionLanguages));
+        }
+    }
+    [AllowAnonymous]
+    [HttpGet("transcription/asrlanguages/{iso}")]
+    public async Task<IActionResult> TranscriptionAsrMethods([FromRoute] string iso)
+    {
+        try
+        {
+            return Ok(await _service.TranscriptionAsrMethods(iso));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(TranscriptionAsrMethods));
+        }
+    }
+    [AllowAnonymous]
+    [HttpGet("transcription/asrsisters")]
+    public async Task<IActionResult> TranscriptionAsrSisters([FromQuery] string iso)
+    {
+        if (string.IsNullOrWhiteSpace(iso))
+            return BadRequest("iso is required");
+        try
+        {
+            return Ok(await _service.TranscriptionAsrSisters(iso));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(TranscriptionAsrSisters));
+        }
+    }
+    /// <summary>
+    /// check to see if transcription task is complete
+    /// </summary>
+    /// <param name="taskId">taskId from voice conversion call</param>
+    /// <returns>null if not done or a File</returns>
+    [AllowAnonymous]
+    [HttpGet("transcription/asrsisters/{taskId}")]
+    public async Task<IActionResult> CheckSisters([FromRoute] string taskId)
+    {
+        try
+        {
+            return Ok(await _service.AsrSistersStatus(taskId));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(CheckSisters));
         }
     }
     /// <summary>
@@ -244,7 +229,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         {
             return BadRequest("File URL or Iso is missing.");
         }
-        Logger.LogInformation("Received URL: {S} {L}", request.FileUrl, request.Iso);
+        //Logger.LogInformation("Received URL: {S} {L}", request.FileUrl, request.Iso);
         try
         {
             string[]? tasks = await _service.Transcription([request.FileUrl], request.Iso, request.Romanize);
@@ -256,21 +241,45 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         }
     }
     /// <summary>
-    /// check to see if voice conversion task is complete
+    /// check to see if transcription task is complete
     /// </summary>
-    /// <param name="taskId">taskId from voice conversion call</param>
+    /// <param name="taskId">taskId from the transcription call</param>
+    /// <param name="phonetic">when true, select the phonetic (method="phonetic") result from the
+    /// unified transcription status. As of Aero v2 there is no separate phonetic endpoint - both
+    /// regular and phonetic results are polled from /v2/transcriptions and distinguished by method.</param>
     /// <returns>null if not done or a File</returns>
     [AllowAnonymous]
     [HttpGet("transcription/{taskId}")]
-    public async Task<IActionResult> CheckTranscription([FromRoute] string taskId)
+    public async Task<IActionResult> CheckTranscription([FromRoute] string taskId, [FromQuery] bool phonetic = false)
     {
         try
         {
-            return Ok(await _service.TranscriptionStatus(taskId));
+            return Ok(await _service.TranscriptionStatus(taskId, phonetic));
         }
         catch (Exception ex)
         {
             return HandleError(ex, nameof(CheckTranscription));
+        }
+    }
+    /// <summary>
+    /// check to see if a phonetic transcription task is complete.
+    /// As of Aero v2 the dedicated /v2/phonetic-transcriptions endpoint has been removed; the task
+    /// is polled from the unified /v2/transcriptions endpoint and the phonetic (method="phonetic")
+    /// result is selected from the segment's transcriptions array.
+    /// </summary>
+    /// <param name="taskId">taskId from the transcription call</param>
+    /// <returns>null if not done or a File</returns>
+    [AllowAnonymous]
+    [HttpGet("phonetic/{taskId}")]
+    public async Task<IActionResult> CheckPhoneticTranscription([FromRoute] string taskId)
+    {
+        try
+        {
+            return Ok(await _service.TranscriptionStatus(taskId, true));
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, nameof(CheckPhoneticTranscription));
         }
     }
     #endregion
@@ -340,7 +349,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
             return BadRequest("InputText is required when ModifiedText is provided.");
         }
 
-        Logger.LogInformation("Received S3 signed URL: {FileUrl}", request.FileUrl);
+        //Logger.LogInformation("Received S3 signed URL: {FileUrl}", request.FileUrl);
         try
         {
             string? taskId = await _service.AudioInfilling(request.FileUrl, request.ModifiedText,
@@ -352,37 +361,7 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
             return HandleError(ex, nameof(PostS3Infilling));
         }
     }
-    /// <summary>
-    /// check to see if audio infilling task is complete
-    /// </summary>
-    /// <param name="taskId">taskId from infilling call</param>
-    /// <returns>null if not done or a File</returns>
-    [AllowAnonymous]
-    [HttpGet("infilling/{taskId}")]
-    public async Task<IActionResult> CheckInfilling([FromRoute] string taskId)
-    {
-        try
-        {
-            HttpContent? content = await _service.AudioInfillingStatus(taskId);
-            if (content != null)
-            {
-                byte[] fileBytes = await content.ReadAsByteArrayAsync();
-                string base64String = Convert.ToBase64String(fileBytes);
-                return Ok(new
-                {
-                    FileName = content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "downloaded.wav",
-                    ContentType = content.Headers.ContentType?.MediaType ?? "audio/wav",
-                    Data = base64String,
-                    IsBase64Encoded = true,
-                });
-            }
-            return Ok(null);
-        }
-        catch (Exception ex)
-        {
-            return HandleError(ex, nameof(CheckInfilling));
-        }
-    }
+
     /// <summary>
     /// check to see if audio infilling task is complete - save result to s3 file
     /// </summary>
@@ -396,12 +375,12 @@ public class AeroController(AeroService service, ILoggerFactory loggerFactory, I
         try
         {
             string? response = await _service.AudioInfillingStatus(taskId, outputFile, "AI");
-            if (response != null)
-            {
-                Models.S3Response url = _s3.SignedUrlForGet(outputFile, "AI", "audio/wav");
-                return Ok(url);
-            }
-            return Ok(null);
+            if (response == null)
+                return Ok(null);
+
+            // success
+            Models.S3Response url = _s3.SignedUrlForGet(outputFile, "AI", "audio/wav");
+            return Ok(url);
         }
         catch (Exception ex)
         {

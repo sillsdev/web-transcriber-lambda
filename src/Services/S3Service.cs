@@ -1,9 +1,10 @@
-﻿using Amazon.S3;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Amazon.S3.Util;
 using SIL.Transcriber.Models;
 using SIL.Transcriber.Services.Contracts;
+using SIL.Transcriber.Utility;
 using System.Net;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
 
@@ -35,6 +36,65 @@ namespace SIL.Transcriber.Services
             // Get the object size to enable Seek from end operations
             GetObjectMetadataResponse data = _s3.GetObjectMetadataAsync(bucket, key).Result;
             _length = data.ContentLength;
+        }
+
+        // A small stream that sequentially reads from an initial prefix stream
+        // and then continues reading from the underlying stream. Disposing this
+        // stream will dispose both parts.
+        private class ConcatenatedStream : Stream
+        {
+            private readonly Stream _prefix;
+            private readonly Stream _rest;
+
+            public ConcatenatedStream(Stream prefix, Stream rest)
+            {
+                _prefix = prefix ?? Stream.Null;
+                _rest = rest ?? Stream.Null;
+            }
+
+            public override bool CanRead => _prefix.CanRead || _rest.CanRead;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+            public override void Flush() { }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                if (_prefix != null && _prefix.Position < _prefix.Length)
+                {
+                    int r = _prefix.Read(buffer, offset, count);
+                    if (r > 0)
+                        return r;
+                }
+                return _rest.Read(buffer, offset, count);
+            }
+
+            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                if (_prefix != null && _prefix.Position < _prefix.Length)
+                {
+                    int r = await _prefix.ReadAsync(buffer, offset, count, cancellationToken);
+                    if (r > 0)
+                        return r;
+                }
+                return await _rest.ReadAsync(buffer, offset, count, cancellationToken);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    try { _prefix.Dispose(); } catch { }
+                    try { _rest.Dispose(); } catch { }
+                }
+                base.Dispose(disposing);
+            }
         }
 
         // Implementations of Stream's properties
@@ -174,30 +234,38 @@ namespace SIL.Transcriber.Services
         public async Task<bool> FileExistsAsync(string fileName, string folder = "",
             string bucket = "")
         {
-            fileName = ProperFolder(folder) + fileName;
-            ListObjectsResponse response = await _client.ListObjectsAsync(
-                bucket == "" ? USERFILES_BUCKET : bucket,
-                fileName
-            );
-            //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
-            if (response.HttpStatusCode == HttpStatusCode.OK)
+            try
             {
-                for (int o = 0; o < response.S3Objects.Count; o++)
+                fileName = ProperFolder(folder) + fileName;
+                ListObjectsResponse response = await _client.ListObjectsAsync(
+                    bucket == "" ? USERFILES_BUCKET : bucket,
+                    fileName
+                );
+                //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
+                if (response.HttpStatusCode == HttpStatusCode.OK)
                 {
-                    if (response.S3Objects[o].Key == fileName)
-                        return true;
+                    for (int o = 0; o < response.S3Objects.Count; o++)
+                    {
+                        if (response.S3Objects[o].Key == fileName)
+                            return true;
+                    }
                 }
-            }
-            else
-            {
-                Console.WriteLine("FileExistsAsync error:" + response.HttpStatusCode.ToString());
+                else
+                {
+                    Console.WriteLine("FileExistsAsync error:" + response.HttpStatusCode.ToString());
+                    return false;
+                }
                 return false;
             }
-            return false;
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, "FileExistsAsync {file}", fileName);
+                return false;
+            }
         }
         public async Task<string> GetFilename(string folder, string filename, bool overwrite = false, string suffix = "")
         {
-            filename = filename.Split('?')[0];
+            filename = FileName.S3ObjectName(filename);
             string ext = Path.GetExtension(filename)??"";
             string newfilename = Path.GetFileNameWithoutExtension(filename) +suffix + ext;
             return !overwrite && await FileExistsAsync(newfilename, folder)
@@ -514,12 +582,44 @@ namespace SIL.Transcriber.Services
                 {
                     _ = await RemoveFile(fileName, folder, bucket);
                 }
-                TransferUtility fileTransferUtility = new(_client);
-                await fileTransferUtility.UploadAsync(
-                    stream,
-                    bucket == "" ? USERFILES_BUCKET : bucket,
-                    ProperFolder(folder) + fileName
-                );
+
+                string destBucket = bucket == "" ? USERFILES_BUCKET : bucket;
+                string destKey = ProperFolder(folder) + fileName;
+
+                // TransferUtility may attempt to read Stream.Length which is not
+                // supported by some streams (e.g., HttpClient response streams).
+                // If Length is not available or stream is not seekable, use multipart upload
+                bool needTempFile = false;
+                try
+                {
+                    // Accessing Length may throw NotSupportedException
+                    _ = stream.Length;
+                }
+                catch
+                {
+                    needTempFile = true;
+                }
+
+                if (needTempFile || !stream.CanSeek)
+                {
+                    if (stream.CanSeek)
+                        stream.Position = 0;
+                    await UploadStreamMultipartAsync(stream, destBucket, destKey);
+                }
+                else
+                {
+                    if (stream.CanSeek)
+                        stream.Position = 0;
+                    TransferUtility fileTransferUtility = new(_client);
+                    TransferUtilityUploadRequest uploadRequest = new()
+                    {
+                        InputStream = stream,
+                        BucketName = destBucket,
+                        Key = destKey,
+                        AutoCloseStream = false
+                    };
+                    await fileTransferUtility.UploadAsync(uploadRequest);
+                }
 
                 return new S3Response
                 {
@@ -536,6 +636,97 @@ namespace SIL.Transcriber.Services
             catch (Exception e)
             {
                 return S3Response(e.Message, HttpStatusCode.InternalServerError);
+            }
+        }
+
+        private async Task<bool> UploadStreamMultipartAsync(Stream stream, string bucket, string key)
+        {
+            const int partSize = 8 * 1024 * 1024; // 8MB
+            InitiateMultipartUploadResponse initiateResponse = await _client.InitiateMultipartUploadAsync(
+                new InitiateMultipartUploadRequest
+                {
+                    BucketName = bucket,
+                    Key = key,
+                }
+            );
+
+            string uploadId = initiateResponse.UploadId;
+            List<PartETag> partETags = [];
+            byte[] buffer = new byte[partSize];
+            int partNumber = 1;
+
+            try
+            {
+                while (true)
+                {
+                    int bytesReadTotal = 0;
+                    while (bytesReadTotal < partSize)
+                    {
+                        int bytesRead = await stream.ReadAsync(buffer, bytesReadTotal, partSize - bytesReadTotal);
+                        if (bytesRead == 0)
+                            break;
+                        bytesReadTotal += bytesRead;
+                    }
+
+                    if (bytesReadTotal == 0)
+                        break;
+
+                    using MemoryStream partStream = new(buffer, 0, bytesReadTotal, writable: false);
+                    UploadPartResponse uploadPartResponse = await _client.UploadPartAsync(
+                        new UploadPartRequest
+                        {
+                            BucketName = bucket,
+                            Key = key,
+                            UploadId = uploadId,
+                            PartNumber = partNumber,
+                            PartSize = bytesReadTotal,
+                            InputStream = partStream,
+                        }
+                    );
+
+                    partETags.Add(new PartETag(partNumber, uploadPartResponse.ETag));
+                    partNumber++;
+                }
+
+                if (partETags.Count == 0)
+                {
+                    await _client.AbortMultipartUploadAsync(
+                        new AbortMultipartUploadRequest
+                        {
+                            BucketName = bucket,
+                            Key = key,
+                            UploadId = uploadId,
+                        }
+                    );
+                    return false;
+                }
+
+                await _client.CompleteMultipartUploadAsync(
+                    new CompleteMultipartUploadRequest
+                    {
+                        BucketName = bucket,
+                        Key = key,
+                        UploadId = uploadId,
+                        PartETags = partETags,
+                    }
+                );
+                return true;
+            }
+            catch
+            {
+                try
+                {
+                    await _client.AbortMultipartUploadAsync(
+                        new AbortMultipartUploadRequest
+                        {
+                            BucketName = bucket,
+                            Key = key,
+                            UploadId = uploadId,
+                        }
+                    );
+                }
+                catch { }
+                throw;
             }
         }
 
@@ -572,20 +763,27 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                //save it as the newName
-                S3Response s3response = ReadObjectDataAsync(fileName, folder).Result;
-                if (s3response.FileStream == null)
+                CopyObjectRequest copyRequest = new()
                 {
-                    return s3response;
+                    SourceBucket = USERFILES_BUCKET,
+                    SourceKey = ProperFolder(folder) + fileName,
+                    DestinationBucket = USERFILES_BUCKET,
+                    DestinationKey = ProperFolder(newFolder) + newFileName,
+                };
+                try
+                {
+                    CopyObjectResponse response = await _client.CopyObjectAsync(copyRequest);
+                    return S3Response(newFileName, response.HttpStatusCode);
                 }
-
-                s3response = await UploadFileAsync(
-                    s3response.FileStream,
-                    true,
-                    newFileName,
-                    newFolder
-                );
-                return S3Response(newFileName, s3response.Status);
+                catch (AmazonS3Exception e) when (
+                    string.Equals(e.ErrorCode, "RequestHeaderSectionTooLarge", StringComparison.OrdinalIgnoreCase)
+                    || (e.Message?.Contains("header section", StringComparison.OrdinalIgnoreCase) ?? false))
+                {
+                    // ponytail: S3 8KB header cap; REPLACE drops source user-metadata so the copy request fits
+                    copyRequest.MetadataDirective = S3MetadataDirective.REPLACE;
+                    CopyObjectResponse response = await _client.CopyObjectAsync(copyRequest);
+                    return S3Response(newFileName, response.HttpStatusCode);
+                }
             }
             catch (AmazonS3Exception e)
             {
