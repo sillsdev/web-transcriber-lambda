@@ -1432,6 +1432,8 @@ namespace SIL.Transcriber.Services
                         break;
                     List<int> srIds = [..sharednotes.Select(n => n.SharedResourceId??0).Distinct()];
                     srIds.AddRange([.. supportingNotes.Select(n => n.ResourceId ?? 0).Distinct()]);
+                    //add non-shared resources that are attached to passages in this project
+                    srIds.AddRange(dbContext.Sharedresources.Join(passages, sr => sr.PassageId, p => p.Id, (sr, p) => sr.Id).ToList());
 
                     IQueryable<Sharedresource>? sharedresources = dbContext.SharedresourcesData
                                     .Where(a => !a.Archived && srIds.Contains(a.Id));

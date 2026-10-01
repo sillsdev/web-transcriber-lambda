@@ -352,6 +352,8 @@ namespace SIL.Transcriber.Repositories
                 Languagebcp47 = $"{plan.Project.LanguageName??""}|{plan.Project.Language}",
                 ArtifactCategoryId = ac?.Id,
                 Note = p.PassagetypeId != null,
+                DateCreated= DateTime.UtcNow,
+                DateUpdated= DateTime.UtcNow,
             };
             dbContext.Sharedresources.Add(sr);
             dbContext.SaveChanges();
