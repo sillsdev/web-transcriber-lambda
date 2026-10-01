@@ -250,7 +250,7 @@ namespace SIL.Transcriber
                     "v1",
                     new OpenApiInfo
                     {
-                        Version = "v4.3.3",
+                        Version = "v4.6",
                         Title = "Transcriber API",
                         Contact = new OpenApiContact
                         {
