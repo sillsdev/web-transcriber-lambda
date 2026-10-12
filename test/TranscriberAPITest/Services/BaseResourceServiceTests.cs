@@ -1,5 +1,4 @@
-using Amazon.S3.Model;
-using Auth0.ManagementApi.Models;
+using Auth0.ManagementApi;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -89,7 +88,10 @@ public class BaseResourceServiceTests
         public string Avatar => string.Empty;
         public bool EmailVerified => true;
         public UserSecret? ParatextLogin(string connection, int userId) => null;
-        public UserSecret? ParatextToken(Identity ptIdentity, int userId) => null;
+
+        // Use the exact UserIdentitySchema type expected by ICurrentUserContext
+        public UserSecret? ParatextToken(UserIdentitySchema ptIdentity, int userId) => null;
+
         public UserSecret? ParatextToken(JToken ptIdentity, int id) => null;
     }
 

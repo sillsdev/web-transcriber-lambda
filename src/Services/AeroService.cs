@@ -65,7 +65,7 @@ public class AeroService(
 
     private static JArray BuildClipArray(IEnumerable<string> s3paths, float[]? timing = null)
     {
-        JArray clips = new();
+        JArray clips = [];
         foreach (string s3path in s3paths)
         {
             JObject clip = new()
@@ -75,9 +75,7 @@ public class AeroService(
 
             if (timing != null && timing.Length > 0)
             {
-                JArray timestamps = new();
-                foreach (float t in timing)
-                    timestamps.Add(t);
+                JArray timestamps = [.. timing];
                 clip["timestamps"] = timestamps;
             }
 
@@ -91,13 +89,13 @@ public class AeroService(
 
     private async Task<string?> GetResult(string api, HttpContent? content, string result)
     {
-        Logger.LogDebug("GetResult {Api}", api);
+        //Logger.LogDebug("GetResult {Api}", api);
         using HttpClient httpClient = await Httpclient();
         HttpResponseMessage response = await httpClient.PostAsync(new Uri(api), content);
         string responseBody = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            Logger.LogError("Aero API error [{Api}]: {Status} {Reason} - {Body}", api, response.StatusCode, response.ReasonPhrase, responseBody);
+            //Logger.LogError("Aero API error [{Api}]: {Status} {Reason} - {Body}", api, response.StatusCode, response.ReasonPhrase, responseBody);
             throw new HttpRequestException($"Aero API returned {(int)response.StatusCode} {response.ReasonPhrase}: {responseBody}", null, response.StatusCode);
         }
         dynamic? x = JsonConvert.DeserializeObject(responseBody);
@@ -152,20 +150,20 @@ public class AeroService(
         if (env == null)
             return null;
 
-        if (!string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(env.State, "SUCCESS", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        string? audioUrl = env.result?["audio_url"]?.ToString();
+        string? audioUrl = env.Result?["audio_url"]?.ToString();
 
         if (string.IsNullOrWhiteSpace(audioUrl))
         {
-            Logger.LogError("Noise removal result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
+            Logger.LogError("Noise removal result missing audio URL [{TaskId}]: {Json}", taskId, env.Result);
             return null;
         }
 
         return await FetchAndUploadAsync(audioUrl, outputFile, outputFolder);
     }
-    public record TaskStatusEnvelope(string task_id, string state, JToken? result, JToken? progress, JToken? error);
+    public record TaskStatusEnvelope(string Task_id, string State, JToken? Result, JToken? Progress, JToken? Error);
 
     private async Task<TaskStatusEnvelope> GetStatus(string service, string TaskId)
     {
@@ -204,7 +202,7 @@ public class AeroService(
             JToken? result = json["result"] as JToken;
             JToken? progress = json["progress"] as JToken;
             JToken? error = json["error"] as JToken;
-            TaskStatusEnvelope env =  new TaskStatusEnvelope(json["task_id"]?.ToString() ?? TaskId, state ?? "PENDING", result, progress, error);
+            TaskStatusEnvelope env =  new (json["task_id"]?.ToString() ?? TaskId, state ?? "PENDING", result, progress, error);
             return env;
         }
         catch (JsonException ex)
@@ -263,16 +261,20 @@ public class AeroService(
                 : _inner.Read(buffer, offset, count);
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             return _prefix != null && _prefix.Position < _prefix.Length
-                ? await _prefix.ReadAsync(buffer, offset, count, cancellationToken)
-                : await _inner.ReadAsync(buffer, offset, count, cancellationToken);
+                ? await _prefix.ReadAsync(buffer, cancellationToken)
+                : await _inner.ReadAsync(buffer, cancellationToken);
         }
         public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
         public override void SetLength(long value) => _inner.SetLength(value);
         public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _inner.WriteAsync(buffer, offset, count, cancellationToken);
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) => _inner.WriteAsync(buffer, cancellationToken);
 
         protected override void Dispose(bool disposing)
         {
@@ -296,11 +298,11 @@ public class AeroService(
     {
         HttpClient client = new();
         HttpResponseMessage response = await client.GetAsync(presignedGetUrl, HttpCompletionOption.ResponseHeadersRead);
-        Logger.LogDebug("GetStream: {Url} -> {Status}", presignedGetUrl, response.StatusCode);
+        //Logger.LogDebug("GetStream: {Url} -> {Status}", presignedGetUrl, response.StatusCode);
         response.EnsureSuccessStatusCode();
 
         Stream sourceStream = await response.Content.ReadAsStreamAsync();
-        Logger.LogDebug("GetStream: content-length={Length} canread={CanRead} canseek={CanSeek}", response.Content.Headers.ContentLength, sourceStream.CanRead, sourceStream.CanSeek);
+        //Logger.LogDebug("GetStream: content-length={Length} canread={CanRead} canseek={CanSeek}", response.Content.Headers.ContentLength, sourceStream.CanRead, sourceStream.CanSeek);
 
         // Probe the first bytes so we can detect an empty body early and
         // also support underlying streams that have been advanced by the probe
@@ -311,7 +313,7 @@ public class AeroService(
         {
             if (sourceStream.CanRead)
             {
-                bytesRead = await sourceStream.ReadAsync(probe, 0, probe.Length);
+                bytesRead = await sourceStream.ReadAsync(probe.AsMemory());
             }
         }
         catch (Exception ex)
@@ -323,7 +325,7 @@ public class AeroService(
         {
             byte[] prefix = new byte[bytesRead];
             Array.Copy(probe, 0, prefix, 0, bytesRead);
-            Logger.LogDebug("GetStream: probe read {Bytes} bytes", bytesRead);
+            //Logger.LogDebug("GetStream: probe read {Bytes} bytes", bytesRead);
             return new ResponseDisposingStream(sourceStream, response, client, prefix);
         }
 
@@ -412,7 +414,7 @@ public class AeroService(
         string tgt = $"tgt{fileName}";
         await S3service.CopyS3FileAsync(targetUrl, Bucket, AERO_FOLDER, tgt);
         await S3service.BucketOwner(tgt, AERO_FOLDER, Bucket);
-        JObject payload = new();
+        JObject payload = [];
         JObject sourceObj = new()
         {
             ["s3_path"] = $"s3://{Bucket}/{AERO_FOLDER}/{fileName}"
@@ -441,16 +443,16 @@ public class AeroService(
         if (env == null)
             return null;
 
-        if (!string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(env.State, "SUCCESS", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        string? audioUrl = env.result?["audio_url"]?.ToString()
-            ?? env.result?["presigned_audio_url"]?.ToString()
-            ?? env.result?["url"]?.ToString();
+        string? audioUrl = env.Result?["audio_url"]?.ToString()
+            ?? env.Result?["presigned_audio_url"]?.ToString()
+            ?? env.Result?["url"]?.ToString();
 
         if (string.IsNullOrWhiteSpace(audioUrl))
         {
-            Logger.LogError("Voice conversion result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
+            Logger.LogError("Voice conversion result missing audio URL [{TaskId}]: {Json}", taskId, env.Result);
             return null;
         }
 
@@ -501,25 +503,25 @@ public class AeroService(
     public async Task<string?> AsrSistersStatus(string taskId)
     {
         TaskStatusEnvelope? env = await GetStatus(RECOMMENDATIONS, taskId);
-        if (env == null || !string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+        if (env == null || !string.Equals(env.State, "SUCCESS", StringComparison.OrdinalIgnoreCase))
             return null;
 
         try
         {
-            if (env.result != null)
+            if (env.Result != null)
             {
-                string ret = JsonConvert.SerializeObject(env.result["result"] ?? env.result);
+                string ret = JsonConvert.SerializeObject(env.Result["result"] ?? env.Result);
                 return ret;
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.result);
+            Logger.LogError(ex, "Failed to parse transcription status response: {Json}", env.Result);
             throw;
         }
         return null;
     }
-    private string? cleanupResult(string tmp)
+    private static string? CleanupResult(string tmp)
     {
         return tmp?.Replace("\"", "").Replace(" ", "").ReplaceLineEndings().Replace(Environment.NewLine, "").Trim('[', ']', '"', ' ');
 
@@ -533,9 +535,9 @@ public class AeroService(
         if (stream.CanSeek)
             stream.Position = 0;
         byte[] bytes = ConvertStreamToByteArray(stream);
-        JObject payload = new();
+        JObject payload = [];
 
-        JArray audioClips = new();
+        JArray audioClips = [];
         JObject clip = new()
         {
             ["audio_base64"] = Convert.ToBase64String(bytes),
@@ -557,9 +559,7 @@ public class AeroService(
         if (timing != null && timing.Length > 0)
         {
             // Aero v2: timestamps live on the individual clip, not at the request root.
-            JArray timestamps = new();
-            foreach (float t in timing)
-                timestamps.Add(t);
+            JArray timestamps = [.. timing];
             clip["timestamps"] = timestamps;
         }
 
@@ -572,14 +572,14 @@ public class AeroService(
         string? tmp = await GetResult(api, content, "task_id");
         if (tmp == null)
             return null;
-        string? result = cleanupResult(tmp);
+        string? result = CleanupResult(tmp);
         return result?.Split(',');
     }
     public async Task<string[]?> Transcription(string[] fileUrls, string lang_iso, bool romanize)
     {
         string api = $"{Domain}{TRANSCRIPTION}";
         // Copy files to S3 input folder and build clips
-        List<string> s3paths = new();
+        List<string> s3paths = [];
         int count = 1;
         foreach (string fileUrl in fileUrls)
         {
@@ -592,7 +592,7 @@ public class AeroService(
             count++;
         }
 
-        JObject payload = new();
+        JObject payload = [];
         if (s3paths.Count > 0)
             payload["clips"] = BuildClipArray(s3paths);
 
@@ -611,7 +611,7 @@ public class AeroService(
         string? tmp = await GetResult(api, content, "task_id");
         if (tmp == null)
             return null;
-        string? result = cleanupResult(tmp);
+        string? result = CleanupResult(tmp);
         return result?.Split(',');
     }
     /// <summary>
@@ -675,7 +675,7 @@ public class AeroService(
         string? tmp = await GetResult(api, content, "task_id");
         if (tmp == null)
             return null;
-        string? result = cleanupResult(tmp);
+        string? result = CleanupResult(tmp);
         return result?.Split(',');
     }
 
@@ -718,16 +718,14 @@ public class AeroService(
 
     private static TranscriptionStatusResponse ParseTranscriptionStatus(TaskStatusEnvelope env, bool phonetic)
     {
-        TranscriptionStatusResult result = ParseTranscriptionStatusResult(env.result, phonetic);
+        TranscriptionStatusResult result = ParseTranscriptionStatusResult(env.Result, phonetic);
         TranscriptionProgress progress = new(CountCompletedItems(result.Items), result.Total);
-        return new TranscriptionStatusResponse(env.task_id, env.state, result, progress, env.error);
+        return new TranscriptionStatusResponse(env.Task_id, env.State, result, progress, env.Error);
     }
 
     private static TranscriptionStatusResult ParseTranscriptionStatusResult(JToken? result, bool phonetic)
     {
-        IReadOnlyList<TranscriptionStatusItem> items = GetTranscriptionStatusItems(result)
-            .Select(item => ParseTranscriptionStatusItem(item, phonetic))
-            .ToList();
+        List<TranscriptionStatusItem> items = [.. GetTranscriptionStatusItems(result).Select(item => ParseTranscriptionStatusItem(item, phonetic))];
 
         // A top-level result array has no named "total"; Newtonsoft throws on string keys
         // against a JArray, so only read "total" when result is an object.
@@ -767,9 +765,7 @@ public class AeroService(
     {
         string clip = item["clip"]?.ToString() ?? item["name"]?.ToString() ?? string.Empty;
         string state = item["state"]?.ToString() ?? "PENDING";
-        IReadOnlyList<TranscriptionStatusSegment> segments = GetTranscriptionStatusSegments(item["segments"])
-            .Select(segment => ParseTranscriptionStatusSegment(segment, phonetic))
-            .ToList();
+        List<TranscriptionStatusSegment> segments = [.. GetTranscriptionStatusSegments(item["segments"]).Select(segment => ParseTranscriptionStatusSegment(segment, phonetic))];
 
         TranscriptionProgress progress = new(
             string.Equals(state, "SUCCESS", StringComparison.OrdinalIgnoreCase) || string.Equals(state, "FAILURE", StringComparison.OrdinalIgnoreCase) ? segments.Count : 0,
@@ -967,7 +963,7 @@ public class AeroService(
 
         if ((replacementAudioUrls != null && replacementAudioUrls.Length > 0))
         {
-            JArray reps = payload["replacements"] as JArray ?? new JArray();
+            JArray reps = payload["replacements"] as JArray ?? [];
             int count = 1;
             foreach (string audioUrl in replacementAudioUrls)
             {
@@ -1006,16 +1002,16 @@ public class AeroService(
         if (env == null)
             return null;
 
-        if (!string.Equals(env.state, "SUCCESS", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(env.State, "SUCCESS", StringComparison.OrdinalIgnoreCase))
             return null;
 
-        string? audioUrl = env.result?["audio_url"]?.ToString()
-            ?? env.result?["presigned_audio_url"]?.ToString()
-            ?? env.result?["url"]?.ToString();
+        string? audioUrl = env.Result?["audio_url"]?.ToString()
+            ?? env.Result?["presigned_audio_url"]?.ToString()
+            ?? env.Result?["url"]?.ToString();
 
         if (string.IsNullOrWhiteSpace(audioUrl))
         {
-            Logger.LogError("Audio infilling result missing audio URL [{TaskId}]: {Json}", taskId, env.result);
+            Logger.LogError("Audio infilling result missing audio URL [{TaskId}]: {Json}", taskId, env.Result);
             return null;
         }
 
@@ -1060,12 +1056,12 @@ public sealed record TranscriptionStatusResponse(
 
 public sealed record TranscriptionStatusResult(
     int Total,
-    IReadOnlyList<TranscriptionStatusItem> Items);
+    List<TranscriptionStatusItem> Items);
 
 public sealed record TranscriptionStatusItem(
     string Clip,
     string State,
-    IReadOnlyList<TranscriptionStatusSegment> Segments,
+    List<TranscriptionStatusSegment> Segments,
     TranscriptionProgress Progress,
     JToken? Error);
 

@@ -1,5 +1,4 @@
-﻿using Auth0.ManagementApi.Models.Actions;
-using JsonApiDotNetCore.Configuration;
+﻿using JsonApiDotNetCore.Configuration;
 using JsonApiDotNetCore.Queries;
 using JsonApiDotNetCore.Resources;
 using SIL.Logging.Models;

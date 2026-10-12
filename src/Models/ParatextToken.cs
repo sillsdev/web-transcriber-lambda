@@ -1,5 +1,4 @@
 ﻿using JsonApiDotNetCore.Resources;
-using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -19,7 +18,7 @@ namespace SIL.Paratext.Models
         public DateTime IssuedAt {
             get {
                 JwtSecurityToken accessToken = new (AccessToken);
-                return accessToken.Payload.Iat != null ? EpochTime.DateTime((long)accessToken.Payload.Iat) : DateTime.MinValue;
+                return accessToken.Payload.IssuedAt;
             }
         }
         [NotMapped]

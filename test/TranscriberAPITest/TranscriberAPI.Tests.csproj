@@ -11,7 +11,7 @@
     <PackageReference Include="Bogus" Version="35.6.5" />
     <!-- Pinned to EF Core 8.x to match the app's stack (Npgsql 8.x + JsonApiDotNetCore 5.3.0, which pins EF Core 8).
          Using EF Core 10 here loads a mismatched EF Core into the test run and breaks the Npgsql 8 provider. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.3.13" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.3.13" />
