@@ -1,4 +1,4 @@
-﻿using Auth0.ManagementApi.Models;
+﻿using Auth0.ManagementApi;
 using Newtonsoft.Json.Linq;
 using SIL.Paratext.Models;
 using SIL.Transcriber.Utility;
@@ -16,10 +16,10 @@ namespace SIL.Transcriber.Services
 
         private string? auth0Id;
 
-        private User? auth0User;
+        private GetUserResponseContent? auth0User;
         protected ILogger<ICurrentUserContext> Logger { get; set; } = loggerFactory.CreateLogger<ICurrentUserContext>();
 
-        private User Auth0User {
+        private GetUserResponseContent Auth0User {
             get {
                 auth0User ??= AuthService.GetUserAsync(Auth0Id).Result;
                 return auth0User;
@@ -34,22 +34,22 @@ namespace SIL.Transcriber.Services
         }
 
         public string Email {
-            get { return Auth0User.Email; }
+            get { return Auth0User.Email ?? ""; }
         }
 
         public string GivenName {
-            get { return Auth0User.FirstName; }
+            get { return Auth0User.GivenName ?? ""; }
         }
 
         public string FamilyName {
-            get { return Auth0User.LastName; }
+            get { return Auth0User.FamilyName ?? ""; }
         }
 
         public string Name {
-            get { return Auth0User.FullName; }
+            get { return Auth0User.Name ?? ""; }
         }
         public string Avatar {
-            get { return Auth0User.Picture; }
+            get { return Auth0User.Picture ?? ""; }
         }
         public bool EmailVerified {
             get { return Auth0User.EmailVerified ?? false; }
@@ -73,16 +73,16 @@ namespace SIL.Transcriber.Services
             return null;
         }
 
-        public UserSecret? ParatextToken(Identity? ptIdentity, int userId)
+        public UserSecret? ParatextToken(UserIdentitySchema? ptIdentity, int userId)
         {
             if (ptIdentity != null)
             {
                 ParatextToken newPTTokens =
                     new()
                     {
-                        AccessToken = ptIdentity.AccessToken,
-                        RefreshToken = ptIdentity.RefreshToken,
-                        OriginalRefreshToken = ptIdentity.RefreshToken,
+                        AccessToken = ptIdentity.AccessToken ?? "",
+                        RefreshToken = ptIdentity.RefreshToken ?? "",
+                        OriginalRefreshToken = ptIdentity.RefreshToken ?? "",
                         UserId = userId
                     };
                 return new UserSecret { ParatextTokens = newPTTokens };
@@ -93,8 +93,8 @@ namespace SIL.Transcriber.Services
 
         public UserSecret? ParatextLogin(string connection, int userId)
         {
-            Identity[]? identities = Auth0User.Identities;
-            Identity? ptIdentity = identities?.FirstOrDefault(i => i.Connection == connection); //i.e. "Paratext-Transcriber"
+            IEnumerable<UserIdentitySchema>? identities = Auth0User.Identities;
+            UserIdentitySchema? ptIdentity = identities?.FirstOrDefault(i => i.Connection == connection); //i.e. "Paratext-Transcriber"
             return ParatextToken(ptIdentity, userId);
         }
     }

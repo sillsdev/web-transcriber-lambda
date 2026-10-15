@@ -41,16 +41,10 @@ namespace SIL.Transcriber.Services
         // A small stream that sequentially reads from an initial prefix stream
         // and then continues reading from the underlying stream. Disposing this
         // stream will dispose both parts.
-        private class ConcatenatedStream : Stream
+        private class ConcatenatedStream(Stream prefix, Stream rest) : Stream
         {
-            private readonly Stream _prefix;
-            private readonly Stream _rest;
-
-            public ConcatenatedStream(Stream prefix, Stream rest)
-            {
-                _prefix = prefix ?? Stream.Null;
-                _rest = rest ?? Stream.Null;
-            }
+            private readonly Stream _prefix = prefix ?? Stream.Null;
+            private readonly Stream _rest = rest ?? Stream.Null;
 
             public override bool CanRead => _prefix.CanRead || _rest.CanRead;
             public override bool CanSeek => false;
@@ -71,15 +65,18 @@ namespace SIL.Transcriber.Services
                 return _rest.Read(buffer, offset, count);
             }
 
-            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+                ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+            public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
             {
                 if (_prefix != null && _prefix.Position < _prefix.Length)
                 {
-                    int r = await _prefix.ReadAsync(buffer, offset, count, cancellationToken);
+                    int r = await _prefix.ReadAsync(buffer, cancellationToken);
                     if (r > 0)
                         return r;
                 }
-                return await _rest.ReadAsync(buffer, offset, count, cancellationToken);
+                return await _rest.ReadAsync(buffer, cancellationToken);
             }
 
             public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
@@ -90,8 +87,12 @@ namespace SIL.Transcriber.Services
             {
                 if (disposing)
                 {
-                    try { _prefix.Dispose(); } catch { }
-                    try { _rest.Dispose(); } catch { }
+                    try
+                    { _prefix.Dispose(); }
+                    catch { }
+                    try
+                    { _rest.Dispose(); }
+                    catch { }
                 }
                 base.Dispose(disposing);
             }
@@ -135,14 +136,14 @@ namespace SIL.Transcriber.Services
                     Key = _key,
                     ByteRange = new ByteRange(_offset, _offset + count - 1),
                 };
-                Logger.LogInformation("S3WrapperStream Big Read {o} {s}", _offset, offset);
+                //Logger.LogInformation("S3WrapperStream Big Read {o} {s}", _offset, offset);
 
                 GetObjectResponse resp = _s3.GetObjectAsync(req).Result;
                 int read = resp.ResponseStream.Read(buffer, offset, count);
                 while (read < count && resp.HttpStatusCode == HttpStatusCode.PartialContent)
                 {
                     // We didn't get enough data to fill the request, so we're at the end of the file
-                    Logger.LogInformation("partial content {r} {c}", read, count);
+                    //Logger.LogInformation("partial content {r} {c}", read, count);
                     read += resp.ResponseStream.ReadAsync(buffer, offset + read, count - read).Result;
                 }
                 _offset += read;
@@ -167,10 +168,10 @@ namespace SIL.Transcriber.Services
                     while (read < count && resp.HttpStatusCode == HttpStatusCode.PartialContent)
                     {
                         // We didn't get enough data to fill the request, so we're at the end of the file
-                        Logger.LogInformation("partial content {r} {c}", read, count);
+                        //Logger.LogInformation("partial content {r} {c}", read, count);
                         read += resp.ResponseStream.ReadAsync(_localBuffer, read, _localBuffer.Length - read).Result;
                     }
-                    Logger.LogInformation("S3WrapperStream Fill Buffer offset {s} {e} {cl} returned {r}", req.ByteRange.Start, req.ByteRange.End, resp.ContentLength, read);
+                    //Logger.LogInformation("S3WrapperStream Fill Buffer offset {s} {e} {cl} returned {r}", req.ByteRange.Start, req.ByteRange.End, resp.ContentLength, read);
                     _localStart = _offset;
                     _localLength = read;
                 }
@@ -244,9 +245,9 @@ namespace SIL.Transcriber.Services
                 //ListObjects uses the passed in filename as a prefix ie. filename*, so check if we have an exact match
                 if (response.HttpStatusCode == HttpStatusCode.OK)
                 {
-                    for (int o = 0; o < response.S3Objects.Count; o++)
+                    for (int o = 0; o < (response.S3Objects?.Count ?? 0); o++)
                     {
-                        if (response.S3Objects[o].Key == fileName)
+                        if (response.S3Objects?[o].Key == fileName)
                             return true;
                     }
                 }
@@ -307,13 +308,13 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                PutACLRequest request = new()
+                PutObjectAclRequest request = new()
                 {
                     BucketName = bucket == "" ? USERFILES_BUCKET : bucket,
                     Key = ProperFolder(folder) + fileName,
-                    CannedACL = S3CannedACL.PublicRead,
+                    ACL = S3CannedACL.PublicRead,
                 };
-                PutACLResponse response = await _client.PutACLAsync(request);
+                PutObjectAclResponse response = await _client.PutObjectAclAsync(request);
                 return S3Response("", response.HttpStatusCode);
             }
             catch (AmazonS3Exception e)
@@ -329,14 +330,14 @@ namespace SIL.Transcriber.Services
         {
             try
             {
-                PutACLRequest request = new()
+                PutObjectAclRequest request = new()
                 {
                     BucketName = bucket == "" ? USERFILES_BUCKET : bucket,
                     Key = ProperFolder(folder) + fileName,
-                    CannedACL = S3CannedACL.BucketOwnerFullControl,
+                    ACL = S3CannedACL.BucketOwnerFullControl,
                 };
                 using AmazonS3Client s3Client = new (GetVarOrThrow("SIL_TR_AWS_KEY"), GetVarOrThrow("SIL_TR_AWS_SECRET"));
-                PutACLResponse response = await s3Client.PutACLAsync(request);
+                PutObjectAclResponse response = await s3Client.PutObjectAclAsync(request);
                 return S3Response("", response.HttpStatusCode);
             }
             catch (AmazonS3Exception e)
@@ -630,7 +631,7 @@ namespace SIL.Transcriber.Services
             }
             catch (AmazonS3Exception e)
             {
-                Logger.LogCritical("UploadFileAsync Error {message} {code} {inner}", e.Message, e.ErrorCode, e.InnerException?.Message);
+                Logger.LogError("UploadFileAsync Error {message} {code} {inner}", e.Message, e.ErrorCode, e.InnerException?.Message);
                 return S3Response(e.Message, e.StatusCode);
             }
             catch (Exception e)
@@ -662,7 +663,7 @@ namespace SIL.Transcriber.Services
                     int bytesReadTotal = 0;
                     while (bytesReadTotal < partSize)
                     {
-                        int bytesRead = await stream.ReadAsync(buffer, bytesReadTotal, partSize - bytesReadTotal);
+                        int bytesRead = await stream.ReadAsync(buffer.AsMemory(bytesReadTotal, partSize - bytesReadTotal));
                         if (bytesRead == 0)
                             break;
                         bytesReadTotal += bytesRead;
@@ -831,13 +832,13 @@ namespace SIL.Transcriber.Services
                 if (response.HttpStatusCode == HttpStatusCode.OK)
                 {
                     list = "[";
-                    for (int o = 0; o < response.S3Objects.Count; o++)
+                    for (int o = 0; o < (response.S3Objects?.Count ?? 0); o++)
                     {
                         list += string.Format(
                             "{{\"Key\":\"{0}\",\"Size\":\"{1}\",\"LastModified\":\"{2}\"}},",
-                            response.S3Objects[o].Key,
-                            response.S3Objects[o].Size,
-                            response.S3Objects[o].LastModified
+                            response.S3Objects?[o].Key,
+                            response.S3Objects?[o].Size,
+                            response.S3Objects?[o].LastModified
                         );
                     }
                     list += "]";
@@ -876,7 +877,7 @@ namespace SIL.Transcriber.Services
                 }
                 stream.Position = 0;
                 return S3Response(
-                        filedata.LastModified.ToString(),
+                        filedata.LastModified?.ToString() ?? "",
                         HttpStatusCode.OK,
                         stream,
                         filedata.Headers["ContentType"]);

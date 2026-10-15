@@ -4,7 +4,7 @@ using JsonApiDotNetCore.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using SIL.Logging.Repositories;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Repositories;
@@ -80,6 +80,7 @@ namespace SIL.Transcriber
             services.AddScoped<AquiferService>();
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
+            services.AddScoped<APIBibleService>();
             services.AddScoped<BibleService>();
             services.AddScoped<BibleBrainBibleService>();
             services.AddScoped<BibleBrainFilesetService>();
@@ -276,20 +277,10 @@ namespace SIL.Transcriber
                             "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
                     }
                 );
-                options.AddSecurityRequirement(
+                options.AddSecurityRequirement(document =>
                     new OpenApiSecurityRequirement
                     {
-                        {
-                            new OpenApiSecurityScheme
-                            {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "Bearer"
-                                }
-                            },
-                            Array.Empty<string>()
-                        }
+                        { new OpenApiSecuritySchemeReference("Bearer", document), [] }
                     }
                 );
             });

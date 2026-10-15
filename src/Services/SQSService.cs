@@ -62,7 +62,7 @@ namespace SIL.Transcriber.Services
                 AttributeNames = ["ApproximateNumberOfMessages"]
             });
 
-            return attributes.Attributes.TryGetValue("ApproximateNumberOfMessages", out string? messageCount)
+            return attributes.Attributes?.TryGetValue("ApproximateNumberOfMessages", out string? messageCount) == true
                 ? int.TryParse(messageCount, out int count) ? count : 0
                 : throw new Exception("Couldn't retrieve message count");
         }
@@ -168,12 +168,12 @@ namespace SIL.Transcriber.Services
                     {
                         string[] parts = queueName.Split(':');
                         if (parts.Length > 0)
-                            queueName = parts[parts.Length - 1];
+                            queueName = parts[^1];
                     }
                     if (queueName.Contains('/'))
                     {
                         string[] segs = queueName.Split('/');
-                        queueName = segs[segs.Length - 1];
+                        queueName = segs[^1];
                     }
 
                     GetQueueUrlResponse getQueueUrlResp = _client.GetQueueUrlAsync(new GetQueueUrlRequest { QueueName = queueName }).Result;
@@ -189,7 +189,7 @@ namespace SIL.Transcriber.Services
                 if (finalQueueUrl.EndsWith("fifo", StringComparison.OrdinalIgnoreCase))
                     sendMessageRequest.MessageDeduplicationId = string.Concat(deDup ?? "", Guid.NewGuid().ToString());
 
-                Logger.LogCritical("***** body {m} groupId {g} deDup {d}", sendMessageRequest.MessageBody, sendMessageRequest.MessageGroupId, sendMessageRequest.MessageDeduplicationId);
+                //Logger.LogCritical("***** body {m} groupId {g} deDup {d}", sendMessageRequest.MessageBody, sendMessageRequest.MessageGroupId, sendMessageRequest.MessageDeduplicationId);
                 SendMessageResponse sqsSend = _client.SendMessageAsync(sendMessageRequest).Result;
                 return sqsSend.MessageId;
             }

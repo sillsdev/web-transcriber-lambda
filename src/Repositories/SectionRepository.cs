@@ -98,13 +98,13 @@ namespace SIL.Transcriber.Repositories
         }
         #endregion
         #region ParatextSync
-        public async Task<IList<SectionSummary>> SectionSummary(
+        public async Task<List<SectionSummary>> SectionSummary(
             int PlanId,
             string book,
             int chapter
         )
         {
-            IList<SectionSummary> ss = [];
+            List<SectionSummary> ss = [];
             var passagewithsection = dbContext.Passages
                 .Join(
                     dbContext.Sections.Where(section => section.PlanId == PlanId),
