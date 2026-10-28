@@ -49,6 +49,7 @@ namespace SIL.Transcriber.Data
         public DbSet<Intellectualproperty> IntellectualPropertys => Set<Intellectualproperty>();
         public DbSet<Invitation> Invitations => Set<Invitation>();
         public DbSet<Mediafile> Mediafiles => Set<Mediafile>();
+        public DbSet<Mediareplacement> Mediareplacements => Set<Mediareplacement>();
         public DbSet<Note> Notes => Set<Note>();
         public DbSet<Organization> Organizations => Set<Organization>();
         public DbSet<Organizationbible> Organizationbibles =>
@@ -211,6 +212,11 @@ namespace SIL.Transcriber.Data
                 .HasForeignKey(o => o.LastModifiedBy);
             _ = builder
                 .Entity<Mediafile>()
+                .HasOne(o => o.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(o => o.LastModifiedBy);
+            _ = builder
+                .Entity<Mediareplacement>()
                 .HasOne(o => o.LastModifiedByUser)
                 .WithMany()
                 .HasForeignKey(o => o.LastModifiedBy);
@@ -390,6 +396,11 @@ namespace SIL.Transcriber.Data
                 .HasOne(o => o.ResourcePassage)
                 .WithMany()
                 .HasForeignKey(o => o.ResourcePassageId);
+            _ = modelBuilder
+                .Entity<Mediafile>()
+                .HasOne(o => o.RenderSourceMedia)
+                .WithMany()
+                .HasForeignKey(o => o.RenderSourceMediaId);
             EntityTypeBuilder<Organization> orgEntity = modelBuilder.Entity<Organization>();
             _ = orgEntity.Property(o => o.PublicByDefault).HasDefaultValue(false);
             _ = orgEntity.HasOne(o => o.Cluster).WithMany().HasForeignKey(o => o.ClusterId);
@@ -420,6 +431,8 @@ namespace SIL.Transcriber.Data
             modelBuilder.Entity<Bible>().HasOne(o => o.IsoMediafile).WithMany().HasForeignKey(x => x.IsoMediafileId);
             modelBuilder.Entity<Bible>().HasOne(o => o.BibleMediafile).WithMany().HasForeignKey(x => x.BibleMediafileId);
             modelBuilder.Entity<Section>().HasOne(o => o.OrganizationScheme).WithMany().HasForeignKey(x => x.OrganizationSchemeId);
+            modelBuilder.Entity<Mediareplacement>().HasOne(o => o.ReplacementMediafile).WithMany().HasForeignKey(x => x.ReplacementMediafileId).OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<Mediareplacement>().HasOne(o => o.OutputMediafile).WithMany().HasForeignKey(x => x.OutputMediafileId).OnDelete(DeleteBehavior.Cascade);
         }
 
         public async Task<int> SaveChangesNoTimestampAsync(
@@ -540,6 +553,7 @@ namespace SIL.Transcriber.Data
                 .Include(x => x.ArtifactType)
                 .Include(x => x.ResourcePassage)
                 .Include(x => x.SourceMedia)
+                .Include(x => x.RenderSourceMedia)
                 .Include(x => x.RecordedbyUser);
 
         public IQueryable<Organizationbible> OrganizationbiblesData =>

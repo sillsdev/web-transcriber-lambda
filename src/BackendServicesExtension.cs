@@ -97,6 +97,7 @@ namespace SIL.Transcriber
             services.AddScoped<IntellectualPropertyService>();
             services.AddScoped<InvitationService>();
             services.AddScoped<MediafileService>();
+            services.AddScoped<MediareplacementService>();
             services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<OrganizationBibleService>();
             services.AddScoped<OrganizationMembershipService>();
@@ -156,6 +157,7 @@ namespace SIL.Transcriber
             services.AddScoped<IntellectualPropertyRepository>();
             services.AddScoped<InvitationRepository>();
             services.AddScoped<MediafileRepository>();
+            services.AddScoped<MediareplacementRepository>();
             services.AddScoped<OrganizationBibleRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationSchemeRepository>();
