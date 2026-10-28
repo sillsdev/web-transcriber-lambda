@@ -467,9 +467,12 @@ public class AeroService(
         using HttpClient httpClient = new();
         HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{LANGUAGES}");
         string jsonString =  await response.Content.ReadAsStringAsync();
-        JArray jsonArray = JArray.Parse(jsonString);
-        JArray filteredArray = new (jsonArray.Where(item => item["is_mms_asr"]?.Value<bool>() ?? false));
-        return filteredArray.ToString();
+        //return looks like {"languages": [{"iso":"zpz","name":"Texmelucan Zapotec"),...],"entries":[{"language_iso":"zpz","script":"Latn","method":"mms"},{"language_iso":"zpz","script":"Latn","method":"omnilingual"}]
+        JObject json = JObject.Parse(jsonString);
+        JArray jsonArray = json["languages"] as JArray  ?? throw new InvalidOperationException("'languages' is missing or is not a JSON array.");
+
+        JArray isoArray = new(jsonArray.OfType<JObject>().Select(item => item["iso"]?.Value<string>()));
+        return isoArray.ToString();
 
     }
     public async Task<string[]?> TranscriptionAsrMethods(string iso)
@@ -477,15 +480,31 @@ public class AeroService(
         using HttpClient httpClient = new();
         HttpResponseMessage response = await httpClient.GetAsync($"{Domain}/{LANGUAGES}?language_iso={iso}");
         string jsonString = await response.Content.ReadAsStringAsync();
-        // returns {  "languages": [{"iso": "eng", "name": "English"}], "entries": [{"language_iso": "eng", "script": "Latn", "method": "mms"},
-        // {"language_iso": "eng", "script": "Latn", "method": "omnilingual"}, {"language_iso": "eng", "script": "Latn", "method": "whisper"}]}
+        // returns {  "languages": [{"iso": "eng", "name": "English"}], "entries": [{"language_iso": "eng", "script": "Latn", "method": "mms", "rank": 2},
+        // {"language_iso": "eng", "script": "Latn", "method": "omnilingual", "rank": 1}]}
         JObject jsonObject = JObject.Parse(jsonString);
         JArray? entries = jsonObject["entries"] as JArray;
-        List<string> methods = entries?.Select(e => e["method"]?.Value<string>()).OfType<string>().Distinct().ToList() ?? [];
 
-        string[] ranking = ["whisper", "w2v-bert", "omnilingual", "mms"];
-        List<string> ranked = [.. ranking.Where(m => methods.Contains(m))];
-        ranked.AddRange(methods.Where(m => !ranking.Contains(m)));
+        // Order by the rank returned with each entry (lower rank = higher priority).
+        List<string> ranked = entries?
+            .OfType<JObject>()
+            .Select(e => e["method"]?.Value<string>())
+            .OfType<string>()
+            .GroupBy(m => m)
+            .Select(g => new
+            {
+                Method = g.Key,
+                Rank = entries
+                    .OfType<JObject>()
+                    .Where(e => e["method"]?.Value<string>() == g.Key)
+                    .Select(e => e["rank"]?.Value<int?>())
+                    .OfType<int>()
+                    .DefaultIfEmpty(int.MaxValue)
+                    .Min()
+            })
+            .OrderBy(x => x.Rank)
+            .Select(x => x.Method)
+            .ToList() ?? [];
 
         return [.. ranked];
     }
@@ -549,9 +568,10 @@ public class AeroService(
 
         payload["language_iso"] = lang_iso;
         // choose default method
-        string? method = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
-        if (!string.IsNullOrEmpty(method))
-            payload["method"] = method;
+        //aero will choose default method
+        //string? method = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
+        //if (!string.IsNullOrEmpty(method))
+        //    payload["method"] = method;
 
         payload["s3_upload"] = true;
         payload["romanize"] = romanize;
@@ -597,9 +617,10 @@ public class AeroService(
             payload["clips"] = BuildClipArray(s3paths);
 
         payload["language_iso"] = lang_iso;
-        string? method = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
-        if (!string.IsNullOrEmpty(method))
-            payload["method"] = method;
+        //don't send in method - they will default to the best one
+        //string? method = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
+        //if (!string.IsNullOrEmpty(method))
+        //    payload["method"] = method;
 
         payload["s3_upload"] = true;
         payload["romanize"] = romanize;
@@ -658,12 +679,14 @@ public class AeroService(
         {
             payload["method"] = method;
         }
+        /* let aero pick
         else
         {
             string? defaultMethod = (await TranscriptionAsrMethods(lang_iso))?.FirstOrDefault();
             if (!string.IsNullOrEmpty(defaultMethod))
                 payload["method"] = defaultMethod;
         }
+        */
 
         payload["s3_upload"] = true;
         payload["romanize"] = romanize;
