@@ -1,5 +1,5 @@
 using Auth0.ManagementApi;
-using Auth0.ManagementApi.Models;
+using Auth0.ManagementApi.Jobs;
 using Newtonsoft.Json.Linq;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
@@ -15,7 +15,7 @@ namespace SIL.Transcriber.Services
         private readonly HttpClient _httpClient;
         private readonly SemaphoreSlim _lock = new(1, 1);
         private string? _accessToken;
-        private ManagementApiClient? managementApiClient;
+        private ManagementClient? managementApiClient;
 
         public AuthService()
         {
@@ -25,26 +25,30 @@ namespace SIL.Transcriber.Services
             _httpClient = new HttpClient { BaseAddress = new Uri(domain) };
         }
 
-        private ManagementApiClient ManagementApiClient {
+        private ManagementClient ManagementApiClient {
             get {
                 if (managementApiClient == null)
                 {
-                    (string? AccessToken, bool _) = GetAccessTokenAsync().Result;
                     Uri domainUri = new(GetVarOrThrow("SIL_TR_AUTH0_DOMAIN"));
-                    managementApiClient = new ManagementApiClient(AccessToken, domainUri.Host);
+                    managementApiClient = new ManagementClient(new ManagementClientOptions
+                    {
+                        Domain = domainUri.Host,
+                        TokenProvider = new DelegateTokenProvider(async _ =>
+                            (await GetAccessTokenAsync()).AccessToken ?? ""),
+                    });
                 }
                 return managementApiClient;
             }
         }
 
-        public async Task<User> GetUserAsync(string Auth0Id) =>
-            await ManagementApiClient.Users.GetAsync(Auth0Id);
+        public async Task<GetUserResponseContent> GetUserAsync(string Auth0Id) =>
+            await ManagementApiClient.Users.GetAsync(Auth0Id, new GetUserRequestParameters());
 
-        public Task ResendVerification(string authId)
+        public async Task ResendVerification(string authId)
         {
-            VerifyEmailJobRequest content = new()
+            CreateVerificationEmailRequestContent content = new()
             { UserId = authId };
-            return ManagementApiClient.Jobs.SendVerificationEmailAsync(content);
+            _ = await ManagementApiClient.Jobs.VerificationEmail.CreateAsync(content);
         }
 
         private async Task<(string? AccessToken, bool Refreshed)> GetAccessTokenAsync()

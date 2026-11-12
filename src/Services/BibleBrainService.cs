@@ -50,7 +50,7 @@ public class BibleBrainService(
     private async Task<string> DoApiCall(string path, List<(string Name, string Value)>? myParams)
     {
         Uri uri = new($"{Domain}{path}");
-        List<(string Name, string Value)>  p = new (myParams??[]);
+        List<(string Name, string Value)>  p = [.. myParams??[]];
         AddParam(p, "v", "4");
         AddParam(p, "key", _key);
         uri = uri.AddParameter([.. p]);
@@ -200,7 +200,7 @@ public class BibleBrainService(
 
             IEnumerable<int> schapters = psgs.Select(p => p.StartChapter??0).Distinct();
             IEnumerable<int> echapters = psgs.Select(p => p.EndChapter??0).Distinct();
-            allChapters = schapters.Concat(echapters).Distinct().Where(c => c != 0).ToList();
+            allChapters = [.. schapters.Concat(echapters).Distinct().Where(c => c != 0)];
         }
         else
         {

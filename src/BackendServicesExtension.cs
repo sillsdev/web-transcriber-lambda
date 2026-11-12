@@ -4,17 +4,20 @@ using JsonApiDotNetCore.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using SIL.Logging.Repositories;
 using SIL.Transcriber.Data;
 using SIL.Transcriber.Repositories;
 using SIL.Transcriber.Services;
 using SIL.Transcriber.Services.Contracts;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using static SIL.Transcriber.Utility.EnvironmentHelpers;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SIL.Transcriber
 {
@@ -80,7 +83,9 @@ namespace SIL.Transcriber
             services.AddScoped<AquiferService>();
             services.AddScoped<ArtifactCategoryService>();
             services.AddScoped<ArtifactTypeService>();
+            services.AddScoped<APIBibleService>();
             services.AddScoped<BibleService>();
+            services.AddScoped<HelloAOService>();
             services.AddScoped<BibleBrainBibleService>();
             services.AddScoped<BibleBrainFilesetService>();
             services.AddScoped<BibleBrainService>();
@@ -96,6 +101,7 @@ namespace SIL.Transcriber
             services.AddScoped<IntellectualPropertyService>();
             services.AddScoped<InvitationService>();
             services.AddScoped<MediafileService>();
+            services.AddScoped<MediareplacementService>();
             services.AddScoped<IOfflineDataService, OfflineDataService>();
             services.AddScoped<OrganizationBibleService>();
             services.AddScoped<OrganizationMembershipService>();
@@ -155,6 +161,7 @@ namespace SIL.Transcriber
             services.AddScoped<IntellectualPropertyRepository>();
             services.AddScoped<InvitationRepository>();
             services.AddScoped<MediafileRepository>();
+            services.AddScoped<MediareplacementRepository>();
             services.AddScoped<OrganizationBibleRepository>();
             services.AddScoped<OrganizationMembershipRepository>();
             services.AddScoped<OrganizationSchemeRepository>();
@@ -238,7 +245,14 @@ namespace SIL.Transcriber
             services.AddAuthorizationBuilder()
                 .SetFallbackPolicy(new AuthorizationPolicyBuilder()
                   .RequireAuthenticatedUser()
-                  .Build());
+                  .Build())
+                // anonymous only when called from localhost on a local (non-Lambda) run
+                .AddPolicy("LocalOrAuthenticated", policy => policy.RequireAssertion(ctx =>
+                    ctx.User.Identity?.IsAuthenticated == true
+                    || (ctx.Resource is HttpContext http
+                        && Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME") is null
+                        && http.Connection.RemoteIpAddress is { } ip
+                        && IPAddress.IsLoopback(ip))));
 
             return services;
         }
@@ -276,24 +290,42 @@ namespace SIL.Transcriber
                             "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
                     }
                 );
-                options.AddSecurityRequirement(
+                options.AddSecurityRequirement(document =>
                     new OpenApiSecurityRequirement
                     {
-                        {
-                            new OpenApiSecurityScheme
-                            {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "Bearer"
-                                }
-                            },
-                            Array.Empty<string>()
-                        }
+                        { new OpenApiSecuritySchemeReference("Bearer", document), [] }
                     }
                 );
+                options.OperationFilter<JsonApiMediaTypeOperationFilter>();
             });
             return services;
+        }
+
+        // JsonApiDotNetCore uses the application/vnd.api+json media type, but Swashbuckle only
+        // emits application/json, so Swagger UI never offers vnd.api+json. Mirror each json body.
+        private sealed class JsonApiMediaTypeOperationFilter : IOperationFilter
+        {
+            private const string JsonApiMediaType = "application/vnd.api+json";
+
+            public void Apply(OpenApiOperation operation, OperationFilterContext context)
+            {
+                AddMediaType(operation.RequestBody?.Content);
+                if (operation.Responses is not null)
+                {
+                    foreach (IOpenApiResponse response in operation.Responses.Values)
+                        AddMediaType(response.Content);
+                }
+            }
+
+            private static void AddMediaType(IDictionary<string, OpenApiMediaType>? content)
+            {
+                if (content is not null
+                    && content.TryGetValue(Application.Json, out OpenApiMediaType? json)
+                    && !content.ContainsKey(JsonApiMediaType))
+                {
+                    content[JsonApiMediaType] = json;
+                }
+            }
         }
 
         public static IServiceCollection AddContextServices(this IServiceCollection services)

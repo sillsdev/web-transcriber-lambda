@@ -48,8 +48,12 @@ namespace SIL.Transcriber
             //{
             //always do what it will do in production
             // _ = app.UseDeveloperExceptionPage();
-            _ = app.UseSwagger();
-            _ = app.UseSwaggerUI();
+            // only expose Swagger on local runs, not on any deployed Lambda stage
+            if (Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME") is null)
+            {
+                _ = app.UseSwagger();
+                _ = app.UseSwaggerUI();
+            }
             //}
 
             _ = app.UseExceptionHandler(exceptionHandlerApp => {

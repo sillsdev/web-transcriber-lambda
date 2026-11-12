@@ -86,6 +86,9 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "offline-shared-resource-id")]
         public string? OfflineSharedResourceId { get; set; }
 
+        [Attr(PublicName = "unversioned-rendering-url")]
+        public string? UnversionedRenderingUrl { get; set; } //an unsaved ai generated version
+
         [Attr(PublicName = "start-chapter")]
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public int? StartChapter { get; set; }

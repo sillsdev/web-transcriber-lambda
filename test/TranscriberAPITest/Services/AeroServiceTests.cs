@@ -7,12 +7,15 @@ namespace TranscriberAPI.Tests.Services;
 
 public class AeroServiceTests
 {
+    private static readonly string[] stringArray = [ "s3://bucket/input/a.wav" ];
+    private static readonly float[] singleArray = [0f, 12.5f];
+
     [Fact]
     public void BuildClipArray_IncludesClipPathAndTimestamps()
     {
-        JArray clips = InvokeBuildClipArray(new[] { "s3://bucket/input/a.wav" }, new[] { 0f, 12.5f });
+        JArray clips = InvokeBuildClipArray(stringArray, singleArray);
 
-        Assert.Single(clips);
+        JToken jToken = Assert.Single(clips);
         JObject clip = Assert.IsType<JObject>(clips[0]);
         Assert.Equal("s3://bucket/input/a.wav", clip["s3_path"]?.ToString());
         Assert.Equal(new JArray(0f, 12.5f), clip["timestamps"]);
@@ -84,8 +87,7 @@ public class AeroServiceTests
         TranscriptionStatusResult result = InvokeParseTranscriptionStatusResult(status);
 
         Assert.Equal(1, result.Total);
-        Assert.Single(result.Items);
-        TranscriptionStatusItem item = result.Items[0];
+        TranscriptionStatusItem item = Assert.Single(result.Items);
         Assert.Equal("1639253353982890452.ogg", item.Clip);
         Assert.Equal("SUCCESS", item.State);
         Assert.Equal(2, item.Segments.Count);
@@ -217,7 +219,7 @@ public class AeroServiceTests
     [Fact]
     public void ExtractTranscriptionText_CombinesSegmentsInOrder()
     {
-        IReadOnlyList<TranscriptionStatusItem> items =
+        List<TranscriptionStatusItem> items =
         [
             new TranscriptionStatusItem(
                 "a.wav",

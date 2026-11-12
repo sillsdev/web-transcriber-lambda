@@ -155,7 +155,7 @@ namespace SIL.Transcriber.Services
         private void AddJsonEntry<TResource>(
             ZipArchive zipArchive,
             string table,
-            IList<TResource> list
+            List<TResource> list
         ) where TResource : class, IIdentifiable
         {
             ZipArchiveEntry entry = zipArchive.CreateEntry(
@@ -422,10 +422,10 @@ namespace SIL.Transcriber.Services
             ref int completed,
             ZipArchive zipArchive,
             string table,
-            IList<TResource> list
+            List<TResource> list
         ) where TResource : class, IIdentifiable
         {
-            Logger.LogInformation("{check} : {dt} {dtBail}", check, DateTime.Now, dtBail);
+            //Logger.LogInformation("{check} : {dt} {dtBail}", check, DateTime.Now, dtBail);
             if (DateTime.Now > dtBail)
                 return false;
             if (completed <= check)
@@ -448,8 +448,8 @@ namespace SIL.Transcriber.Services
                 string data = reader.ReadToEnd();
                 bool recent = writeTime > DateTime.Now.AddMinutes(data.Contains("writing") ? -8 : -4);
 
-                Logger.LogInformation("CheckProgress: fileName={fn}, lastAdd={la}, writeTime={wt}, recent={r}, dataLength={dl}",
-                    fileName, lastAdd, writeTime, recent, data.Length);
+                //Logger.LogInformation("CheckProgress: fileName={fn}, lastAdd={la}, writeTime={wt}, recent={r}, dataLength={dl}",
+                //    fileName, lastAdd, writeTime, recent, data.Length);
 
                 if (recent)
                 {
@@ -466,17 +466,17 @@ namespace SIL.Transcriber.Services
                         validDataRead = true;
                         if (media)
                             startNext += lastAdd;
-                        Logger.LogInformation("CheckProgress: Parsed startNext={sn} from status file", startNext);
+                        //Logger.LogInformation("CheckProgress: Parsed startNext={sn} from status file", startNext);
                     }
                     else
                     {
-                        Logger.LogWarning("CheckProgress: Failed to parse data='{d}'", data);
+                        //Logger.LogWarning("CheckProgress: Failed to parse data='{d}'", data);
                         startNext = 0;
                     }
                 }
                 else
                 {
-                    Logger.LogWarning("CheckProgress: Status file not recent, writeTime={wt}", writeTime);
+                    //Logger.LogWarning("CheckProgress: Status file not recent, writeTime={wt}", writeTime);
                     startNext = 0;
                 }
             }
@@ -1433,7 +1433,7 @@ namespace SIL.Transcriber.Services
                     List<int> srIds = [..sharednotes.Select(n => n.SharedResourceId??0).Distinct()];
                     srIds.AddRange([.. supportingNotes.Select(n => n.ResourceId ?? 0).Distinct()]);
                     //add non-shared resources that are attached to passages in this project
-                    srIds.AddRange(dbContext.Sharedresources.Join(passages, sr => sr.PassageId, p => p.Id, (sr, p) => sr.Id).ToList());
+                    srIds.AddRange([.. dbContext.Sharedresources.Join(passages, sr => sr.PassageId, p => p.Id, (sr, p) => sr.Id)]);
 
                     IQueryable<Sharedresource>? sharedresources = dbContext.SharedresourcesData
                                     .Where(a => !a.Archived && srIds.Contains(a.Id));
@@ -2086,7 +2086,7 @@ namespace SIL.Transcriber.Services
         private string GetRelationshipId<TResource>(ResourceObject ro, string relationship)
             where TResource : class, IIdentifiable
         {
-            ResourceType resourceType = _resourceGraph.GetResourceType(typeof(TResource));
+            ResourceType resourceType = _resourceGraph.GetResourceType<TResource>();
             IReadOnlyCollection<RelationshipAttribute>? rels = resourceType.Relationships;
             RelationshipAttribute? myTypeRelationship = rels.FirstOrDefault(
                         r => r.PublicName == relationship
@@ -2124,7 +2124,7 @@ namespace SIL.Transcriber.Services
         private TResource ResourceObjectToResource<TResource>(ResourceObject ro, TResource s, string mapKey = "")
             where TResource : class, IIdentifiable
         {
-            ResourceType resourceType = _resourceGraph.GetResourceType(typeof(TResource));
+            ResourceType resourceType = _resourceGraph.GetResourceType<TResource>();
             IReadOnlyCollection<AttrAttribute>? attrs = resourceType.Attributes;
             IReadOnlyCollection<RelationshipAttribute>? rels = resourceType.Relationships;
 
@@ -2132,7 +2132,7 @@ namespace SIL.Transcriber.Services
                 s.StringId = ro.Id;
 
             // Track which *-id attributes were set from the attributes section
-            HashSet<string> processedIdAttributes = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> processedIdAttributes = new (StringComparer.Ordinal);
 
             if (ro.Attributes != null)
                 foreach (KeyValuePair<string, object?> row in ro.Attributes)
@@ -2321,7 +2321,7 @@ namespace SIL.Transcriber.Services
 
             return fileorg == null ? null : ResourceObjectToResource(fileorg, new Organization());
         }
-        private Dictionary<string, ResourceObject> ReadFileArtifactCategories(ZipArchive archive)
+        private static Dictionary<string, ResourceObject> ReadFileArtifactCategories(ZipArchive archive)
         {
             Dictionary<string, ResourceObject> acs = [];
             IJsonApiOptions options = new JsonApiOptions();
@@ -3724,6 +3724,9 @@ namespace SIL.Transcriber.Services
             for (int ix = 0; ix < lst.Count && (dtBail == null || DateTime.Now + SlowestMediaCopy < dtBail); ix++)
             {
                 Mediafile m = lst[ix];
+                Passage? notePassage = m.PassageId == null ? null : dbContext.PassagesData.Include(p => p.Passagetype).FirstOrDefault(p => p.Id == m.PassageId && !p.Archived);
+                if (notePassage?.Passagetype?.IsNote() ?? false)
+                    Logger.LogInformation("CopyMediafilesAsync note mediafile {MediafileId}: passage {PassageId}, audio {AudioUrl}, original {OriginalFile}, offline {OfflineId}", m.Id, notePassage.Id, m.AudioUrl, m.OriginalFile, m.OfflineId);
                 string id = m.OfflineId ?? "error";
                 if (!oldmap.ContainsKey(id))
                 {
@@ -3947,9 +3950,7 @@ namespace SIL.Transcriber.Services
         //like GetMappedId but never falls back to the old id - null if it wasn't copied
         private int? GetCopiedId(string table, string projId, string? oldId)
         {
-            if (projId == "" || string.IsNullOrEmpty(oldId))
-                return null;
-            return GetCachedMap(table, projId).TryGetValue(oldId, out int mappedId) && mappedId > 0 ? mappedId : null;
+            return (projId == "" || string.IsNullOrEmpty(oldId)) ? null : GetCachedMap(table, projId).TryGetValue(oldId, out int mappedId) ? mappedId : null;
         }
         //DEPRECATED
         private async Task<Fileresponse> ProcessImportCopyProjectDeprecatedAsync(
@@ -4985,6 +4986,13 @@ namespace SIL.Transcriber.Services
                             )];
                             IdMap shrmap = GetMap(name, mapKey);
                             int sharedResourceTotal = sourceProjectSharedResources.Count;
+                            int noteSharedResourceCount = sourceProjectSharedResources.Count(ro =>
+                                ro.Attributes != null
+                                && ro.Attributes.TryGetValue("note", out object? rawNote)
+                                && rawNote is JsonElement noteElement
+                                && noteElement.ValueKind == JsonValueKind.True
+                                && noteElement.GetBoolean());
+                            Logger.LogInformation("Import shared resources {Count} total, {NoteCount} marked as note/pencil for map {MapKey}", sharedResourceTotal, noteSharedResourceCount, mapKey);
                             List<ResourceObject> pendingSharedResources = [.. sourceProjectSharedResources.Where(ro => !shrmap.ContainsKey(ro.Id ?? ""))];
                             while (pendingSharedResources.Count > 0 && DateTime.Now < dtBail)
                             {
@@ -5141,7 +5149,7 @@ namespace SIL.Transcriber.Services
                     }
                     if (DateTime.Now >= dtBail)
                     {
-                        Logger.LogCritical("Bailing on import of {n} at entry {e} because time is up. {d}", sourceproject?.Name, entry.FullName, DateTime.Now);
+                        //Logger.LogCritical("Bailing on import of {n} at entry {e} because time is up. {d}", sourceproject?.Name, entry.FullName, DateTime.Now);
                         complete = false;
                         break;
                     }

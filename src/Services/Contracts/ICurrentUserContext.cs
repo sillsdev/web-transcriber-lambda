@@ -1,5 +1,5 @@
 ﻿
-using Auth0.ManagementApi.Models;
+using Auth0.ManagementApi;
 using Newtonsoft.Json.Linq;
 using SIL.Paratext.Models;
 
@@ -15,7 +15,7 @@ namespace SIL.Transcriber.Services
         string Avatar { get; }
         bool EmailVerified { get; }
         UserSecret? ParatextLogin(string connection, int userId);
-        UserSecret? ParatextToken(Identity ptIdentity, int userId);
+        UserSecret? ParatextToken(UserIdentitySchema ptIdentity, int userId);
         UserSecret? ParatextToken(JToken ptIdentity, int id);
     }
 }

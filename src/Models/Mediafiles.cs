@@ -102,12 +102,17 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "source-media")]
         public Mediafile? SourceMedia { get; set; }
 
+        [Attr(PublicName = "render-source-media-id")]
+        public int? RenderSourceMediaId { get; set; }
+        [HasOne(PublicName = "render-source-media")]
+        public Mediafile? RenderSourceMedia { get; set; }
+
         [Attr(PublicName = "source-segments")]
         [Column(TypeName = "jsonb")]
         public string? SourceSegments { get; set; }
 
-        //TODO [Attr(PublicName = "comment")]
-        //public string? Comment { get; set; }
+        [Attr(PublicName = "note")]
+        public string? Note { get; set; }
 
         [Attr(PublicName = "offline-passage-id")]
         public string? OfflinePassageId { get; set; }

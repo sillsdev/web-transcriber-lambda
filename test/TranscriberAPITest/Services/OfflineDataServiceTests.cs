@@ -14,7 +14,6 @@ using SIL.Transcriber.Services.Contracts;
 using System.IO.Compression;
 using System.Net;
 using Xunit;
-using Identity = Auth0.ManagementApi.Models.Identity;
 
 namespace TranscriberAPI.Tests.Services;
 
@@ -1119,10 +1118,10 @@ public class OfflineDataServiceTests
         using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
         {
             WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
-            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization }, serviceProvider);
-            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
-            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
-            AddJsonEntry(archive, "data/F_sections.json", new[] { sourceSection }, serviceProvider);
+            AddJsonEntry(archive, "data/B_organizations.json", [sourceOrganization], serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", [sourceProject], serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", [sourcePlan], serviceProvider);
+            AddJsonEntry(archive, "data/F_sections.json", [sourceSection], serviceProvider);
             AddJsonEntry(archive, "data/G_passages.json", sourcePassages, serviceProvider);
             AddJsonEntry(archive, "data/I_sharedresources.json", sharedResources, serviceProvider);
             AddJsonEntry(archive, "data/J_sharedresourcereferences.json", references, serviceProvider);
@@ -1178,9 +1177,9 @@ public class OfflineDataServiceTests
         using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
         {
             WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
-            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization }, serviceProvider);
-            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
-            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
+            AddJsonEntry(archive, "data/B_organizations.json", [sourceOrganization], serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", [sourceProject], serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", [sourcePlan], serviceProvider);
             AddJsonEntry(archive, "data/F_sections.json", sections, serviceProvider);
         }
         return stream.ToArray();
@@ -1254,11 +1253,11 @@ public class OfflineDataServiceTests
         using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
         {
             WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
-            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization, extraOrganization }, serviceProvider);
-            AddJsonEntry(archive, "data/C_artifactcategorys.json", new[] { globalCategory, orgCategory }, serviceProvider);
-            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
-            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
-            AddJsonEntry(archive, "data/F_sections.json", new[] { sourceSection }, serviceProvider);
+            AddJsonEntry(archive, "data/B_organizations.json", [sourceOrganization, extraOrganization], serviceProvider);
+            AddJsonEntry(archive, "data/C_artifactcategorys.json", [globalCategory, orgCategory], serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", [sourceProject], serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", [sourcePlan], serviceProvider);
+            AddJsonEntry(archive, "data/F_sections.json", [sourceSection], serviceProvider);
         }
         return stream.ToArray();
     }
@@ -1388,14 +1387,14 @@ public class OfflineDataServiceTests
         using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
         {
             WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
-            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization, extraOrganization }, serviceProvider);
-            AddJsonEntry(archive, "data/C_artifactcategorys.json", new[] { reusedSharedCategory, sourceOwnedCategory, unusedForeignCategory }, serviceProvider);
-            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
-            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
-            AddJsonEntry(archive, "data/F_sections.json", new[] { sourceSection }, serviceProvider);
-            AddJsonEntry(archive, "data/G_passages.json", new[] { sourcePrimaryPassage, sourceSupportingPassage }, serviceProvider);
-            AddJsonEntry(archive, "data/I_sharedresources.json", new[] { supportingSharedResource }, serviceProvider);
-            AddJsonEntry(archive, "data/J_sharedresourcereferences.json", new[] { supportingReference }, serviceProvider);
+            AddJsonEntry(archive, "data/B_organizations.json", [sourceOrganization, extraOrganization], serviceProvider);
+            AddJsonEntry(archive, "data/C_artifactcategorys.json", [reusedSharedCategory, sourceOwnedCategory, unusedForeignCategory], serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", [sourceProject], serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", [sourcePlan], serviceProvider);
+            AddJsonEntry(archive, "data/F_sections.json", [sourceSection], serviceProvider);
+            AddJsonEntry(archive, "data/G_passages.json", [sourcePrimaryPassage, sourceSupportingPassage], serviceProvider);
+            AddJsonEntry(archive, "data/I_sharedresources.json", [supportingSharedResource], serviceProvider);
+            AddJsonEntry(archive, "data/J_sharedresourcereferences.json", [supportingReference], serviceProvider);
         }
         return stream.ToArray();
     }
@@ -1504,14 +1503,14 @@ public class OfflineDataServiceTests
         using (ZipArchive archive = new(stream, ZipArchiveMode.Create, true))
         {
             WriteEntry(archive, "SILTranscriber", DateTime.UtcNow.ToString("o"));
-            AddJsonEntry(archive, "data/B_organizations.json", new[] { sourceOrganization, extraOrganization }, serviceProvider);
-            AddJsonEntry(archive, "data/C_artifactcategorys.json", new[] { supportingCategory }, serviceProvider);
-            AddJsonEntry(archive, "data/D_projects.json", new[] { sourceProject }, serviceProvider);
-            AddJsonEntry(archive, "data/E_plans.json", new[] { sourcePlan }, serviceProvider);
-            AddJsonEntry(archive, "data/F_sections.json", new[] { sourceSection }, serviceProvider);
-            AddJsonEntry(archive, "data/G_passages.json", new[] { sourcePrimaryPassage, sourceSupportingPassage }, serviceProvider);
-            AddJsonEntry(archive, "data/I_sharedresources.json", new[] { supportingSharedResource }, serviceProvider);
-            AddJsonEntry(archive, "data/J_sharedresourcereferences.json", new[] { supportingReference }, serviceProvider);
+            AddJsonEntry(archive, "data/B_organizations.json", [sourceOrganization, extraOrganization], serviceProvider);
+            AddJsonEntry(archive, "data/C_artifactcategorys.json", [supportingCategory], serviceProvider);
+            AddJsonEntry(archive, "data/D_projects.json", [sourceProject], serviceProvider);
+            AddJsonEntry(archive, "data/E_plans.json", [sourcePlan], serviceProvider);
+            AddJsonEntry(archive, "data/F_sections.json", [sourceSection], serviceProvider);
+            AddJsonEntry(archive, "data/G_passages.json", [sourcePrimaryPassage, sourceSupportingPassage], serviceProvider);
+            AddJsonEntry(archive, "data/I_sharedresources.json", [supportingSharedResource], serviceProvider);
+            AddJsonEntry(archive, "data/J_sharedresourcereferences.json", [supportingReference], serviceProvider);
         }
         return stream.ToArray();
     }
@@ -1853,7 +1852,7 @@ public class OfflineDataServiceTests
         public string Avatar => string.Empty;
         public bool EmailVerified => true;
         public UserSecret? ParatextLogin(string connection, int userId) => null;
-        public UserSecret? ParatextToken(Identity ptIdentity, int userId) => null;
+        public UserSecret? ParatextToken(Auth0.ManagementApi.UserIdentitySchema ptIdentity, int userId) => null;
         public UserSecret? ParatextToken(JToken ptIdentity, int id) => null;
     }
 
