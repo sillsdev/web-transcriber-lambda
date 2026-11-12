@@ -38,6 +38,7 @@ provider:
     SIL_TR_USERFILES_BUCKET: ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_USERFILES_BUCKET}
     SIL_TR_WEBHOOK_PASSWORD:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_PASSWORD}
     SIL_TR_WEBHOOK_USERNAME:   ${file(./serverless.env.yml):${self:custom.myStage}.SIL_TR_WEBHOOK_USERNAME}
+    SIL_TR_API_BIBLE:   ${file(./serverless.env.yml):xxx.SIL_TR_API_BIBLE}
 
 custom:
   myStage: ${opt:stage, self:provider.stage}

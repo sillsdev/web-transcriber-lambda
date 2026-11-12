@@ -7,8 +7,8 @@ namespace SIL.Transcriber.Models
         [Attr(PublicName = "plan-id")]
         public int PlanId { get; set; }
 
-        [HasOne(PublicName = "plan")]
-        required public Plan Plan { get; set; }
+        [HasOne(PublicName = "passage")]
+        required public Passage Passage { get; set; }
 
         [Attr(PublicName = "replacement-mediafile-id")]
         public int ReplacementMediafileId { get; set; }
@@ -17,10 +17,10 @@ namespace SIL.Transcriber.Models
         required public Mediafile ReplacementMediafile { get; set; }
 
         [Attr(PublicName = "selection-start")]
-        public double SelectionStart { get; set; }
+        public double? SelectionStart { get; set; }
 
         [Attr(PublicName = "selection-end")]
-        public double SelectionEnd { get; set; }
+        public double? SelectionEnd { get; set; }
 
         [Attr(PublicName = "output-mediafile-id")]
         public int OutputMediafileId { get; set; }
@@ -28,7 +28,6 @@ namespace SIL.Transcriber.Models
         [HasOne(PublicName = "output-mediafile")]
         required public Mediafile OutputMediafile { get; set; }
 
-        [Attr(PublicName = "archived")]
         public bool Archived { get; set; }
     }
 }
